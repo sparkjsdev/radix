@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "spotlight",
+  "description": "The viewer's spotlight: a smooth cone from a lamp toward a target, brightness over attenuation times distance squared, over a 0.25 floor. The blog lit rooms (a lamp 6 m up, an 80 degree cone, attenuation 0.5); here the lamp hangs above and in front of the scan with a 30 degree cone. Click the scan to aim it.",
+  "source": { "name": "World Labs threeviewer effects (lighting.glsl computeSpotlight; blog: origin (0,-6,5), target (0,0,5), 80, 10, 25, 0.5), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "click": { "type": "input.click", "note": "Click to aim" },
+    "light": { "type": "wl.spotlight", "inputs": {"lamp": [0, 2.2, 1.6], "fov": 30, "smooth": 8, "brightness": 25, "attenuation": 2.5} },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "light.position" },
+    { "from": "rgb.value", "to": "light.rgb" },
+    { "from": "click.point", "to": "light.target" },
+    { "from": "light.rgb", "to": "out.rgb" }
+  ],
+  "params": {
+    "Lamp": "light.lamp",
+    "Cone (deg)": "light.fov",
+    "Soft edge (deg)": "light.smooth",
+    "Brightness": "light.brightness",
+    "Attenuation": "light.attenuation"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "name": "disintegrate",
+  "description": "A band sweeps up and down; behind it the splats scatter into a swirling cloud of tiny dots, and they reform as it passes back. Three groups: Sweep band (where the band is), Scatter cloud (a random push per splat) and Swirl and settle (spin the cloud by height, then mix back to the scan).",
+  "source": { "name": "Spark examples: splat-shader-effects (Disintegrate)", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/splat-shader-effects", "license": "MIT" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "out": { "type": "splat.write", "inputs": {"size": 0.004} },
+    "sweep": { "type": "group.sweep" },
+    "cloud": { "type": "group.cloud", "inputs": {"amount": 0.5} },
+    "swirl": { "type": "group.swirl", "inputs": {"twist": 5} }
+  },
+  "links": [
+    { "from": "center.value", "to": "sweep.position" },
+    { "from": "center.value", "to": "cloud.position" },
+    { "from": "cloud.cloud", "to": "swirl.cloud" },
+    { "from": "sweep.whole", "to": "swirl.whole" },
+    { "from": "center.value", "to": "swirl.center" },
+    { "from": "swirl.center", "to": "out.center" },
+    { "from": "swirl.dots", "to": "out.sizeMix" }
+  ],
+  "params": {
+    "Scatter": "cloud.amount",
+    "Twist": "swirl.twist",
+    "Dot size": "out.size"
+  },
+  "groups": {
+    "sweep": {
+      "label": "Sweep band",
+      "description": "Time plus height through a slow sine: 1 where the scan is in one piece, 0 where the band has passed.",
+      "inputs": {
+        "position": { "type": "vec3", "default": [0, 0, 0] }
+      },
+      "outputs": { "whole": "float" },
+      "nodes": {
+        "time": { "type": "input.time" },
+        "height": { "type": "math.vec3Split" },
+        "sweep": { "type": "math.add", "note": "Time plus height: a band moving up" },
+        "band": { "type": "math.sine", "inputs": {"frequency": 0.159, "amplitude": -1} },
+        "whole": { "type": "math.smoothstep", "inputs": {"low": -1, "high": 0.5}, "note": "1 = in one piece, 0 = scattered" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.position", "to": "height.v" },
+        { "from": "time.seconds", "to": "sweep.a" },
+        { "from": "height.y", "to": "sweep.b" },
+        { "from": "sweep.value", "to": "band.x" },
+        { "from": "band.value", "to": "whole.x" },
+        { "from": "whole.value", "to": "outputs.whole" }
+      ]
+    },
+    "cloud": {
+      "label": "Scatter cloud",
+      "description": "Each splat pushed by a random vector from its position: where it goes when scattered.",
+      "inputs": {
+        "position": { "type": "vec3", "default": [0, 0, 0] },
+        "amount": { "type": "float", "default": 0.5 }
+      },
+      "outputs": { "cloud": "vec3" },
+      "nodes": {
+        "random": { "type": "field.hash3" },
+        "scatter": { "type": "math.vec3Scale", "inputs": {"s": 0.5}, "note": "A random push per splat" },
+        "cloud": { "type": "math.vec3Add" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.position", "to": "random.position" },
+        { "from": "random.signed", "to": "scatter.v" },
+        { "from": "inputs.position", "to": "cloud.a" },
+        { "from": "scatter.value", "to": "cloud.b" },
+        { "from": "cloud.value", "to": "outputs.cloud" },
+        { "from": "inputs.amount", "to": "scatter.s" }
+      ]
+    },
+    "swirl": {
+      "label": "Swirl and settle",
+      "description": "The cloud spun about the vertical axis, more with height, then mixed back to the scan by how whole it is; scattered splats shrink to dots.",
+      "inputs": {
+        "cloud": { "type": "vec3", "default": [0, 0, 0] },
+        "whole": { "type": "float", "default": 1 },
+        "center": { "type": "vec3", "default": [0, 0, 0] },
+        "twist": { "type": "float", "default": 5 }
+      },
+      "outputs": { "center": "vec3", "dots": "float" },
+      "nodes": {
+        "cloudHeight": { "type": "math.vec3Split" },
+        "twist": { "type": "math.mul", "inputs": {"b": 5} },
+        "turns": { "type": "math.add", "inputs": {"b": 2} },
+        "swirl": { "type": "math.mul" },
+        "spin": { "type": "math.rotate", "inputs": {"axis": [0, 1, 0]} },
+        "settle": { "type": "math.vec3Mix" },
+        "dots": { "type": "math.oneMinus" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.cloud", "to": "cloudHeight.v" },
+        { "from": "cloudHeight.y", "to": "twist.a" },
+        { "from": "twist.value", "to": "turns.a" },
+        { "from": "turns.value", "to": "swirl.a" },
+        { "from": "inputs.whole", "to": "swirl.b" },
+        { "from": "inputs.cloud", "to": "spin.point" },
+        { "from": "swirl.value", "to": "spin.angle" },
+        { "from": "spin.value", "to": "settle.a" },
+        { "from": "inputs.center", "to": "settle.b" },
+        { "from": "inputs.whole", "to": "settle.t" },
+        { "from": "settle.value", "to": "outputs.center" },
+        { "from": "inputs.whole", "to": "dots.x" },
+        { "from": "dots.value", "to": "outputs.dots" },
+        { "from": "inputs.twist", "to": "twist.b" }
+      ]
+    }
+  }
+}

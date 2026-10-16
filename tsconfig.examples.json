@@ -1,0 +1,13 @@
+{
+  // The example pages: TypeScript that scripts/build-examples.mjs turns into
+  // static JavaScript by stripping the types, file by file
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["@webgpu/types", "webxr"],
+    "erasableSyntaxOnly": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.examples.tsbuildinfo"
+  },
+  "include": ["examples/**/*.ts", "src/worker/modules.d.ts"]
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radix • Interactivity</title>
+  <link rel="stylesheet" href="../js/example.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/node_modules/three/build/three.webgpu.js",
+        "three/webgpu": "/node_modules/three/build/three.webgpu.js",
+        "three/tsl": "/node_modules/three/build/three.tsl.js",
+        "three/addons/": "/node_modules/three/examples/jsm/",
+        "@sparkjsdev/radix": "/dist/radix.module.js",
+        "lil-gui": "/node_modules/lil-gui/dist/lil-gui.esm.js"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <a href="#" id="mobile_button">Menu</a>
+  <div id="menu">
+    <div class="border">
+      <div class="border">
+        <h3>Tipatat's Splat Restaurant</h3>
+        <h1> Menu </h1>
+        <h2>CHEF SPECIALS</h2>
+        <div id="menu_list"></div>
+        <h2>Food scans by <a href="https://x.com/tipatat" target="_blank">Tipatat</a></h2>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.DS_Store
+# Recordings from the bench and the dev link scripts
+recordings/
+# Local splat files for the benchmarks and convert:ply
+/splats/
+# The docs' reference pages (scripts/build-docs.mjs, run by npm run build)
+/docs/ref/

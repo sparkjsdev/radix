@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "name": "dissolve",
+  "description": "Splats burn away where noise falls under a rising threshold, with a glowing edge. Built from three groups: Progress (time into a threshold that rises and falls), Burn edge (which splats survive and how close each is to burning) and Glow and lift (what the edge does to a splat). Double-click a group card to see inside.",
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "noise": { "type": "field.noise", "inputs": {"scale": 3}, "options": {"octaves": 3} },
+    "out": { "type": "splat.write" },
+    "progress": { "type": "group.progress", "inputs": {"speed": 0.2, "scrub": 0, "start": 0.2, "end": 0.85} },
+    "edge": { "type": "group.edge", "inputs": {"width": 0.06} },
+    "look": { "type": "group.look", "inputs": {"color": [1, 0.45, 0.15], "glow": 3, "lift": 0.12, "shrinkTo": 0.35} }
+  },
+  "links": [
+    { "from": "center.value", "to": "noise.position" },
+    { "from": "noise.unit", "to": "edge.noise" },
+    { "from": "progress.threshold", "to": "edge.threshold" },
+    { "from": "edge.keep", "to": "out.keep" },
+    { "from": "rgb.value", "to": "look.rgb" },
+    { "from": "edge.band", "to": "look.band" },
+    { "from": "look.offset", "to": "out.offset" },
+    { "from": "look.rgb", "to": "out.rgb" },
+    { "from": "look.scale", "to": "out.scale" }
+  ],
+  "params": {
+    "Speed": "progress.speed",
+    "Scrub": "progress.scrub",
+    "Noise scale": "noise.scale",
+    "Start": "progress.start",
+    "End": "progress.end",
+    "Edge width": "edge.width",
+    "Edge color": "look.color",
+    "Glow": "look.glow",
+    "Lift": "look.lift",
+    "Shrink to": "look.shrinkTo"
+  },
+  "groups": {
+    "progress": {
+      "label": "Progress",
+      "description": "Time into a threshold: seconds times speed, plus scrub, bounced between 0 and 1 and remapped from start to end.",
+      "inputs": {
+        "speed": { "type": "float", "default": 0.2 },
+        "scrub": { "type": "float", "default": 0 },
+        "start": { "type": "float", "default": 0.2 },
+        "end": { "type": "float", "default": 0.85 }
+      },
+      "outputs": { "threshold": "float" },
+      "nodes": {
+        "time": { "type": "input.time" },
+        "speed": { "type": "math.mul", "inputs": {"b": 0.2} },
+        "scrub": { "type": "math.add", "inputs": {"b": 0} },
+        "progress": { "type": "math.pingPong" },
+        "threshold": { "type": "math.remap", "inputs": {"outLow": 0.2, "outHigh": 0.85} },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "time.seconds", "to": "speed.a" },
+        { "from": "speed.value", "to": "scrub.a" },
+        { "from": "scrub.value", "to": "progress.x" },
+        { "from": "progress.value", "to": "threshold.x" },
+        { "from": "threshold.value", "to": "outputs.threshold" },
+        { "from": "inputs.speed", "to": "speed.b" },
+        { "from": "inputs.scrub", "to": "scrub.b" },
+        { "from": "inputs.start", "to": "threshold.outLow" },
+        { "from": "inputs.end", "to": "threshold.outHigh" }
+      ]
+    },
+    "edge": {
+      "label": "Burn edge",
+      "description": "Noise above the threshold survives. The band is 1 right at the burning edge and fades to 0 over the edge width.",
+      "inputs": {
+        "noise": { "type": "float", "default": 0 },
+        "threshold": { "type": "float", "default": 0 },
+        "width": { "type": "float", "default": 0.06, "min": 0, "max": 1 }
+      },
+      "outputs": { "keep": "bool", "band": "float" },
+      "nodes": {
+        "above": { "type": "math.sub" },
+        "keep": { "type": "math.greater", "inputs": {"b": 0} },
+        "edge": { "type": "math.smoothstep", "inputs": {"low": 0, "high": 0.06} },
+        "band": { "type": "math.oneMinus" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.noise", "to": "above.a" },
+        { "from": "inputs.threshold", "to": "above.b" },
+        { "from": "above.value", "to": "keep.a" },
+        { "from": "above.value", "to": "edge.x" },
+        { "from": "edge.value", "to": "band.x" },
+        { "from": "keep.value", "to": "outputs.keep" },
+        { "from": "band.value", "to": "outputs.band" },
+        { "from": "inputs.width", "to": "edge.high" }
+      ]
+    },
+    "look": {
+      "label": "Glow and lift",
+      "description": "What the edge does to a splat: glow in the edge color, rise a little and shrink, all by the band.",
+      "inputs": {
+        "rgb": { "type": "color", "default": [1, 1, 1] },
+        "band": { "type": "float", "default": 1, "min": 0, "max": 1 },
+        "color": { "type": "color", "default": [1, 0.45, 0.15] },
+        "glow": { "type": "float", "default": 3, "min": 0, "max": 8 },
+        "lift": { "type": "float", "default": 0.12 },
+        "shrinkTo": { "type": "float", "default": 0.35 }
+      },
+      "outputs": { "offset": "vec3", "rgb": "color", "scale": "float" },
+      "nodes": {
+        "glow": { "type": "color.tint", "inputs": {"color": [1, 0.45, 0.15], "intensity": 3} },
+        "liftAmount": { "type": "math.mul", "inputs": {"b": 0.12} },
+        "lift": { "type": "math.vec3Scale", "inputs": {"v": [0, 1, 0]} },
+        "shrink": { "type": "math.remap", "inputs": {"outLow": 1, "outHigh": 0.35} },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.rgb", "to": "glow.rgb" },
+        { "from": "inputs.band", "to": "glow.amount" },
+        { "from": "inputs.band", "to": "liftAmount.a" },
+        { "from": "liftAmount.value", "to": "lift.s" },
+        { "from": "inputs.band", "to": "shrink.x" },
+        { "from": "lift.value", "to": "outputs.offset" },
+        { "from": "glow.value", "to": "outputs.rgb" },
+        { "from": "shrink.value", "to": "outputs.scale" },
+        { "from": "inputs.color", "to": "glow.color" },
+        { "from": "inputs.glow", "to": "glow.intensity" },
+        { "from": "inputs.lift", "to": "liftAmount.b" },
+        { "from": "inputs.shrinkTo", "to": "shrink.outHigh" }
+      ]
+    }
+  }
+}

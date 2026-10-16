@@ -1,0 +1,90 @@
+{
+  "name": "@sparkjsdev/radix",
+  "version": "0.0.1",
+  "description": "An advanced WebGPU 3D Gaussian Splatting renderer for THREE.js",
+  "license": "MIT",
+  "author": "Andreas Sundquist",
+  "repository": "sparkjsdev/radix",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/radix.module.js",
+  "module": "./dist/radix.module.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/radix.module.js"
+    },
+    "./core": {
+      "types": "./dist/types/core/index.d.ts",
+      "import": "./dist/radix-core.module.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepare": "node scripts/build-lib.mjs --lib-only",
+    "build": "node scripts/build-lib.mjs",
+    "build:watch": "node scripts/build-lib.mjs --watch",
+    "build:examples": "node scripts/build-examples.mjs",
+    "build:test": "node scripts/build-test.mjs",
+    "build:single": "node scripts/build-single.mjs",
+    "build:site": "node scripts/build-site.mjs",
+    "serve": "http-server . -p 8000 --cors -c-1",
+    "serve:site": "http-server build/site -p 8002 -c-1 --mimetypes scripts/site.types",
+    "docs": "node scripts/build-docs.mjs",
+    "check:docs": "node scripts/build-docs.mjs --check",
+    "check:core": "tsx scripts/check-core.ts",
+    "check:examples": "node scripts/check-examples.mjs",
+    "check:test": "node scripts/check-test.mjs",
+    "bench:core": "esbuild scripts/bench-core.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/bench-core.mjs --log-level=warning && node --max-old-space-size=16384 node_modules/.cache/bench-core.mjs",
+    "bench": "node scripts/bench.mjs",
+    "convert:ply": "esbuild scripts/convert-large-ply.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/convert-large-ply.mjs --log-level=warning && node --max-old-space-size=16384 node_modules/.cache/convert-large-ply.mjs",
+    "typecheck": "tsc -p tsconfig.lib.json --noEmit --declaration false --emitDeclarationOnly false && tsc -p tsconfig.core.json && tsc -p tsconfig.examples.json && tsc -p tsconfig.test.json",
+    "lint": "npm run typecheck && eslint .",
+    "lint:fix": "eslint . --fix && npm run typecheck"
+  },
+  "peerDependencies": {
+    "three": ">=0.186.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@tweakpane/core": "^2.0.5",
+    "@tweakpane/plugin-essentials": "^0.2.1",
+    "@types/three": "0.186.0",
+    "@webgpu/types": "^0.1.72",
+    "elkjs": "^0.12.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "fzstd": "^0.1.1",
+    "globals": "^17.11.0",
+    "http-server": "^14.1.1",
+    "lil-gui": "^0.21.0",
+    "playwright-core": "^1.63.0",
+    "three": "0.186.0",
+    "tsx": "^4.23.12",
+    "tweakpane": "^4.0.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true
+  },
+  "keywords": [
+    "3d",
+    "three.js",
+    "gsplats",
+    "3dgs",
+    "gaussian",
+    "splats",
+    "webgpu"
+  ]
+}

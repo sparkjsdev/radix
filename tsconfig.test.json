@@ -1,0 +1,11 @@
+{
+  // The GPU test and benchmark pages (bundled by scripts/build-test.mjs)
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["@webgpu/types", "webxr"],
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.test.tsbuildinfo"
+  },
+  "include": ["test/**/*.ts", "src/worker/modules.d.ts"]
+}

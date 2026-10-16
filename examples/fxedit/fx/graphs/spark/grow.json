@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "grow",
+  "description": "Click the scan: it grows back out of the point you clicked. Seconds since the click become a 0 to 1 progress, each splat starts a little late at random, and position, size and opacity all ease in from zero.",
+  "source": { "name": "Spark examples: splat-transitions (explosion, birth)", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/splat-transitions", "license": "MIT" },
+  "nodes": {
+    "click": { "type": "input.click", "note": "Where and how long ago you clicked" },
+    "center": { "type": "input.center" },
+    "progress": { "type": "math.mul", "inputs": { "b": 0.7 }, "note": "Seconds times speed" },
+    "random": { "type": "field.hash3" },
+    "pick": { "type": "math.vec3Split" },
+    "delay": { "type": "math.mul", "inputs": { "b": 0.4 }, "note": "Each splat waits up to 0.4 of the way" },
+    "late": { "type": "math.remap", "inputs": { "inHigh": 1, "outLow": 0, "outHigh": 1, "clamp": true } },
+    "smooth": { "type": "math.smoothstep", "inputs": { "low": 0, "high": 1 } },
+    "ease": { "type": "math.pow", "inputs": { "e": 0.6 }, "note": "0 to 1, fast then gentle" },
+    "place": { "type": "math.scaleAbout", "note": "From the click point to where it belongs" },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "click.age", "to": "progress.a" },
+    { "from": "center.value", "to": "random.position" },
+    { "from": "random.value", "to": "pick.v" },
+    { "from": "pick.x", "to": "delay.a" },
+    { "from": "progress.value", "to": "late.x" },
+    { "from": "delay.value", "to": "late.inLow" },
+    { "from": "late.value", "to": "smooth.x" },
+    { "from": "smooth.value", "to": "ease.x" },
+    { "from": "center.value", "to": "place.point" },
+    { "from": "click.point", "to": "place.pivot" },
+    { "from": "ease.value", "to": "place.factor" },
+    { "from": "place.value", "to": "out.center" },
+    { "from": "ease.value", "to": "out.scale" },
+    { "from": "ease.value", "to": "out.opacity" }
+  ],
+  "params": {
+    "Speed": "progress.b",
+    "Spread": "delay.b",
+    "Ease": "ease.e"
+  }
+}

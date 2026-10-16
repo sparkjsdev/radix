@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "name": "waves",
+  "description": "A 3D lattice of bright blobs scrolls through the scan and it pulses outward with them. One intensity knob drives the color and the motion: a single number can feed many nodes.",
+  "source": { "name": "Spark examples: splat-shader-effects (Waves)", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/splat-shader-effects", "license": "MIT" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "time": { "type": "input.time" },
+    "intensity": { "type": "input.float", "inputs": { "value": 0.8 }, "note": "One knob, three uses" },
+    "scroll": { "type": "math.mul", "inputs": { "b": 3 } },
+    "lattice": { "type": "field.sineLattice", "inputs": { "frequency": 10 }, "note": "Small at the center of each blob" },
+    "blobs": { "type": "math.decay", "inputs": { "rate": 2 }, "note": "Bright at the blob centers" },
+    "gain": { "type": "math.mul", "inputs": { "b": 5 } },
+    "light": { "type": "math.add", "inputs": { "b": 0.3 } },
+    "color": { "type": "color.blend", "options": { "mode": "multiply" } },
+    "pulse": { "type": "math.mul", "inputs": { "b": 0.04 } },
+    "pulseAmount": { "type": "math.mul" },
+    "grow": { "type": "math.add", "inputs": { "b": 1 } },
+    "swell": { "type": "math.scaleAbout", "inputs": { "pivot": [0, -0.3, 0] } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "time.seconds", "to": "scroll.a" },
+    { "from": "center.value", "to": "lattice.position" },
+    { "from": "scroll.value", "to": "lattice.phase" },
+    { "from": "lattice.value", "to": "blobs.x" },
+    { "from": "blobs.value", "to": "gain.a" },
+    { "from": "gain.value", "to": "light.a" },
+    { "from": "rgb.value", "to": "color.base" },
+    { "from": "light.value", "to": "color.color" },
+    { "from": "intensity.value", "to": "color.amount" },
+    { "from": "color.value", "to": "out.rgb" },
+    { "from": "light.value", "to": "pulse.a" },
+    { "from": "pulse.value", "to": "pulseAmount.a" },
+    { "from": "intensity.value", "to": "pulseAmount.b" },
+    { "from": "pulseAmount.value", "to": "grow.a" },
+    { "from": "center.value", "to": "swell.point" },
+    { "from": "grow.value", "to": "swell.factor" },
+    { "from": "swell.value", "to": "out.center" }
+  ],
+  "params": {
+    "Intensity": "intensity.value",
+    "Blob grid": "lattice.frequency",
+    "Scroll speed": "scroll.b",
+    "Pulse": "pulse.b"
+  }
+}

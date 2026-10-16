@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    // The package's own name, from source (esbuild reads these too)
+    "paths": {
+      "@sparkjsdev/radix": ["./src/index.ts"],
+      "@sparkjsdev/radix/core": ["./src/core/index.ts"]
+    }
+  },
+  // Each part has its own config (npm run typecheck). An editor opens a file
+  // in the first part that includes it, so core comes before the library,
+  // which includes src/core too.
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.core.json" },
+    { "path": "./tsconfig.lib.json" },
+    { "path": "./tsconfig.examples.json" },
+    { "path": "./tsconfig.test.json" }
+  ]
+}

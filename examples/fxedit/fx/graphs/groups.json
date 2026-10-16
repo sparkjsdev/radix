@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "name": "groups",
+  "description": "Nodes made of nodes. Pulsing ring is a group: a card with inputs (where, how fast, how big) and one output, the ring. Two cards use it, each with its own inputs, sharing one inside. Double-click one to open it: inside is another group, Ring, the shape itself. Select some nodes and press ⌘G to fold them into a group of your own.",
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "ringA": { "type": "group.pulsingRing", "inputs": { "center": [0.25, 0.2, 0], "speed": 0.35, "size": 0.9 }, "note": "One card..." },
+    "ringB": { "type": "group.pulsingRing", "inputs": { "center": [-0.3, -0.25, 0.1], "speed": 0.22, "size": 1.1 }, "note": "...and another: same inside, own inputs" },
+    "both": { "type": "math.minMax", "note": "Either ring" },
+    "glow": { "type": "color.tint", "inputs": { "color": [0.35, 0.8, 1], "intensity": 2.5 } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "ringA.position" },
+    { "from": "center.value", "to": "ringB.position" },
+    { "from": "ringA.ring", "to": "both.a" },
+    { "from": "ringB.ring", "to": "both.b" },
+    { "from": "rgb.value", "to": "glow.rgb" },
+    { "from": "both.max", "to": "glow.amount" },
+    { "from": "glow.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Speed A": "ringA.speed",
+    "Speed B": "ringB.speed",
+    "Width A": "ringA.width",
+    "Color": "glow.color"
+  },
+  "groups": {
+    "pulsingRing": {
+      "label": "Pulsing ring",
+      "description": "A ring that grows from nothing to its size and back: time times speed, bounced between 0 and 1, sets the radius of a Ring (another group: open it too).",
+      "inputs": {
+        "position": { "type": "vec3", "default": [0, 0, 0] },
+        "center": { "type": "vec3", "default": [0, 0, 0], "min": -1, "max": 1 },
+        "speed": { "type": "float", "default": 0.3, "min": 0, "max": 2 },
+        "size": { "type": "float", "default": 1, "min": 0, "max": 2 },
+        "width": { "type": "float", "default": 0.06, "min": 0.005, "max": 0.3 }
+      },
+      "outputs": { "ring": "float" },
+      "nodes": {
+        "inputs": { "type": "group.input" },
+        "time": { "type": "input.time" },
+        "rate": { "type": "math.mul" },
+        "bounce": { "type": "math.pingPong", "note": "0 -> 1 -> 0 ..." },
+        "radius": { "type": "math.mul" },
+        "shape": { "type": "group.ring", "note": "A group inside a group" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "time.seconds", "to": "rate.a" },
+        { "from": "inputs.speed", "to": "rate.b" },
+        { "from": "rate.value", "to": "bounce.x" },
+        { "from": "bounce.value", "to": "radius.a" },
+        { "from": "inputs.size", "to": "radius.b" },
+        { "from": "inputs.position", "to": "shape.position" },
+        { "from": "inputs.center", "to": "shape.center" },
+        { "from": "radius.value", "to": "shape.radius" },
+        { "from": "inputs.width", "to": "shape.width" },
+        { "from": "shape.ring", "to": "outputs.ring" }
+      ]
+    },
+    "ring": {
+      "label": "Ring",
+      "description": "1 on a shell of some radius around a center, fading to 0 within width of it: the distance to the center, minus the radius, made positive, near zero.",
+      "inputs": {
+        "position": { "type": "vec3", "default": [0, 0, 0] },
+        "center": { "type": "vec3", "default": [0, 0, 0], "min": -1, "max": 1 },
+        "radius": { "type": "float", "default": 0.5, "min": 0, "max": 2 },
+        "width": { "type": "float", "default": 0.06, "min": 0.005, "max": 0.3 }
+      },
+      "outputs": { "ring": "float" },
+      "nodes": {
+        "inputs": { "type": "group.input" },
+        "distance": { "type": "field.distance" },
+        "off": { "type": "math.sub", "note": "How far from the shell (signed)" },
+        "flip": { "type": "math.mul", "inputs": { "b": -1 } },
+        "abs": { "type": "math.minMax", "note": "max(x, -x): made positive" },
+        "near": { "type": "math.smoothstep", "inputs": { "low": 0 } },
+        "ring": { "type": "math.oneMinus" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.position", "to": "distance.position" },
+        { "from": "inputs.center", "to": "distance.point" },
+        { "from": "distance.value", "to": "off.a" },
+        { "from": "inputs.radius", "to": "off.b" },
+        { "from": "off.value", "to": "flip.a" },
+        { "from": "off.value", "to": "abs.a" },
+        { "from": "flip.value", "to": "abs.b" },
+        { "from": "abs.max", "to": "near.x" },
+        { "from": "inputs.width", "to": "near.high" },
+        { "from": "near.value", "to": "ring.x" },
+        { "from": "ring.value", "to": "outputs.ring" }
+      ]
+    }
+  }
+}

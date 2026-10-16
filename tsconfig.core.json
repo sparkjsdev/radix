@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    // No DOM and no three: src/core must run in workers and in Node.
+    // WebWorker supplies CompressionStream, Blob, Response and TextEncoder.
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.core.tsbuildinfo"
+  },
+  "include": ["src/core/**/*.ts", "scripts/check-core.ts"]
+}

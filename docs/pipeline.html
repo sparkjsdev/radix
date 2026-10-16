@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: the pipeline</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='8' cy='8' rx='7' ry='4' fill='%232dd4bf' transform='rotate(-30 8 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+pre .e { color: var(--red); }
+#progress { background: linear-gradient(90deg, var(--core), var(--gpu), var(--wgpu)); }
+.hero .inner { position: relative; max-width: 780px; padding: 24px; }
+.hero h1 { font-size: clamp(48px, 9vw, 104px); margin: 0; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(120deg, #fff, var(--core) 40%, var(--gpu) 70%, var(--wgpu)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: clamp(18px, 2.4vw, 23px); color: #cfd4df; margin: 22px 0 8px; text-shadow: 0 2px 20px #000; }
+
+section { max-width: 1080px; margin: 0 auto; padding: 90px 28px 40px; }
+section > .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+section > h2 { font-size: clamp(28px, 4vw, 42px); margin: 10px 0 12px; letter-spacing: -0.02em; line-height: 1.15; }
+section > p.lede { font-size: 18px; color: #c7ccd8; max-width: 760px; margin: 0 0 22px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 0; }
+.row { display: flex; gap: 18px; flex-wrap: wrap; }
+.row > * { flex: 1 1 300px; min-width: 0; }
+.takeaway { border-left: 3px solid var(--core); padding: 6px 14px; margin: 22px 0 0; color: #d6dae3; background: linear-gradient(90deg, #13202a, transparent); border-radius: 0 8px 8px 0; }
+.takeaway b { color: var(--core); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 12px/1 var(--mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--dim); cursor: pointer; user-select: none; transition: all .15s; }
+.chip:hover { color: var(--text); border-color: #3a4256; }
+.chip.on { color: #0a0c11; background: var(--text); border-color: var(--text); }
+button.btn { font: 600 13px/1 system-ui, sans-serif; padding: 9px 14px; border-radius: 9px; border: 1px solid #3a4256; background: #1d2333; color: var(--text); cursor: pointer; }
+button.btn:hover { background: #262e42; }
+button.btn.primary { background: var(--text); color: #0a0c11; border-color: var(--text); }
+label.ctl { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); margin: 8px 0; }
+label.ctl input[type=range] { flex: 1; accent-color: var(--core); }
+label.ctl output { font: 12px var(--mono); color: var(--text); min-width: 90px; text-align: right; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+.kv dt { color: var(--dim); } .kv dd { margin: 0; font-family: var(--mono); font-size: 13px; }
+.yes { color: var(--worker); } .no { color: var(--red); }
+.small { font-size: 13px; color: var(--dim); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* Layers */
+#layersSvg { width: 100%; height: auto; display: block; }
+#layersSvg .box { cursor: pointer; transition: opacity .2s; }
+#layersSvg .box rect { stroke-width: 2; }
+#layersSvg .box:hover rect { filter: brightness(1.25); }
+#layersSvg text { font-family: system-ui, sans-serif; }
+#layersSvg .forbid { opacity: 0; transition: opacity .3s; }
+#layersSvg.showForbid .forbid { opacity: 1; }
+
+/* Table */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0; font: 12px var(--mono); }
+.tbl th, .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tbl th, .tbl td.idx { white-space: nowrap; }
+.tbl thead th.bundle { font: 600 12px system-ui, sans-serif; border-bottom: 2px solid; }
+.tbl thead th.col { color: var(--dim); cursor: pointer; }
+.tbl thead th.col:hover { color: var(--text); }
+.tbl td.idx { color: var(--faint); }
+.tbl tr.spare td { background: repeating-linear-gradient(45deg, transparent 0 6px, #ffffff07 6px 12px); color: var(--faint); }
+.tbl tr.mark td { border-bottom: 2px dashed var(--yellow); }
+.tbl tr.mark.cap td { border-bottom-color: var(--pink); }
+.capbar { height: 18px; border-radius: 6px; background: #ffffff0c; position: relative; overflow: hidden; margin: 8px 0; }
+.capbar div { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--yellow), #f59e0b); transition: width .3s; }
+#growLog { font: 12px var(--mono); color: var(--dim); min-height: 20px; }
+
+/* Packing strip */
+.texels { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.texel { display: flex; gap: 2px; padding: 4px; border: 1px solid #3a4256; border-radius: 6px; background: #0f131b; }
+.texel span { width: 22px; height: 22px; border-radius: 3px; display: grid; place-items: center; font: 10px var(--mono); color: #0a0c11; }
+
+/* Layout */
+#layoutCanvas, #writeCanvas, #octCanvas, #sphereCanvas, #byteCanvas { display: block; width: 100%; height: auto; border-radius: 10px; }
+.bits { font: 13px var(--mono); display: flex; flex-wrap: wrap; gap: 1px; margin-top: 8px; }
+.bits span { width: 15px; text-align: center; border-radius: 2px; padding: 2px 0; }
+
+/* Flow */
+.flow { display: flex; gap: 0; align-items: stretch; overflow-x: auto; padding: 4px 0 10px; }
+.flow .node { flex: 1 0 118px; text-align: center; padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; transition: all .25s; position: relative; }
+.flow .node .ic { font-size: 22px; }
+.flow .node .t { font-weight: 600; font-size: 13px; margin-top: 4px; }
+.flow .node .l { font: 10px var(--mono); color: var(--dim); }
+.flow .node.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 30px -8px var(--c); transform: translateY(-3px); }
+.flow .arrow { flex: 0 0 22px; display: grid; place-items: center; color: var(--faint); }
+
+/* Bits */
+.word { display: flex; align-items: stretch; margin: 6px 0; gap: 10px; }
+.word .wl { width: 64px; font: 12px var(--mono); color: var(--dim); display: flex; align-items: center; }
+.word .wb { flex: 1; display: flex; height: 38px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+.word .f { display: flex; align-items: center; justify-content: center; font: 11px/1.1 var(--mono); color: #0a0c11; border-right: 1px solid #0a0c1155; cursor: help; text-align: center; overflow: hidden; transition: filter .15s; padding: 0 2px; }
+.word .f:hover { filter: brightness(1.25) saturate(1.2); }
+#bitInfo { min-height: 48px; font-size: 14px; color: #cfd4df; }
+.livebits { font: 12px var(--mono); word-break: break-all; }
+.livebits b { font-weight: 400; padding: 0 1px; border-radius: 2px; }
+
+/* Access */
+.fn { display: inline-flex; align-items: center; gap: 6px; font: 12px var(--mono); padding: 6px 10px; border-radius: 8px; margin: 3px; border: 1px solid var(--line); transition: all .2s; }
+.fn.ok { border-color: #2f6b4a; background: #102318; color: var(--worker); }
+.fn.bad { border-color: #5b2a2a; background: #1e1214; color: #a26a6a; text-decoration: line-through; }
+
+/* Buffers */
+.buffers { display: flex; gap: 24px; align-items: center; justify-content: center; position: relative; min-height: 190px; }
+.buf { width: 220px; height: 130px; border-radius: 14px; border: 2px solid; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: transform .6s cubic-bezier(.6,.0,.2,1); background: var(--panel2); position: relative; overflow: hidden; }
+.buf .fill { position: absolute; left: 0; bottom: 0; height: 100%; background: currentColor; opacity: .18; transition: width .2s linear; }
+.buf b { font-size: 20px; position: relative; } .buf small { color: var(--dim); position: relative; font: 11px var(--mono); }
+.tag { font: 11px var(--mono); padding: 3px 8px; border-radius: 6px; background: #1d2333; border: 1px solid var(--line); }
+.warn { color: var(--yellow); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+
+/* Workers */
+.pool { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.slot { height: 104px; border-radius: 12px; border: 1px dashed #343c50; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: var(--faint); position: relative; overflow: hidden; }
+.slot.live { border: 1px solid var(--worker); color: var(--text); background: #0f1d16; animation: pop .35s ease; }
+.slot.busy { box-shadow: 0 0 22px -6px var(--worker); }
+.slot .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--worker); width: 0; }
+.slot .lease { position: absolute; top: 6px; right: 8px; font: 10px var(--mono); color: var(--yellow); }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } }
+#queue { font: 12px var(--mono); color: var(--dim); min-height: 22px; }
+#workerLog { font: 12px var(--mono); color: var(--dim); height: 96px; overflow: auto; background: #0f131b; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+/* Files */
+.formats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.fmt { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--panel2); transition: all .3s; }
+.fmt h4 { margin: 0 0 4px; font-size: 18px; }
+.fmt.hit { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 10px 30px -10px var(--yellow); transform: translateY(-3px); }
+#drop { border: 2px dashed #3a4256; border-radius: 14px; padding: 26px; text-align: center; color: var(--dim); transition: all .2s; margin-top: 14px; }
+#drop.over { border-color: var(--yellow); color: var(--text); background: #1d1a0d; }
+
+/* RDX */
+.rdx { display: flex; gap: 4px; flex-wrap: wrap; margin: 12px 0; }
+.rdx div { padding: 10px 12px; border-radius: 8px; font: 12px var(--mono); color: #0a0c11; }
+
+/* Projection, sorting, and drawing */
+#projCanvas, #eyesCanvas, #radixCanvas, #compactCanvas, #twoSortCanvas, #quadCanvas { display: block; width: 100%; height: auto; border-radius: 10px; }
+.keyrow { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; margin: 5px 0; }
+.keyrow .lbl { font: 12px var(--mono); color: var(--dim); }
+.keyrow .bits span { width: 13px; font-size: 11px; }
+.meter { height: 14px; border-radius: 5px; background: #ffffff0c; position: relative; overflow: hidden; margin: 4px 0 10px; }
+.meter div { position: absolute; inset: 0 auto 0 0; border-radius: 5px; transition: width .3s; }
+.meter span { position: absolute; right: 6px; top: -1px; font: 11px var(--mono); color: var(--text); }
+.vi { display: flex; gap: 6px; margin: 6px 0 12px; }
+.vi span { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); display: grid; place-items: center; font: 15px var(--mono); cursor: pointer; background: var(--panel2); }
+.vi span.on { background: var(--text); color: #0a0c11; }
+.loop { display: flex; gap: 18px; flex-wrap: wrap; }
+.loop pre { flex: 1.4 1 420px; margin: 0; }
+.loop pre .ln { display: block; border-radius: 4px; padding: 0 4px; margin: 0 -4px; transition: background .15s; }
+.loop pre .ln[data-b] { cursor: default; }
+.loop pre .ln.on { background: #ffffff12; }
+.blocks { flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px; }
+.blocks div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel2); transition: all .2s; font-size: 13px; }
+.blocks div b { display: block; font: 600 13px var(--mono); }
+.blocks div small { color: var(--dim); }
+.blocks div.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 26px -10px var(--c); transform: translateX(-4px); }
+.blocks div.off { opacity: .35; }
+
+/* Roadmap */
+.road { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.road div { border-radius: 12px; padding: 16px; border: 1px solid var(--line); background: var(--panel2); }
+.road div.done { border-color: #2f6b4a; }
+.road b { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body data-root="" data-page="pipeline.html">
+<div id="progress"></div>
+<nav id="nav"></nav>
+
+<header class="hero" id="top">
+  <canvas id="heroCanvas"></canvas>
+  <div class="inner">
+    <h1>The pipeline</h1>
+    <p class="lead">How splats get from a file to the screen. Each splat is projected into a few words with a sort key from its distance, sorted on the GPU in the same frame or on a worker, and drawn as a quad whose corners come from the vertex index.</p>
+    <p class="small">This page covers the four projection methods, stereo, sort keys, radix sort, compaction, the WebGL2 path, and the draw. Radix uses three.js WebGPURenderer with TSL only, on WebGPU or the WebGL2 backend.</p>
+    <div class="scroll">sections below ↓</div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="flow" data-title="Life of a splat">
+  <div class="eyebrow">01 · The pipeline</div>
+  <h2>From file to screen</h2>
+  <p class="lede">These are the steps from a file on disk to the screen, and back to the CPU or a file. Click a step or press play.</p>
+  <div class="panel reveal">
+    <div class="flow" id="flowNodes"></div>
+    <div style="display: flex; gap: 8px; margin: 8px 0"><button class="btn primary" id="flowPlay">▶ play</button><button class="btn" id="flowNext">next →</button></div>
+    <div class="row">
+      <div><h3 id="flowTitle" style="margin: 6px 0"></h3><p id="flowText" style="color: #cfd4df; margin: 0"></p></div>
+      <pre id="flowCode" style="flex: 1.3 1 360px"></pre>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/rendering.html#what-a-render-does">What a render does</a> <a href="ref/quickstart.html">Quickstart</a></p>
+</section>
+
+<!-- 2 -->
+<section id="project" data-title="Projection">
+  <div class="eyebrow">02 · From 3D to the screen</div>
+  <h2>Four projection methods</h2>
+  <p class="lede">Before a splat is drawn, its 3D Gaussian is converted to 2D: a quad that covers it and a way to shade each pixel. Radix has four methods. Move the camera close and to the side: <b>ewa</b> linearizes the projection at the center and moves away from the true outline, while the ray methods stay on it (the dots are points of the splat's 3σ surface, projected).</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 520px">
+      <canvas id="projCanvas"></canvas>
+      <div class="chips" id="projChips" style="margin-top: 10px"></div>
+    </div>
+    <div class="panel" style="flex: 1 1 260px">
+      <label class="ctl">distance <input type="range" id="pjDist" min="0.6" max="8" step="0.01" value="1.8"><output></output></label>
+      <label class="ctl">to the side <input type="range" id="pjSide" min="0" max="2.5" step="0.01" value="1.1"><output></output></label>
+      <label class="ctl">turn <input type="range" id="pjYaw" min="0" max="180" step="0.5" value="40"><output></output></label>
+      <label class="ctl">tilt <input type="range" id="pjTilt" min="0" max="180" step="0.5" value="25"><output></output></label>
+      <label class="ctl">length <input type="range" id="pjLen" min="0.05" max="0.8" step="0.005" value="0.3"><output></output></label>
+      <dl class="kv small" style="margin-top: 12px">
+        <dt style="color: var(--core)">ewa</dt><dd>the Jacobian at the center: a 2D Gaussian</dd>
+        <dt style="color: var(--wgpu)">3dgut</dt><dd>7 sigma points, projected</dd>
+        <dt style="color: var(--gpu)">htgs</dt><dd>the exact outline (a dual quadric)</dd>
+        <dt style="color: var(--pink)">raygs</dt><dd>a 3D quad facing the eye</dd>
+      </dl>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>Ray methods:</b> 3dgut, htgs, and raygs use their outline only to place the quad. Each pixel then finds where its ray passes closest to the splat's center in 3D, so the shading stays exact even when the outline is approximate.</p>
+  <p class="deeper">See also: <a href="ref/projection.html#methods">The four methods</a> <a href="ref/generators.html">Generators</a></p>
+</section>
+
+<!-- 3 -->
+<section id="words" data-title="Words">
+  <div class="eyebrow">03 · What the draw reads</div>
+  <h2>Packing into words</h2>
+  <p class="lede">The projection writes each splat as a few uint32 words: first what both eyes share, measured from the head (the camera in mono), then what each eye needs. The words fill <code>uint32x4</code> channels, with a <code>uint32x2</code> last one when only one or two are left, and a separate RGBA8 texel holds the sort key. Hover over a field for its description.</p>
+  <div class="panel reveal">
+    <div class="row" style="align-items: center">
+      <div class="chips" id="packMethod" style="flex: 0 1 auto"></div>
+      <div class="chips" id="packEyes" style="flex: 0 1 auto"></div>
+    </div>
+    <div id="packRows" style="margin-top: 12px"></div>
+    <div id="packInfo" style="min-height: 44px; font-size: 14px; color: #cfd4df"></div>
+    <div class="row">
+      <div><div class="small">bytes per splat, of the writers' 64</div><div class="meter"><div id="packBytes" style="background: var(--core)"></div><span id="packBytesT"></span></div></div>
+      <div><div class="small">channels, of the writers' 4</div><div class="meter"><div id="packChans" style="background: var(--gpu)"></div><span id="packChansT"></span></div></div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/projection.html#words">Words</a></p>
+</section>
+
+<!-- 4 -->
+<section id="eyes" data-title="Two eyes">
+  <div class="eyebrow">04 · XR</div>
+  <h2>Stereo: shared head data, per-eye bounds</h2>
+  <p class="lede">In XR the camera is two eyes a few centimetres apart. A splat is read once and projected for both eyes. Its distance, color, opacity, and 3D shape come from the head and are stored once; only the 2D bound (or raygs' quad frame) is stored per eye. Increase the eye separation to see the bound shift in each eye's view.</p>
+  <div class="panel reveal">
+    <canvas id="eyesCanvas"></canvas>
+    <div class="row" style="margin-top: 6px">
+      <div><label class="ctl">eye separation <input type="range" id="eyIpd" min="0" max="0.6" step="0.005" value="0.064"><output></output></label>
+        <label class="ctl">splat distance <input type="range" id="eyDist" min="0.4" max="4" step="0.01" value="1.2"><output></output></label></div>
+      <div class="small" id="eyesInfo"></div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/xr.html#head-and-eyes">Head and eyes</a> <a href="ref/xr.html">WebXR</a></p>
+</section>
+
+<!-- 5 -->
+<section id="keys" data-title="Sort keys">
+  <div class="eyebrow">05 · Back to front</div>
+  <h2>Distance to sort key</h2>
+  <p class="lede">Splats blend over each other, so they are drawn from far to near. The sort key is the distance's float32 bits, cut to 16, 24, or 32 bits (the renderer's <code>sortBits</code>, 24 by default) and flipped so ascending keys run back to front. Distances are never negative, so the sign bit is always 0 and is dropped at every width. The GPU computes the key in the projection, with the bit count as a uniform.</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 520px">
+      <label class="ctl">distance <input type="range" id="kyDist" min="-2" max="3" step="0.001" value="0.4"><output></output></label>
+      <div class="keyrow"><span class="lbl">float32</span><div class="bits" id="kyF"></div></div>
+      <div class="keyrow"><span class="lbl">32 bits</span><div class="bits" id="ky32"></div></div>
+      <div class="keyrow"><span class="lbl">24 bits</span><div class="bits" id="ky24"></div></div>
+      <div class="keyrow"><span class="lbl">16 bits</span><div class="bits" id="ky16"></div></div>
+      <p class="small" id="kyInfo"></p>
+    </div>
+    <div class="panel" style="flex: 1 1 280px">
+      <div class="chips" id="kyBits"></div>
+      <div id="kyStrip" style="margin-top: 12px"></div>
+      <button class="btn" id="kyShuffle" style="margin-top: 10px">new distances</button>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>16-bit sort keys:</b> cutting the float to its top 16 bits would leave 7 mantissa bits. Instead the 16-bit sort key keeps distances from 2<sup>-32</sup> to 2<sup>32</sup> (6 exponent bits) with 10 mantissa bits, about 0.1% apart, and clamps the rest.</p>
+  <p class="deeper">See also: <a href="ref/sorting.html#sort-keys">Sort keys</a></p>
+</section>
+
+<!-- 6 -->
+<section id="radix" data-title="Radix sort">
+  <div class="eyebrow">06 · GPU sorting</div>
+  <h2>Radix sort: one digit per pass</h2>
+  <p class="lede"><code>WgpuRadixSort</code> sorts by one digit per pass, least significant first: count each digit (histogram), turn the counts into starting offsets (prefix scan), then move every key to its digit's next free slot (scatter). Each pass keeps the order of equal digits, so after the last pass the keys are fully sorted. This example uses 6-bit keys with 2-bit digits, so it takes 3 passes. The splat sort uses 8-bit digits and 2 to 4 passes, one per 8 sort key bits.</p>
+  <div class="panel reveal">
+    <canvas id="radixCanvas"></canvas>
+    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center">
+      <button class="btn primary" id="rxPlay">▶ play</button><button class="btn" id="rxStep">step →</button><button class="btn" id="rxReset">new keys</button>
+      <span class="small" id="rxInfo"></span>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>Stability:</b> the colors show each key's starting position. Within a digit, keys keep their relative order in every pass. This makes LSD radix sort correct, and it makes the GPU order identical to the CPU's <code>SortKeys.sort</code>.</p>
+  <p class="deeper">See also: <a href="ref/wgpu.html#wgpuradixsort-and-wgpucompact">WgpuRadixSort</a> <a href="ref/sorting.html#the-gpu-sort">The GPU sort</a></p>
+</section>
+
+<!-- 7 -->
+<section id="compact" data-title="Compaction">
+  <div class="eyebrow">07 · Visible splats only</div>
+  <h2>Compaction</h2>
+  <p class="lede">Splats culled in every eye get the invalid sort key. Before sorting, <code>WgpuCompact</code> keeps only the valid sort keys: an exclusive prefix sum of the valid flags gives each remaining splat its slot, in input order. The total becomes the instance count of an indirect draw, so culled splats are not drawn and nothing is read back.</p>
+  <div class="panel reveal">
+    <canvas id="compactCanvas"></canvas>
+    <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap">
+      <button class="btn primary" id="cpRun">▶ compact</button><button class="btn" id="cpNew">new sort keys</button><span class="small" id="cpInfo"></span>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/wgpu.html#wgpuradixsort-and-wgpucompact">WgpuCompact</a></p>
+</section>
+
+<!-- 8 -->
+<section id="twosort" data-title="The WebGL2 fallback">
+  <div class="eyebrow">08 · The GPU sort and the WebGL2 fallback</div>
+  <h2>On WebGL2, sort orders arrive late</h2>
+  <p class="lede">With WebGPU, <code>WgpuSplatSorter</code> sorts in the same frame as the draw, for that frame's camera (<code>sortMode: "gpu"</code>, the default there). On the WebGL2 fallback (<code>sortMode: "cpu"</code>), the camera's view computes the sort keys, reads them back, sorts them on a worker, and applies the order. The order arrives a few frames later. Sort keys depend only on the head's position, so the view re-sorts when the head has moved far enough (or when an object or the collection of splats has changed). Turning the head never requires a new order, unless a <code>sortGuard</code> dropped the splats outside the view.</p>
+  <div class="panel reveal">
+    <canvas id="twoSortCanvas"></canvas>
+    <div class="row" style="margin-top: 6px">
+      <div><label class="ctl">re-sort after moving <input type="range" id="tsThreshold" min="0.02" max="1" step="0.01" value="0.25"><output></output></label>
+        <label class="ctl"><input type="checkbox" id="tsTurn"> only turn the head (no movement)</label></div>
+      <div class="small" id="tsInfo"></div>
+    </div>
+  </div>
+  <pre class="reveal">// what autoSort does for the camera's view: one sort in flight,
+// applied when it finishes
+if (!sorting &amp;&amp; camera.position.distanceTo(sortedAt) &gt; threshold) {
+  sorting = true;
+  sortedAt.copy(camera.position);
+  // sort keys on the GPU, a 4-byte readback per splat, a worker sort
+  const order = await view.sort(camera);
+  // draws the collection it was sorted for
+  view.apply(order);
+  sorting = false;
+}</pre>
+  <p class="deeper">See also: <a href="ref/sorting.html#the-cpu-sort">The CPU sort</a> <a href="ref/views.html#orders">Orders</a> <a href="multi-splat.html">The multi-splat model</a></p>
+</section>
+
+<!-- 9 -->
+<section id="quad" data-title="A quad from bits">
+  <div class="eyebrow">09 · No vertex attributes</div>
+  <h2>A quad from four vertex indices</h2>
+  <p class="lede">Each splat is a quad: two triangles over four corners. There are no vertex attributes, only one index buffer of 1024 quads, shared by every renderer: quad <i>q</i> is <code>4q + [0, 1, 2, 2, 1, 3]</code>. One instance draws 1024 splats, because GPUs run an instance's vertices together and instances of 4 vertices would leave most of that work idle. The vertex shader's splat is <code>instanceIndex × 1024 + vertexIndex / 4</code>, and its corner comes from the two low bits of <code>vertexIndex</code> (bit 0 is x, bit 1 is y). Because the draw is indexed, the GPU's vertex cache shades the two shared corners once, so the vertex shader, the costly stage, runs 4 times per splat instead of 6. Below is one quad (q = 0); click an index buffer entry to select it.</p>
+  <div class="row reveal">
+    <div class="panel">
+      <div class="small">quad 0 of the index buffer: <code>[0, 1, 2, 2, 1, 3]</code></div>
+      <div class="vi" id="quadVi"></div>
+      <div class="keyrow"><span class="lbl">vertexIndex</span><div class="bits" id="quadBits"></div></div>
+      <dl class="kv small" id="quadRuns" style="margin-top: 8px"></dl>
+      <pre style="margin-top: 12px">const corner = vec2(v.bitAnd(1), v.shiftRight(1).bitAnd(1))
+  .mul(2).sub(1);
+// <span id="quadOut"></span></pre>
+    </div>
+    <div class="panel"><canvas id="quadCanvas"></canvas></div>
+  </div>
+  <p class="deeper">See also: <a href="ref/projection.html#the-draw">The draw</a></p>
+</section>
+
+<!-- 10 -->
+<section id="loop" data-title="Render loop">
+  <div class="eyebrow">10 · Usage in an app</div>
+  <h2>A render loop</h2>
+  <p class="lede">The app calls each part explicitly, so the code below reads top to bottom. Hover over a line to see which block it uses. The viewer at <code>/build/examples/splats/index.html</code> is this code with a panel and camera controls added.</p>
+  <div class="panel reveal">
+    <div class="chips" id="loopMode" style="margin-bottom: 12px"></div>
+    <div class="loop">
+      <pre id="loopCode"></pre>
+      <div class="blocks" id="loopBlocks">
+        <div data-b="load" style="--c: var(--worker)"><b>loadSplats · GpuArrays</b><small>a file into a table, then into textures</small></div>
+        <div data-b="views" style="--c: var(--blue)"><b>SplatCollection · SplatRenderer</b><small>what to draw, placed; the method and params</small></div>
+        <div data-b="project" style="--c: var(--gpu)"><b>SplatProjector</b><small>words and a sort key per splat, one dispatch per object</small></div>
+        <div data-b="gpu" style="--c: var(--wgpu)"><b>WgpuSplatSorter</b><small>WebGPU: compact, sort, and indirect draw</small></div>
+        <div data-b="cpu" style="--c: var(--yellow)"><b>view.sort · apply</b><small>the WebGL2 fallback: sort keys on the GPU, a worker sort</small></div>
+        <div data-b="draw" style="--c: var(--pink)"><b>SplatRenderer</b><small>a Mesh: one quad per splat, in order</small></div>
+      </div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/rendering.html">Rendering</a> <a href="ref/recipes.html">Recipes</a></p>
+</section>
+
+<section id="next" data-title="Next">
+  <div class="eyebrow">More</div>
+  <h2>Related pages</h2>
+  <div class="next-cards">
+    <a href="multi-splat.html" style="--c: var(--pink)"><em>Next</em><b>Drawing many splat objects</b><span>How one sort draws many objects, and why that takes collections, views, versioned orders, and releases.</span></a>
+    <a href="model.html" style="--c: var(--core)"><em>Overview</em><b>How it fits together</b><span>The classes and the data passed between them in one frame.</span></a>
+    <a href="ref/rendering.html" style="--c: var(--gpu)"><em>Reference</em><b>Rendering</b><span>SplatCollection, SplatRenderer, and every option and default.</span></a>
+  </div>
+</section>
+
+<footer>Radix docs · <a href="index.html">home</a> · <a href="ref/overview.html">reference</a> · source: <code>docs/pipeline.html</code></footer>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = (n) => n.toLocaleString("en-US");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const hsl = (h, s = 70, l = 62) => `hsl(${h} ${s}% ${l}%)`;
+
+// ---------- The codecs (ports of core/layout.ts and core/encoding.ts) ----------
+const TEXTURE_WIDTH = 1024, ROW_ELEMENTS = 4096;
+const alignCapacity = (n) => Math.max(1, Math.ceil(n / ROW_ELEMENTS)) * ROW_ELEMENTS;
+function textureLayout(texels) {
+  const rows = Math.max(1, Math.ceil(texels / TEXTURE_WIDTH));
+  const height = Math.min(4096, 2 ** Math.max(0, Math.floor(Math.log2(rows / 2))));
+  const layers = Math.max(2, Math.ceil(rows / height));
+  return { width: TEXTURE_WIDTH, height, layers, yBits: Math.log2(height), texels: TEXTURE_WIDTH * height * layers, fits: layers <= 512 };
+}
+const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+function toHalf(f) {
+  f32[0] = f;
+  const bits = u32[0], sign = (bits >>> 16) & 0x8000, exponent = (bits >>> 23) & 0xff, mantissa = bits & 0x7fffff;
+  if (exponent === 0xff) return sign | 0x7c00 | (mantissa ? 0x200 : 0);
+  const e = exponent - 127 + 15;
+  if (e >= 0x1f) return sign | 0x7c00;
+  if (e <= 0) {
+    const m = Math.abs(f32[0]) * 2 ** 24; let r = Math.floor(m); const fr = m - r;
+    if (fr > 0.5 || (fr === 0.5 && (r & 1))) r += 1;
+    return sign | r;
+  }
+  const half = sign | (e << 10) | (mantissa >> 13), rest = mantissa & 0x1fff;
+  return rest > 0x1000 || (rest === 0x1000 && (half & 1)) ? half + 1 : half;
+}
+function fromHalf(h) {
+  const sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+  if (e === 0) return sign * m * 2 ** -24;
+  if (e === 0x1f) return m ? NaN : sign * Infinity;
+  return sign * (1 + m / 1024) * 2 ** (e - 15);
+}
+const encodeLodOpacity = (o) => Math.max(0, Math.min(255, Math.round(o * 128)));
+function encodeExtRgb({ r, g, b }) {
+  const maxAbs = Math.max(Math.abs(r), Math.abs(g), Math.abs(b));
+  const base = Math.max(0, Math.min(31, (maxAbs > 0 ? Math.ceil(Math.log2(maxAbs)) : 0) + 15));
+  const unit = 2 ** (base - 15) / 255;
+  const mag = (v) => Math.min(255, Math.round(Math.abs(v) / unit));
+  const signs = (r < 0 ? 1 : 0) | (g < 0 ? 2 : 0) | (b < 0 ? 4 : 0);
+  return (mag(r) | (mag(g) << 8) | (mag(b) << 16) | (((base << 3) | signs) << 24)) >>> 0;
+}
+function decodeExtRgb(e) {
+  const unit = 2 ** (((e >>> 27) & 0x1f) - 15) / 255;
+  return { r: (e & 0xff) * unit * (e & 0x1000000 ? -1 : 1), g: ((e >>> 8) & 0xff) * unit * (e & 0x2000000 ? -1 : 1), b: ((e >>> 16) & 0xff) * unit * (e & 0x4000000 ? -1 : 1) };
+}
+function decodeOct(code, bits) {
+  if (code === 0) return { x: 0, y: 0, z: 0 };
+  const max = 2 ** bits - 1;
+  let x = ((code & max) / max) * 2 - 1, y = (((code >>> bits) & max) / max) * 2 - 1;
+  const z = 1 - Math.abs(x) - Math.abs(y), t = Math.max(-z, 0);
+  x += x >= 0 ? -t : t; y += y >= 0 ? -t : t;
+  const l = Math.hypot(x, y, z);
+  return { x: x / l, y: y / l, z: z / l };
+}
+function octProject(v) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  let px = v.x / l1, py = v.y / l1;
+  if (v.z < 0) [px, py] = [(1 - Math.abs(py)) * (px >= 0 ? 1 : -1), (1 - Math.abs(px)) * (py >= 0 ? 1 : -1)];
+  return { px, py };
+}
+function encodeOct(v, bits) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  if (!(l1 > 0)) return 0;
+  const { px, py } = octProject(v), max = 2 ** bits - 1;
+  const code = Math.round((px * 0.5 + 0.5) * max) | (Math.round((py * 0.5 + 0.5) * max) << bits);
+  return code === 0 ? max | (max << bits) : code;
+}
+function encodeQuat(q, axisBits, angleBits) {
+  const length = Math.hypot(q.x, q.y, q.z, q.w);
+  if (!(length > 0)) return 0;
+  const s = (q.w < 0 ? -1 : 1) / length, axis = { x: q.x * s, y: q.y * s, z: q.z * s };
+  const angle = 2 * Math.acos(Math.min(1, q.w * s));
+  return encodeOct(axis, axisBits) + Math.round((angle / Math.PI) * (2 ** angleBits - 1)) * 2 ** (2 * axisBits);
+}
+function decodeQuat(code, axisBits, angleBits) {
+  const size = 2 ** (2 * axisBits), a = decodeOct(code % size, axisBits);
+  const angle = ((Math.floor(code / size) % 2 ** angleBits) / (2 ** angleBits - 1)) * Math.PI, s = Math.sin(angle / 2);
+  return { x: a.x * s, y: a.y * s, z: a.z * s, w: Math.cos(angle / 2) };
+}
+const deg = (r) => (r * 180) / Math.PI;
+function quatAngle(a, b) {
+  const d = (k) => Math.hypot(a.x - k * b.x, a.y - k * b.y, a.z - k * b.z, a.w - k * b.w);
+  return deg(4 * Math.asin(Math.min(1, Math.min(d(1), d(-1)) / 2)));
+}
+const vecAngle = (a, b) => deg(2 * Math.asin(Math.min(1, Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) / 2)));
+
+function chips(container, items, initial, onPick) {
+  const el = typeof container === "string" ? $(container) : container;
+  el.innerHTML = items.map((it) => `<span class="chip" data-v="${it.value ?? it}">${it.label ?? it}</span>`).join("");
+  const pick = (v) => { $$(".chip", el).forEach((c) => c.classList.toggle("on", c.dataset.v === String(v))); onPick(v); };
+  el.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) pick(c.dataset.v); });
+  pick(initial);
+}
+
+// A canvas drawn at its on-screen size (CSS pixels, sharp on HiDPI)
+function fitCanvas(canvas, height) {
+  const dpr = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(height * dpr); canvas.style.height = `${height}px`;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W: w, H: height };
+}
+
+// ---------- Hero: drifting splats ----------
+(() => {
+  const canvas = $("#heroCanvas"), ctx = canvas.getContext("2d");
+  let w, h, splats, visible = true, mx = 0, my = 0;
+  const resize = () => { const d = Math.min(2, devicePixelRatio); w = canvas.width = innerWidth * d; h = canvas.height = canvas.clientHeight * d; };
+  const make = () => Array.from({ length: 150 }, () => ({
+    x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, sx: 20 + Math.random() * 90, sy: 6 + Math.random() * 30,
+    a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.004, vx: (Math.random() - 0.5) * 0.00012, hue: [168, 258, 25, 140, 320][Math.floor(Math.random() * 5)] + Math.random() * 20, o: 0.12 + Math.random() * 0.3,
+  }));
+  resize(); splats = make();
+  addEventListener("resize", resize);
+  addEventListener("mousemove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; });
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
+  const frame = () => {
+    if (visible) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const d = w / innerWidth;
+      for (const s of splats) {
+        if (!reducedMotion) { s.a += s.va; s.x = (s.x + s.vx + 1) % 1; }
+        ctx.save();
+        ctx.translate(s.x * w + mx * 60 * s.z * d, s.y * h + my * 40 * s.z * d);
+        ctx.rotate(s.a);
+        ctx.scale(s.sx * s.z * d, s.sy * s.z * d);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        g.addColorStop(0, `hsla(${s.hue}, 85%, 62%, ${s.o})`);
+        g.addColorStop(1, `hsla(${s.hue}, 85%, 62%, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      const fade = ctx.createLinearGradient(0, h * 0.6, 0, h);
+      fade.addColorStop(0, "rgba(10,12,17,0)"); fade.addColorStop(1, "rgba(10,12,17,1)");
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, w, h);
+    }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+
+// ---------- Shared by the projection, sorting, and drawing sections ----------
+// Calls frame(now) every animation frame while `el` is on screen, until it
+// returns false; the returned function starts it again (after an input)
+function whileVisible(el, frame) {
+  let visible = false, running = false;
+  const loop = (now) => {
+    if (!visible || frame(now) === false) { running = false; return; }
+    requestAnimationFrame(loop);
+  };
+  const start = () => { if (visible && !running) { running = true; requestAnimationFrame(loop); } };
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; start(); }).observe(el);
+  return start;
+}
+
+// A range input and the <output> after it
+function slider(id, show, onInput) {
+  const el = $(id), out = el.nextElementSibling;
+  const set = () => (out.textContent = show(+el.value));
+  el.addEventListener("input", () => { set(); onInput(); });
+  set();
+  return () => +el.value;
+}
+
+// 3-vectors and 3x3 matrices (rows)
+const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul3 = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const matVec = (m, v) => m.map((r) => dot3(r, v));
+const matMul = (a, b) => a.map((r) => [0, 1, 2].map((j) => r[0] * b[0][j] + r[1] * b[1][j] + r[2] * b[2][j]));
+const transpose3 = (m) => [0, 1, 2].map((i) => [0, 1, 2].map((j) => m[j][i]));
+const column = (m, i) => [m[0][i], m[1][i], m[2][i]];
+function rotationYX(yaw, tilt) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cx = Math.cos(tilt), sx = Math.sin(tilt);
+  return matMul([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]], [[1, 0, 0], [0, cx, -sx], [0, sx, cx]]);
+}
+
+// Half axes and angle of the ellipse (x - m)^T S^-1 (x - m) = 1, S = (a b; b d)
+function ellipseOf(a, b, d) {
+  const avg = (a + d) / 2, delta = Math.sqrt(Math.max(0, avg * avg - (a * d - b * b)));
+  const l1 = avg + delta, l2 = Math.max(0, avg - delta);
+  const angle = Math.abs(b) < 1e-12 ? (a >= d ? 0 : Math.PI / 2) : Math.atan2(l1 - a, b);
+  return { r1: Math.sqrt(Math.max(l1, 0)), r2: Math.sqrt(l2), angle };
+}
+
+// A splat seen by a pinhole camera at the origin looking down -z, focal f
+// pixels, image y down: x = f X / -Z, y = -f Y / -Z
+const pinhole = (p, f) => [(f * p[0]) / -p[2], (-f * p[1]) / -p[2]];
+function ewaEllipse(c, sigma, f, k) {
+  const J = [[f / -c[2], 0, (f * c[0]) / (c[2] * c[2])], [0, -f / -c[2], (-f * c[1]) / (c[2] * c[2])]];
+  const a = dot3(J[0], matVec(sigma, J[0])), b = dot3(J[0], matVec(sigma, J[1])), d = dot3(J[1], matVec(sigma, J[1]));
+  const e = ellipseOf(a, b, d), [x, y] = pinhole(c, f);
+  return { x, y, r1: e.r1 * k, r2: e.r2 * k, angle: e.angle };
+}
+
+// The sort key of a distance (core/sort.ts SortKeys.compute)
+const SORT16_LO = 95 << 23, SORT16_HI = (159 << 23) - 1;
+function sortKeyOf(distance, bits) {
+  const mask = 2 ** bits - 1;
+  f32[0] = distance;
+  const f = u32[0];
+  if (!(f < 0x7f800000)) return mask;
+  const q = bits === 32 ? f : bits === 24 ? f >>> 7 : (Math.min(Math.max(f, SORT16_LO), SORT16_HI) - SORT16_LO) >>> 13;
+  return Math.min((mask ^ q) >>> 0, 0xff * 2 ** (bits - 8) - 1);
+}
+const bitSpans = (value, n, color) => Array.from({ length: n }, (_, k) => {
+  const b = n - 1 - k, c = color(b);
+  return `<span style="background:${c}2a;color:${c}">${Math.floor(value / 2 ** b) % 2}</span>`;
+}).join("");
+
+// ---------- 5. Flow ----------
+(() => {
+  const steps = [
+    { ic: "📄", t: "A file", l: "PLY · SPZ · RAD · RDX", c: "var(--yellow)", title: "Bytes on disk or over HTTP", text: "Splat scenes are stored as PLY, SPZ, RAD, or RDX. The format is recognised from the first bytes. The app chooses the layout to load into: ext splats by default, or packed splats at half the memory.", code: `const data = await loadSplats("scene.spz", {
+  // 16 or 32 bytes per splat; extSplats when omitted
+  layout: settings.lowMemory ? "packedSplats" : "extSplats",
+});` },
+    { ic: "🧵", t: "WorkerPool", l: "worker/", c: "var(--worker)", title: "Decoded on a worker", text: "loadSplats runs the core/ decoder on a pooled worker. The first call creates the worker. The bytes are sent in and the arrays are returned as transferables, so nothing is copied.", code: `// default: the shared pool where the page can create
+// workers, else this thread
+loadSplats(url, { worker: true | false | pool | lease });` },
+    { ic: "▦", t: "ArrayData", l: "core/", c: "var(--core)", title: "A table on the CPU", text: "The splats are stored in the bundle named after their layout (extSplats or packedSplats), plus \"lodTree\" when the file has a tree. Splats.get finds them for any loaded layout.", code: `// layout: "extSplats" | "covSplats" | "packedSplats"
+const { layout, bundle } = Splats.get(data);
+Splats.load(bundle, i, splat); // any layout
+if (Splats.isExt(bundle)) Splats.loadPbr(bundle, i, pbr);` },
+    { ic: "🧊", t: "GpuArrays", l: "gpu/", c: "var(--gpu)", title: "The same table in textures", text: "fromData makes one array texture per channel and uploads the rows. Row i on the CPU is texel i on the GPU (or i / packing).", code: `const arrays = GpuArrays.fromData(renderer, data);
+arrays.upload(more, { dstStart, count }); // ranges too
+// { storage: true }: compute shaders can write them too` },
+    { ic: "🔎", t: "Reader", l: "any shader", c: "var(--blue)", title: "Loaded in any shader", text: "A reader is built from the bundle definition and bound to data, so one shader can read whichever arrays are bound. GpuSplatReader.from picks the reader for the loaded layout; every layout has the same load functions.", code: `const reader = GpuSplatReader.from(arrays); // the loaded layout
+const splat = reader.loadSplat(index); // a SplatNode (TSL struct)
+const center = reader.loadCenter(index); // one fetch` },
+    { ic: "✍️", t: "Writer", l: "fragment · compute", c: "var(--wgpu)", title: "Written by shaders", text: "A writer runs write(index, out) over a range of rows. The fragment writer works on both backends; the compute writer (WebGPU) gives the same results in one dispatch.", code: `// or GpuArrayWriter, with the same arguments
+const writer = new WgpuArrayWriter({
+  outputs: { extSplats: Splats.EXT },
+  write: (index, out) =&gt; {
+    const splat = transform(reader.loadSplat(index));
+    GpuSplats.storeExt(out.extSplats, splat);
+  },
+});
+next.write(writer, { count: arrays.count });` },
+    { ic: "📐", t: "Project", l: "SplatProjector", c: "var(--gpu)", title: "Projected for every eye", text: "Each render, a writer pass turns every splat into a few uint32 words per eye (how to place and shade its quad) plus one back-to-front sort key. It is an ordinary writer: compute on WebGPU or a fragment pass on WebGL2, with one dispatch per object in the renderer's collection. Before each dispatch the renderer sets the object's transform and its generator context (the view origin in the object's space), so a generator adds view-dependent color, such as spherical harmonics, before the splat is transformed.", code: `splatRenderer.collection = new SplatCollection([
+  // placed by an object; its SH, if any, seen from each view
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+  // or any TSL generator
+  { generator, count, matrixWorld },
+]);
+// method: "ewa" | "3dgut" | "htgs" | "raygs"` },
+    { ic: "↕️", t: "Sort", l: "WgpuSplatSorter", c: "var(--wgpu)", title: "Ordered back to front", text: "On WebGPU the sort keys are compacted and radix sorted in the same frame, and the visible count is written for an indirect draw. On the WebGL2 fallback, the camera's view computes the sort keys, reads them back, and sorts them on a worker. It keeps drawing the collection that each order was sorted for.", code: `// WebGPU: sortMode "gpu", every render
+// the WebGL2 fallback (autoSort does this):
+const view = splatRenderer.viewFor(camera);
+view.apply(await view.sort(camera));` },
+    { ic: "🎨", t: "Draw", l: "SplatRenderer", c: "var(--pink)", title: "Drawn in order", text: "One indexed quad per splat. Its 4 corners are computed from the vertex index, so there are no vertex attributes, and the shared corners are shaded once. The vertex shader decodes the words of the eye being drawn; the fragment shader evaluates the Gaussian and blends it over what is already drawn behind it.", code: `const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.render(scene, camera);
+// another viewpoint: projected and sorted again
+renderer.render(scene, otherCamera);` },
+    { ic: "🔁", t: "Swap or save", l: "swap · read · write", c: "var(--yellow)", title: "Next frame, readback, or export", text: "Swap the buffers for the next frame, read rows back to the CPU, or save them as a file again.", code: `arrays.swap(next);
+reader.bind(arrays); // bind again after a swap
+const back = await arrays.read({ start, count });
+const ply = await writeSplats(back, "ply");` },
+  ];
+  const nodes = $("#flowNodes");
+  nodes.innerHTML = steps.map((s, i) => `${i ? '<div class="arrow">→</div>' : ""}<div class="node" data-i="${i}" style="--c:${s.c}"><div class="ic">${s.ic}</div><div class="t">${s.t}</div><div class="l">${s.l}</div></div>`).join("");
+  let at = 0, timer = 0;
+  const go = (i) => {
+    at = (i + steps.length) % steps.length;
+    const s = steps[at];
+    $$(".node", nodes).forEach((n) => n.classList.toggle("on", +n.dataset.i === at));
+    $("#flowTitle").textContent = s.title; $("#flowTitle").style.color = s.c;
+    $("#flowText").textContent = s.text; $("#flowCode").innerHTML = s.code;
+  };
+  nodes.addEventListener("click", (e) => { const n = e.target.closest(".node"); if (n) { stop(); go(+n.dataset.i); } });
+  const stop = () => { clearInterval(timer); timer = 0; $("#flowPlay").textContent = "▶ play"; };
+  $("#flowNext").addEventListener("click", () => { stop(); go(at + 1); });
+  $("#flowPlay").addEventListener("click", () => {
+    if (timer) return stop();
+    $("#flowPlay").textContent = "❚❚ pause"; go(at + 1);
+    timer = setInterval(() => go(at + 1), 2600);
+  });
+  go(0);
+})();
+
+// ---------- 14. Projection ----------
+(() => {
+  const canvas = $("#projCanvas");
+  const K = 3;
+  const COLORS = { truth: "#e8eaf0", ewa: "#2dd4bf", "3dgut": "#fb923c", htgs: "#a78bfa", raygs: "#f472b6" };
+  const shown = new Set(Object.keys(COLORS));
+  const chipsEl = $("#projChips");
+  chipsEl.innerHTML = Object.keys(COLORS).map((k) => `<span class="chip on" data-v="${k}" style="border-color:${COLORS[k]}">${k === "truth" ? "3σ surface" : k}</span>`).join("");
+  chipsEl.addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    shown.has(c.dataset.v) ? shown.delete(c.dataset.v) : shown.add(c.dataset.v);
+    c.classList.toggle("on", shown.has(c.dataset.v));
+    draw();
+  });
+
+  const dist = slider("#pjDist", (v) => `${v.toFixed(2)} m`, () => draw());
+  const side = slider("#pjSide", (v) => `${v.toFixed(2)} m`, () => draw());
+  const yaw = slider("#pjYaw", (v) => `${v}°`, () => draw());
+  const tilt = slider("#pjTilt", (v) => `${v}°`, () => draw());
+  const len = slider("#pjLen", (v) => `${v.toFixed(2)} m`, () => draw());
+
+  function draw() {
+    const { ctx, W, H } = fitCanvas(canvas, Math.round(Math.min(440, Math.max(280, (canvas.clientWidth || 600) * 0.6))));
+    const f = H * 0.45, ox = W / 2, oy = H / 2;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = "#1c2230"; ctx.lineWidth = 1;
+    for (let x = ox % 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = oy % 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    const c = [side(), 0, -dist()];
+    const R = rotationYX((yaw() * Math.PI) / 180, (tilt() * Math.PI) / 180), S = [len(), len() * 0.35, len() * 0.12];
+    const M = R.map((r) => [r[0] * S[0], r[1] * S[1], r[2] * S[2]]);
+    const sigma = matMul(M, transpose3(M));
+    const at = ([x, y]) => [ox + x, oy + y];
+    const ellipse = (e, color, dash = []) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash);
+      ctx.beginPath(); ctx.ellipse(ox + e.x, oy + e.y, Math.max(0.5, e.r1), Math.max(0.5, e.r2), e.angle, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    // The splat's 3σ surface, projected
+    if (shown.has("truth")) {
+      ctx.fillStyle = "#e8eaf055";
+      for (let i = 0; i < 48; i++) for (let j = 1; j < 24; j++) {
+        const th = (i / 48) * Math.PI * 2, ph = (j / 24) * Math.PI;
+        const p = add3(c, matVec(M, [K * Math.sin(ph) * Math.cos(th), K * Math.sin(ph) * Math.sin(th), K * Math.cos(ph)]));
+        if (p[2] < -0.02) { const [x, y] = at(pinhole(p, f)); ctx.fillRect(x - 1, y - 1, 2, 2); }
+      }
+    }
+
+    // ewa: the Jacobian at the center
+    if (shown.has("ewa")) ellipse(ewaEllipse(c, sigma, f, K), COLORS.ewa);
+
+    // 3dgut: the unscented transform of 7 sigma points
+    if (shown.has("3dgut")) {
+      const pts = [c];
+      for (let i = 0; i < 3; i++) for (const s of [1, -1]) pts.push(add3(c, mul3(column(M, i), s * Math.sqrt(3))));
+      if (pts.every((p) => p[2] < -0.01)) {
+        const px = pts.map((p) => pinhole(p, f));
+        const mean = [0, 1].map((k) => px.slice(1).reduce((s, p) => s + p[k], 0) / 6);
+        let a = 0, b = 0, d = 0;
+        px.forEach((p, i) => {
+          const w = i === 0 ? 2 : 1 / 6, dx = p[0] - mean[0], dy = p[1] - mean[1];
+          a += w * dx * dx; b += w * dx * dy; d += w * dy * dy;
+        });
+        const e = ellipseOf(a, b, d);
+        ellipse({ x: mean[0], y: mean[1], r1: e.r1 * K, r2: e.r2 * K, angle: e.angle }, COLORS["3dgut"]);
+        ctx.fillStyle = COLORS["3dgut"];
+        px.forEach((p) => { const [x, y] = at(p); ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); });
+      }
+    }
+
+    // htgs: the outline's dual conic, K (M M^T - c c^T) K^T with K = diag(f, -f, -1)
+    if (shown.has("htgs")) {
+      const Mk = M.map((r) => r.map((v) => v * K));
+      const A = matMul(Mk, transpose3(Mk)).map((r, i) => r.map((v, j) => v - c[i] * c[j]));
+      const k = [f, -f, -1], C = A.map((r, i) => r.map((v, j) => v * k[i] * k[j]));
+      if (C[2][2] < 0) {
+        const m = [C[0][2] / C[2][2], C[1][2] / C[2][2]];
+        const e = ellipseOf(-C[0][0] / C[2][2] + m[0] * m[0], -C[0][1] / C[2][2] + m[0] * m[1], -C[1][1] / C[2][2] + m[1] * m[1]);
+        ellipse({ x: m[0], y: m[1], ...e }, COLORS.htgs, [7, 4]);
+      }
+    }
+
+    // raygs: a quad orthogonal to the whitened view ray (render/projections.tsl.ts raygsFrame)
+    if (shown.has("raygs")) {
+      const Rt = transpose3(R), local = matVec(Rt, c), w = [local[0] / S[0], local[1] / S[1], local[2] / S[2]];
+      const c2 = dot3(w, w), kappa = K * K;
+      if (c2 > kappa * 1.0001) {
+        const mu = mul3(w, 1 / Math.sqrt(c2));
+        const t = add3(mu, [0, 0, mu[2] >= 0 ? 1 : -1]), inv = 2 / dot3(t, t);
+        const r0 = sub3(mul3(t, t[0] * inv), [1, 0, 0]), r1 = sub3(mul3(t, t[1] * inv), [0, 1, 0]);
+        const q0 = matVec(R, [S[0] * r0[0], S[1] * r0[1], S[2] * r0[2]]), q1 = matVec(R, [S[0] * r1[0], S[1] * r1[1], S[2] * r1[2]]);
+        const bxx = dot3(q0, q0), bxy = dot3(q0, q1), byy = dot3(q1, q1);
+        const eig = (bxx + byy) / 2 + Math.sqrt(Math.max(0, ((bxx - byy) ** 2) / 4 + bxy * bxy));
+        let u1 = Math.abs(bxx - eig) >= Math.abs(byy - eig) ? [bxy, eig - bxx] : [eig - byy, bxy];
+        const l = Math.hypot(u1[0], u1[1]) || 1; u1 = [u1[0] / l, u1[1] / l];
+        const u0 = [-u1[1], u1[0]];
+        const axis0 = add3(mul3(q0, u0[0]), mul3(q1, u0[1])), axis1 = add3(mul3(q0, u1[0]), mul3(q1, u1[1]));
+        const z = K / Math.sqrt(Math.max(1 - kappa / c2, 1e-4));
+        const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([s0, s1]) => add3(c, add3(mul3(axis0, s0 * z), mul3(axis1, s1 * z))));
+        if (corners.every((p) => p[2] < -0.01)) {
+          ctx.strokeStyle = COLORS.raygs; ctx.fillStyle = "#f472b614"; ctx.lineWidth = 2;
+          ctx.beginPath(); corners.forEach((p, i) => { const [x, y] = at(pinhole(p, f)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+      } else {
+        ctx.fillStyle = COLORS.raygs; ctx.font = "12px system-ui"; ctx.fillText("raygs: the camera is inside the splat", 10, H - 12);
+      }
+    }
+
+    const [cx, cy] = at(pinhole(c, f));
+    ctx.strokeStyle = "#e8eaf0"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
+    ctx.fillStyle = "#98a1b4"; ctx.font = "12px system-ui"; ctx.fillText("+ the projected center", 10, 18);
+  }
+  addEventListener("resize", draw);
+  draw();
+})();
+
+// ---------- 15. Words ----------
+(() => {
+  const HEAD = "#2dd4bf", EYE = ["#a78bfa", "#f472b6"], PAD = "#2a3040";
+  const F = (label, bits, color, info) => ({ label, bits, color, info });
+  const rgb = (c) => F("rgb", 32, c, "HDR color: three 8-bit magnitudes, three sign bits, and a shared 5-bit exponent (the ext splat code)");
+  const dir = (c) => [F("dir u", 16, c, "Direction from the head to the center, octahedral, 16 bits per axis"), F("dir v", 16, c, "Direction from the head to the center, octahedral, 16 bits per axis")];
+  const distance = (c) => [F("distance", 32, c, "float32 distance from the head: with the direction, the exact center for ray evaluation; the sort key is computed from it")];
+  const methods = {
+    ewa: {
+      head: [],
+      eye: (c, v) => [
+        [F("ndc x", 16, c, `Eye ${v}: the center in NDC, 16-bit fixed point over [-2, 2]`), F("ndc y", 16, c, `Eye ${v}: the center in NDC, 16-bit fixed point over [-2, 2]`)],
+        [F("depth", 16, c, `Eye ${v}: view depth as a half float, for the quad's clip position`), F("angle", 16, c, `Eye ${v}: angle of the 2D Gaussian's major axis, 16 bits over 180°`)],
+        [rgb(c)],
+        [F("opacity", 8, c, `Eye ${v}: opacity after the anti-aliasing blur (0 marks the eye culled)`), F("scale 1", 12, c, `Eye ${v}: 2D half extent in pixels, log2, 12 bits`), F("scale 2", 12, c, `Eye ${v}: 2D half extent in pixels, log2, 12 bits`)],
+      ],
+    },
+    "3dgut / htgs": {
+      head: [dir(HEAD), distance(HEAD), [rgb(HEAD)], [F("quat", 32, HEAD, "Rotation in head space: octahedral axis 10 + 10 bits, angle 12 bits")],
+        [F("log sx", 16, HEAD, "Scales after the MIP filter, ln, half floats"), F("log sy", 16, HEAD, "Scales after the MIP filter, ln, half floats")],
+        [F("log sz", 16, HEAD, "Scales after the MIP filter, ln, half floats"), F("opacity", 8, HEAD, "Opacity, compensated for the MIP filter"), F("spare", 8, PAD, "Unused")]],
+      eye: (c, v) => [
+        [F("ndc x", 16, c, `Eye ${v}: the bound's center in NDC`), F("ndc y", 16, c, `Eye ${v}: the bound's center in NDC`)],
+        [F("angle", 10, c, `Eye ${v}: the bound's angle, 10 bits (its half step folded into the scales)`), F("scale 1", 11, c, `Eye ${v}: bound half extent, log2, rounded outward (0 marks the eye culled)`), F("scale 2", 11, c, `Eye ${v}: bound half extent, log2, rounded outward`)],
+      ],
+    },
+    raygs: {
+      head: [dir(HEAD), distance(HEAD), [rgb(HEAD)], [F("opacity", 8, HEAD, "Opacity, compensated for the MIP filter"), F("spare", 24, PAD, "Unused")]],
+      eye: (c, v) => [
+        [F("frame", 32, c, `Eye ${v}: the quad's frame, a quaternion (octahedral axis 10 + 10, angle 12)`)],
+        [F("c²", 32, c, `Eye ${v}: float32 squared distance of the eye from the center, in the whitened frame (0 marks the eye culled)`)],
+        [F("len 0", 16, c, `Eye ${v}: the quad's axis lengths, ln, half floats`), F("len 1", 16, c, `Eye ${v}: the quad's axis lengths, ln, half floats`)],
+      ],
+    },
+  };
+  let method = "3dgut / htgs", eyes = 2;
+  const render = () => {
+    const m = methods[method];
+    const words = [...m.head];
+    for (let v = 0; v < eyes; v++) words.push(...m.eye(EYE[v], v));
+    const channels = [];
+    for (let left = words.length, k = 0; left > 0; left -= 4, k++) channels.push(left > 2 ? 4 : 2);
+    let html = "", w = 0;
+    channels.forEach((n, c) => {
+      html += `<div class="small" style="margin:10px 0 2px">w${c} · uint32x${n}</div>`;
+      for (let i = 0; i < n; i++, w++) {
+        const fields = words[w] ?? [F("padding", 32, PAD, "No format has 3 components, so the last channel is padded")];
+        html += `<div class="word"><div class="wl">word ${w}</div><div class="wb">${fields.map((f) => `<div class="f" data-info="${f.info}" style="flex:${f.bits};background:${f.color}">${f.label}<br>${f.bits}</div>`).join("")}</div></div>`;
+      }
+    });
+    html += `<div class="small" style="margin:10px 0 2px">sort key · unorm8x4 (bundle sortKeys)</div><div class="word"><div class="wl">sort key</div><div class="wb">${[0, 1, 2, 3].map((b) => `<div class="f" data-info="Byte ${b} of the back-to-front sort key: when read back, the 4 bytes form one uint32" style="flex:8;background:#facc15">byte ${b}</div>`).join("")}</div></div>`;
+    $("#packRows").innerHTML = html;
+    const bytes = channels.reduce((s, n) => s + n * 4, 0) + 4;
+    $("#packBytes").style.width = `${(bytes / 64) * 100}%`; $("#packBytesT").textContent = `${bytes} B`;
+    $("#packChans").style.width = `${((channels.length + 1) / 4) * 100}%`; $("#packChansT").textContent = `${channels.length + 1}`;
+    $("#packInfo").innerHTML = `<span class="small">${m.head.length} head word${m.head.length === 1 ? "" : "s"}, stored once · ${m.eye(EYE[0], 0).length} words per eye</span>`;
+  };
+  $("#packRows").addEventListener("mouseover", (e) => { const f = e.target.closest(".f"); if (f) $("#packInfo").textContent = f.dataset.info; });
+  chips("#packMethod", Object.keys(methods), method, (v) => { method = v; render(); });
+  chips("#packEyes", [{ value: 1, label: "mono" }, { value: 2, label: "stereo (XR)" }], eyes, (v) => { eyes = +v; render(); });
+})();
+
+// ---------- 16. Two eyes ----------
+(() => {
+  const canvas = $("#eyesCanvas");
+  const ipd = slider("#eyIpd", (v) => `${(v * 100).toFixed(1)} cm`, () => draw());
+  const dist = slider("#eyDist", (v) => `${v.toFixed(2)} m`, () => draw());
+  const R = rotationYX(0.6, 0.25), S = [0.16, 0.07, 0.04];
+  const M = R.map((r) => [r[0] * S[0], r[1] * S[1], r[2] * S[2]]), sigma = matMul(M, transpose3(M));
+  function draw() {
+    // Side by side, or stacked on narrow screens
+    const narrow = (canvas.clientWidth || 600) < 560;
+    const { ctx, W, H } = fitCanvas(canvas, narrow ? 420 : 300);
+    ctx.clearRect(0, 0, W, H);
+    const c = [0.12, 0, -dist()], half = ipd() / 2;
+
+    // Top-down: x across, forward up
+    const th = narrow ? 190 : H, tw = narrow ? W : Math.min(W * 0.42, 340), scale = (th - 40) / 4.4, hx = tw / 2, hy = th - 18;
+    const top = ([x, , z]) => [hx + x * scale, hy + z * scale];
+    ctx.fillStyle = "#0f131b"; ctx.fillRect(0, 0, tw, th);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, tw, th); ctx.clip();
+    for (const [s, color] of [[-1, "#a78bfa"], [1, "#f472b6"]]) {
+      const e = [s * half, 0, 0], [ex, ey] = top(e);
+      ctx.strokeStyle = color + "88"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - 3.4 * scale, ey - 3.4 * scale); ctx.moveTo(ex, ey); ctx.lineTo(ex + 3.4 * scale, ey - 3.4 * scale); ctx.stroke();
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = "#e8eaf0"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(hx, hy + 4, 12, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    const sxz = ellipseOf(sigma[0][0], sigma[0][2], sigma[2][2]), [sx, sy] = top(c);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, "#2dd4bfee"); g.addColorStop(1, "#2dd4bf00");
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(sxz.angle); ctx.scale(Math.max(2, sxz.r1 * 3 * scale), Math.max(2, sxz.r2 * 3 * scale));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.restore();
+    ctx.fillStyle = "#98a1b4"; ctx.font = "12px system-ui"; ctx.fillText("from above: the head and its two eyes", 10, 18);
+
+    // Each eye's image of the splat
+    const left = narrow ? 0 : tw + 10, iy = narrow ? th + 30 : 30;
+    const iw = (W - left - (narrow ? 10 : 20)) / 2, ih = H - iy - 10, f = ih * 0.5;
+    const images = [];
+    [[-1, "#a78bfa", "left eye"], [1, "#f472b6", "right eye"]].forEach(([s, color, label], k) => {
+      const x0 = left + k * (iw + 10), y0 = iy;
+      ctx.fillStyle = "#0f131b"; ctx.fillRect(x0, y0, iw, ih);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y0, iw, ih);
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, iw, ih); ctx.clip();
+      const e = ewaEllipse(sub3(c, [s * half, 0, 0]), sigma, f, 3), cx = x0 + iw / 2 + e.x, cy = y0 + ih / 2 + e.y;
+      images.push(e.x);
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      gr.addColorStop(0, "#2dd4bfdd"); gr.addColorStop(1, "#2dd4bf00");
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(e.angle); ctx.scale(Math.max(1, e.r1), Math.max(1, e.r2)); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = color; ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(1, e.r1), Math.max(1, e.r2), e.angle, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "#ffffff30"; ctx.beginPath(); ctx.moveTo(x0 + iw / 2, y0); ctx.lineTo(x0 + iw / 2, y0 + ih); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = color; ctx.fillText(label, x0, y0 - 10);
+    });
+    $("#eyesInfo").innerHTML = `The bound moves <b>${Math.abs(images[0] - images[1]).toFixed(1)} px</b> between the eyes. Shared from the head: center, color, opacity (and for the ray methods the 3D shape). Stereo uses <b>36 B</b> per splat for ewa and <b>44 B</b> for the ray methods, sort keys included: <span class="yes">8 to 24 bytes less</span> than storing everything twice.`;
+  }
+  addEventListener("resize", draw);
+  draw();
+})();
+
+// ---------- 17. Sort keys ----------
+(() => {
+  const FLOAT = (b) => (b === 31 ? "#f87171" : b >= 23 ? "#a78bfa" : "#2dd4bf");
+  let bits = 24, strip = [];
+  const update = () => {
+    const d = 10 ** +$("#kyDist").value;
+    $("#kyDist").nextElementSibling.textContent = `${d < 1 ? d.toPrecision(3) : d.toFixed(2)} m`;
+    f32[0] = d;
+    const f = u32[0];
+    $("#kyF").innerHTML = bitSpans(f, 32, FLOAT);
+    for (const n of [32, 24, 16]) $(`#ky${n}`).innerHTML = bitSpans(sortKeyOf(d, n), n, () => (n === bits ? "#facc15" : "#98a1b4"));
+    $("#kyInfo").innerHTML = `<span style="color:var(--red)">sign</span> (always 0), <span style="color:var(--gpu)">exponent</span>, and <span style="color:var(--core)">mantissa</span>. Each sort key is <code>mask ^ q</code>: q = f (32 bits), f &gt;&gt;&gt; 7 (24 bits), or the clamped window (16 bits). Flipping every bit gives far splats small sort keys, so an ascending sort runs back to front.`;
+    const keyed = strip.map((s) => ({ ...s, key: sortKeyOf(s.d, bits) })).sort((a, b) => a.key - b.key || a.i - b.i);
+    $("#kyStrip").innerHTML = `<div class="small" style="margin-bottom:6px">draw order at ${bits} sort key bits, first drawn at the top</div>` + keyed.map((s, k) => {
+      const tie = keyed.some((o, j) => j !== k && o.key === s.key);
+      return `<div style="display:flex;align-items:center;gap:10px;margin:3px 0;font:12px var(--mono)"><i style="width:${Math.max(6, 30 / Math.sqrt(s.d))}px;height:${Math.max(6, 30 / Math.sqrt(s.d))}px;border-radius:50%;background:hsl(${s.hue} 70% 60%);flex:none"></i><span style="width:70px">${s.d.toFixed(4)} m</span><span style="color:${tie ? "var(--yellow)" : "var(--dim)"}">${s.key.toString(16).padStart(bits / 4, "0")}${tie ? " = tie" : ""}</span></div>`;
+    }).join("");
+  };
+  const shuffle = () => {
+    strip = Array.from({ length: 7 }, (_, i) => ({ i, d: 10 ** (Math.random() * 1.7 - 0.2), hue: Math.random() * 360 }));
+    const near = 2 + Math.random() * 8;
+    strip.push({ i: 7, d: near, hue: 50 }, { i: 8, d: near * 1.0004, hue: 200 });
+    update();
+  };
+  $("#kyDist").addEventListener("input", update);
+  $("#kyShuffle").addEventListener("click", shuffle);
+  chips("#kyBits", [16, 24, 32].map((b) => ({ value: b, label: `${b}-bit sort keys` })), bits, (v) => { bits = +v; update(); });
+  shuffle();
+})();
+
+// ---------- 18. Radix sort ----------
+(() => {
+  const canvas = $("#radixCanvas"), N = 24, PASSES = 3, PHASES = ["histogram", "prefix scan", "scatter"];
+  let items, order, from, pass, phase, counts, offsets, animStart = 0, timer = 0;
+  const reset = () => {
+    items = Array.from({ length: N }, (_, i) => ({ key: Math.floor(Math.random() * 64), hue: (i / N) * 300 }));
+    order = items.map((_, i) => i); from = order.slice(); pass = 0; phase = -1; counts = null; offsets = null;
+    restart(); info();
+  };
+  const digit = (key, p) => (key >> (2 * p)) & 3;
+  const step = () => {
+    if (pass >= PASSES) return reset();
+    phase += 1;
+    if (phase === 0) { counts = [0, 0, 0, 0]; order.forEach((i) => counts[digit(items[i].key, pass)]++); offsets = null; }
+    if (phase === 1) { offsets = [0, 0, 0, 0]; for (let d = 1; d < 4; d++) offsets[d] = offsets[d - 1] + counts[d - 1]; }
+    if (phase === 2) {
+      const next = offsets.slice(), out = new Array(N);
+      for (const i of order) out[next[digit(items[i].key, pass)]++] = i;
+      from = order; order = out; animStart = performance.now();
+    }
+    if (phase === 3) { phase = 0; pass += 1; if (pass >= PASSES) { phase = 3; counts = null; offsets = null; } else { phase = -1; return step(); } }
+    restart(); info();
+  };
+  const info = () => {
+    $("#rxInfo").textContent = pass >= PASSES ? "sorted: 3 passes of 2 bits" : phase < 0 ? "press step or play" : `pass ${pass + 1} of ${PASSES}, bits ${2 * pass}–${2 * pass + 1}: ${PHASES[phase]}`;
+  };
+  const restart = whileVisible(canvas, (now) => {
+    const { ctx, W, H } = fitCanvas(canvas, 230);
+    ctx.clearRect(0, 0, W, H);
+    const cw = (W - 20) / N, y0 = 30, bh = 54;
+    const t = phase === 2 ? Math.min(1, (now - animStart) / 700) : 1;
+    const ease = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    ctx.font = "12px system-ui"; ctx.fillStyle = "#98a1b4";
+    ctx.fillText(W < 560 ? "keys in base 4, colored by starting position" : "keys (base 4, the current digit bright), colored by starting position", 10, 18);
+    order.forEach((i, slot) => {
+      const old = from.indexOf(i), x = 10 + (phase === 2 ? old + (slot - old) * ease : slot) * cw, lift = phase === 2 ? Math.sin(ease * Math.PI) * 18 : 0;
+      ctx.fillStyle = `hsl(${items[i].hue} 70% 55%)`;
+      ctx.fillRect(x + 1, y0 - lift, cw - 2, bh);
+      const k = items[i].key, digits = [2, 1, 0].map((p) => digit(k, p));
+      ctx.font = `600 ${Math.min(13, cw * 0.42)}px ui-monospace, monospace`;
+      digits.forEach((dv, j) => {
+        const p = 2 - j, current = pass < PASSES && p === pass && phase >= 0;
+        ctx.fillStyle = current ? "#0a0c11" : "#0a0c1166";
+        ctx.fillText(dv, x + cw / 2 - 4, y0 - lift + 16 + j * 15);
+      });
+    });
+    if (counts) {
+      const by = y0 + bh + 34, bw = (W - 40) / 4;
+      for (let d = 0; d < 4; d++) {
+        const x = 10 + d * (bw + 6), hgt = (counts[d] / N) * 70;
+        ctx.fillStyle = "#1d2333"; ctx.fillRect(x, by, bw, 76);
+        ctx.fillStyle = "#facc15aa"; ctx.fillRect(x, by + 76 - hgt, bw, hgt);
+        ctx.fillStyle = "#e8eaf0"; ctx.font = "12px ui-monospace, monospace";
+        ctx.fillText(`digit ${d}: ${counts[d]}`, x + 6, by + 16);
+        if (offsets) { ctx.fillStyle = "#2dd4bf"; ctx.fillText(`starts at ${offsets[d]}`, x + 6, by + 34); }
+      }
+    }
+    return t < 1;
+  });
+  $("#rxStep").addEventListener("click", () => { clearInterval(timer); timer = 0; $("#rxPlay").textContent = "▶ play"; step(); });
+  $("#rxReset").addEventListener("click", reset);
+  $("#rxPlay").addEventListener("click", () => {
+    if (timer) { clearInterval(timer); timer = 0; $("#rxPlay").textContent = "▶ play"; return; }
+    $("#rxPlay").textContent = "❚❚ pause"; step();
+    timer = setInterval(() => { if (pass >= PASSES) { clearInterval(timer); timer = 0; $("#rxPlay").textContent = "▶ play"; } else step(); }, 1300);
+  });
+  addEventListener("resize", () => restart());
+  reset();
+})();
+
+// ---------- 19. Compaction ----------
+(() => {
+  const canvas = $("#compactCanvas"), N = 20;
+  let keys, start = -1;
+  const fresh = () => { keys = Array.from({ length: N }, () => (Math.random() < 0.35 ? null : Math.floor(Math.random() * 90) + 10)); start = -1; restart(); };
+  const restart = whileVisible(canvas, (now) => {
+    const t = start < 0 ? 0 : (now - start) / 1000;
+    const { ctx, W, H } = fitCanvas(canvas, 250);
+    ctx.clearRect(0, 0, W, H);
+    const ox = 112, cw = (W - ox - 10) / N, rows = [26, 80, 120, 168];
+    ctx.font = "12px system-ui"; ctx.fillStyle = "#98a1b4";
+    ["sort keys", "valid", "exclusive scan", "compacted"].forEach((label, r) => ctx.fillText(label, 0, rows[r] + 20));
+    let seen = 0;
+    const slots = keys.map((k) => (k === null ? -1 : seen++));
+    keys.forEach((k, i) => {
+      const x = ox + i * cw;
+      ctx.fillStyle = k === null ? "#262c3c" : `hsl(${(i / N) * 300} 70% 55%)`;
+      ctx.fillRect(x + 1, rows[0], cw - 2, 32);
+      ctx.fillStyle = k === null ? "#5d6579" : "#0a0c11"; ctx.font = "600 12px ui-monospace, monospace";
+      ctx.fillText(k === null ? "✕" : k, x + cw / 2 - 7, rows[0] + 21);
+      if (t > 0.1 + i * 0.03) { ctx.fillStyle = k === null ? "#5d6579" : "#4ade80"; ctx.fillText(k === null ? 0 : 1, x + cw / 2 - 4, rows[1] + 20); }
+      if (t > 1 + i * 0.07) { ctx.fillStyle = "#facc15"; ctx.fillText(keys.slice(0, i).filter((v) => v !== null).length, x + cw / 2 - 4, rows[2] + 20); }
+      if (k !== null) {
+        const move = Math.max(0, Math.min(1, (t - 2.6 - slots[i] * 0.04) / 0.6));
+        if (move > 0) {
+          const tx = ox + slots[i] * cw, xx = x + (tx - x) * move, yy = rows[0] + (rows[3] - rows[0]) * move;
+          ctx.fillStyle = `hsl(${(i / N) * 300} 70% 55%)`; ctx.fillRect(xx + 1, yy, cw - 2, 32);
+          ctx.fillStyle = "#0a0c11"; ctx.fillText(k, xx + cw / 2 - 7, yy + 21);
+        }
+      }
+    });
+    const done = t > 4;
+    $("#cpInfo").innerHTML = done ? `count = <b>${seen}</b> → <code>drawIndexedIndirect [6, ${seen}, 0, 0, 0]</code>: ${N - seen} culled splats are never drawn` : start < 0 ? "press compact" : "";
+    return start >= 0 && !done;
+  });
+  $("#cpRun").addEventListener("click", () => { start = performance.now(); restart(); });
+  $("#cpNew").addEventListener("click", fresh);
+  addEventListener("resize", () => restart());
+  fresh();
+})();
+
+// ---------- 20. The WebGL2 fallback ----------
+(() => {
+  const canvas = $("#twoSortCanvas"), FRAMES = 48;
+  const threshold = slider("#tsThreshold", (v) => `${v.toFixed(2)} m`, () => {});
+  let simTime = 0, frame = 0, last = 0, sortedAt = null, job = null, sorts = 0, lagging = 0;
+  const history = [];
+  const dots = Array.from({ length: 70 }, () => [Math.random() * 3.6 - 1.8, Math.random() * 3.6 - 1.8]);
+  const camera = (t) => $("#tsTurn").checked
+    ? { x: 0, y: 0, heading: t * 0.9 }
+    : { x: Math.cos(t * 0.33) * 1.1 + Math.sin(t * 0.9) * 0.25, y: Math.sin(t * 0.33) * 0.8, heading: t * 0.33 + Math.PI / 2 + Math.sin(t * 1.3) * 0.5 };
+  $("#tsTurn").addEventListener("change", () => { sortedAt = null; });
+  const tick = () => {
+    simTime += 1 / 30; frame += 1;
+    const cam = camera(simTime);
+    if (job && frame >= job.land) { job = null; sorts += 1; }
+    if (!job && (!sortedAt || Math.hypot(cam.x - sortedAt.x, cam.y - sortedAt.y) > threshold())) {
+      sortedAt = { x: cam.x, y: cam.y };
+      job = { start: frame, land: frame + 7 };
+    }
+    if (job) lagging += 1;
+    history.push({ frame, job: job ? { ...job } : null });
+    if (history.length > FRAMES) history.shift();
+  };
+  whileVisible(canvas, (now) => {
+    if (now - last > 1000 / 30) { last = now; tick(); }
+
+    // The scene beside the timelines, or above them on narrow screens
+    const narrow = (canvas.clientWidth || 600) < 560;
+    const { ctx, W, H } = fitCanvas(canvas, narrow ? 440 : 280);
+    ctx.clearRect(0, 0, W, H);
+    const side = narrow ? W : Math.min(240, W * 0.36), sh = narrow ? 170 : H, s = Math.min(side, sh) / 4.2, cx = side / 2, cy = sh / 2;
+    ctx.fillStyle = "#0f131b"; ctx.fillRect(0, 0, side, sh);
+    ctx.fillStyle = "#2dd4bf88"; dots.forEach(([x, y]) => ctx.fillRect(cx + x * s - 1.5, cy + y * s - 1.5, 3, 3));
+    const cam = camera(simTime);
+    if (sortedAt) {
+      ctx.strokeStyle = "#facc1588"; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(cx + sortedAt.x * s, cy + sortedAt.y * s, threshold() * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.save(); ctx.translate(cx + cam.x * s, cy + cam.y * s); ctx.rotate(cam.heading);
+    ctx.fillStyle = "#e8eaf0"; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.font = "12px system-ui"; ctx.fillStyle = "#98a1b4"; ctx.fillText("from above: the camera and the re-sort radius", 8, 16);
+
+    // Timelines: one column per frame, newest on the right
+    const tx = narrow ? 0 : side + 20, tw = W - tx - (narrow ? 0 : 10), cw = tw / FRAMES, gy = (narrow ? sh + 30 : 0) + 54, cy2 = gy + 96;
+    ctx.fillStyle = "#fb923c"; ctx.fillText("WebGPU: WgpuSplatSorter, every frame", tx, gy - 10);
+    ctx.fillStyle = "#facc15"; ctx.fillText(narrow ? "WebGL2 fallback: sorted on a worker" : "WebGL2 fallback: view.sort (sort keys, readback, worker) → apply", tx, cy2 - 10);
+    history.forEach((h, k) => {
+      const x = tx + k * cw;
+      ["#a78bfa", "#fb923c", "#fbbf24", "#f472b6"].forEach((color, j) => { ctx.fillStyle = color; ctx.fillRect(x + 1, gy + j * 9, cw - 2, 8); });
+      ctx.fillStyle = h.job ? "#f8717166" : "#4ade8018"; ctx.fillRect(x + 1, cy2, cw - 2, 36);
+      ctx.fillStyle = "#a78bfa"; ctx.fillRect(x + 1, cy2, cw - 2, 8);
+      ctx.fillStyle = "#f472b6"; ctx.fillRect(x + 1, cy2 + 28, cw - 2, 8);
+      if (h.job && h.frame === h.job.start) {
+        const visibleFrames = Math.min(h.job.land - h.job.start, history.length - k);
+        ctx.fillStyle = "#facc15"; ctx.fillRect(x + 1, cy2 + 12, cw * visibleFrames - 2, 12);
+      }
+    });
+    ctx.font = "11px system-ui"; ctx.fillStyle = "#98a1b4";
+    ctx.fillText("project · compact · sort · draw", tx, gy + 50);
+    ctx.fillText(narrow ? "yellow: a sort in flight · red: the previous order" : "project and draw each frame; the yellow bar is a sort in flight, red frames draw the previous order", tx, cy2 + 52);
+    $("#tsInfo").innerHTML = `CPU re-sorts so far: <b>${sorts}</b> · frames drawn while a sort was in flight: <b>${frame ? Math.round((lagging / frame) * 100) : 0}%</b>${$("#tsTurn").checked ? " · turning does not move the head, so there are no new sorts" : ""}`;
+  });
+})();
+
+// ---------- 21. Quad from bits ----------
+(() => {
+  const canvas = $("#quadCanvas");
+  const INDICES = [0, 1, 2, 2, 1, 3];
+  let k = 0, auto = true, lastStep = 0;
+  const corner = (i) => [(i & 1) * 2 - 1, (i >> 1) * 2 - 1];
+  $("#quadVi").innerHTML = INDICES.map((i, p) => `<span data-p="${p}" title="index buffer entry ${p}">${i}</span>`).join("");
+  $("#quadVi").addEventListener("click", (e) => { const s = e.target.closest("span"); if (s) { auto = false; k = +s.dataset.p; restart(); } });
+  const restart = whileVisible(canvas, (now) => {
+    if (auto && now - lastStep > 900) { lastStep = now; k = (k + 1) % 6; }
+    const v = INDICES[k], [x, y] = corner(v);
+    const shaded = new Set(INDICES.slice(0, k + 1)), hit = INDICES.slice(0, k).includes(v);
+    $$("#quadVi span").forEach((s) => s.classList.toggle("on", +s.dataset.p === k));
+    $("#quadBits").innerHTML = bitSpans(v, 2, (b) => (b === 0 ? "#2dd4bf" : "#a78bfa")) + `<span style="width:auto;margin-left:10px;color:var(--dim)">bit 1 → y, bit 0 → x</span>`;
+    $("#quadOut").textContent = `vertex ${v} → (${x}, ${y})${hit ? ": already shaded, read from the cache" : ""}`;
+    $("#quadRuns").innerHTML = `<dt>indices read</dt><dd>${k + 1} of 6</dd><dt>vertex shader runs</dt><dd>${shaded.size} of 4</dd><dt>cache hits</dt><dd class="${k + 1 - shaded.size ? "yes" : ""}">${k + 1 - shaded.size}</dd>`;
+
+    const { ctx, W, H } = fitCanvas(canvas, 260);
+    ctx.clearRect(0, 0, W, H);
+    const size = Math.min(W - 150, H - 80), ox = W / 2, oy = H / 2;
+    const at = ([cx, cy]) => [ox + (cx * size) / 2, oy - (cy * size) / 2];
+    [[0, 1, 2], [3, 4, 5]].forEach((tri, t) => {
+      const drawn = tri.filter((p) => p <= k);
+      ctx.fillStyle = t === 0 ? "#2dd4bf33" : "#a78bfa33"; ctx.strokeStyle = t === 0 ? "#2dd4bf" : "#a78bfa"; ctx.lineWidth = 2;
+      ctx.beginPath(); drawn.forEach((p, j) => { const [px, py] = at(corner(INDICES[p])); j ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      if (drawn.length === 3) { ctx.closePath(); ctx.fill(); }
+      ctx.stroke();
+    });
+
+    // The 4 corners: their index, and whether the vertex shader has run for them
+    ctx.font = "12px ui-monospace, monospace";
+    for (let i = 0; i < 4; i++) {
+      const [cx, cy] = corner(i), [px, py] = at([cx, cy]);
+      ctx.fillStyle = i === v ? "#facc15" : shaded.has(i) ? "#e8eaf0" : "#5d6579";
+      ctx.fillText(`vertex ${i}${shaded.has(i) ? " ✓" : ""}`, px + (cx < 0 ? -78 : 12), py + (cy < 0 ? 18 : -10));
+      ctx.fillStyle = "#5d6579"; ctx.fillText(`(${cx}, ${cy})`, px + (cx < 0 ? -58 : 12), py + (cy < 0 ? 34 : -26));
+    }
+    const [px, py] = at([x, y]);
+    ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+    return auto;
+  });
+  addEventListener("resize", () => restart());
+})();
+
+// ---------- 22. Render loop ----------
+(() => {
+  const L = (b, html) => ({ b, html });
+  const common = [
+    L("load", `const data = await loadSplats(url, { worker: true });`),
+    L("load", `const splats = GpuArrays.fromData(renderer, data);`),
+    L("", ``),
+  ];
+  const code = {
+    gpu: [...common,
+      L("views", `const object = SplatCollection.arrays(splats, { matrixWorld });`),
+      L("views", `const collection = new SplatCollection([object]);`),
+      L("views", `const splatRenderer = new SplatRenderer({`),
+      L("views", `  renderer,`),
+      L("views", `  method: "raygs",`),
+      L("views", `  collection,`),
+      L("views", `});`),
+      L("draw", `scene.add(splatRenderer);`),
+      L("", ``),
+      L("draw", `renderer.setAnimationLoop(() =&gt; renderer.render(scene, camera));`),
+      L("", `// inside, onBeforeRender:`),
+      L("project", `//   project each object (one dispatch per object; its SH from the view)`),
+      L("gpu", `//   sort on the GPU (sortMode "gpu")`),
+    ],
+    cpu: [...common,
+      L("views", `const object = SplatCollection.arrays(splats, { matrixWorld });`),
+      L("views", `const collection = new SplatCollection([object]);`),
+      L("views", `const splatRenderer = new SplatRenderer({`),
+      L("views", `  renderer,`),
+      L("views", `  method: "raygs",`),
+      L("views", `  collection,`),
+      L("views", `  // the loop below sorts manually`),
+      L("views", `  autoSort: false,`),
+      L("views", `});`),
+      L("draw", `scene.add(splatRenderer);`),
+      L("views", `// the camera's view holds its order`),
+      L("views", `const view = splatRenderer.viewFor(camera);`),
+      L("", ``),
+      L("draw project", `renderer.setAnimationLoop(async () =&gt; {`),
+      L("draw project", `  // projection, with the applied order`),
+      L("draw project", `  renderer.render(scene, camera);`),
+      L("cpu", `  const moved = camera.position.distanceTo(sortedAt);`),
+      L("cpu", `  if (sorting || moved &lt; threshold) return;`),
+      L("cpu", `  sorting = true;`),
+      L("cpu", `  sortedAt.copy(camera.position);`),
+      L("cpu", `  const order = await view.sort(camera);`),
+      L("cpu draw", `  view.apply(order);`),
+      L("cpu", `  sorting = false;`),
+      L("draw", `});`),
+    ],
+  };
+  let mode = "gpu";
+  const blocks = $$("#loopBlocks div");
+  const highlight = (names) => blocks.forEach((b) => b.classList.toggle("on", names.includes(b.dataset.b)));
+  const render = () => {
+    $("#loopCode").innerHTML = code[mode].map((l) => `<span class="ln"${l.b ? ` data-b="${l.b}"` : ""}>${l.html || " "}</span>`).join("");
+    blocks.forEach((b) => b.classList.toggle("off", (mode === "gpu" && b.dataset.b === "cpu") || (mode === "cpu" && b.dataset.b === "gpu")));
+    highlight([]);
+  };
+  $("#loopCode").addEventListener("mouseover", (e) => {
+    const l = e.target.closest(".ln");
+    $$("#loopCode .ln").forEach((x) => x.classList.toggle("on", x === l && !!l.dataset.b));
+    highlight(l?.dataset.b ? l.dataset.b.split(" ") : []);
+  });
+  $("#loopCode").addEventListener("mouseleave", () => { $$("#loopCode .ln").forEach((x) => x.classList.remove("on")); highlight([]); });
+  chips("#loopMode", [{ value: "gpu", label: "WebGPU: sort on the GPU" }, { value: "cpu", label: "WebGL2 fallback: sort on a worker" }], mode, (v) => { mode = v; render(); });
+})();
+</script>
+</body>
+</html>

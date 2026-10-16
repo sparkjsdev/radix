@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "radialWarp",
+  "description": "Concentric ripples run outward from the center, pushing splats in and out. The distance from a point drives a sine wave, and the wave scales each splat's position about that point.",
+  "source": { "name": "Spark examples: glsl (radial warp)", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/glsl", "license": "MIT" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "time": { "type": "input.time" },
+    "radius": { "type": "field.distance", "note": "r: how far from the center" },
+    "speed": { "type": "math.mul", "inputs": { "b": 0.48 } },
+    "wave": { "type": "math.sine", "inputs": { "frequency": 5, "amplitude": 0.035 }, "note": "A ripple in r that moves with time" },
+    "factor": { "type": "math.add", "inputs": { "b": 1 }, "note": "1 + wave" },
+    "warp": { "type": "math.scaleAbout", "note": "Push out where the wave is up, in where it is down" },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "radius.position" },
+    { "from": "time.seconds", "to": "speed.a" },
+    { "from": "radius.value", "to": "wave.x" },
+    { "from": "speed.value", "to": "wave.phase" },
+    { "from": "wave.value", "to": "factor.a" },
+    { "from": "center.value", "to": "warp.point" },
+    { "from": "factor.value", "to": "warp.factor" },
+    { "from": "warp.value", "to": "out.center" }
+  ],
+  "params": {
+    "Ripples": "wave.frequency",
+    "Strength": "wave.amplitude",
+    "Speed": "speed.b",
+    "Center": "radius.point"
+  }
+}

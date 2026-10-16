@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "name": "wave",
+  "description": "A ripple. Distance along an axis plus time feeds a sine wave; the wave lifts splats up and down, and its crests light up. One output can feed many inputs.",
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "time": { "type": "input.time" },
+    "along": { "type": "field.axisGradient", "inputs": { "axis": [1, 0, 0.3], "length": 1 }, "note": "Position along the wave's direction" },
+    "speed": { "type": "math.mul", "inputs": { "b": 0.6 } },
+    "phase": { "type": "math.add", "note": "Moving along the axis or in time shifts the wave" },
+    "wave": { "type": "math.sine", "inputs": { "frequency": 1.5, "amplitude": 0.05 } },
+    "lift": { "type": "math.vec3Scale", "inputs": { "v": [0, 1, 0] }, "note": "Up by the wave's height" },
+    "crest": { "type": "math.smoothstep", "inputs": { "low": 0.03, "high": 0.05 }, "note": "Only the top of each wave" },
+    "glow": { "type": "color.tint", "inputs": { "color": [0.55, 0.85, 1], "intensity": 1.4 } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "along.position" },
+    { "from": "time.seconds", "to": "speed.a" },
+    { "from": "along.value", "to": "phase.a" },
+    { "from": "speed.value", "to": "phase.b" },
+    { "from": "phase.value", "to": "wave.x" },
+    { "from": "wave.value", "to": "lift.s" },
+    { "from": "wave.value", "to": "crest.x" },
+    { "from": "rgb.value", "to": "glow.rgb" },
+    { "from": "crest.value", "to": "glow.amount" },
+    { "from": "lift.value", "to": "out.offset" },
+    { "from": "glow.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Height": "wave.amplitude",
+    "Waves per unit": "wave.frequency",
+    "Speed": "speed.b",
+    "Direction": "along.axis",
+    "Crest color": "glow.color"
+  }
+}

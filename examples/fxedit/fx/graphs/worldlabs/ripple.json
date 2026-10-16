@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "name": "ripple",
+  "description": "The viewer's ripple, as on the blog: click the scan and a wave runs inward over 3 seconds, its size scaled by the hit point's distance to the camera; splats move along the direction from the hit point and brighten on the crests (at 0.3 of the viewer's amplitude, which is a lot on an object).",
+  "source": { "name": "World Labs threeviewer effects (ripple.glsl; blog: rippleEffect(time, 3.0, outward false, hit, distance to camera)), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "nodes": {
+    "click": { "type": "input.click" },
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "camera": { "type": "input.camera" },
+    "reach": { "type": "field.distance", "note": "Scale: the hit point's distance to the camera" },
+    "ripple": { "type": "wl.ripple", "inputs": {"duration": 3, "outward": false, "amplitude": 0.3} },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "click.point", "to": "reach.position" },
+    { "from": "camera.position", "to": "reach.point" },
+    { "from": "center.value", "to": "ripple.position" },
+    { "from": "rgb.value", "to": "ripple.rgb" },
+    { "from": "click.point", "to": "ripple.center" },
+    { "from": "click.age", "to": "ripple.age" },
+    { "from": "reach.value", "to": "ripple.scale" },
+    { "from": "ripple.offset", "to": "out.offset" },
+    { "from": "ripple.rgb", "to": "out.rgb" }
+  ],
+  "params": {
+    "Duration": "ripple.duration",
+    "Amplitude": "ripple.amplitude",
+    "Outward": "ripple.outward"
+  }
+}

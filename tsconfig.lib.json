@@ -1,0 +1,15 @@
+{
+  // The library: typechecked as a whole, and the declarations in dist/types/
+  // (scripts/build-lib.mjs)
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "./src",
+    "outDir": "./dist/types",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["@webgpu/types", "webxr"]
+  },
+  "include": ["src/**/*.ts"]
+}

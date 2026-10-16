@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "name": "colorStripes",
+  "description": "Fine rainbow bands in three directions. The position is split into x, y and z, each makes its own sine stripes, and the three are combined into a color that multiplies the splat's own.",
+  "source": { "name": "Spark examples: glsl (color stripes)", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/glsl", "license": "MIT" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "split": { "type": "math.vec3Split", "note": "One number per axis" },
+    "red": { "type": "math.sine", "inputs": { "frequency": 4.5, "amplitude": 0.4 } },
+    "green": { "type": "math.sine", "inputs": { "frequency": 6.2, "amplitude": 0.4 } },
+    "blue": { "type": "math.sine", "inputs": { "frequency": 7.2, "phase": 0.25, "amplitude": 0.4 } },
+    "redUp": { "type": "math.add", "inputs": { "b": 0.6 } },
+    "greenUp": { "type": "math.add", "inputs": { "b": 0.6 } },
+    "blueUp": { "type": "math.add", "inputs": { "b": 0.6 } },
+    "stripes": { "type": "math.vec3Combine", "note": "Back into one color" },
+    "blend": { "type": "color.blend", "options": { "mode": "multiply" } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "split.v" },
+    { "from": "split.x", "to": "red.x" },
+    { "from": "split.y", "to": "green.x" },
+    { "from": "split.z", "to": "blue.x" },
+    { "from": "red.value", "to": "redUp.a" },
+    { "from": "green.value", "to": "greenUp.a" },
+    { "from": "blue.value", "to": "blueUp.a" },
+    { "from": "redUp.value", "to": "stripes.x" },
+    { "from": "greenUp.value", "to": "stripes.y" },
+    { "from": "blueUp.value", "to": "stripes.z" },
+    { "from": "rgb.value", "to": "blend.base" },
+    { "from": "stripes.value", "to": "blend.color" },
+    { "from": "blend.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Red stripes": "red.frequency",
+    "Green stripes": "green.frequency",
+    "Blue stripes": "blue.frequency",
+    "Amount": "blend.amount"
+  }
+}

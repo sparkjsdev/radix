@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "name": "reveal",
+  "description": "Masks and keep. A growing sphere decides which splats exist: inside it they are kept, outside they are removed, and a thin band at its surface glows.",
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "time": { "type": "input.time" },
+    "speed": { "type": "math.mul", "inputs": { "b": 0.25 } },
+    "cycle": { "type": "math.pingPong", "note": "0 to 1 and back, forever" },
+    "radius": { "type": "math.remap", "inputs": { "outLow": 0, "outHigh": 1.3 } },
+    "distance": { "type": "field.distance", "inputs": { "point": [0, 0, 0] }, "note": "How far each splat is from the sphere's center" },
+    "inside": { "type": "math.sub", "note": "radius - distance: positive inside the sphere" },
+    "keep": { "type": "math.greater", "inputs": { "b": 0 } },
+    "edge": { "type": "math.smoothstep", "inputs": { "low": 0, "high": 0.05 } },
+    "band": { "type": "math.oneMinus", "note": "1 right at the surface, 0 deeper inside" },
+    "glow": { "type": "color.tint", "inputs": { "color": [0.3, 0.8, 1], "intensity": 3 } },
+    "out": { "type": "splat.write", "note": "keep = false removes the splat" }
+  },
+  "links": [
+    { "from": "time.seconds", "to": "speed.a" },
+    { "from": "speed.value", "to": "cycle.x" },
+    { "from": "cycle.value", "to": "radius.x" },
+    { "from": "center.value", "to": "distance.position" },
+    { "from": "radius.value", "to": "inside.a" },
+    { "from": "distance.value", "to": "inside.b" },
+    { "from": "inside.value", "to": "keep.a" },
+    { "from": "inside.value", "to": "edge.x" },
+    { "from": "edge.value", "to": "band.x" },
+    { "from": "rgb.value", "to": "glow.rgb" },
+    { "from": "band.value", "to": "glow.amount" },
+    { "from": "glow.value", "to": "out.rgb" },
+    { "from": "keep.value", "to": "out.keep" }
+  ],
+  "params": {
+    "Speed": "speed.b",
+    "Largest radius": "radius.outHigh",
+    "Sphere center": "distance.point",
+    "Edge width": "edge.high",
+    "Glow color": "glow.color",
+    "Glow": "glow.intensity"
+  }
+}

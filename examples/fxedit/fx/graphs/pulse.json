@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "pulse",
+  "description": "Time drives size. A sine wave of time, remapped from -1..1 to a size range, scales every splat: the scan breathes.",
+  "nodes": {
+    "time": { "type": "input.time", "note": "Counts seconds" },
+    "wave": { "type": "math.sine", "inputs": { "frequency": 0.5, "amplitude": 1 }, "note": "Swings between -1 and 1" },
+    "size": { "type": "math.remap", "inputs": { "inLow": -1, "inHigh": 1, "outLow": 0.3, "outHigh": 1.4 }, "note": "-1..1 becomes smallest..largest" },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "time.seconds", "to": "wave.x" },
+    { "from": "wave.value", "to": "size.x" },
+    { "from": "size.value", "to": "out.scale" }
+  ],
+  "params": {
+    "Speed": "wave.frequency",
+    "Smallest": "size.outLow",
+    "Largest": "size.outHigh"
+  }
+}

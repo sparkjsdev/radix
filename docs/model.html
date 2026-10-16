@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: how it fits together</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='8' cy='8' rx='7' ry='4' fill='%23f472b6' transform='rotate(-30 8 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+:root {
+  --bg: #0a0c11; --panel: #121620; --panel2: #171c28; --line: #262c3c; --text: #e8eaf0; --dim: #98a1b4; --faint: #5d6579;
+  --core: #2dd4bf; --gpu: #a78bfa; --wgpu: #fb923c; --worker: #4ade80; --render: #f472b6; --blue: #60a5fa; --yellow: #facc15; --red: #f87171;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --map: 400px;
+}
+* { box-sizing: border-box; scrollbar-color: #343c50 transparent; scrollbar-width: thin; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+a { color: var(--blue); }
+h3 { margin: 18px 0 6px; font-size: 18px; }
+
+#progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--core), var(--gpu), var(--wgpu), var(--render)); z-index: 30; width: 0; }
+
+/* Hero */
+header.hero { position: relative; height: auto; min-height: calc(88vh - var(--top)); display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; border-bottom: 1px solid var(--line); }
+#heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero .inner { position: relative; max-width: 820px; padding: 24px; }
+.hero h1 { font-size: clamp(44px, 8vw, 92px); margin: 0; letter-spacing: -0.04em; line-height: 1.08; background: linear-gradient(120deg, #fff, var(--core) 35%, var(--gpu) 60%, var(--render)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: clamp(18px, 2.3vw, 22px); color: #cfd4df; margin: 22px auto 8px; max-width: 700px; text-shadow: 0 2px 20px #000; }
+.hero .small { color: var(--dim); }
+.hero .toc { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 28px; }
+.hero .toc a { text-decoration: none; font: 12px var(--mono); color: var(--dim); border: 1px solid var(--line); background: #11151fcc; padding: 6px 10px; border-radius: 999px; }
+.hero .toc a:hover { color: var(--text); border-color: #3a4256; }
+
+/* Two columns: chapters and the docked system map */
+.page { display: grid; grid-template-columns: minmax(0, 1fr) var(--map); gap: 0; }
+main { min-width: 0; }
+aside#mapDock { position: sticky; top: var(--top); height: calc(100vh - var(--top)); border-left: 1px solid var(--line); background: #0c0f16; display: flex; flex-direction: column; }
+@media (max-width: 1180px) {
+  .page { grid-template-columns: 1fr; }
+  aside#mapDock { position: fixed; right: 0; top: var(--top); width: min(var(--map), 92vw); z-index: 25; transform: translateX(100%); transition: transform .3s; box-shadow: -20px 0 40px #000a; }
+  aside#mapDock.open { transform: none; }
+  #mapToggle { display: block !important; }
+}
+#mapToggle { display: none; position: fixed; right: 14px; bottom: 14px; z-index: 26; }
+.mapHead { padding: 14px 16px 6px; border-bottom: 1px solid var(--line); }
+.mapHead b { font-size: 14px; }
+.mapHead .small { margin-top: 2px; }
+#mapWrap { flex: 1; overflow: auto; padding: 6px 8px; }
+#mapSvg { width: 100%; display: block; }
+#mapSvg .pill { cursor: pointer; transition: opacity .35s; }
+#mapSvg .pill rect { transition: all .35s; }
+#mapSvg .pill text { font: 10.5px var(--mono); pointer-events: none; }
+#mapSvg .pill.future { opacity: 0.16; }
+#mapSvg .pill.seen { opacity: 0.6; }
+#mapSvg .pill.now { opacity: 1; }
+#mapSvg .pill.now rect { stroke-width: 2; filter: drop-shadow(0 0 6px var(--c)); }
+#mapSvg .pill.pick rect { stroke: #fff; stroke-width: 2.5; }
+#mapSvg .edge { fill: none; stroke-width: 1.4; transition: opacity .35s; }
+#mapSvg .edge.future { opacity: 0; }
+#mapSvg .edge.seen { opacity: 0.18; }
+#mapSvg .edge.now { opacity: 0.9; }
+#mapSvg .band text { font: 600 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+#card { border-top: 1px solid var(--line); padding: 12px 16px 16px; min-height: 200px; max-height: 44vh; overflow: auto; font-size: 13.5px; }
+#card h4 { margin: 0 0 2px; font: 600 15px var(--mono); }
+#card .layer { font: 11px var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+#card ul { margin: 6px 0; padding-left: 18px; }
+#card li { margin: 2px 0; }
+#card li code { font-size: 12px; }
+#card .io { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; margin-top: 6px; font-size: 13px; }
+#card .io dt { color: var(--dim); }
+#card .io dd { margin: 0; }
+
+/* Chapters */
+section { max-width: 900px; margin: 0 auto; padding: 84px 32px 36px; }
+section > .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+section > h2 { font-size: clamp(28px, 3.6vw, 40px); margin: 10px 0 12px; letter-spacing: -0.02em; line-height: 1.15; }
+section > p.lede { font-size: 18px; color: #c7ccd8; margin: 0 0 18px; }
+section p { color: #d3d7e1; }
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.in { opacity: 1; transform: none; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 14px 0; }
+.row { display: flex; gap: 16px; flex-wrap: wrap; }
+.row > * { flex: 1 1 280px; min-width: 0; }
+.takeaway { border-left: 3px solid var(--render); padding: 8px 14px; margin: 20px 0 0; color: #d6dae3; background: linear-gradient(90deg, #24131d, transparent); border-radius: 0 8px 8px 0; }
+.takeaway b { color: var(--render); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 12px/1 var(--mono); padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--dim); cursor: pointer; user-select: none; transition: all .15s; }
+.chip:hover { color: var(--text); border-color: #3a4256; }
+.chip.on { color: #0a0c11; background: var(--text); border-color: var(--text); }
+button.btn { font: 600 13px/1 system-ui, sans-serif; padding: 9px 14px; border-radius: 9px; border: 1px solid #3a4256; background: #1d2333; color: var(--text); cursor: pointer; }
+button.btn:hover { background: #262e42; }
+button.btn.primary { background: var(--text); color: #0a0c11; border-color: var(--text); }
+label.ctl { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); margin: 8px 0; }
+label.ctl input[type=range] { flex: 1; accent-color: var(--render); }
+label.ctl output { font: 12px var(--mono); color: var(--text); min-width: 96px; text-align: right; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--dim); } .kv dd { margin: 0; font-family: var(--mono); font-size: 13px; }
+.small { font-size: 13px; color: var(--dim); }
+.cls { font-family: var(--mono); font-size: 0.86em; padding: 1px 6px; border-radius: 5px; cursor: pointer; border: 1px solid; white-space: nowrap; }
+.cls:hover { filter: brightness(1.3); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th, .tbl td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tbl th { color: var(--dim); font-weight: 600; font-size: 12px; }
+.tbl td.num, .tbl th.num { text-align: right; font-family: var(--mono); }
+
+/* The running example: one file on its way to pixels */
+.journey { display: flex; align-items: center; gap: 0; margin: 4px 0 18px; overflow-x: auto; }
+.journey .st { flex: 1 0 auto; text-align: center; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; font: 11px var(--mono); color: var(--faint); background: var(--panel); transition: all .3s; white-space: nowrap; }
+.journey .st.on { color: #0a0c11; background: var(--c); border-color: var(--c); box-shadow: 0 6px 22px -8px var(--c); }
+.journey .st.done { color: var(--dim); }
+.journey .ar { flex: 0 0 18px; text-align: center; color: var(--faint); font-size: 12px; }
+
+/* Flow of a frame */
+.flow { display: flex; align-items: stretch; overflow-x: auto; padding: 4px 0 8px; }
+.flow .node { flex: 1 0 104px; text-align: center; padding: 10px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; transition: all .25s; }
+.flow .node .t { font-weight: 600; font-size: 13px; }
+.flow .node .l { font: 10px var(--mono); color: var(--dim); }
+.flow .node.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 26px -10px var(--c); transform: translateY(-3px); }
+.flow .node.once { border-style: dashed; }
+.flow .arrow { flex: 0 0 18px; display: grid; place-items: center; color: var(--faint); }
+.lane { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 6px 0; font: 12px var(--mono); }
+.lane .bar { position: relative; height: 26px; border-radius: 7px; background: #ffffff08; overflow: hidden; }
+.lane .seg { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font: 10.5px var(--mono); color: #0a0c11; overflow: hidden; white-space: nowrap; transition: all .4s; }
+.lane .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff22; }
+
+/* Data model */
+.cols { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.col { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--panel2); font: 12px var(--mono); }
+.col b { display: block; margin-bottom: 2px; }
+.texgrid { display: grid; gap: 2px; margin-top: 8px; }
+.texgrid div { height: 10px; border-radius: 2px; background: #ffffff10; }
+.texgrid div.used { background: var(--gpu); }
+.texgrid div.pick { background: var(--yellow); }
+
+/* Bits */
+.bits { font: 12px var(--mono); display: flex; flex-wrap: wrap; gap: 1px; margin-top: 4px; }
+.bits span { width: 14px; text-align: center; border-radius: 2px; padding: 2px 0; }
+.word { display: flex; align-items: stretch; margin: 5px 0; gap: 10px; }
+.word .wl { width: 70px; font: 12px var(--mono); color: var(--dim); display: flex; align-items: center; }
+.word .wb { flex: 1; display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.word .f { display: flex; align-items: center; justify-content: center; font: 10.5px/1.1 var(--mono); color: #0a0c11; border-right: 1px solid #0a0c1155; overflow: hidden; text-align: center; }
+
+/* Lanes of a load */
+.swim { display: grid; grid-template-columns: 96px 1fr; gap: 6px 10px; align-items: center; }
+.swim .who { font: 12px var(--mono); color: var(--dim); }
+.swim .track { position: relative; height: 34px; border-radius: 8px; background: #ffffff07; }
+.swim .blk { position: absolute; top: 4px; bottom: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font: 11px var(--mono); color: #0a0c11; opacity: 0; transform: scale(.9); transition: all .35s; white-space: nowrap; overflow: hidden; }
+.swim .blk.in { opacity: 1; transform: none; }
+
+/* Quizzes */
+.quiz { margin-top: 22px; }
+.quiz h4 { margin: 0 0 6px; font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.q { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--panel); }
+.q > button { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 11px 14px; cursor: pointer; font-size: 15px; }
+.q > button::before { content: "?"; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #262c3c; color: var(--yellow); font: 600 12px var(--mono); margin-right: 10px; }
+.q .a { display: none; padding: 0 14px 12px 44px; color: #cfd4df; font-size: 14.5px; }
+.q.open .a { display: block; }
+.q.open > button::before { content: "!"; background: var(--yellow); color: #0a0c11; }
+
+/* Recipes */
+.recipes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.recipe { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel2); cursor: pointer; font-size: 13.5px; transition: all .2s; }
+.recipe b { display: block; font-size: 14px; margin-bottom: 2px; }
+.recipe.on { border-color: var(--render); box-shadow: 0 0 0 1px var(--render); }
+
+/* Bars */
+.hbar { display: grid; grid-template-columns: 120px 1fr 64px; gap: 8px; align-items: center; margin: 4px 0; font: 12px var(--mono); }
+.hbar .b { height: 16px; border-radius: 5px; transition: width .4s; }
+footer { text-align: center; color: var(--faint); font-size: 13px; padding: 60px 20px 90px; }
+</style>
+</head>
+<body data-root="" data-page="model.html">
+<div id="progress"></div>
+
+<header class="hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="inner">
+    <h1>How Radix<br>fits together</h1>
+    <p class="lead">A guide to the classes of <code>src/</code> and the data that passes between them, from a splat file to pixels, on WebGPU and on the WebGL2 fallback.</p>
+    <p class="small">Read it from top to bottom. As you scroll, the map on the right highlights the classes of each chapter. Click a class name to see what it does. <a href="data.html">The data</a> and <a href="pipeline.html">the pipeline</a> cover the same ground in more detail, and <a href="ref/api.html">the reference</a> lists every class.</p>
+    <nav class="toc" id="toc"></nav>
+  </div>
+</header>
+
+<div class="page">
+<main>
+
+<!-- 1 -->
+<section id="frame" data-title="One frame" data-step="5" data-classes="loadSplats,GpuArrays,SplatCollection,SplatRenderer,SplatProjector,WgpuSplatSorter,sortSplatKeys,SplatView">
+  <div class="eyebrow">01 · Overview</div>
+  <h2>The steps of one frame</h2>
+  <p class="lede">A file is loaded once and uploaded to the GPU once. Then, every frame, the splats are <b>projected</b> for the camera, <b>sorted</b> back to front, and <b>drawn</b>.</p>
+  <div class="journey" data-journey></div>
+  <div class="panel reveal">
+    <div class="chips" id="frameMode"><span class="chip on" data-mode="gpu">WebGPU: GPU sort</span><span class="chip" data-mode="cpu">WebGL2 fallback: CPU sort</span></div>
+    <div class="flow" id="frameFlow" style="margin-top: 12px"></div>
+    <div style="display: flex; gap: 8px; margin: 6px 0 4px"><button class="btn primary" id="framePlay">▶ play a frame</button></div>
+    <div class="row"><div><h3 id="frameTitle"></h3><p id="frameText" style="margin: 0"></p></div><pre id="frameCode" style="flex: 1.3 1 340px"></pre></div>
+  </div>
+  <p>The two modes are the same up to and including the projection. They differ in where the sort runs. On WebGPU, compute shaders sort on the GPU in the same frame, and the draw reads the splat count directly from a GPU buffer (an <i>indirect</i> draw), so no data is read back to JavaScript. WebGL2 has no compute shaders, so the view computes the sort keys on the GPU, reads them back, and sorts them on a worker thread. The resulting order arrives a few frames later, so the view keeps drawing the splats that order was sorted for, and sorts again only when the camera, an object, or the collection of splats has changed enough.</p>
+  <div class="panel reveal">
+    <div class="small" style="margin-bottom: 6px">Frames over time on the WebGL2 fallback: which part is busy in each frame. Each column is one frame.</div>
+    <div class="lane"><span>frame</span><div class="bar" id="laneFrame"></div></div>
+    <div class="lane"><span>readback</span><div class="bar" id="laneRead"></div></div>
+    <div class="lane"><span>worker</span><div class="bar" id="laneWorker"></div></div>
+    <div class="small" id="laneNote" style="margin-top: 6px"></div>
+  </div>
+  <p class="takeaway reveal"><b>Data flow:</b> data passes through <i>file → table on the CPU → the same table on the GPU → projected words and sort keys → an order → pixels</i>. Each arrow is one class, and each class can be used on its own.</p>
+  <div class="quiz" data-quiz="frame"></div>
+  <p class="deeper">See also: <a href="ref/rendering.html#what-a-render-does">What a render does</a> <a href="ref/quickstart.html">Quickstart</a></p>
+</section>
+
+<!-- 2 -->
+<section id="data" data-title="Tables" data-step="1" data-classes="ArrayData,defineBundle,ArrayFormats,TextureLayout,GpuArrays">
+  <div class="eyebrow">02 · The data model</div>
+  <h2>ArrayData and GpuArrays: one table on the CPU and on the GPU</h2>
+  <p class="lede">Radix stores all its data, including splats, in <b>tables</b>. Rows are <b>elements</b>. Columns are <b>channels</b>, each stored as one typed array. Channels used together form a named <b>bundle</b>. <span class="cls" data-c="ArrayData">ArrayData</span> holds the table on the CPU; <span class="cls" data-c="GpuArrays">GpuArrays</span> holds the same table in GPU textures, so each CPU row corresponds to one GPU row.</p>
+  <div class="journey" data-journey></div>
+  <div class="panel reveal">
+    <div class="small">A table (one ArrayData; its bundles share its rows)</div>
+    <div class="chips" id="dataBundles"></div>
+    <p class="small" id="dataNote" style="margin: 6px 0 0"></p>
+    <label class="ctl">elements <input type="range" id="dataCount" min="0" max="100" value="62"><output id="dataCountOut"></output></label>
+    <div class="row">
+      <div><h3 style="margin-top: 4px">On the CPU: ArrayData</h3><div class="cols" id="dataCols"></div><dl class="kv" id="dataKv" style="margin-top: 10px"></dl></div>
+      <div><h3 style="margin-top: 4px">On the GPU: GpuArrays</h3><div id="dataTex"></div></div>
+    </div>
+  </div>
+  <p>These rules keep the two copies aligned:</p>
+  <ul>
+    <li>A <b>format</b> is a scalar type with a component count, named like WebGPU vertex formats: <code>"uint32x4"</code>, <code>"unorm8x4"</code>, <code>"float16x2"</code>. <span class="cls" data-c="ArrayFormats">ArrayFormats</span> tells you its bytes and typed array.</li>
+    <li>A <b>bundle definition</b> (<span class="cls" data-c="defineBundle">defineBundle</span>) is plain data: channel formats plus a <code>packing</code> of 1, 2, or 4 elements per GPU texel. It can be posted to a worker or written into a file header.</li>
+    <li><code>count</code> rows are valid; <code>capacity</code> rows are allocated, always a multiple of 4096. This fills whole 1024-texel texture rows at every packing.</li>
+    <li>Every bundle of a table shares its <code>count</code> and <code>capacity</code>: a splat and its LoD tree node sit in the same row. Data with other rows, such as the sort keys of a projected collection or a draw order, is a table of its own.</li>
+    <li>On the GPU each channel is a 2D array texture, 1024 texels wide. <span class="cls" data-c="TextureLayout">TextureLayout</span> picks its height and layer count; an element's texel is found with shifts and masks only.</li>
+    <li><code>new GpuArrays({ ..., storage: true })</code> (WebGPU only) can also be written by compute shaders. The flag is part of the type, <code>GpuArrays&lt;S, true&gt;</code>, so compute writers refuse other arrays at compile time.</li>
+  </ul>
+<pre>const data = new ArrayData({
+  bundles: { extSplats: Splats.EXT },
+  count: 1000,
+});
+// a Uint32Array, capacity * 4 long
+data.bundles.extSplats.channels.extA.data;
+
+// one texture per channel, uploaded
+const arrays = GpuArrays.fromData(renderer, data);
+// rows read back, as an ArrayData
+const back = await arrays.read({ start: 0, count: 10 });</pre>
+  <p class="takeaway reveal"><b>Why tables:</b> splats, sort keys, draw orders, and LoD trees all use the same structure, so uploads, readbacks, worker transfers, and file formats are implemented once for tables instead of once per kind of data.</p>
+  <div class="quiz" data-quiz="data"></div>
+  <p class="deeper">See also: <a href="ref/arraydata.html">ArrayData</a> <a href="ref/gpu-arrays.html">GPU arrays</a> <a href="data.html">The data, in depth</a></p>
+</section>
+
+<!-- 3 -->
+<section id="twins" data-title="Twins" data-step="1" data-classes="Splats,GpuSplats,Encoding,GpuEncoding,SortKeys,GpuSortKeys,SplatMath,GpuSplatMath,Sh,GpuSh,ShPalette,GpuShPalette">
+  <div class="eyebrow">03 · CPU and GPU</div>
+  <h2>Twin classes: the same bits on the CPU and the GPU</h2>
+  <p class="lede">Code that encodes or decodes bits comes in pairs. The CPU class is in <code>core/</code> and has no prefix. Its shader twin is in <code>gpu/</code>, starts with <code>Gpu</code>, has the same method names, and builds TSL (three.js shader code) instead of computing numbers. Both produce the same bits, so a table written on one side reads correctly on the other.</p>
+  <div class="journey" data-journey></div>
+  <table class="tbl reveal">
+    <tr><th>CPU (core/)</th><th>GPU (gpu/, TSL)</th><th>What they share</th></tr>
+    <tr><td><span class="cls" data-c="Splats">Splats</span></td><td><span class="cls" data-c="GpuSplats">GpuSplats</span></td><td>the three splat layouts: encode, decode, store one splat</td></tr>
+    <tr><td><span class="cls" data-c="Encoding">Encoding</span></td><td><span class="cls" data-c="GpuEncoding">GpuEncoding</span></td><td>half floats, HDR colors, octahedral directions, and rotations</td></tr>
+    <tr><td><span class="cls" data-c="SortKeys">SortKeys</span></td><td><span class="cls" data-c="GpuSortKeys">GpuSortKeys</span></td><td>a distance as a sort key that orders splats back to front</td></tr>
+    <tr><td><span class="cls" data-c="SplatMath">SplatMath</span></td><td><span class="cls" data-c="GpuSplatMath">GpuSplatMath</span></td><td>quaternions, covariances, and eigenvectors</td></tr>
+    <tr><td><span class="cls" data-c="Sh">Sh</span>, <span class="cls" data-c="ShPalette">ShPalette</span></td><td><span class="cls" data-c="GpuSh">GpuSh</span>, <span class="cls" data-c="GpuShPalette">GpuShPalette</span></td><td>spherical harmonics: the codecs (ext, packed), the basis, and palettes</td></tr>
+  </table>
+  <p>A splat is a center, three scales, a rotation, a color, and an opacity. Three <b>layouts</b> store one splat per table row; a layout's name is also its bundle's name:</p>
+  <div class="panel reveal">
+    <div class="chips" id="layoutChips"></div>
+    <div id="layoutWords" style="margin-top: 10px"></div>
+    <div class="small" id="layoutNote"></div>
+  </div>
+  <div class="panel reveal">
+    <h3 style="margin-top: 0">Codec example: the same call on the CPU and the GPU</h3>
+    <div class="chips" id="codecChips"></div>
+    <label class="ctl"><span id="codecLabel">value</span> <input type="range" id="codecValue" min="0" max="1000" value="420"><output id="codecOut"></output></label>
+    <div class="row">
+      <pre id="codecCpu"></pre>
+      <pre id="codecGpu"></pre>
+    </div>
+    <div class="bits" id="codecBits"></div>
+    <div class="small" id="codecNote" style="margin-top: 6px"></div>
+  </div>
+  <p class="takeaway reveal"><b>Layout independence:</b> <code>Splats.get(data)</code> finds the splat bundle of any layout on the CPU, and <code>GpuSplatReader.from(arrays)</code> does the same in shaders. Choose the layout by memory use (16 or 32 bytes per splat); the rest of the code does not depend on which layout it receives.</p>
+  <div class="quiz" data-quiz="twins"></div>
+  <p class="deeper">See also: <a href="ref/encoding.html#the-shader-twins">The shader twins</a> <a href="ref/splats.html">Splats</a></p>
+</section>
+
+<!-- 4 -->
+<section id="files" data-title="Loading" data-step="0" data-classes="SplatFiles,PlyFile,CompressedPlyFile,SpzFile,RadFile,RdxFile,Compression,WorkerPool,loadSplats,writeSplats">
+  <div class="eyebrow">04 · Loading data</div>
+  <h2>Files and workers: from bytes to a table</h2>
+  <p class="lede"><span class="cls" data-c="loadSplats">loadSplats</span> turns a URL, a <code>File</code>, or bytes into an <code>ArrayData</code> with the splats in the requested layout (<code>loadSplatFile</code> also keeps RAD's clustered SH as a palette: <code>{ splats, shPalette? }</code>). By default it runs on a worker, so decoding 10M splats does not block the page.</p>
+  <div class="journey" data-journey></div>
+  <div class="panel reveal">
+    <div class="chips" id="swimMode"><span class="chip on" data-w="1">worker: true (default)</span><span class="chip" data-w="0">worker: false</span></div>
+    <div class="swim" id="swim" style="margin-top: 12px"></div>
+    <div style="display: flex; gap: 8px; margin-top: 10px"><button class="btn primary" id="swimPlay">▶ load a file</button></div>
+    <p class="small" id="swimNote" style="margin-bottom: 0"></p>
+  </div>
+<pre>const data = await loadSplats("scene.spz", {
+  // or extSplats (default), or covSplats
+  layout: "packedSplats",
+  // stage: downloading, decoding, ...
+  onProgress: (fraction, stage) => show(stage, fraction),
+});
+
+// encoded back to file bytes
+const bytes = await writeSplats(data, "spz", { version: 3 });</pre>
+  <div class="row reveal">
+    <div class="panel"><h3 style="margin-top: 0">The formats</h3>
+      <table class="tbl">
+        <tr><th>Class</th><th>Format</th><th class="num">decode</th></tr>
+        <tr><td><span class="cls" data-c="PlyFile">PlyFile</span></td><td>3DGS PLY, point clouds, compressed PLY</td><td class="num">1.4M/s</td></tr>
+        <tr><td><span class="cls" data-c="CompressedPlyFile">CompressedPlyFile</span></td><td>writes SuperSplat compressed PLY</td><td class="num">as PlyFile</td></tr>
+        <tr><td><span class="cls" data-c="SpzFile">SpzFile</span></td><td>SPZ 1-3 (writes 2 or 3)</td><td class="num">1.0M/s</td></tr>
+        <tr><td><span class="cls" data-c="RadFile">RadFile</span></td><td>RAD, with LoD trees</td><td class="num">1.3M/s</td></tr>
+        <tr><td><span class="cls" data-c="RdxFile">RdxFile</span></td><td>any table, chunked</td><td class="num">6M/s</td></tr>
+      </table>
+      <p class="small" style="margin-bottom: 0">Splats decoded per second into extSplats, on one core of an M3 Max. <span class="cls" data-c="SplatFiles">SplatFiles</span> identifies the format from the first bytes of the file.</p>
+    </div>
+    <div class="panel"><h3 style="margin-top: 0">The pool</h3>
+      <p style="margin-top: 0"><span class="cls" data-c="WorkerPool">WorkerPool</span> runs <code>core/</code> functions on up to 4 workers, created on first use. Arrays are passed as <i>transfers</i>: the buffer moves to the other thread instead of being copied, and the sender's view becomes empty.</p>
+      <p class="small" style="margin-bottom: 0">The <code>worker</code> option: if omitted, the shared pool when workers are available (otherwise this thread); <code>true</code>: the pool; <code>false</code>: this thread; a pool or a <code>WorkerLease</code>: to choose one worker.</p>
+    </div>
+  </div>
+  <p><span class="cls" data-c="RdxFile">RdxFile</span> is Radix's own format. It stores any table's bundles in chunks of rows, byte-transposed and gzipped by <span class="cls" data-c="Compression">Compression</span>. The header lists the size of every chunk, so a viewer can read chunks in any order with HTTP range requests.</p>
+  <p class="takeaway reveal"><b>Copies:</b> loading makes two copies of the splats, not three. The worker decodes the file bytes directly into the table's arrays, the arrays are transferred back to the page without a copy, and <code>GpuArrays.fromData</code> copies them once into textures.</p>
+  <div class="quiz" data-quiz="files"></div>
+  <p class="deeper">See also: <a href="ref/files.html">Splat files</a> <a href="ref/workers.html">Workers</a> <a href="ref/rdx.html">RDX</a></p>
+</section>
+
+<!-- 5 -->
+<section id="shaders" data-title="Shader I/O" data-step="2" data-classes="GpuArrayReader,GpuSplatReader,GpuShReader,GpuArrayWriter,WgpuArrayWriter,WgpuArrayStore,WgpuCompute,WgpuBuffer">
+  <div class="eyebrow">05 · Reading and writing in shaders</div>
+  <h2>Readers, writers, and the splat generator</h2>
+  <p class="lede">Shaders access tables through two kinds of objects. A <b>reader</b> returns the texels of a row index, in any shader stage. A <b>writer</b> runs a function once per output row and stores what it returns, as a fragment pass (both backends) or a compute dispatch (WebGPU).</p>
+  <div class="journey" data-journey></div>
+  <div class="row reveal">
+    <div class="panel"><h3 style="margin-top: 0">Read</h3>
+      <p style="margin-top: 0"><span class="cls" data-c="GpuArrayReader">GpuArrayReader</span> reads one bundle: <code>load(channel, index)</code>. Its shader is built from the bundle definition, so it can be bound to any arrays of that shape.</p>
+      <p style="margin-bottom: 0"><span class="cls" data-c="GpuSplatReader">GpuSplatReader</span> reads splats of any layout as the same struct: <code>loadSplat(i)</code> (center, scales, quaternion, rgb, opacity) or <code>loadCovSplat(i)</code> (a covariance instead). <span class="cls" data-c="GpuShReader">GpuShReader</span> reads their spherical harmonics, per splat or through a palette, and gives the color seen from a point: <code>color(i, origin, center)</code>.</p>
+    </div>
+    <div class="panel"><h3 style="margin-top: 0">Write</h3>
+      <p style="margin-top: 0"><span class="cls" data-c="GpuArrayWriter">GpuArrayWriter</span> renders a full-screen pass per texture layer, one fragment per row. <span class="cls" data-c="WgpuArrayWriter">WgpuArrayWriter</span> takes the same arguments and gives the same results as one compute dispatch, for <code>storage: true</code> arrays.</p>
+      <p style="margin-bottom: 0">At a lower level, <code>wgpu/</code> has the basic building blocks: <span class="cls" data-c="WgpuCompute">WgpuCompute</span> kernels, <span class="cls" data-c="WgpuBuffer">WgpuBuffer</span> storage buffers, and <span class="cls" data-c="WgpuArrayStore">WgpuArrayStore</span> scattered writes.</p>
+    </div>
+  </div>
+  <p>The renderer is built around the <b>splat generator</b>: any object with <code>generateSplat(index, context)</code> or <code>generateCovSplat(index, context)</code>, and a <code>bind(data, context)</code> that points it at its data. The <code>context</code> tells it about the object and the view in the object's own space (<code>viewOrigin</code>, <code>viewForward</code>, <code>objectToHead</code>, ...), set per object. <code>SplatGenerator.fromSplats({ layout, remap, modifiers, sh })</code> makes one for stored splats. It applies an optional remap of the index (either an index list, for example the splats of a Level-of-Detail subset, or a TSL function), then the reader's load, then the spherical harmonics' color seen from <code>context.viewOrigin</code>, then each modifier in turn; its data is <code>{ splats, indices?, shPalette? }</code>. <code>SplatGenerator.forArrays(arrays)</code> picks the right one for given arrays, SH included. A plain object with a function that computes a splat from its index is also a generator, and its data, if it binds any, can be of any type. The projection requests splat <i>i</i> from a generator and does not depend on which kind of generator it is.</p>
+  <div class="panel reveal">
+    <div class="chips" id="sourceChips"><span class="chip on" data-s="stored">stored splats</span><span class="chip" data-s="gen">a generator</span></div>
+    <pre id="sourceCode"></pre>
+    <div class="flow" id="sourceFlow"></div>
+  </div>
+  <p class="takeaway reveal"><b>Generators:</b> a generator in a renderer's collection runs inside the projection pass. No splats are stored for it, and its splats are projected and sorted together with all other splats.</p>
+  <div class="quiz" data-quiz="shaders"></div>
+  <p class="deeper">See also: <a href="ref/shaders.html">Shaders</a> <a href="ref/gpu-arrays.html#gpuarraywriter">Writers</a> <a href="ref/wgpu.html">WebGPU compute</a></p>
+</section>
+
+<!-- 6 -->
+<section id="projection" data-title="Projection" data-step="3" data-classes="SplatCamera,SplatProjection,SplatProjector,SplatCollection,SplatParams">
+  <div class="eyebrow">06 · Splats to screen space</div>
+  <h2>Projection: a few words per splat, per eye</h2>
+  <p class="lede">Every frame, each splat's 3D Gaussian is converted into what the draw needs on screen: its screen position, its 2D shape, its color, and its opacity. These values are packed into a few 32-bit <b>words</b> per splat, plus a <b>sort key</b> for its distance. Computing them once per splat, instead of at each of a quad's four corners, reduces the cost of the draw.</p>
+  <div class="journey" data-journey></div>
+  <ul>
+    <li>Internal classes of the renderer: <span class="cls" data-c="SplatCamera">SplatCamera</span> holds the camera of one render as shader uniforms: the <b>head</b> (the point that distances are measured from) and one eye, or two for XR. <code>set(renderer, camera)</code> fills it from any camera; a camera made for the other clip convention is converted, not modified. An XR <code>ArrayCamera</code> gives two eyes. Splats enter the projection in head space.</li>
+    <li><span class="cls" data-c="SplatCollection">SplatCollection</span> holds what is projected, in order: objects of a generator, its data, a count, and a <code>matrixWorld</code> (the object's world transform: object to world, such as an <code>Object3D</code>'s <code>matrixWorld</code>), each at an offset in one output. Each object's generator, data, and count are fixed; its world transform, params, and release stay live and can change after the collection is created.</li>
+    <li><span class="cls" data-c="SplatProjection">SplatProjection</span> (internal) implements one of four projection methods, selected by a renderer's <code>method</code>. It defines its words, how to compute them for a splat, and how the draw decodes them.</li>
+    <li><span class="cls" data-c="SplatProjector">SplatProjector</span> keeps one program per generator (generate, transform, the modifier, project) and runs it once per object, one dispatch per object. Apps only read <code>programs</code> and call <code>dispose(generator)</code>.</li>
+    <li><span class="cls" data-c="SplatParams">SplatParams</span> (internal) holds the defaults and the uniforms: a renderer's <code>params</code> (<code>maxStdDev</code>, <code>minAlpha</code>, <code>falloff</code>: the draw reads them too) and each object's <code>objectParams</code> (<code>blurAmount</code>, depth of field, <code>sortGuard</code>, ...); a view or an object can set its own.</li>
+  </ul>
+  <div class="panel reveal">
+    <div class="small">method</div><div class="chips" id="projMethod"></div>
+    <div class="small" style="margin-top: 8px">eyes</div><div class="chips" id="projEyes"><span class="chip on" data-e="1">1 (a camera)</span><span class="chip" data-e="2">2 (XR)</span></div>
+    <label class="ctl">splats <input type="range" id="projCount" min="0" max="100" value="60"><output id="projCountOut"></output></label>
+    <p id="projDesc" style="margin: 6px 0"></p>
+    <div id="projWords"></div>
+    <dl class="kv" id="projKv" style="margin-top: 10px"></dl>
+  </div>
+<pre>const collection = new SplatCollection([
+  // GpuArrays of any layout, placed by its world transform
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+  // a generator, at the next offset
+  { generator: ring, count: 4000, matrixWorld: ringObject.matrixWorld },
+]);
+
+// projected for each render's camera
+const splatRenderer = new SplatRenderer({
+  renderer,
+  method: "ewa",
+  collection,
+});
+scene.add(splatRenderer);</pre>
+  <p class="takeaway reveal"><b>Stereo cost:</b> words that depend only on the head (center direction, distance, color, rotation) are written once; each eye adds only a few words of its own. Both eyes are projected in the same pass and share one sort.</p>
+  <div class="quiz" data-quiz="projection"></div>
+  <p class="deeper">See also: <a href="ref/projection.html">Projection</a> <a href="pipeline.html">The pipeline, in depth</a></p>
+</section>
+
+<!-- 7 -->
+<section id="sorting" data-title="Sorting" data-step="4" data-classes="WgpuSplatSorter,WgpuCompact,WgpuRadixSort,sortSplatKeys,SortKeys">
+  <div class="eyebrow">07 · Back to front</div>
+  <h2>Sorting: on the GPU, or on the CPU a few frames later</h2>
+  <p class="lede">Splats are transparent, so they must be blended from far to near. The projection has already written each splat's sort key; sorting turns the sort keys into an <b>order</b>, the list of splat indices to draw.</p>
+  <div class="journey" data-journey></div>
+  <div class="panel reveal">
+    <h3 style="margin-top: 0">On WebGPU: <span class="cls" data-c="WgpuSplatSorter">WgpuSplatSorter</span></h3>
+    <label class="ctl">sort key bits <input type="range" id="sortBits" min="0" max="2" value="1"><output id="sortBitsOut"></output></label>
+    <div class="flow" id="sortFlow"></div>
+    <p class="small" id="sortNote" style="margin-bottom: 0"></p>
+  </div>
+  <p><span class="cls" data-c="WgpuCompact">WgpuCompact</span> first keeps only the splats with a valid sort key (visible in at least one eye) and writes their count to a GPU buffer. <span class="cls" data-c="WgpuRadixSort">WgpuRadixSort</span> then sorts those sort keys 8 bits at a time and reads the count from that buffer, so the count is never read back to JavaScript. Both classes are general-purpose: they accept any uint32 keys and values. The last kernel writes the arguments of the draw call.</p>
+  <div class="panel reveal">
+    <h3 style="margin-top: 0">On WebGL2: sort keys on the GPU, a sort on a worker, then the order is applied</h3>
+<pre>// the camera's viewpoint, with its own CPU order
+const view = splatRenderer.viewFor(camera);
+// the collection's sort keys: computed on the GPU, read back,
+// sorted on a worker
+const order = await view.sort(camera);
+// drawn from the next frame on (autoSort does both automatically)
+view.apply(order);</pre>
+    <p style="margin-bottom: 0"><span class="cls" data-c="sortSplatKeys">sortSplatKeys</span> runs <code>SortKeys.sort</code>, a stable radix sort in two passes (16 and 16 bits for 32-bit sort keys, 11 and 13 for 24-bit ones), in about 7 ms for 2M splats with 24-bit sort keys. In the meantime, the GPU keeps drawing with the previous order and the current projection of the collection that order was sorted for, so splats stay in their positions and only their order is slightly out of date. Each order has a version; an order that arrives with a newer version than the displayed one is applied even if the collection has changed since. With a <code>sortGuard</code>, the sort keys of splats far outside the view are also dropped, so fewer splats are sorted and drawn; in that case, sort again when the camera turns as well as when it moves.</p>
+  </div>
+  <p class="takeaway reveal"><b>Sort key bits:</b> sort keys are the distance's float bits truncated to 16, 24, or 32 bits (set by <code>sortBits</code>). 24 is the default: 3 GPU radix passes, and neighboring splats closer than about 0.0015% of their distance may swap order. 32 bits takes a fourth pass and keeps the exact float order. 16 bits sorts faster but gives splats within 0.1% of each other the same sort key.</p>
+  <div class="quiz" data-quiz="sorting"></div>
+  <p class="deeper">See also: <a href="ref/sorting.html">Sorting</a> <a href="ref/views.html#orders">Orders</a></p>
+</section>
+
+<!-- 8 -->
+<section id="drawing" data-title="Drawing" data-step="5" data-classes="SplatRenderer,SplatView,createRenderer,CameraControls">
+  <div class="eyebrow">08 · Pixels</div>
+  <h2>SplatRenderer: the draw mesh</h2>
+  <p class="lede"><span class="cls" data-c="SplatRenderer">SplatRenderer</span> is a <code>THREE.Mesh</code>: give it a collection, add it to a scene, and render as usual, from any camera. Immediately before each render, it projects the collection for the camera, sorts it, and then draws one quad per splat in that order.</p>
+  <div class="journey" data-journey></div>
+  <div class="panel reveal">
+    <div class="chips" id="drawStage"><span class="chip on" data-d="0">batched quads</span><span class="chip" data-d="1">vertex stage</span><span class="chip" data-d="2">fragment stage</span><span class="chip" data-d="3">before each render</span></div>
+    <canvas id="drawCanvas" width="900" height="300" style="width: 100%; height: auto; display: block; margin-top: 10px; border-radius: 10px; background: #0d1018"></canvas>
+    <p id="drawText" style="margin-bottom: 0"></p>
+  </div>
+<pre>// WebGPU, or WebGL2 as a fallback
+const renderer = await createRenderer();
+
+// GPU sort on WebGPU, otherwise CPU sort
+const splatRenderer = new SplatRenderer({
+  renderer,
+  method: "ewa",
+  collection,
+});
+scene.add(splatRenderer);
+// applied to every splat; programs are cached
+splatRenderer.modifier = depthColor;
+
+renderer.render(scene, camera);
+// a second camera: on WebGPU, nothing else is needed
+renderer.render(scene, otherCamera);</pre>
+  <p>Other parts of the API:</p>
+  <ul>
+    <li>A <span class="cls" data-c="SplatView">SplatView</span> is one viewpoint of a renderer: <code>splatRenderer.viewFor(camera, { collection, objectParams, modifier })</code> draws that camera with settings of its own (its own LoD subset, say); the rest follow the renderer. With the CPU sort, the renderer makes a view for each camera it renders, because each camera needs its own order.</li>
+    <li>Set <code>splatRenderer.view = splatRenderer.viewFor("thumbnail")</code> to pick a view explicitly, for example to draw one camera twice with different settings; unset it to go back to choosing by camera.</li>
+    <li>The <code>modifier</code> runs on every splat in <code>modifierSpace</code> (view space, world space, the object's space, or a frame's <code>matrixWorld</code>), similar to an override material. Switching between modifiers does not recompile any programs.</li>
+    <li><code>prepare(camera)</code> projects before the render instead of during it; <code>phase</code> wraps the project and sort steps for a profiler; <code>onInvalidate</code> tells an on-demand app when an order landed or a sort was requested (<code>requestSort()</code>), so a render would show something new.</li>
+    <li><code>params</code> (<code>maxStdDev</code>, <code>minAlpha</code>, <code>falloff</code>) and <code>objectParams</code> (blur, culling limits, depth of field, <code>sortGuard</code>) are plain values changed in place; <a href="ref/params.html">params</a> lists each with its default.</li>
+    <li>An object's <code>release</code> runs once nothing draws or sorts that object. It frees what the object owns, as the app defines it: for example, the index list of a Level-of-Detail subset.</li>
+  </ul>
+  <p>For navigation, <span class="cls" data-c="CameraControls">CameraControls</span> moves the camera from pointer, touch, keyboard, gamepad, or WebXR controller input. It has two modes, orbit around a target and fly; the F key switches between them without moving the view. Call <code>controls.update()</code> before each render. The viewer at <code>/build/examples/splats/index.html</code> uses all of these classes in one page; <code>/build/examples/scenes/index.html</code> shows several objects, several cameras and views, modifiers, and a subset drawn through an index list recomputed from the camera (as a Level-of-Detail subset would be).</p>
+  <p class="takeaway reveal"><b>Draw cost:</b> the fragment stage blends every pixel of every quad, so splats near the camera cost the most. Discarding fragments beyond the splat's cutoff and below <code>minAlpha</code> limits this cost.</p>
+  <div class="quiz" data-quiz="drawing"></div>
+  <p class="deeper">See also: <a href="ref/rendering.html#splatrenderer">SplatRenderer</a> <a href="ref/views.html">Views</a> <a href="ref/params.html">Params</a></p>
+</section>
+
+<!-- 9 -->
+<section id="recipes" data-title="Recipes" data-step="5" data-classes="">
+  <div class="eyebrow">09 · Combining the classes</div>
+  <h2>Recipes: different pipelines from the same classes</h2>
+  <p class="lede">Each step is a separate class, so a pipeline takes a few lines of code. Select a recipe to highlight the classes it uses on the map.</p>
+  <div class="recipes reveal" id="recipeChips"></div>
+  <pre id="recipeCode"></pre>
+  <p id="recipeText"></p>
+  <div class="quiz" data-quiz="recipes"></div>
+  <p class="deeper">See also: <a href="ref/recipes.html">Recipes</a></p>
+</section>
+
+<!-- 10 -->
+<section id="cost" data-title="Cost" data-step="5" data-classes="GpuProfiler">
+  <div class="eyebrow">10 · Where the time goes</div>
+  <h2>A cost model</h2>
+  <p class="lede">The cost of each step scales with a different quantity. Knowing which one helps you choose what to change: fewer splats, fewer pixels, fewer sort key bits, or a different projection method.</p>
+  <table class="tbl reveal">
+    <tr><th>Step</th><th>Scales with</th><th class="num">bytes per splat</th></tr>
+    <tr><td>source splats (GpuArrays)</td><td>splats</td><td class="num">32 ext/cov, 16 packed</td></tr>
+    <tr><td>projection (projected splats)</td><td>splats × eyes</td><td class="num">20 to 44 (ch. 6)</td></tr>
+    <tr><td>GPU sort (compaction + radix)</td><td>visible splats × sort key bytes</td><td class="num">16 (sort keys, values, scratch)</td></tr>
+    <tr><td>CPU sort (readback, worker, upload)</td><td>splats</td><td class="num">4 down, 4 up</td></tr>
+    <tr><td>draw: vertex stage</td><td>drawn splats</td><td class="num">reads 4 to 44</td></tr>
+    <tr><td>draw: fragment stage</td><td>pixels × splats over each pixel</td><td class="num"></td></tr>
+  </table>
+  <div class="panel reveal">
+    <div class="chips" id="costScene"></div>
+    <div id="costBars" style="margin-top: 10px"></div>
+    <p class="small" id="costNote" style="margin-bottom: 0"></p>
+  </div>
+  <p><span class="cls" data-c="GpuProfiler">GpuProfiler</span> measures this in your own app: <code>createRenderer({ profile: true })</code>, then <code>profiler.phase("project", fn)</code> around your steps and <code>await profiler.collect()</code> for milliseconds per phase.</p>
+  <p class="takeaway reveal"><b>Main cost:</b> the draw takes most of the frame time. Splats close around the camera are the most expensive, especially with the ray methods (3dgut, htgs), which evaluate them across the whole screen. Projection and sorting take a few milliseconds even at 10M splats.</p>
+  <div class="quiz" data-quiz="cost"></div>
+  <p class="deeper">See also: <a href="ref/performance.html">Performance</a></p>
+</section>
+
+<section id="keep-reading" data-title="Related pages">
+  <div class="eyebrow">More</div>
+  <h2>Related pages</h2>
+  <div class="next-cards">
+    <a href="data.html" style="--c: var(--core)"><em>In depth</em><b>The data</b><span>Tables, formats, texture layout, a splat in 32 bytes, writers, workers, and files.</span></a>
+    <a href="pipeline.html" style="--c: var(--gpu)"><em>In depth</em><b>The pipeline</b><span>Projection, sort keys, the GPU and CPU sorts, and the draw.</span></a>
+    <a href="ref/overview.html" style="--c: var(--render)"><em>Reference</em><b>The reference</b><span>The Markdown reference as HTML, with the API index and every default.</span></a>
+  </div>
+</section>
+
+<footer>Radix docs · <a href="index.html">home</a> · <a href="ref/overview.html">reference</a> · source: <code>docs/model.html</code></footer>
+</main>
+
+<aside id="mapDock">
+  <div class="mapHead"><b>System map</b><div class="small">Every public class, grouped by layer. Highlighted: this chapter; dimmed: earlier chapters. Arrows: data passed between classes.</div></div>
+  <div id="mapWrap"><svg id="mapSvg"></svg></div>
+  <div id="card"><div class="small">Click a class to see what it does.</div></div>
+</aside>
+</div>
+<button class="btn" id="mapToggle">System map</button>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = (n) => n.toLocaleString("en-US");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const LAYER_COLOR = { core: "#2dd4bf", gpu: "#a78bfa", wgpu: "#fb923c", worker: "#4ade80", render: "#f472b6", controls: "#60a5fa" };
+const bytesText = (b) => (b >= 2 ** 30 ? `${(b / 2 ** 30).toFixed(2)} GiB` : b >= 2 ** 20 ? `${(b / 2 ** 20).toFixed(1)} MiB` : b >= 1024 ? `${(b / 1024).toFixed(1)} KiB` : `${b} B`);
+const countText = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${n}`);
+const logCount = (v, lo = 1e3, hi = 2e7) => Math.round(lo * (hi / lo) ** (v / 100));
+
+// ---------- The classes ----------
+// layer, role, main members, what it takes and gives, the chapter that explains it
+const CLASSES = {
+  ArrayData: ["core", "A table of typed arrays: rows are elements, columns are channels, grouped in named bundles.", ["new ArrayData({ bundles, count })", "addBundle(name, def, { data })", "ensureCapacity(n)", "copyFrom / clone / swap", "toTransferable(), ArrayData.fromTransferable(t)"], "bundle definitions, counts", "the CPU table everything else uses", "data"],
+  defineBundle: ["core", "A bundle definition: channel formats, packing (elements per GPU texel), and whether files save it.", ["defineBundle({ extA: \"uint32x4\" }, { packing, serialize })"], "channel formats", "a plain-data definition", "data"],
+  ArrayFormats: ["core", "What a format name means: scalar type, component count, bytes, and typed array.", ["ArrayFormats.info(\"uint32x4\")", "ArrayFormats.make(scalar, components)"], "a format name", "its description", "data"],
+  TextureLayout: ["core", "Where element t sits in a 1024-wide 2D array texture, and the spans of a range.", ["TextureLayout.for(texels)", "TextureLayout.alignCapacity(n)", "layout.spans(start, count)"], "a texel count", "width, height, layers, spans", "data"],
+  Splats: ["core", "The three splat layouts on the CPU: definitions, finding, making, converting, and per-splat codecs.", ["Splats.EXT / COV / PACKED / LOD_TREE", "Splats.get(data), Splats.make(count, { layout })", "Splats.convert(data, { layout })", "Splats.load / store / loadCenter(bundle, i, out)", "Splats.encoder(bundle) / decoder(bundle)"], "tables and splat records", "splats in table rows", "twins"],
+  Encoding: ["core", "Bit-level codecs: half floats, HDR colors, LoD opacity, octahedral directions, and rotations.", ["Encoding.encodeHalf / decodeHalf", "Encoding.encodeExtRgb", "Encoding.encodeOct24, encodeQuatOct32, encodeQuatOct24", "Encoding.encodeOct(v, bits)"], "numbers, vectors", "packed integer codes", "twins"],
+  SplatMath: ["core", "Splat geometry: normalized quaternions, covariances from scales and rotation, and back.", ["SplatMath.normalizeQuat", "SplatMath.covFromScaleQuat", "SplatMath.symEigens", "SplatMath.basisToQuat"], "scales, rotations, covariances", "the other form", "twins"],
+  SortKeys: ["core", "Distances as back-to-front sort keys, and the CPU radix sort of those sort keys.", ["SortKeys.compute(distance, bits)", "SortKeys.sort({ keys, count, bits })", "SortKeys.KEYS (orders: ArrayData.INDICES)", "SortKeys.invalid(bits)"], "distances or sort keys", "sort keys, or an order", "twins"],
+  SplatFiles: ["core", "Splat files on the current thread: detects the format and passes the call to its class.", ["SplatFiles.detectFormat(bytes, name)", "SplatFiles.decode(bytes, { layout })", "SplatFiles.encode(data, format)", "SplatFiles.fetch(url)"], "bytes or a URL", "{ splats, shPalette? }", "files"],
+  PlyFile: ["core", "Binary PLY: 3DGS files, RGB point clouds, and SuperSplat compressed PLY, with their spherical harmonics (f_rest, float32).", ["PlyFile.read(bytes, { layout, sh })", "PlyFile.write(data, { pbr, sh })"], "PLY bytes", "{ splats: an ArrayData (+ an SH bundle) }", "files"],
+  CompressedPlyFile: ["core", "SuperSplat / PlayCanvas compressed PLY: 16 bytes per splat, quantized in chunks of 256, written in Morton order; SH as an sh element of bytes over \u00b14.", ["CompressedPlyFile.write(data, { sort, sh })", "CompressedPlyFile.read = PlyFile.read"], "an ArrayData", "compressed PLY bytes", "files"],
+  SpzFile: ["core", "SPZ (gzipped, quantized) versions 1 to 3, SH included; writes 2 or 3.", ["SpzFile.read(bytes, { layout, sh })", "SpzFile.write(data, { version: 3 })"], "SPZ bytes", "{ splats: an ArrayData }", "files"],
+  RadFile: ["core", "RAD files, with their LoD trees and SH (s8, s8_delta, f16, f32), clustered SH (a palette) included.", ["RadFile.read(bytes, { sh })", "RadFile.write(data, { radSh, shPalette })"], "RAD bytes", "{ splats (+ lodTree), shPalette? }", "files"],
+  Sh: ["core", "Spherical harmonics on the CPU: two codecs by name (ext, packed), SH bundles beside the splats, and the basis.", ["Sh.find(bundles), Sh.add(data, codec, degree)", "Sh.encoder(data) / decoder(data)", "Sh.convert(data, codec)", "Sh.evaluate(coeffs, dir, degree)"], "coefficients, tables", "SH bundles, colors", "twins"],
+  ShPalette: ["core", "A table of SH entries that splats pick by label (shLabel): RAD's clustered SH and SOG's palettes.", ["ShPalette.create({ codec, degree, size })", "set(n, coeffs), get(n)", "convert(codec), expand(data, labels), expanded(data)"], "coefficients", "a palette table", "twins"],
+  RdxFile: ["core", "Radix's own format: any table in compressed chunks of rows, readable with HTTP range requests.", ["RdxFile.encode(data), RdxFile.decode(bytes)", "RdxFile.encodeFiles(data, name)", "RdxFile.load(url) -> readChunk(i, into)", "RdxFile.makeData(header)"], "an ArrayData", "files, or chunks back", "files"],
+  Compression: ["core", "gzip through the platform's streams, and byte-transposed gzip for numeric columns.", ["Compression.gzip / gunzip", "Compression.compressTransposed(values, bytes)"], "bytes", "bytes", "files"],
+  createRenderer: ["gpu", "An initialized WebGPURenderer (WebGPU, or WebGL2 as a fallback) that requests the limits 95% of devices support.", ["createRenderer({ backend, xr, profile, hdr, limits })", "getGpuCaps(renderer)"], "options, URL parameters", "a renderer and its capabilities", "drawing"],
+  GpuArrays: ["gpu", "The same table in GPU textures, one 2D array texture per channel; storage arrays can be written by compute.", ["GpuArrays.fromData(renderer, data)", "upload / read / copyFrom", "write(writer, range) / writeBatch", "swap(other), hasStorage(), version"], "an ArrayData", "textures shaders read and write", "data"],
+  GpuArrayReader: ["gpu", "TSL reads of one bundle, built from its definition and bound to any arrays of that shape.", ["new GpuArrayReader(def).bind(arrays, name)", "load(channel, index), fetch(...)"], "arrays, a row index", "texels in a shader", "shaders"],
+  GpuArrayWriter: ["gpu", "Writes bundles from a TSL function per row, as fragment passes (both backends).", ["new GpuArrayWriter({ outputs, write: (index, out) => ... })", "arrays.write(writer, { at, count })"], "a TSL function", "rows written on the GPU", "shaders"],
+  GpuSplatReader: ["gpu", "Reads splats of any layout as one struct (SplatGenerator.fromSplats wraps one).", ["GpuSplatReader.from(arrays)", "loadSplat(i), loadCovSplat(i)", "loadCenter / loadRgb / loadOpacity(i)"], "splat arrays", "SplatNode / CovSplatNode", "shaders"],
+  GpuShReader: ["gpu", "Reads and evaluates stored spherical harmonics in any generator (fromSplats holds one).", ["new GpuShReader({ codec, degree, palette })", "bind(arrays, palette?)", "color(i, origin, center), apply(splat, i, origin)"], "SH arrays (or labels and a palette)", "a color node", "shaders"],
+  GpuSh: ["gpu", "The TSL twin of Sh: the SH basis, the codecs' decoders, and the degree cap (objectParams.maxShDegree).", ["GpuSh.evaluate(dir, degree, coefficients)", "GpuSh.maxDegree", "GpuSh.codec(name)"], "TSL nodes", "an SH color node", "twins"],
+  GpuShPalette: ["gpu", "SH palettes on the GPU: uploaded, or made empty for a writer to fill.", ["GpuShPalette.upload(renderer, palette)", "GpuShPalette.create(renderer, { codec, degree, size })"], "an ShPalette", "GpuArrays", "twins"],
+  GpuSplats: ["gpu", "The TSL twin of Splats: splat structs and their codecs, and the forms of a generator's splats.", ["GpuSplats.Splat(center, scales, quaternion, rgb, opacity, index)", "GpuSplats.decodeExt / encodeCov / storePacked ...", "GpuSplats.splatOf(generator, i), covSplatOf, normalOf"], "TSL nodes", "TSL nodes, same bits as Splats", "twins"],
+  SplatGenerator: ["gpu", "Any object that produces splat i in TSL: stored splats through a template, or your own function. One program; its data is bound per dispatch.", ["SplatGenerator<Data>: { generateSplat(i, context) and / or generateCovSplat(i, context), bind(data, context) }", "SplatGenerator.fromSplats({ layout, remap, modifiers, sh })", "SplatGenerator.forArrays(arrays)", "SplatGenerator.indices(renderer, list, into?)", "SplatModifier, CovSplatModifier, SplatGeneratorContext"], "an index (and data)", "a SplatNode / CovSplatNode", "shaders"],
+  GpuEncoding: ["gpu", "The TSL twin of Encoding (half floats through the GPU's own instructions).", ["GpuEncoding.encodeHalf, decodeExtRgb, decodeQuatOct32 ..."], "TSL nodes", "codes", "twins"],
+  GpuSplatMath: ["gpu", "The TSL twin of SplatMath, plus quaternion rotation in shaders.", ["GpuSplatMath.quatRotate, covFromScaleQuat, symEigens ..."], "TSL nodes", "TSL nodes", "twins"],
+  GpuSortKeys: ["gpu", "The TSL twin of SortKeys: the same sort key from the same distance.", ["GpuSortKeys.compute(distance, bits)", "pack / unpack (RGBA8 texels)"], "a distance node", "a sort key node", "twins"],
+  GpuProfiler: ["gpu", "GPU and CPU time per named phase, from timestamp queries.", ["createRenderer({ profile: true })", "profiler.beginFrame(), phase(name, fn)", "await profiler.collect()"], "your frame's phases", "milliseconds per phase", "cost"],
+  WgpuCompute: ["wgpu", "A compute kernel from a TSL body; batches run in one compute pass.", ["new WgpuCompute({ workgroupSize, body })", "dispatch(renderer, size | indirect)", "WgpuComputeBatch"], "a TSL body", "a dispatch", "shaders"],
+  WgpuBuffer: ["wgpu", "A typed, resizable storage buffer of 32-bit values; can swap GPU buffers with another one.", ["new WgpuBuffer({ renderer, format, count })", "element(i), upload, read, copyFrom, swap"], "values", "a buffer shaders read and write", "shaders"],
+  WgpuArrayWriter: ["wgpu", "The compute version of GpuArrayWriter, for storage arrays: same arguments, same results.", ["new WgpuArrayWriter({ outputs, write })", "arrays.write(writer, range)"], "a TSL function", "rows written by compute", "shaders"],
+  WgpuArrayStore: ["wgpu", "Scattered writes into storage arrays from your own kernel.", ["new WgpuArrayStore(def).bind(arrays, name)", "store(channel, index, value)"], "indices, values", "rows anywhere", "shaders"],
+  WgpuCompact: ["wgpu", "Stream compaction: keeps the keys that are not invalid, in order, with their indices and their count on the GPU.", ["new WgpuCompact({ renderer, key: (i) => ... })", "compact(n): keys, values, count"], "a key function", "compacted keys and values", "sorting"],
+  WgpuRadixSort: ["wgpu", "A stable radix sort of uint32 keys and values, 8 bits per pass, sized from a GPU count.", ["new WgpuRadixSort({ renderer, keys, values })", "sort(count, { bits })", "sortIndirect(countBuffer, { bits })"], "keys and values", "the same, sorted", "sorting"],
+  WgpuSplatSorter: ["wgpu", "Compaction + radix sort + the indirect draw arguments for projected splats, all on the GPU.", ["new WgpuSplatSorter(renderer)", "sort(arrays, count, bits)", "values, count, indirect", "await readCount()"], "a renderer's projected sort keys", "a draw order and draw arguments", "sorting"],
+  WorkerPool: ["worker", "Up to 4 workers running core/, created on first use; arrays are transferred, not copied.", ["WorkerPool.default", "pool.call(name, args, { onProgress })", "pool.acquire() -> WorkerLease"], "a core/ call", "its result", "files"],
+  loadSplats: ["worker", "A splat file (URL, File, or bytes) into an ArrayData, on a worker by default, its SH included (extSh by default; RAD's clustered SH expanded per splat, or kept as a palette by loadSplatFile).", ["loadSplats(source, { layout, sh, worker, onProgress })", "loadSplatFile(source, options): { splats, shPalette? }"], "a file", "an ArrayData in the requested layout", "files"],
+  writeSplats: ["worker", "An ArrayData into a PLY, SPZ, RAD, or RDX file.", ["writeSplats(data, \"spz\", { version })"], "an ArrayData", "file bytes", "files"],
+  sortSplatKeys: ["worker", "SortKeys.sort on a worker (or this thread): the WebGL2 fallback's sort.", ["sortSplatKeys(keys, { bits, ordering, worker })", "-> { ordering, visible, keys }"], "read-back sort keys", "an order a view applies", "sorting"],
+  SplatCamera: ["render", "Internal: the camera of one render as uniforms (the head and one or two eyes).", ["SplatCamera.set(renderer, camera)", "setViews({ head, eyes, size, ndcZMin })", "eye(v), eyes, SplatCamera.viewIndex"], "a camera (XR: an ArrayCamera)", "uniforms", "projection"],
+  SplatParams: ["render", "Internal: defaults and the shared uniforms of a renderer's params (the draw reads them) and each object's.", ["SplatParams.VIEW: maxStdDev, minAlpha, falloff", "SplatParams.OBJECT: blurAmount, sortGuard, maxShDegree, depth of field ...", "SplatParams.nodes"], "plain values", "uniforms", "projection"],
+  SplatCollection: ["render", "Which splats to draw, in order: immutable objects of a generator, its data, a count, and a live matrixWorld, at offsets.", ["new SplatCollection([{ generator, data, count, matrixWorld, params, release }])", "SplatCollection.arrays(arrays, { matrixWorld, shPalette })", "SplatCollection.object(object): typed data", "objects ({ object, offset }), count, EMPTY"], "generators and their data", "one collection to project and sort", "projection"],
+  SplatView: ["render", "One viewpoint of a SplatRenderer (a camera, or a key of the app's): settings over the renderer's and the CPU sort's order.", ["splatRenderer.viewFor(key, { collection, params, objectParams, modifier })", "collection, params, objectParams, modifier (null: none), sortBits, autoSort", "sort(camera), apply(order), order, requestSort()", "dispose()"], "a renderer, a camera", "an order, settings", "drawing"],
+  SplatProjection: ["render", "Internal: one projection method, its words, the TSL that computes them, and the draw's decoding.", ["SplatProjection.get(method), METHODS", "words(eyes), outputs(eyes)", "project(splatNode, eyes), write(splat, eyes)", "SplatProjection.writeKeys"], "a head-space splat node", "words and a sort key", "projection"],
+  SplatProjector: ["render", "The program cache (generate, transform, modifier, project), one dispatch per collection object.", ["SplatProjector.programs (compiles so far)", "SplatProjector.dispose(generator)"], "a collection and settings", "projected words and sort keys", "projection"],
+  SplatRenderer: ["render", "The draw mesh and the settings every viewpoint shares: projects and sorts its collection for each render's camera, then draws one quad per splat in that order.", ["new SplatRenderer({ renderer, collection, method, params, modifier, sortMode, onInvalidate })", "collection, method, params, objectParams, modifier, autoSort", "viewFor(key), views, view, viewKey, requestSort()", "prepare(camera), phase, readSortedCount(), dispose()"], "a collection, views", "pixels", "drawing"],
+  CameraControls: ["controls", "Orbit and fly camera controls (pointer, touch, keyboard, gamepad, and WebXR input) in one update(); switching modes does not move the view.", ["new CameraControls({ canvas, object, storageKey, settings })", "update(), mode, lookAt(target), getTarget()", "settings, set(), reset(), CameraControls.DEFAULTS", "pick, xr, rig"], "input events", "a moved camera", "drawing"],
+};
+const LAYERS = [
+  ["controls", "controls/: camera controls"],
+  ["render", "render/: projection, sorting policy, and the draw"],
+  ["wgpu", "wgpu/: WebGPU compute"],
+  ["worker", "worker/: workers"],
+  ["gpu", "gpu/: shaders, both backends"],
+  ["core", "core/: plain JavaScript"],
+];
+// [from, to, kind]: "data" flows, "uses", "twin"
+const EDGES = [
+  ["SplatFiles", "ArrayData", "data"], ["PlyFile", "SplatFiles", "uses"], ["CompressedPlyFile", "SplatFiles", "uses"], ["SpzFile", "SplatFiles", "uses"], ["RadFile", "SplatFiles", "uses"], ["RdxFile", "SplatFiles", "uses"], ["Compression", "RdxFile", "uses"],
+  ["loadSplats", "ArrayData", "data"], ["loadSplats", "WorkerPool", "uses"], ["SplatFiles", "loadSplats", "uses"], ["ArrayData", "writeSplats", "data"],
+  ["defineBundle", "ArrayData", "uses"], ["ArrayFormats", "ArrayData", "uses"], ["TextureLayout", "GpuArrays", "uses"],
+  ["ArrayData", "GpuArrays", "data"], ["GpuArrays", "GpuArrayReader", "data"], ["GpuArrays", "GpuSplatReader", "data"],
+  ["GpuArrayWriter", "GpuArrays", "data"], ["WgpuArrayWriter", "GpuArrays", "data"], ["WgpuArrayStore", "GpuArrays", "data"],
+  ["WgpuCompute", "WgpuArrayWriter", "uses"], ["WgpuBuffer", "WgpuRadixSort", "uses"], ["WgpuBuffer", "WgpuCompact", "uses"],
+  ["Splats", "GpuSplats", "twin"], ["Encoding", "GpuEncoding", "twin"], ["SortKeys", "GpuSortKeys", "twin"], ["SplatMath", "GpuSplatMath", "twin"],
+  ["Sh", "GpuSh", "twin"], ["ShPalette", "GpuShPalette", "twin"], ["Sh", "SplatFiles", "uses"], ["GpuSh", "GpuShReader", "uses"], ["GpuShReader", "SplatGenerator", "uses"], ["GpuShPalette", "GpuShReader", "data"],
+  ["GpuSplatReader", "SplatGenerator", "uses"], ["SplatGenerator", "SplatCollection", "data"], ["SplatCollection", "SplatRenderer", "data"],
+  ["SplatCamera", "SplatProjector", "data"], ["SplatProjection", "SplatProjector", "uses"], ["SplatParams", "SplatProjector", "uses"], ["SplatRenderer", "SplatProjector", "data"],
+  ["GpuSplats", "SplatProjection", "uses"], ["GpuSortKeys", "SplatProjection", "uses"],
+  ["SplatProjector", "WgpuArrayWriter", "uses"], ["SplatProjector", "GpuArrayWriter", "uses"],
+  ["SplatProjector", "WgpuSplatSorter", "data"], ["WgpuCompact", "WgpuSplatSorter", "uses"], ["WgpuRadixSort", "WgpuSplatSorter", "uses"],
+  ["SplatView", "sortSplatKeys", "uses"], ["SortKeys", "sortSplatKeys", "uses"],
+  ["WgpuSplatSorter", "SplatRenderer", "data"], ["SplatView", "SplatRenderer", "data"], ["SplatProjector", "SplatRenderer", "uses"], ["SplatCollection", "SplatView", "data"],
+  ["CameraControls", "SplatCamera", "data"],
+  ["createRenderer", "GpuArrays", "uses"],
+];
+
+// ---------- The map: pills flowed into one band per layer ----------
+const map = { pills: {}, chapter: 0, seen: new Set(), now: new Set(), picked: null, extra: null };
+function layoutMap() {
+  const svg = $("#mapSvg");
+  const width = 380;
+  const measure = document.createElement("canvas").getContext("2d");
+  measure.font = "10.5px ui-monospace, SFMono-Regular, Menlo, monospace";
+  let y = 4;
+  let html = "";
+  for (const [layer, label] of LAYERS) {
+    const color = LAYER_COLOR[layer];
+    const names = Object.keys(CLASSES).filter((name) => CLASSES[name][0] === layer);
+    const top = y;
+    y += 20;
+    let x = 10;
+    const rowH = 24;
+    for (const name of names) {
+      const w = Math.ceil(measure.measureText(name).width) + 16;
+      if (x + w > width - 8) {
+        x = 10;
+        y += rowH;
+      }
+      map.pills[name] = { x, y, w, h: 18, color };
+      x += w + 6;
+    }
+    y += rowH + 8;
+    html += `<g class="band"><rect x="2" y="${top}" width="${width - 4}" height="${y - top - 6}" rx="10" fill="${color}0d" stroke="${color}33"/><text x="12" y="${top + 14}" fill="${color}">${label}</text></g>`;
+  }
+  svg.setAttribute("viewBox", `0 0 ${width} ${y}`);
+  const center = (p) => [p.x + p.w / 2, p.y + p.h / 2];
+  let edges = "";
+  for (const [a, b, kind] of EDGES) {
+    const pa = map.pills[a], pb = map.pills[b];
+    const [x1, y1] = center(pa), [x2, y2] = center(pb);
+    const dy = Math.max(30, Math.abs(y2 - y1) * 0.5);
+    const c1 = y2 >= y1 ? y1 + dy : y1 - dy, c2 = y2 >= y1 ? y2 - dy : y2 + dy;
+    const d = Math.abs(y2 - y1) < 4 ? `M${x1} ${y1} Q ${(x1 + x2) / 2} ${y1 - 26} ${x2} ${y2}` : `M${x1} ${y1} C ${x1} ${c1}, ${x2} ${c2}, ${x2} ${y2}`;
+    const stroke = kind === "twin" ? "#e8eaf0" : kind === "uses" ? "#8b93a7" : pa.color;
+    edges += `<path class="edge future" data-a="${a}" data-b="${b}" d="${d}" stroke="${stroke}" ${kind === "twin" ? 'stroke-dasharray="3 3"' : kind === "data" ? 'marker-end="url(#ar)"' : 'stroke-dasharray="1 3"'}/>`;
+  }
+  let pills = "";
+  for (const [name, p] of Object.entries(map.pills)) {
+    pills += `<g class="pill future" data-c="${name}" style="--c:${p.color}"><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="9" fill="#11141b"/><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="9" fill="${p.color}22" stroke="${p.color}"/><text x="${p.x + p.w / 2}" y="${p.y + 12.5}" text-anchor="middle" fill="#e8eaf0">${name}</text></g>`;
+  }
+  svg.innerHTML = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#aab"/></marker></defs>${html}${edges}${pills}`;
+  $$(".pill", svg).forEach((g) => g.addEventListener("click", () => showCard(g.dataset.c)));
+}
+
+function refreshMap() {
+  const extra = map.extra;
+  for (const g of $$("#mapSvg .pill")) {
+    const name = g.dataset.c;
+    const now = extra ? extra.has(name) : map.now.has(name);
+    g.classList.toggle("now", now);
+    g.classList.toggle("seen", !now && map.seen.has(name));
+    g.classList.toggle("future", !now && !map.seen.has(name));
+    g.classList.toggle("pick", map.picked === name);
+  }
+  const lit = extra ?? map.now;
+  for (const e of $$("#mapSvg .edge")) {
+    const { a, b } = e.dataset;
+    const known = map.seen.has(a) && map.seen.has(b);
+    const now = (lit.has(a) || lit.has(b)) && (known || (lit.has(a) && lit.has(b)));
+    e.classList.toggle("now", now);
+    e.classList.toggle("seen", !now && known);
+    e.classList.toggle("future", !now && !known);
+  }
+}
+
+function showCard(name) {
+  const c = CLASSES[name];
+  if (!c) return;
+  const [layer, role, members, takes, gives, chapter] = c;
+  map.picked = name;
+  refreshMap();
+  const color = LAYER_COLOR[layer];
+  $("#card").innerHTML = `<div class="layer" style="color:${color}">${layer}/</div><h4 style="color:${color}">${name}</h4><div>${role}</div>
+    <ul>${members.map((m) => `<li><code>${m.replace(/</g, "&lt;")}</code></li>`).join("")}</ul>
+    <dl class="io">${takes ? `<dt>takes</dt><dd>${takes}</dd>` : ""}<dt>gives</dt><dd>${gives}</dd><dt>explained in</dt><dd><a href="#${chapter}">${$(`#${chapter}`).dataset.title}</a></dd></dl>`;
+  if (innerWidth <= 1180) $("#mapDock").classList.add("open");
+}
+
+// ---------- Chapters: scroll spy, journey strips, progress ----------
+const SECTIONS = $$("main section");
+const JOURNEY = [["file bytes", "#4ade80"], ["ArrayData", "#2dd4bf"], ["GpuArrays", "#a78bfa"], ["projected splats", "#f472b6"], ["order", "#fb923c"], ["pixels", "#e8eaf0"]];
+function setupChapters() {
+  $("#toc").innerHTML = SECTIONS.map((s, i) => `<a href="#${s.id}">${String(i + 1).padStart(2, "0")} ${s.dataset.title}</a>`).join("");
+  SECTIONS.forEach((s) => {
+    const strip = $("[data-journey]", s);
+    if (!strip) return;
+    const step = Number(s.dataset.step);
+    const all = s.id === "frame";
+    strip.innerHTML = JOURNEY.map(([label, c], i) => `<div class="st ${all || i === step ? "on" : i < step ? "done" : ""}" style="--c:${c}" data-i="${i}">${label}</div>${i < JOURNEY.length - 1 ? '<div class="ar">→</div>' : ""}`).join("");
+  });
+  const classesOf = (s) => (s.dataset.classes ? s.dataset.classes.split(",") : []);
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const index = SECTIONS.indexOf(entry.target);
+      map.chapter = index;
+      map.seen = new Set(SECTIONS.slice(0, index + 1).flatMap(classesOf));
+      map.now = new Set(classesOf(entry.target));
+      if (entry.target.id === "recipes") {
+        map.now = new Set(RECIPES[recipeIndex].classes);
+      }
+      if (entry.target.id === "cost") {
+        map.now = new Set([...map.seen]);
+      }
+      map.extra = null;
+      refreshMap();
+    }
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  SECTIONS.forEach((s) => observer.observe(s));
+  const reveal = new IntersectionObserver((entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("in")), { threshold: 0.12 });
+  $$(".reveal").forEach((el) => reveal.observe(el));
+  addEventListener("scroll", () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    $("#progress").style.width = `${(scrollY / Math.max(1, max)) * 100}%`;
+  }, { passive: true });
+  document.addEventListener("click", (event) => {
+    const el = event.target.closest(".cls");
+    if (el) showCard(el.dataset.c);
+  });
+  $$(".cls").forEach((el) => {
+    const color = LAYER_COLOR[CLASSES[el.dataset.c]?.[0]] ?? "#888";
+    el.style.color = color;
+    el.style.borderColor = `${color}66`;
+    el.style.background = `${color}14`;
+  });
+  $("#mapToggle").addEventListener("click", () => $("#mapDock").classList.toggle("open"));
+}
+
+// ---------- Quizzes ----------
+const QUIZZES = {
+  frame: [
+    ["Which steps run every frame, and which once?", "Loading (loadSplats) and uploading (GpuArrays.fromData) run once. Projection, sorting, and the draw run every frame, because they depend on the camera."],
+    ["Why does the WebGL2 fallback draw with an order from earlier frames?", "Its sort needs the sort keys on the CPU: a readback, a sort on a worker, and an upload. This takes a few frames, so the draw keeps using the last order while a new one is computed. The projection itself still uses the current frame's camera."],
+  ],
+  data: [
+    ["A table has 5,000 rows. What is its capacity, and why?", "8,192: capacity is always a multiple of 4096, which fills whole 1024-texel texture rows at every packing (1, 2, or 4 per texel). This keeps CPU rows and GPU texels aligned."],
+    ["Can a compute shader write any GpuArrays?", "No: only arrays made with storage: true on WebGPU. The flag is in the type, GpuArrays<S, true>, so WgpuArrayWriter refuses other arrays at compile time. GpuArrayWriter (a fragment pass) writes any arrays, on both backends."],
+  ],
+  twins: [
+    ["What is the difference between Splats.load and GpuSplatReader.loadSplat?", "They mean the same thing: both return a splat (center, scales, quaternion, rgb, opacity) from a table row. Splats.load reads CPU arrays and returns numbers; GpuSplatReader.loadSplat builds shader code that reads the same row from textures."],
+    ["Your app runs out of GPU memory with 10M splats. What is the first thing to change?", "Load them as packedSplats: 16 bytes a splat instead of 32, with byte colors and scales (and, for files with spherical harmonics, sh: \"packed\": 48 bytes instead of 64). Nothing else needs to change, because readers work with every layout."],
+  ],
+  files: [
+    ["After loadSplats returns on a worker, how many copies of the splats exist?", "One on the page: the worker decoded directly into the table's arrays, and those arrays were transferred (moved, not copied) back. GpuArrays.fromData then makes the GPU copy."],
+    ["Which format can hold a sort order, or a table of your own?", "RDX (RdxFile): it stores any table's serializable bundles. PLY, SPZ, and RAD hold splats (with their spherical harmonics, and LoD trees where the format has them)."],
+  ],
+  shaders: [
+    ["What makes something a SplatGenerator?", "A generateSplat(index, context) or a generateCovSplat(index, context) function returning a splat struct node, and optionally bind(data, context) to point it at an object's data. The context holds the view origin and the object's transforms in the object's space. SplatGenerator.fromSplats provides all three for stored splats (with their spherical harmonics); a custom generator can be a plain object with one function."],
+    ["When would you use WgpuArrayWriter instead of GpuArrayWriter?", "On WebGPU with storage arrays, to write rows as one compute dispatch instead of a fragment pass per texture layer. Both take the same arguments and give the same results."],
+  ],
+  projection: [
+    ["Why are the two eyes of an XR frame projected in one pass?", "Most of a splat's projection depends only on the head. It is computed once, and each eye adds its own few words. One pass also produces one set of sort keys, so both eyes share one sort."],
+    ["How are two objects sorted together?", "Put both in one SplatCollection, each with its own world transform (matrixWorld). The renderer projects each object at its offset in one output, then sorts and draws that output."],
+    ["Why does using a frame's matrix as the modifier space not compile a new program?", "The space only changes the two matrices around the modifier, which are uniforms set per dispatch. Programs depend on the generator, the modifier, the method, and the eye count."],
+  ],
+  sorting: [
+    ["Why does WgpuSplatSorter never read anything back?", "Compaction writes the visible count to a GPU buffer, the radix sort sizes its dispatches from it (sortIndirect), and the last kernel writes the arguments of the draw call (an indirect draw)."],
+    ["When does the WebGL2 fallback need to re-sort?", "When the camera has moved enough (sort keys are distances from the camera), when an object has moved, or when the collection has changed. With a sortGuard enabled, also when the camera has turned enough, because splats outside the widened view were dropped from the order."],
+  ],
+  drawing: [
+    ["How do two viewpoints share one SplatRenderer?", "Render the scene from each camera. With the GPU sort nothing else is needed; with the CPU sort the renderer makes a view per camera, each with its own order. Projection runs again for each render's camera. A camera that should draw differently gets settings of its own through splatRenderer.viewFor(camera, options)."],
+    ["When can a file's arrays be disposed after loading another?", "Once nothing draws or sorts the object that holds them: give that object release: () => arrays.dispose(), and it runs once neither a displayed order nor any sort in progress still uses that object."],
+  ],
+  recipes: [
+    ["Which recipe does not use three.js?", "The Node recipe: loadSplats (or SplatFiles), Splats, and writeSplats are all in core/ or worker/, which run without a GPU."],
+  ],
+  cost: [
+    ["Which step does doubling the pixel ratio slow down?", "Mostly the draw's fragment stage, which has four times as many pixels to blend. Projection and sorting do not depend on the number of pixels."],
+    ["Why can 3dgut and htgs be much slower than ewa inside a scene?", "They evaluate the Gaussian along each pixel's ray, so a splat that surrounds the camera correctly covers the whole screen and costs one fragment per pixel. ewa drops splats too close to the camera."],
+  ],
+};
+function setupQuizzes() {
+  $$("[data-quiz]").forEach((el) => {
+    const items = QUIZZES[el.dataset.quiz] ?? [];
+    el.innerHTML = `<h4>Review questions</h4>${items.map(([q, a]) => `<div class="q"><button>${q}</button><div class="a">${a}</div></div>`).join("")}`;
+    $$(".q > button", el).forEach((b) => b.addEventListener("click", () => b.parentElement.classList.toggle("open")));
+  });
+}
+
+// ---------- 1. One frame ----------
+const FRAME = {
+  gpu: [
+    { t: "Load", l: "loadSplats", c: "#4ade80", once: true, title: "Load: file to table (once)", text: "A worker downloads and decodes the file into an ArrayData in the requested layout. The arrays are transferred back to the page without a copy.", code: `const data = await loadSplats("scene.spz");` },
+    { t: "Upload", l: "GpuArrays", c: "#a78bfa", once: true, title: "Upload: table to textures (once)", text: "The same table is uploaded as one texture per channel. From this point on, the splats are stored on the GPU.", code: `const splats = GpuArrays.fromData(renderer, data);` },
+    { t: "Camera", l: "SplatCamera", c: "#f472b6", title: "Camera: as uniforms", text: "Before each render, the renderer copies the camera (or both XR eyes) into SplatCamera's uniforms. It also combines the camera with each object's world transform (its matrix) when it projects that object.", code: `// in SplatRenderer.onBeforeRender, done automatically (internal)
+SplatCamera.set(renderer, camera);` },
+    { t: "Project", l: "SplatProjector", c: "#f472b6", title: "Project: one dispatch per object", text: "For each object of the renderer's collection, its cached program generates each splat, transforms it to head space (around the modifier), and writes its screen-space words and a sort key. Splats outside every eye get the invalid sort key.", code: `const object = SplatCollection.arrays(splats, { matrixWorld });
+splatRenderer.collection = new SplatCollection([object]);` },
+    { t: "Sort", l: "WgpuSplatSorter", c: "#fb923c", title: "Sort: on the GPU, same frame", text: "Compaction keeps the visible sort keys, a radix sort orders them back to front, and a last kernel writes the draw's arguments. Nothing is read back.", code: `// sortMode "gpu": WgpuSplatSorter, done automatically` },
+    { t: "Draw", l: "SplatRenderer", c: "#e8eaf0", title: "Draw: one indirect draw", text: "One quad per visible splat, in the sorted order, blended far to near. The instance count comes from the GPU.", code: `renderer.render(scene, camera);` },
+  ],
+  cpu: [
+    { t: "Load", l: "loadSplats", c: "#4ade80", once: true, title: "Load: file to table (once)", text: "As on WebGPU, a worker decodes the file into an ArrayData.", code: `const data = await loadSplats("scene.spz");` },
+    { t: "Upload", l: "GpuArrays", c: "#a78bfa", once: true, title: "Upload: table to textures (once)", text: "Same as WebGPU.", code: `const splats = GpuArrays.fromData(renderer, data);` },
+    { t: "Camera", l: "SplatCamera", c: "#f472b6", title: "Camera", text: "Same as WebGPU.", code: `// done automatically (internal)
+SplatCamera.set(renderer, camera);` },
+    { t: "Project", l: "SplatProjector", c: "#f472b6", title: "Project: a fragment pass per object", text: "The same programs run as full-screen fragment passes per texture layer (WebGL2 has no compute), for the collection the camera's applied order was sorted for. Splats outside the view keep valid sort keys, because the order lags behind the camera (unless a sortGuard drops the splats far outside the view).", code: `// sortMode "cpu": splatRenderer.viewFor(camera).order.collection` },
+    { t: "Draw", l: "SplatRenderer", c: "#e8eaf0", title: "Draw: with the latest order", text: "The draw uses the most recently applied order. The splats are at the positions computed by this frame's projection; only their order may be a few frames old.", code: `renderer.render(scene, camera);` },
+    { t: "Re-sort", l: "sortSplatKeys", c: "#fb923c", title: "Re-sort: after a change", text: "The sort keys are computed on the GPU, read back, sorted on the renderer's worker, and applied to the camera's view. This takes a few frames and runs in parallel with rendering; autoSort starts it when the camera, an object, or the collection has changed.", code: `const view = splatRenderer.viewFor(camera);
+view.apply(await view.sort(camera));` },
+  ],
+};
+let frameMode = "gpu", frameStep = 2;
+function renderFrame() {
+  const steps = FRAME[frameMode];
+  $("#frameFlow").innerHTML = steps.map((s, i) => `<div class="node ${s.once ? "once" : ""} ${i === frameStep ? "on" : ""}" style="--c:${s.c}" data-i="${i}"><div class="t">${s.t}</div><div class="l">${s.l}</div></div>${i < steps.length - 1 ? '<div class="arrow">→</div>' : ""}`).join("");
+  $$("#frameFlow .node").forEach((n) => n.addEventListener("click", () => { frameStep = Number(n.dataset.i); renderFrame(); }));
+  const s = steps[frameStep];
+  $("#frameTitle").textContent = s.title;
+  $("#frameText").textContent = s.text;
+  $("#frameCode").innerHTML = s.code;
+  map.extra = new Set([s.l]);
+  if (s.l === "WgpuSplatSorter") ["WgpuCompact", "WgpuRadixSort"].forEach((c) => map.extra.add(c));
+  if (s.l === "SplatProjector") ["SplatCollection", "SplatRenderer", "SplatProjection"].forEach((c) => map.extra.add(c));
+  refreshMap();
+}
+let framePlaying = 0;
+function setupFrame() {
+  $$("#frameMode .chip").forEach((c) => c.addEventListener("click", () => {
+    $$("#frameMode .chip").forEach((o) => o.classList.toggle("on", o === c));
+    frameMode = c.dataset.mode;
+    frameStep = Math.min(frameStep, FRAME[frameMode].length - 1);
+    renderFrame();
+  }));
+  $("#framePlay").addEventListener("click", () => {
+    const run = ++framePlaying;
+    frameStep = 0;
+    const tick = () => {
+      if (run !== framePlaying) return;
+      renderFrame();
+      if (frameStep < FRAME[frameMode].length - 1) {
+        frameStep += 1;
+        setTimeout(tick, reducedMotion ? 300 : 1100);
+      }
+    };
+    tick();
+  });
+  renderFrame();
+  map.extra = null;
+  // The fallback's lanes: frames of 16 ms; a sort spans readback (~1 frame)
+  // and the worker (~2 frames); the order is used from the frame after
+  const frames = 12;
+  const pct = (f) => (f / frames) * 100;
+  for (let f = 0; f <= frames; f += 1) {
+    for (const lane of ["#laneFrame", "#laneRead", "#laneWorker"]) $(lane).insertAdjacentHTML("beforeend", `<div class="tick" style="left:${pct(f)}%"></div>`);
+  }
+  const orderOf = [];
+  let order = 0;
+  for (let f = 0; f < frames; f += 1) {
+    if (f === 4) order = 1;
+    if (f === 9) order = 2;
+    orderOf.push(order);
+  }
+  $("#laneFrame").insertAdjacentHTML("beforeend", orderOf.map((o, f) => `<div class="seg" style="left:${pct(f) + 0.4}%;width:${pct(1) - 0.8}%;background:${["#a78bfa", "#f472b6", "#fb923c"][o]}">order ${o}</div>`).join(""));
+  $("#laneRead").insertAdjacentHTML("beforeend", [1, 6].map((f) => `<div class="seg" style="left:${pct(f) + 0.4}%;width:${pct(1) - 0.8}%;background:#60a5fa">keys</div>`).join(""));
+  $("#laneWorker").insertAdjacentHTML("beforeend", [2, 7].map((f, i) => `<div class="seg" style="left:${pct(f) + 0.4}%;width:${pct(2) - 0.8}%;background:#4ade80">sort → order ${i + 1}</div>`).join(""));
+  $("#laneNote").textContent = "The camera moves at frame 1. The sort keys for the new camera are read back and sorted on the worker, and order 1 is drawn from frame 4. Every frame still projects with the current camera.";
+}
+
+// ---------- 2. Tables ----------
+const TEXTURE_WIDTH = 1024, ROW_ELEMENTS = 4096;
+const alignCapacity = (n) => Math.max(1, Math.ceil(n / ROW_ELEMENTS)) * ROW_ELEMENTS;
+function textureLayout(texels) {
+  const rows = Math.max(1, Math.ceil(texels / TEXTURE_WIDTH));
+  const height = Math.min(4096, 2 ** Math.max(0, Math.floor(Math.log2(rows / 2))));
+  const layers = Math.max(2, Math.ceil(rows / height));
+  return { width: TEXTURE_WIDTH, height, layers, texels: TEXTURE_WIDTH * height * layers };
+}
+const BUNDLES = {
+  extSplats: { channels: { extA: ["uint32x4", 16], extB: ["uint32x4", 16] }, packing: 1, color: "#2dd4bf" },
+  covSplats: { channels: { covA: ["uint32x4", 16], covB: ["uint32x4", 16] }, packing: 1, color: "#a78bfa" },
+  packedSplats: { channels: { packed: ["uint32x4", 16] }, packing: 1, color: "#60a5fa" },
+  lodTree: { channels: { node: ["uint32x2", 8] }, packing: 1, color: "#facc15" },
+  sortKeys: { channels: { key: ["unorm8x4", 4] }, packing: 1, color: "#fb923c" },
+  indices: { channels: { index: ["uint32", 4] }, packing: 4, color: "#f472b6" },
+};
+// Tables an app meets: bundles in one table share its rows (count and
+// capacity), so each set below is its own ArrayData
+const TABLES = [
+  { label: "extSplats", bundles: ["extSplats"], note: "A loaded file in the default layout: 32 bytes per splat, one row per splat." },
+  { label: "covSplats", bundles: ["covSplats"], note: "The same splats with their covariance stored instead of scales and a rotation." },
+  { label: "packedSplats + lodTree", bundles: ["packedSplats", "lodTree"], note: "A 16-byte packed file with its Level-of-Detail tree: one tree node per row, beside the splat of that row, so both bundles share the table's count." },
+  { label: "sortKeys", bundles: ["sortKeys"], note: "A table of its own: one sort key per projected splat (RGBA8), written by the projection and read by the sort. Its count follows the projected collection, not a file." },
+  { label: "indices (an order)", bundles: ["indices"], note: "ArrayData.INDICES: one uint32 per row, four rows per texel (packing 4). Draw orders and LoD index lists use it; its count is the number of splats drawn or listed." },
+];
+let dataTable = TABLES[0];
+let dataOn = new Set(dataTable.bundles);
+function renderData() {
+  const count = logCount(Number($("#dataCount").value));
+  const capacity = alignCapacity(count);
+  $("#dataCountOut").textContent = fmt(count);
+  let cols = "", cpu = 0, gpu = "";
+  let gpuBytes = 0;
+  for (const name of dataOn) {
+    const b = BUNDLES[name];
+    for (const [label, [format, bytes]] of Object.entries(b.channels)) {
+      cols += `<div class="col" style="border-color:${b.color}66"><b style="color:${b.color}">${name}.${label}</b>${format}<br><span class="small">${bytesText(bytes * capacity)}</span></div>`;
+      cpu += bytes * capacity;
+      const layout = textureLayout(Math.ceil(capacity / b.packing));
+      gpuBytes += layout.texels * bytes;
+      gpu += `<div class="small" style="margin-top:8px"><span style="color:${b.color}">${name}.${label}</span>: ${layout.width} × ${layout.height} × ${layout.layers} layers, ${bytesText(layout.texels * bytes)} (${((layout.texels / capacity - 1) * 100).toFixed(0)}% padding)</div>`;
+    }
+  }
+  $("#dataNote").textContent = dataTable.note;
+  $("#dataCols").innerHTML = cols || '<span class="small">no bundles</span>';
+  $("#dataKv").innerHTML = `<dt>count</dt><dd>${fmt(count)}</dd><dt>capacity</dt><dd>${fmt(capacity)} (a multiple of 4096)</dd><dt>CPU memory</dt><dd>${bytesText(cpu)}</dd>`;
+  const layout = textureLayout(capacity);
+  const cellsPerLayer = 16, layersShown = Math.min(layout.layers, 8);
+  const used = capacity > 0 ? count / layout.texels : 0;
+  let grid = "";
+  for (let l = 0; l < layersShown; l += 1) {
+    for (let r = 0; r < cellsPerLayer; r += 1) {
+      const at = (l * cellsPerLayer + r) / (layout.layers * cellsPerLayer);
+      grid += `<div class="${at < used ? "used" : ""}"></div>`;
+    }
+  }
+  $("#dataTex").innerHTML = `<div class="small">${dataOn.size ? "Each channel is one texture. Each square is 1/16 of a layer; highlighted squares hold valid rows." : ""}</div><div class="texgrid" style="grid-template-columns: repeat(${cellsPerLayer}, 1fr)">${dataOn.size ? grid : ""}</div>${layout.layers > layersShown ? `<div class="small">... ${layout.layers - layersShown} more layers</div>` : ""}${gpu}<dl class="kv" style="margin-top:10px"><dt>GPU memory</dt><dd>${bytesText(gpuBytes)}</dd></dl>`;
+}
+function setupData() {
+  $("#dataBundles").innerHTML = TABLES.map((t, i) => `<span class="chip ${t === dataTable ? "on" : ""}" data-t="${i}">${t.label}</span>`).join("");
+  $$("#dataBundles .chip").forEach((c) => c.addEventListener("click", () => {
+    dataTable = TABLES[Number(c.dataset.t)];
+    dataOn = new Set(dataTable.bundles);
+    $$("#dataBundles .chip").forEach((o) => o.classList.toggle("on", o === c));
+    renderData();
+  }));
+  $("#dataCount").addEventListener("input", renderData);
+  renderData();
+}
+
+// ---------- 3. Twins ----------
+const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+function toHalf(f) {
+  f32[0] = f;
+  const bits = u32[0], sign = (bits >>> 16) & 0x8000, exponent = (bits >>> 23) & 0xff, mantissa = bits & 0x7fffff;
+  if (exponent === 0xff) return sign | 0x7c00 | (mantissa ? 0x200 : 0);
+  const e = exponent - 127 + 15;
+  if (e >= 0x1f) return sign | 0x7c00;
+  if (e <= 0) {
+    const m = Math.abs(f32[0]) * 2 ** 24; let r = Math.floor(m); const fr = m - r;
+    if (fr > 0.5 || (fr === 0.5 && (r & 1))) r += 1;
+    return sign | r;
+  }
+  const half = sign | (e << 10) | (mantissa >> 13), rest = mantissa & 0x1fff;
+  return rest > 0x1000 || (rest === 0x1000 && (half & 1)) ? half + 1 : half;
+}
+function fromHalf(h) {
+  const sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+  if (e === 0) return sign * m * 2 ** -24;
+  if (e === 0x1f) return m ? NaN : sign * Infinity;
+  return sign * (1 + m / 1024) * 2 ** (e - 15);
+}
+function octProject(v) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  let px = v.x / l1, py = v.y / l1;
+  if (v.z < 0) [px, py] = [(1 - Math.abs(py)) * (px >= 0 ? 1 : -1), (1 - Math.abs(px)) * (py >= 0 ? 1 : -1)];
+  return { px, py };
+}
+function encodeOct(v, bits) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  if (!(l1 > 0)) return 0;
+  const { px, py } = octProject(v), max = 2 ** bits - 1;
+  const code = Math.round((px * 0.5 + 0.5) * max) | (Math.round((py * 0.5 + 0.5) * max) << bits);
+  return code === 0 ? max | (max << bits) : code;
+}
+function decodeOct(code, bits) {
+  if (code === 0) return { x: 0, y: 0, z: 0 };
+  const max = 2 ** bits - 1;
+  let x = ((code & max) / max) * 2 - 1, y = (((code >>> bits) & max) / max) * 2 - 1;
+  const z = 1 - Math.abs(x) - Math.abs(y), t = Math.max(-z, 0);
+  x += x >= 0 ? -t : t; y += y >= 0 ? -t : t;
+  const l = Math.hypot(x, y, z);
+  return { x: x / l, y: y / l, z: z / l };
+}
+const SORT16_LO = 95 << 23, SORT16_HI = (159 << 23) - 1;
+function sortKeyOf(distance, bits) {
+  const mask = 2 ** bits - 1;
+  f32[0] = distance;
+  const f = u32[0];
+  if (!(f < 0x7f800000)) return mask;
+  const q = bits === 32 ? f : bits === 24 ? f >>> 7 : (Math.min(Math.max(f, SORT16_LO), SORT16_HI) - SORT16_LO) >>> 13;
+  return Math.min((mask ^ q) >>> 0, 0xff * 2 ** (bits - 8) - 1);
+}
+const bitSpans = (value, n, color) => Array.from({ length: n }, (_, k) => {
+  const b = n - 1 - k;
+  const c = color(b);
+  return `<span style="background:${c}33;color:${c}">${Math.floor(value / 2 ** b) % 2}</span>`;
+}).join("");
+const LAYOUT_WORDS = {
+  extSplats: { note: "32 bytes: a float32 center, an HDR color, half-float log scales, a 10+10+12 bit rotation, and PBR fields (normal, roughness, metallic).", words: [
+    ["extA.xyz", [["center x, y, z (float32 each)", 32, "#60a5fa"]]],
+    ["extA.w", [["opacity", 8, "#f472b6"], ["normal v", 12, "#2dd4bf"], ["normal u", 12, "#2dd4bf"]]],
+    ["extB.x", [["exp", 5, "#facc15"], ["±", 3, "#f87171"], ["b", 8, "#fb923c"], ["g", 8, "#fb923c"], ["r", 8, "#fb923c"]]],
+    ["extB.y", [["half(ln sy)", 16, "#a78bfa"], ["half(ln sx)", 16, "#a78bfa"]]],
+    ["extB.z", [["metallic", 8, "#4ade80"], ["roughness", 8, "#4ade80"], ["half(ln sz)", 16, "#a78bfa"]]],
+    ["extB.w", [["angle", 12, "#f472b6"], ["axis v", 10, "#e8eaf0"], ["axis u", 10, "#e8eaf0"]]],
+  ] },
+  covSplats: { note: "32 bytes: like ext, but a covariance (3 log variances, 3 correlations) instead of scales and rotation. ewa projects covariances directly.", words: [
+    ["covA.xyz", [["center x, y, z (float32 each)", 32, "#60a5fa"]]],
+    ["covA.w", [["opacity", 8, "#f472b6"], ["normal", 24, "#2dd4bf"]]],
+    ["covB.x", [["exp", 5, "#facc15"], ["±", 3, "#f87171"], ["b", 8, "#fb923c"], ["g", 8, "#fb923c"], ["r", 8, "#fb923c"]]],
+    ["covB.y", [["half(ln yy)", 16, "#a78bfa"], ["half(ln xx)", 16, "#a78bfa"]]],
+    ["covB.z", [["half(corr xy)", 16, "#e8eaf0"], ["half(ln zz)", 16, "#a78bfa"]]],
+    ["covB.w", [["half(corr yz)", 16, "#e8eaf0"], ["half(corr xz)", 16, "#e8eaf0"]]],
+  ] },
+  packedSplats: { note: "16 bytes: byte color and opacity, a half-float center, byte log scales, and an 8+8+8 bit rotation. Half the memory, with slightly lower precision.", words: [
+    ["packed.x", [["opacity", 8, "#f472b6"], ["b", 8, "#fb923c"], ["g", 8, "#fb923c"], ["r", 8, "#fb923c"]]],
+    ["packed.y", [["half center y", 16, "#60a5fa"], ["half center x", 16, "#60a5fa"]]],
+    ["packed.z", [["axis v | u", 16, "#e8eaf0"], ["half center z", 16, "#60a5fa"]]],
+    ["packed.w", [["angle", 8, "#f472b6"], ["ln sz", 8, "#a78bfa"], ["ln sy", 8, "#a78bfa"], ["ln sx", 8, "#a78bfa"]]],
+  ] },
+};
+function renderLayout(name) {
+  const l = LAYOUT_WORDS[name];
+  $("#layoutWords").innerHTML = l.words.map(([w, fields]) => `<div class="word"><div class="wl">${w}</div><div class="wb">${fields.map(([label, bits, c]) => `<div class="f" style="flex:${bits};background:${c}">${label}</div>`).join("")}</div></div>`).join("");
+  $("#layoutNote").textContent = l.note;
+}
+const CODECS = {
+  half: { label: "value", range: [-4, 4], cpu: (v) => `Encoding.encodeHalf(${v.toFixed(3)})`, gpu: (v) => `GpuEncoding.encodeHalf(float(${v.toFixed(3)}))`, run: (v) => { const h = toHalf(v); return { bits: h, n: 16, out: `0x${h.toString(16).padStart(4, "0")} → ${fromHalf(h).toPrecision(5)}`, color: (b) => (b === 15 ? "#f87171" : b >= 10 ? "#facc15" : "#2dd4bf"), note: "1 sign bit, 5 exponent bits, and 10 mantissa bits. The GPU side uses the hardware's packHalf2x16, which rounds the same way." }; } },
+  key: { label: "distance", range: [0.05, 40], cpu: (v) => `SortKeys.compute(${v.toFixed(3)}, 24)`, gpu: (v) => `GpuSortKeys.compute(float(${v.toFixed(3)}), sortBits)`, run: (v) => { const k = sortKeyOf(v, 24); return { bits: k, n: 24, out: `${k}`, color: (b) => (b >= 16 ? "#a78bfa" : "#2dd4bf"), note: "The distance's float bits without the sign bit, truncated to 24 bits and inverted: far splats get small sort keys, so ascending sort keys run back to front." }; } },
+  oct: { label: "normal angle", range: [0, 360], cpu: (v) => `Encoding.encodeOct24(n)`, gpu: () => `GpuEncoding.encodeOct24(n)`, run: (deg) => { const a = (deg * Math.PI) / 180; const n = { x: Math.cos(a) * 0.8, y: Math.sin(a) * 0.8, z: 0.6 }; const c = encodeOct(n, 12); const d = decodeOct(c, 12); const err = (Math.acos(Math.min(1, n.x * d.x + n.y * d.y + n.z * d.z)) * 180) / Math.PI; return { bits: c, n: 24, out: `(${n.x.toFixed(2)}, ${n.y.toFixed(2)}, ${n.z.toFixed(2)}) → ${c}`, color: (b) => (b >= 12 ? "#2dd4bf" : "#60a5fa"), note: `The direction is folded onto a square, 12 bits per axis; it decodes to within ${err.toFixed(3)}° of the original.` }; } },
+};
+let codec = "half";
+function renderCodec() {
+  const c = CODECS[codec];
+  const t = Number($("#codecValue").value) / 1000;
+  const v = c.range[0] + (c.range[1] - c.range[0]) * t;
+  const r = c.run(v);
+  $("#codecLabel").textContent = c.label;
+  $("#codecOut").textContent = codec === "oct" ? `${v.toFixed(0)}°` : v.toFixed(3);
+  $("#codecCpu").innerHTML = `// core/: takes numbers, returns numbers\n${c.cpu(v)}\n// = ${r.out}`;
+  $("#codecGpu").innerHTML = `// gpu/: builds shader code\n${c.gpu(v)}\n// = the same bits, in a shader`;
+  $("#codecBits").innerHTML = bitSpans(r.bits, r.n, r.color);
+  $("#codecNote").textContent = r.note;
+}
+function setupTwins() {
+  $("#layoutChips").innerHTML = Object.keys(LAYOUT_WORDS).map((n, i) => `<span class="chip ${i === 0 ? "on" : ""}" data-l="${n}">${n}</span>`).join("");
+  $$("#layoutChips .chip").forEach((c) => c.addEventListener("click", () => { $$("#layoutChips .chip").forEach((o) => o.classList.toggle("on", o === c)); renderLayout(c.dataset.l); }));
+  renderLayout("extSplats");
+  $("#codecChips").innerHTML = [["half", "half float"], ["key", "sort key"], ["oct", "octahedral normal"]].map(([k, l], i) => `<span class="chip ${i === 0 ? "on" : ""}" data-k="${k}">${l}</span>`).join("");
+  $$("#codecChips .chip").forEach((c) => c.addEventListener("click", () => { $$("#codecChips .chip").forEach((o) => o.classList.toggle("on", o === c)); codec = c.dataset.k; renderCodec(); }));
+  $("#codecValue").addEventListener("input", renderCodec);
+  renderCodec();
+}
+
+// ---------- 4. Loading ----------
+function setupSwim() {
+  let worker = true;
+  const lanes = ["page", "worker", "GPU"];
+  const render = () => {
+    $("#swim").innerHTML = lanes.map((l) => `<div class="who">${l}</div><div class="track" data-lane="${l}"></div>`).join("");
+  };
+  const blocks = () => worker
+    ? [["worker", 0, 30, "#4ade80", "download"], ["worker", 30, 34, "#2dd4bf", "decode into ArrayData"], ["page", 64, 6, "#facc15", "transfer"], ["GPU", 70, 22, "#a78bfa", "GpuArrays.fromData"]]
+    : [["page", 0, 30, "#4ade80", "download"], ["page", 30, 34, "#2dd4bf", "decode (page busy)"], ["GPU", 64, 22, "#a78bfa", "GpuArrays.fromData"]];
+  const play = () => {
+    render();
+    blocks().forEach(([lane, at, w, c, label], i) => {
+      const el = document.createElement("div");
+      el.className = "blk";
+      el.style.cssText = `left:${at}%;width:${w}%;background:${c}`;
+      el.textContent = label;
+      $(`[data-lane="${lane}"]`, $("#swim")).append(el);
+      setTimeout(() => el.classList.add("in"), reducedMotion ? 0 : 150 + i * 550);
+    });
+    $("#swimNote").textContent = worker
+      ? "The page can keep rendering while the worker downloads and decodes. The decoded arrays are transferred back: the buffers move between threads, and nothing is copied."
+      : "On this thread, the decode blocks the page. This is acceptable in Node or inside your own worker, but not on a page that is rendering.";
+  };
+  $$("#swimMode .chip").forEach((c) => c.addEventListener("click", () => { $$("#swimMode .chip").forEach((o) => o.classList.toggle("on", o === c)); worker = c.dataset.w === "1"; play(); }));
+  $("#swimPlay").addEventListener("click", play);
+  play();
+}
+
+// ---------- 5. Shader I/O ----------
+function setupSource() {
+  const code = {
+    stored: `const splats = GpuArrays.fromData(renderer, data);
+// a shared reader per layout; data: { splats }
+const object = SplatCollection.arrays(splats, { matrixWorld });
+splatRenderer.collection = new SplatCollection([object]);`,
+    gen: `// A ring of splats, computed in the projection pass; no splats are stored
+const ring = {
+  generateSplat: (i) => {
+    const a = float(i).mul(0.001);
+    const center = vec3(cos(a), 0, sin(a));
+    return GpuSplats.Splat(
+      center,
+      vec3(0.01), // scales
+      vec4(0, 0, 0, 1), // quaternion
+      vec3(1, 0.6, 0.2), // rgb
+      float(0.8), // opacity
+      uint(i), // index
+    );
+  },
+};
+
+const object = { generator: ring, count: 6283 };
+splatRenderer.collection = new SplatCollection([object]);`,
+  };
+  const flows = {
+    stored: [["GpuArrays", "#a78bfa"], ["GpuSplatReader", "#a78bfa"], ["generateSplat(i)", "#e8eaf0"], ["SplatProjector", "#f472b6"], ["projected splats", "#f472b6"]],
+    gen: [["your TSL function", "#facc15"], ["generateSplat(i)", "#e8eaf0"], ["SplatProjector", "#f472b6"], ["projected splats", "#f472b6"]],
+  };
+  const show = (k) => {
+    $("#sourceCode").innerHTML = code[k];
+    $("#sourceFlow").innerHTML = flows[k].map(([t, c], i, a) => `<div class="node on" style="--c:${c}"><div class="t">${t}</div></div>${i < a.length - 1 ? '<div class="arrow">→</div>' : ""}`).join("");
+  };
+  $$("#sourceChips .chip").forEach((c) => c.addEventListener("click", () => { $$("#sourceChips .chip").forEach((o) => o.classList.toggle("on", o === c)); show(c.dataset.s); }));
+  show("stored");
+}
+
+// ---------- 6. Projection ----------
+const METHODS = {
+  ewa: { head: 0, eye: 4, desc: "Standard 3DGS: the Gaussian's covariance projected to a 2D Gaussian per eye (EWA splatting). The cheapest method; it drops splats too close to the camera." },
+  "3dgut": { head: 6, eye: 2, desc: "A 2D bound from 7 sigma points (the unscented transform), then the 3D Gaussian evaluated along each pixel's ray." },
+  htgs: { head: 6, eye: 2, desc: "The exact outline of the ellipsoid on screen, then the same ray evaluation as 3dgut." },
+  raygs: { head: 4, eye: 3, desc: "A quad facing the eye, tilted in 3D, with the ray density interpolated across it." },
+};
+// Words stored as uint32x4 channels, a uint32x2 last one for 1 or 2 words
+function storedWords(words) {
+  let stored = 0;
+  for (let left = words; left > 0; left -= 4) stored += left > 2 ? 4 : 2;
+  return stored;
+}
+let projMethod = "ewa", projEyes = 1;
+function renderProjection() {
+  const m = METHODS[projMethod];
+  const count = logCount(Number($("#projCount").value), 1e4, 4e7);
+  const words = m.head + m.eye * projEyes;
+  const stored = storedWords(words);
+  const perSplat = stored * 4 + 4;
+  $("#projCountOut").textContent = countText(count);
+  $("#projDesc").textContent = m.desc;
+  const cell = (label, c, n) => `<div class="f" style="flex:${n};background:${c}">${label}</div>`;
+  const parts = [];
+  if (m.head) parts.push(cell(`head: ${m.head} words`, "#a78bfa", m.head));
+  for (let e = 0; e < projEyes; e += 1) parts.push(cell(`eye ${e}: ${m.eye}`, e ? "#60a5fa" : "#f472b6", m.eye));
+  if (stored > words) parts.push(cell("pad", "#3a4256", stored - words));
+  parts.push(cell("key", "#fb923c", 1));
+  $("#projWords").innerHTML = `<div class="word"><div class="wl">a splat</div><div class="wb">${parts.join("")}</div></div>`;
+  $("#projKv").innerHTML = `<dt>per splat</dt><dd>${perSplat} B (${words} words + a 4-byte sort key)</dd><dt>for ${countText(count)} splats</dt><dd>${bytesText(perSplat * count)}</dd><dt>channels</dt><dd>${storedWords(words) / 4 >= 1 ? Array.from({ length: Math.ceil(stored / 4) }, (_, i) => `w${i}`).join(", ") : "w0"} + sortKeys.key</dd>`;
+}
+function setupProjection() {
+  $("#projMethod").innerHTML = Object.keys(METHODS).map((k, i) => `<span class="chip ${i === 0 ? "on" : ""}" data-m="${k}">${k}</span>`).join("");
+  $$("#projMethod .chip").forEach((c) => c.addEventListener("click", () => { $$("#projMethod .chip").forEach((o) => o.classList.toggle("on", o === c)); projMethod = c.dataset.m; renderProjection(); }));
+  $$("#projEyes .chip").forEach((c) => c.addEventListener("click", () => { $$("#projEyes .chip").forEach((o) => o.classList.toggle("on", o === c)); projEyes = Number(c.dataset.e); renderProjection(); }));
+  $("#projCount").addEventListener("input", renderProjection);
+  renderProjection();
+}
+
+// ---------- 7. Sorting ----------
+function renderSort() {
+  const bits = [16, 24, 32][Number($("#sortBits").value)];
+  const passes = bits / 8;
+  $("#sortBitsOut").textContent = `${bits} bits`;
+  const nodes = [["compact", "3 kernels", "#fb923c"], ...Array.from({ length: passes }, (_, p) => [`pass ${p + 1}`, `digit ${p * 8}-${p * 8 + 7}`, "#fb923c"]), ["draw args", "1 kernel", "#e8eaf0"]];
+  $("#sortFlow").innerHTML = nodes.map(([t, l, c], i) => `<div class="node on" style="--c:${c}"><div class="t">${t}</div><div class="l">${l}</div></div>${i < nodes.length - 1 ? '<div class="arrow">→</div>' : ""}`).join("");
+  $("#sortNote").textContent = `${passes} radix passes of 3 kernels each (histogram, scan, scatter), so ${3 + 1 + passes * 3 + 1} dispatches in total, each sized on the GPU. ${passes % 2 ? "An odd pass count leaves the result in the scratch buffers; the sorter swaps buffers instead of copying." : ""}`;
+}
+
+// ---------- 8. Drawing ----------
+function drawDraw(stage) {
+  const canvas = $("#drawCanvas"), g = canvas.getContext("2d");
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.font = "13px ui-monospace, Menlo, monospace";
+  const texts = [
+    "All splats are drawn in one draw call, split into instances of 1024 splats each instead of one splat each. The index buffer holds 1024 quads. The vertex shader computes its splat as instance × 1024 + vertex / 4, and its corner from the two low bits of the vertex index. GPUs run vertex shaders in batches, and instances of only 4 vertices left most of each batch idle. Batching quads this way reduced the draw time by 10–15%.",
+    "The vertex stage reads the splat's index from the order, then its projected words, and places one corner of its quad along the bound's axes, sized to where the splat fades below minAlpha. The quad's four corners are shared by two triangles.",
+    "The fragment stage evaluates the method's density at the pixel, discards fragments past the cutoff or below minAlpha, and blends premultiplied color over the color already drawn behind it (far to near).",
+    "Before each render, onBeforeRender copies the camera into SplatCamera, projects every object of its collection (one dispatch each; the camera's view may set its own collection and settings), and then sorts: on the GPU, or by using the camera's view's applied order (autoSort may start a new sort). prepare(camera) runs the same steps before the render.",
+  ];
+  $("#drawText").textContent = texts[stage];
+  const W = canvas.width, H = canvas.height;
+  if (stage === 0) {
+    for (let inst = 0; inst < 3; inst += 1) {
+      const x0 = 30 + inst * 290;
+      g.fillStyle = "#98a1b4"; g.fillText(`instance ${inst}`, x0, 28);
+      for (let q = 0; q < 24; q += 1) {
+        const x = x0 + (q % 8) * 32, y = 50 + Math.floor(q / 8) * 70;
+        g.strokeStyle = "#f472b6aa"; g.strokeRect(x, y, 26, 26);
+        g.beginPath(); g.moveTo(x, y + 26); g.lineTo(x + 26, y); g.stroke();
+        g.fillStyle = "#e8eaf0"; g.font = "9px ui-monospace, Menlo, monospace"; g.fillText(`${inst * 1024 + q}`, x + 1, y + 40);
+      }
+      g.font = "13px ui-monospace, Menlo, monospace"; g.fillStyle = "#5d6579"; g.fillText("... 1024 quads", x0, 270);
+    }
+  } else if (stage === 1) {
+    const cx = W / 2, cy = H / 2;
+    g.save(); g.translate(cx, cy); g.rotate(-0.5);
+    const grad = g.createRadialGradient(0, 0, 0, 0, 0, 120);
+    grad.addColorStop(0, "#f472b6cc"); grad.addColorStop(1, "#f472b600");
+    g.scale(1, 0.45); g.fillStyle = grad; g.beginPath(); g.arc(0, 0, 120, 0, Math.PI * 2); g.fill(); g.restore();
+    g.save(); g.translate(cx, cy); g.rotate(-0.5); g.strokeStyle = "#facc15"; g.strokeRect(-120, -54, 240, 108);
+    [[-120, -54], [120, -54], [-120, 54], [120, 54]].forEach(([x, y], i) => { g.fillStyle = "#facc15"; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.fillStyle = "#e8eaf0"; g.fillText(`${i}`, x + 8, y - 6); });
+    g.restore();
+    g.fillStyle = "#98a1b4"; g.fillText("corner = (bit 0, bit 1) of the vertex index", 20, 26);
+  } else if (stage === 2) {
+    for (let k = 0; k < 7; k += 1) {
+      const x = 120 + k * 110, r = 70 - k * 4;
+      const grad = g.createRadialGradient(x, H / 2, 0, x, H / 2, r);
+      const c = ["#60a5fa", "#2dd4bf", "#a78bfa", "#f472b6", "#fb923c", "#facc15", "#4ade80"][k];
+      grad.addColorStop(0, `${c}cc`); grad.addColorStop(1, `${c}00`);
+      g.fillStyle = grad; g.beginPath(); g.arc(x, H / 2, r, 0, 7); g.fill();
+    }
+    g.fillStyle = "#98a1b4"; g.fillText("far", 30, H - 20); g.fillText("near →", W - 90, H - 20);
+  } else {
+    const steps = ["SplatCamera.set", "project each object, sort", "draw"];
+    steps.forEach((s, i) => {
+      const x = 40 + i * 290;
+      g.strokeStyle = "#f472b6"; g.strokeRect(x, 110, 240, 60);
+      g.fillStyle = "#e8eaf0"; g.fillText(s, x + 12, 145);
+      if (i < 2) { g.fillStyle = "#5d6579"; g.fillText("→", x + 255, 145); }
+    });
+    g.fillStyle = "#98a1b4"; g.fillText("inside renderer.render(scene, camera), for each SplatRenderer", 40, 80);
+  }
+}
+
+// ---------- 9. Recipes ----------
+const RECIPES = [
+  { name: "Default setup", classes: ["createRenderer", "loadSplats", "GpuArrays", "SplatCollection", "SplatRenderer"], text: "Load the file, upload it, put the arrays in a collection, and add a SplatRenderer of that collection. The SplatRenderer projects and sorts before every render, from any camera: on the GPU with WebGPU, and on WebGL2 with an autoSort per camera (it makes a view for each camera it renders).", code: `const renderer = await createRenderer();
+
+const data = await loadSplats(url);
+const splats = GpuArrays.fromData(renderer, data);
+
+const collection = new SplatCollection([SplatCollection.arrays(splats)]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);` },
+  { name: "Objects and a generator, one sort", classes: ["SplatCollection", "SplatGenerator", "GpuSplats", "SplatRenderer"], text: "Two placements of one file (one program for both) and splats computed from their index inside the projection pass. Each has its own world transform, and all are sorted and drawn together so they blend correctly with each other.", code: `const ring = {
+  generateSplat: (i) =>
+    GpuSplats.Splat(/* center, scales, quaternion, rgb, opacity, i */),
+};
+
+splatRenderer.collection = new SplatCollection([
+  SplatCollection.arrays(splats, { matrixWorld: a.matrixWorld }),
+  // a non-uniform scale uses the covariance path
+  SplatCollection.arrays(splats, { matrixWorld: b.matrixWorld }),
+  { generator: ring, count: 100000, matrixWorld: ringObject.matrixWorld },
+]);` },
+  { name: "Modifiers, two views", classes: ["SplatView", "SplatRenderer", "SplatProjector"], text: "A color and a depth image of the same camera, rendered to two targets each frame through one SplatRenderer: two views of the app's own keys, the depth one with its own modifier, picked by splatRenderer.view. Each program compiles once, and each view keeps its own CPU order.", code: `const depthColor = (s) => {
+  const out = s.toVar();
+  // center in view space: -z is the depth
+  const z = s.get("center").z.negate().div(10);
+  out.get("rgb").assign(vec3(z));
+  return out;
+};
+const color = r.viewFor("color");
+const depth = r.viewFor("depth", { modifier: depthColor });
+
+r.view = color;
+renderer.setRenderTarget(a);
+renderer.render(scene, camera);
+
+r.view = depth;
+renderer.setRenderTarget(b);
+renderer.render(scene, camera);` },
+  { name: "LoD subsets and the sort", classes: ["SplatGenerator", "SplatCollection", "SplatView", "sortSplatKeys"], text: "A Level-of-Detail subset: the app picks the splats for the current camera and passes them as an index list over shared arrays (one program for every collection), and replaces the collection as the camera moves. On the CPU path, the camera's view keeps drawing the old collection until the order for the new collection arrives; only then does each object's release return its index list to a pool. A second camera can draw its own subset through its view's collection. One object of a splat atlas can be drawn the same way, through its own index list.", code: `const listed = SplatGenerator.fromSplats({ remap: "indices" }); // once
+
+// for each new subset
+const indices = SplatGenerator.indices(renderer, nearest, pool.pop());
+const subset = SplatCollection.object({
+  generator: listed,
+  data: { splats, indices },
+  count: nearest.length,
+  matrixWorld: () => object.matrixWorld,
+  // returns the index list; the splat arrays are kept
+  release: () => pool.push(indices),
+});
+splatRenderer.collection = new SplatCollection([subset]);
+
+// or manually, instead of autoSort:
+const view = splatRenderer.viewFor(camera);
+view.apply(await view.sort(camera));` },
+  { name: "Node only", classes: ["loadSplats", "Splats", "writeSplats", "SplatFiles", "SpzFile"], text: "Without a GPU or three.js: convert or edit files in a script. core/ runs in any JavaScript environment.", code: `import { loadSplats, writeSplats, Splats } from "@sparkjsdev/radix";
+
+const data = await loadSplats(readFileSync("in.ply"));
+// edit splats with Splats.load / store
+const { bundle } = Splats.get(data);
+
+const bytes = await writeSplats(data, "spz", { version: 3 });
+writeFileSync("out.spz", bytes);` },
+];
+let recipeIndex = 0;
+function renderRecipe() {
+  const r = RECIPES[recipeIndex];
+  $$("#recipeChips .recipe").forEach((el, i) => el.classList.toggle("on", i === recipeIndex));
+  $("#recipeCode").innerHTML = r.code;
+  $("#recipeText").textContent = r.text;
+  if (map.chapter === SECTIONS.findIndex((s) => s.id === "recipes")) {
+    map.now = new Set(r.classes);
+    r.classes.forEach((c) => map.seen.add(c));
+    refreshMap();
+  }
+}
+function setupRecipes() {
+  $("#recipeChips").innerHTML = RECIPES.map((r) => `<div class="recipe"><b>${r.name}</b><span class="small">${r.classes.length} classes</span></div>`).join("");
+  $$("#recipeChips .recipe").forEach((el, i) => el.addEventListener("click", () => { recipeIndex = i; renderRecipe(); }));
+  renderRecipe();
+}
+
+// ---------- 10. Cost ----------
+// GPU ms per frame, 1920x1080, ewa, 24-bit sort keys, Apple M3 Max
+const COSTS = {
+  "butterfly (0.5M)": { project: 0.09, compact: 0.06, radix: 0.28, draw: 2.36 },
+  "ceramic, inside (2M)": { project: 0.33, compact: 0.16, radix: 0.27, draw: 4.29 },
+  "bicycle (6.1M)": { project: 0.94, compact: 0.46, radix: 0.8, draw: 4.53 },
+  "grace, inside (10M)": { project: 1.55, compact: 0.78, radix: 0.96, draw: 4.86 },
+};
+function renderCost(name) {
+  const c = COSTS[name];
+  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  const colors = { project: "#f472b6", compact: "#fb923c", radix: "#facc15", draw: "#e8eaf0" };
+  const max = Math.max(...Object.values(COSTS).map((x) => Object.values(x).reduce((a, b) => a + b, 0)));
+  $("#costBars").innerHTML = Object.entries(c).map(([k, v]) => `<div class="hbar"><span>${k}</span><div><div class="b" style="width:${(v / max) * 100}%;background:${colors[k]}"></div></div><span>${v.toFixed(2)} ms</span></div>`).join("")
+    + `<div class="hbar"><span>total</span><div><div class="b" style="width:${(total / max) * 100}%;background:linear-gradient(90deg,#f472b6,#fb923c,#facc15,#e8eaf0)"></div></div><span>${total.toFixed(1)} ms</span></div>`;
+  $("#costNote").textContent = "GPU time per frame while the camera turns a full 360° (orbiting an object, or looking around inside a scene), 1920×1080, ewa, 24-bit sort keys, WebGPU on an Apple M3 Max.";
+}
+function setupCost() {
+  $("#costScene").innerHTML = Object.keys(COSTS).map((k, i) => `<span class="chip ${i === 2 ? "on" : ""}" data-k="${k}">${k}</span>`).join("");
+  $$("#costScene .chip").forEach((c) => c.addEventListener("click", () => { $$("#costScene .chip").forEach((o) => o.classList.toggle("on", o === c)); renderCost(c.dataset.k); }));
+  renderCost(Object.keys(COSTS)[2]);
+}
+
+// ---------- Hero: drifting splats, sorted back to front ----------
+function hero() {
+  const canvas = $("#heroCanvas"), g = canvas.getContext("2d");
+  const splats = Array.from({ length: 140 }, (_, i) => ({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random(), a: Math.random() * Math.PI, s: 0.3 + Math.random(), h: [168, 260, 25, 330][i % 4] }));
+  const resize = () => { canvas.width = canvas.clientWidth * devicePixelRatio; canvas.height = canvas.clientHeight * devicePixelRatio; };
+  resize();
+  addEventListener("resize", resize);
+  let t = 0;
+  const frame = () => {
+    t += 0.002;
+    const W = canvas.width, H = canvas.height;
+    g.clearRect(0, 0, W, H);
+    const order = splats.map((s) => ({ s, z: (s.z + t * 0.3) % 1 })).sort((a, b) => a.z - b.z);
+    for (const { s, z } of order) {
+      const k = 0.3 + z * 1.2;
+      const x = W / 2 + (s.x * W * 0.6) * k, y = H / 2 + (s.y * H * 0.6) * k;
+      const r = 50 * s.s * k * devicePixelRatio;
+      g.save(); g.translate(x, y); g.rotate(s.a + t); g.scale(1, 0.4);
+      const grad = g.createRadialGradient(0, 0, 0, 0, 0, r);
+      grad.addColorStop(0, `hsla(${s.h} 80% 65% / ${0.35 * z})`); grad.addColorStop(1, `hsla(${s.h} 80% 65% / 0)`);
+      g.fillStyle = grad; g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill(); g.restore();
+    }
+    if (!reducedMotion) requestAnimationFrame(frame);
+  };
+  frame();
+}
+
+layoutMap();
+setupChapters();
+setupQuizzes();
+setupFrame();
+setupData();
+setupTwins();
+setupSwim();
+setupSource();
+setupProjection();
+$("#sortBits").addEventListener("input", renderSort);
+renderSort();
+$$("#drawStage .chip").forEach((c) => c.addEventListener("click", () => { $$("#drawStage .chip").forEach((o) => o.classList.toggle("on", o === c)); drawDraw(Number(c.dataset.d)); }));
+drawDraw(0);
+setupRecipes();
+setupCost();
+hero();
+</script>
+</body>
+</html>
