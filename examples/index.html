@@ -125,8 +125,7 @@
     <code>sutro-2m.rdx</code>, and in the splats viewer also <code>grace-interior-10m.rdx</code>,
     <code>bicycle.rdx</code> and <code>garden.rdx</code>. <code>?url=</code>
     opens any other file, its spherical harmonics included.
-    The SOG and LCC viewers have samples of their own. The Doom and Quake pages read their levels from the same hosted folder (built by the original Radix
-    repo's tools); <code>?data=&lt;url&gt;</code> reads a copy from elsewhere.
+    The SOG and LCC viewers have samples of their own.
     The GPU test and benchmark pages (<code>build/test/gpu/index.html</code>, <code>build/test/bench/index.html</code>,
     from <code>test/</code>) are bundled from the library's sources by <code>npm run build:test</code>: the tests
     reach into its internals, outside the bundle.
@@ -174,12 +173,6 @@
       ["fx editor", "A node editor for splat effects: JSON graphs of TSL nodes built into Radix modifiers, with values, time, clicks and the camera as uniforms, so editing a value compiles nothing; probes, groups, ELK auto-layout and three themes, on the five sample scans. On WebGL2 the graph runs inside the scan's generator.",
         [["editor", "fxedit/index.html", ""],
           ["dissolve", "fxedit/index.html", "graph=dissolve"], ["toybox theme", "fxedit/index.html", "theme=toybox"]]],
-      ["Doom", "The shareware episode on splats, driven by the real game (doomgeneric in WASM, in a worker): the camera follows the player, doors and lifts move, sector lighting (light levels, distance, fullbright, fuzz) runs inside the generators, every thing is one batched sprite-atlas object, and the software frame's menus and status bar are splats drawn by a second renderer; each level's LoD trees are selected on a worker under a splat budget.",
-        [["demo loop", "doom/index.html", ""], ["E1M1", "doom/index.html", "warp=1,1"], ["E1M6", "doom/index.html", "warp=1,6", "the most objects and things"],
-          ["free fly", "doom/index.html", "sim=0&level=e1m8", "no game: fly through one level"], ["GPU timings", "doom/index.html", "warp=1,1&timing=1", "GPU time per phase"]]],
-      ["Quake", "The shareware episode on splats, driven by the real game (quakegeneric in WASM, in a worker): the camera follows the player; lightmaps, light styles, dynamic lights, sky and liquids are lit inside the generators; animated models deform on the GPU; particles and the software HUD are splats too; each map's LoD trees are selected on a worker under a splat budget.",
-        [["demo loop", "quake/index.html", ""], ["E1M1", "quake/index.html", "map=e1m1"], ["start map", "quake/index.html", "map=start"],
-          ["free fly", "quake/index.html", "sim=0&map=e1m1", "no game: fly through one map"], ["GPU timings", "quake/index.html", "map=e1m1&timing=1", "GPU time per phase"]]],
     ];
 
     const url = (path, query, gl) => {

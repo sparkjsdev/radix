@@ -116,8 +116,6 @@ const radixPages = [
     name: "fractals", path: "fractals/index.html", query: `preset=${preset}&splats=500000`, ready: "window.radixFractals?.ready",
   })),
   { name: "fxedit", path: "fxedit/index.html", query: "", ready: "window.radixFxedit?.ready" },
-  { name: "doom", path: "doom/index.html", query: "warp=1,1&nosound", ready: "window.radixDoom?.ready || window.radixDoom?.error" },
-  { name: "quake", path: "quake/index.html", query: "map=start&nosound", ready: "window.radixQuake?.ready || window.radixQuake?.error" },
   // LCC scenes (hosted samples): a Portable one with 3 cells and a Quality one
   // (SH); XGRIDS' LCC2 street (.sog), a converted LCC2 scene (.spz, SH); and
   // walking on the temple's collision mesh

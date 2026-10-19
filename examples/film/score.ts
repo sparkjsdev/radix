@@ -12,7 +12,7 @@
 //   8.5    a shutter, then a clock ticking in the silence (the photograph)
 //   9.3    a riser into the drop at bar 10: the title, half-time drums
 //   13-34  the groove under the features (arps from 15, zaps on the
-//          modifier wipes, hits on the numbers, an 8-bit bass for Doom)
+//          modifier wipes, hits on the numbers, an 8-bit bass from 32)
 //   34-36  hits on the montage words; 36-38 the breakdown; 38 the end chord
 import { BAR, BEAT, bars, beats } from "./timeline.js";
 
@@ -233,7 +233,7 @@ export class Score {
     });
   }
 
-  // A square wave through a stepped curve: 8 bits for Doom
+  // A square wave through a stepped curve: 8 bits
   chip(at: number, note: number, length: number, level = 0.07) {
     this.add({
       start: at,
@@ -433,7 +433,7 @@ function compose(s: Score) {
   s.impact(bars(29.25), 0.35);
   s.impact(bars(30.2), 0.4);
   s.tick(bars(31.05), 0.05);
-  // Doom, then Quake
+  // Two hits before the montage
   s.impact(bars(32), 0.3);
   s.impact(bars(33), 0.45);
 

@@ -275,9 +275,9 @@ for some). `docs/checks.md` lists what each covers.
   flip (`?flip=1` for y-down files).
 - Hosted data: dated GCS folders (`scripts/data.mjs`) hold every example's
   data in a subfolder (`rdx/`,
-  `rdx-sh/`, `spz/`, `sogs/`, `lcc/`, `lcc2/`, `doom/`, `quake/`). Files in a
-  dated folder are never replaced, so the pages' addresses (the catalogs,
-  `DATA_ROOT`) stay valid. `npm run check:examples` loads them with the Spark
+  `rdx-sh/`, `spz/`, `sogs/`, `lcc/`, `lcc2/`). Files in a
+  dated folder are never replaced, so the pages' addresses (the catalogs)
+  stay valid. `npm run check:examples` loads them with the Spark
   ports.
 - `examples/spark/`: static ports of the SparkJS 2.3.1 examples, a test of
   what Radix can do unchanged (TypeScript built as above, on the
@@ -308,46 +308,6 @@ for some). `docs/checks.md` lists what each covers.
     modifier costs about 6x there (`?apply=` picks either, `?sort=cpu` the
     worker sort on WebGPU). ELK loads as a classic script from
     `node_modules/elkjs/lib/` (the site copies it).
-  - `examples/doom/` and `examples/quake/` each hold a copy of `data.ts`
-    (`DATA_ROOT`: the dated GCS folder of `scripts/data.mjs`,
-    rewritten by the site build for its `--data`; `dataBase(name)`, honoring
-    `?data=` (a copy elsewhere);
-    `fetchData(url)`, whose
-    404 names the missing address) and of `lod/`:
-    `lodTraversal.ts` (LoD selection, plus a
-    budgeted traversal), `lodWorker.ts` (a module worker: relative imports
-    only) and `LodSelector.ts` (trees on the worker, changed index lists as
-    `SplatGenerator.indices` from a pool per object, `splatObject()`
-    releasing lists to the pool; with the CPU sort, call `update()` once the
-    last collection is shown). Keep the two copies in step.
-  - `examples/doom/` (`radixDoom`: `ready`, `error`, `measure()`): the
-    Doom shareware port, both backends, on `doom/` on GCS. The game
-    runs in a module worker
-    (`simWorker.ts`) with the sim bridge in `sim/`. One world
-    `SplatRenderer`: level objects (merged by the exporter to 25-80 per
-    level) are `LodSelector` lists drawn by a remap-indices generator that
-    lights each splat from its `sector` bundle and a per-sector light table
-    (`lighting.ts`); movers have live matrices; all things are one object of
-    a batch generator (list entry = atlas splat | slot << 21 over a per-frame
-    pose and light table; a slot is reused only after older lists are
-    released, `things.ts`), since one object per thing took WebGL2 frames to
-    32 ms. The HUD (frame splats, weapon) is a second renderer with a fixed
-    overlay camera and view `"hud"` (`autoSort: false`, made up front:
-    `requestSort()` only reaches existing views). Defaults as quake's: pixel
-    ratio 1, no sort guard, budget 2.5M (GPU sort) / 1.5M (CPU sort).
-  - `examples/quake/` (`radixQuake`: `ready`, `error`, `measure()`): the
-    Quake shareware port, both backends, on `quake/` on GCS. The sim
-    bridge is in `sim/`
-    (`simWorker.ts` is a module worker). One `SplatRenderer` draws the world
-    through the lighting generator (`lighting.ts`: lightmaps, styles, dynamic
-    lights, sky, liquids, bound per object over the LoD index lists), entities
-    through the atlas generator (`models.ts`, MdlDeform on the covariance) and
-    particles; a second renderer (view key `"hud"`) draws the 320x240 frame.
-    `world.ts` loads maps, runs `LodSelector`, brush movers, animated textures
-    and WebGL2 residency (`?resident=` LoD nodes, default 24M). Defaults on
-    both backends: pixel ratio 1, no sort guard, a splat budget shared with
-    the entities of 2.5M with the GPU sort and 1.5M with the CPU sort; on
-    WebGL2 `requestSort()` while entities animate. Query parameters in its `main.ts` header.
 - `examples/fractals/` (`radixFractals`: `ready`, `show(name)`, `bake()`,
   `settled()`, `progress()`, `baked()`, `samples()`; both backends): 3D
   fractals as splats. A kind's `GpuArrayWriter` bakes samples of
@@ -443,9 +403,8 @@ for some). `docs/checks.md` lists what each covers.
   copies only), the `node_modules/` files the import maps load, and a
   landing `index.html` (the GitHub repo, getting started, links). Repo paths
   are kept, so relative links work under any prefix; the build fails on a
-  broken link or import-map address. `-- --data <url>` points its copies of
-  `examples/{doom,quake}/data.js` at another address than
-  `RADIX_DATA_URL`. `npm run check:examples -- --base http://localhost:8002`
+  broken link or import-map address.
+  `npm run check:examples -- --base http://localhost:8002`
   checks the site's pages. `npm run build:single` (`scripts/build-single.mjs`,
   run by the site build) writes each example page but the Spark ports
   as one HTML file, `build/examples/<name>/<name>.html` (linked as

@@ -6,8 +6,6 @@
 //   sogs/    the SOG viewer's samples
 //   lcc/     the LCC viewer's LCC v1 samples, with their collision.lci, and
 //   lcc2/    its LCC2 samples
-//   doom/    the Doom port's levels
-//   quake/   the Quake port's maps
 // Files in a dated folder are never replaced, so these addresses stay valid.
 // Data folders changed or added since the data's version name their own
 // (RADIX_FOLDER_VERSIONS).

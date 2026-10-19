@@ -15,24 +15,19 @@
 // checked against its files.
 //
 // The examples read their data from the dated GCS folder in
-// scripts/data.mjs (build/data/ is not copied); --data points
-// Doom's and Quake's at another address.
+// scripts/data.mjs (build/data/ is not copied).
 //
 //   npm run build:site          (runs npm run build first)
-//     [-- --data <url>]         (another address for the examples' data)
 //   npm run serve:site          http://localhost:8002/
 import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { RADIX_DATA_URL } from "./data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = path.join(root, "build/site");
 const DOCS = "docs";
-const dataArg = process.argv.indexOf("--data");
-const DATA_URL = dataArg >= 0 ? new URL(process.argv[dataArg + 1]).href.replace(/\/?$/, "/") : RADIX_DATA_URL;
 
 // What the examples' import maps load (three.webgpu.js imports three.core.js
 // beside it; GLTFLoader and TransformControls import their jsm helpers;
@@ -350,17 +345,6 @@ if (!sparkHtml.includes(built)) {
 }
 await writeFile(sparkIndex, sparkHtml.replace(built, 'href="../../../examples/spark/${example.name}/main.ts.html">Radix source</a>'));
 
-// The examples' built data (build/data/, not copied) from GCS
-const dataLine = /^export const DATA_ROOT = .*$/m;
-for (const page of ["doom", "quake"]) {
-  const dataJs = path.join(SITE, `build/examples/${page}/data.js`);
-  const dataJsText = await readFile(dataJs, "utf8");
-  if (!dataLine.test(dataJsText)) {
-    throw new Error(`build/examples/${page}/data.js: no DATA_ROOT line to point at the hosted data`);
-  }
-  await writeFile(dataJs, dataJsText.replace(dataLine, `export const DATA_ROOT = ${JSON.stringify(DATA_URL)};`));
-}
-
 // --- 5. The landing page ---
 
 const git = (...args) => {
@@ -461,5 +445,4 @@ if (broken.length) {
   console.error(`Broken links in the site:\n  ${broken.join("\n  ")}`);
   process.exit(1);
 }
-console.log(`Data:    ${DATA_URL}
-Preview: npm run serve:site, then http://localhost:8002/`);
+console.log("Preview: npm run serve:site, then http://localhost:8002/");

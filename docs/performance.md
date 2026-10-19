@@ -41,7 +41,7 @@ From the comparison of Oct 9, 2026: five scenes from 0.5M to 10M splats, timed o
 - **SparkJS 2.3.1** culls like Radix and has no WebGPU path. Radix on WebGPU was 1.37x as fast; at 10M splats (Grace Cathedral, inside), 9.2 ms against 16.5 ms.
 - **WebGL2**, where all three sort on a worker: at defaults Spark was 1.09x as fast as Radix and PlayCanvas 1.47x. Radix stalls in the frames that upload a new order, and a moving camera makes it re-sort all the time: on Grace its turning frames took 16 ms, against 10 ms turning in place. This is the main weakness of Radix's WebGL2 path.
 - **Vsync:** with culling matched, Radix on WebGPU held 120 fps on four scenes and 118 on Grace (108 at defaults); PlayCanvas on WebGPU held 120 on all. On Grace the WebGL2 worker sorts drop frames: Radix 81 fps and Spark 73, with 23% and 27% of frames late and p99 frames of 50 and 59 ms. Timed, Spark showed almost no stalls. PlayCanvas on WebGL2 held 116 fps.
-- **Level of detail** helps most with very large scenes: Spark can build a LoD tree on load and draw a budget of splats chosen for the view. Radix loads and saves LoD trees but does not yet choose LoD subsets itself; the Doom, Quake, SOG and LCC examples choose them in example code (Doom's and Quake's on a worker under a splat budget, `examples/doom/lod/`).
+- **Level of detail** helps most with very large scenes: Spark can build a LoD tree on load and draw a budget of splats chosen for the view. Radix loads and saves LoD trees but does not yet choose LoD subsets itself; the SOG and LCC examples choose them in example code.
 - **Loading** a PLY to the first frame took Radix 0.3-2.2 s, Spark 0.1-1.6 s, and PlayCanvas 0.3-5.0 s.
 
 ## Large scenes
