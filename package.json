@@ -33,7 +33,7 @@
     "build:single": "node scripts/build-single.mjs",
     "build:site": "node scripts/build-site.mjs",
     "serve": "http-server . -p 8000 --cors -c-1",
-    "serve:site": "http-server build/site -p 8002 -c-1 --mimetypes scripts/site.types",
+    "serve:site": "http-server build/site -p 8002 -c-1",
     "docs": "node scripts/build-docs.mjs",
     "check:docs": "node scripts/build-docs.mjs --check",
     "check:core": "tsx scripts/check-core.ts",

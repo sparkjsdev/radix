@@ -80,7 +80,7 @@ npm run serve      # http-server on the repo root, port 8000
 
 Then open:
 
-- `http://localhost:8000/build/site/`: the place to start, after `npm run build:site`. It's a landing page that links to the examples, the docs and the highlighted sources, all copied into one folder that can be put on any static host.
+- `http://localhost:8000/build/site/`: the place to start, after `npm run build:site`. It's a landing page that links to the examples and the docs, all copied into one folder that can be put on any static host.
 - `http://localhost:8000/build/examples/index.html`: the example pages (a splat viewer, short scenes, WebXR, an SPZ reader and writer, MPM water, the fx node editor, fractals, and LCC and SOG viewers) and the ports of the SparkJS 2.3.1 examples.
 - `http://localhost:8000/docs/index.html`: the docs (guide, API reference, recipes, and the comparison with SparkJS).
 - `http://localhost:8000/build/test/gpu/index.html`: the GPU checks (`?gpu=webgpu-gl` for the WebGL2 backend).
@@ -97,7 +97,7 @@ The pages load their splat files from Google Cloud Storage and sparkjs.dev, so t
 | `npm run check:test` | the GPU test page on both backends in headless Chrome (needs `npm run serve`) |
 | `npm run check:examples` | every example page on both backends in headless Chrome (needs `npm run serve`) |
 | `npm run bench` / `npm run bench:core` | the GPU benchmark page over the hosted samples / core benchmarks in Node |
-| `npm run build:site` / `npm run serve:site` | a static site of the examples, docs and highlighted sources in `build/site/`, served on port 8002 |
+| `npm run build:site` / `npm run serve:site` | a static site of the examples and docs in `build/site/`, served on port 8002 |
 
 ## Layout
 

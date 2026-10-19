@@ -5,7 +5,7 @@
 // pages work when opened from disk (file://). A page sets
 // <body data-root="" | "../"> (the path to the docs folder) and data-page
 // (its path from there, for the top bar); a page outside the docs sets
-// data-section (examples, source; empty for none). It declares no globals,
+// data-section (examples; empty for none). It declares no globals,
 // so pages keep their own helpers.
 /* global document, matchMedia, IntersectionObserver, MutationObserver, NodeFilter, innerHeight, addEventListener */
 "use strict";
@@ -22,14 +22,10 @@
     ["pipeline.html", "Pipeline"],
     ["multi-splat.html", "Multi-splat"],
   ];
-  // The sources on GitHub; the static site (scripts/build-site.mjs)
-  // points this at its highlighted source pages
-  const SOURCE = "https://github.com/sparkjsdev/radix/tree/main/src";
   // [section, label, page from the docs folder]
   const SECTIONS = [
     ["guide", "Guide", "index.html"],
     ["examples", "Examples", "../build/examples/index.html"],
-    ["source", "Source", SOURCE],
     ["reference", "Reference", "ref/overview.html"],
   ];
   const $ = (s, r = document) => r.querySelector(s);

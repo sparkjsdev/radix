@@ -23,8 +23,7 @@ From a clean checkout: `npm install` (its `prepare` builds `dist/`),
 (the examples and Spark ports), `http://localhost:8000/docs/index.html` (the
 docs) and `http://localhost:8000/build/test/gpu/index.html` (the GPU checks).
 After `npm run build:site`, `http://localhost:8000/build/site/` is the landing
-page that links to all of them and the highlighted sources. The README has
-the rest.
+page that links to all of them. The README has the rest.
 
 Docs live in `docs/`, in two forms:
 
@@ -50,8 +49,8 @@ Docs live in `docs/`, in two forms:
   (every result) and `img/bench-*.jpg` hold the benchmarks of Oct 9, 2026.
   `site.js` draws every page's top bar: Radix, then the sections Guide
   (these pages, a second row; `GUIDE`), Examples (`build/examples/`,
-  whose two index pages load the bar with `data-section="examples"`),
-  Source (GitHub, or the static site's source pages) and Reference (`ref/`).
+  whose two index pages load the bar with `data-section="examples"`) and
+  Reference (`ref/`).
   Sections end in "See also" links into `ref/`. To browse it, run
   `npm run serve` and open `http://localhost:8000/docs/`
   (`file://` works in Chrome, but some editor previews do not follow links).
@@ -393,15 +392,12 @@ for some). `docs/checks.md` lists what each covers.
   playback; `timeline.ts`, `text.ts`), not a page.
 - Static site: `npm run build:site` (`scripts/build-site.mjs`)
   builds `build/site/` (gitignored), one folder to preview
-  (`npm run serve:site`, :8002, `scripts/site.types` serves
-  sources as text) and copy to any static host: the bundle and built examples,
-  the docs, every `src/` and `examples/` `.ts` and each repo file the docs
-  link to (raw and as a highlighted `<file>.html` page with a file tree,
-  styled by the docs' `site.css` / `site.js`; docs source links and the
-  Spark list's "Radix source" point at those pages, and the top bar's Radix
-  logo at the landing page and its Source at the sources, in the site's
-  copies only), the `node_modules/` files the import maps load, and a
-  landing `index.html` (the GitHub repo, getting started, links). Repo paths
+  (`npm run serve:site`, :8002) and copy to any static host: the bundle and
+  built examples, the docs, the `node_modules/` files the import maps load,
+  and a landing `index.html` (the GitHub repo, getting started, links). The
+  sources stay on GitHub: the docs' links to repo files and the Spark list's
+  "Radix source" name the commit the site is built from, and the top bar's
+  Radix logo goes to the landing page, in the site's copies only. Repo paths
   are kept, so relative links work under any prefix; the build fails on a
   broken link or import-map address.
   `npm run check:examples -- --base http://localhost:8002`

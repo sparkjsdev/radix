@@ -1,2 +1,0 @@
-# Source files the static site links to, shown as text (npm run serve:site)
-text/plain ts md mjs
