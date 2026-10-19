@@ -84,6 +84,36 @@ npm run serve   # the repo on port 8000
 
 Then open `http://localhost:8000/docs/index.html`. Its top bar links to the guide, the reference and the examples, which load their splat files over the network.
 
+## Credits
+
+The library follows these papers, formats and projects:
+
+- `ewa`, the default projection method: [3D Gaussian Splatting for Real-Time Radiance Field Rendering](https://arxiv.org/abs/2308.04079) (Kerbl et al., SIGGRAPH 2023) and [EWA Volume Splatting](https://vcg.seas.harvard.edu/publications/20011001-ewa-volume-splatting) (Zwicker et al., IEEE Visualization 2001).
+- `3dgut`: [3DGUT: Enabling Distorted Cameras and Secondary Rays in Gaussian Splatting](https://arxiv.org/abs/2412.12507) (Wu et al., CVPR 2025). Its ray evaluation, which `htgs` shares, is the maximum response of [3D Gaussian Ray Tracing](https://arxiv.org/abs/2407.07090) (Moenne-Loccoz et al., SIGGRAPH Asia 2024).
+- `htgs`: the exact outline of [Efficient Perspective-Correct 3D Gaussian Splatting Using Hybrid Transparency](https://arxiv.org/abs/2410.08129) (Hahlbohm et al., Eurographics 2025), without its hybrid-transparency blending.
+- `raygs`, and the anti-aliasing of `3dgut` and `htgs`: [Hardware-Rasterized Ray-Based Gaussian Splatting](https://arxiv.org/abs/2503.18682) (Rota Bulò et al., CVPR 2025).
+- PLY: the layout of the 3DGS reference implementation, [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting).
+- SPZ: Niantic's format and its coordinate systems, [nianticlabs/spz](https://github.com/nianticlabs/spz).
+- Compressed PLY: the format of PlayCanvas's [SuperSplat](https://github.com/playcanvas/supersplat), with the scale and SH mappings of [splat-transform](https://github.com/playcanvas/splat-transform).
+- The quaternion of a rotation basis: `Quat::from_rotation_axes` in [glam](https://github.com/bitshifter/glam-rs), after `XMQuaternionRotationMatrix` in [DirectXMath](https://github.com/microsoft/DirectXMath).
+- The FSE coding of the Zstandard encoder: `fse_compress.c` and `fse.h` in [zstd](https://github.com/facebook/zstd).
+
+The examples also follow:
+
+- MPM water: Yuanming Hu's [mpm88](https://github.com/taichi-dev/taichi/blob/master/python/taichi/examples/simulation/mpm88.py) (Taichi), in the units of nialltl's [MPM guide](https://nialltl.neocities.org/articles/mpm_guide), with the position clamp of nialltl's [incremental_mpm](https://github.com/nialltl/incremental_mpm) and the fixed-point grid sums of [WebGPU-Ocean](https://github.com/matsuoka-601/WebGPU-Ocean).
+- SOG viewer: PlayCanvas's [SOG format](https://developer.playcanvas.com/user-manual/gaussian-splatting/formats/sog/), and level-of-detail selection and streaming after the [PlayCanvas engine](https://github.com/playcanvas/engine).
+- Effect editor: Inigo Quilez's [distance functions](https://www.shadertoy.com/view/Xds3zN) and [palettes](https://www.shadertoy.com/view/ll2GD3), Matt Zucker's [polynomial approximations of matplotlib colormaps](https://www.shadertoy.com/view/WlfXRN), five colormaps of [CMasher](https://github.com/1313e/CMasher), Melissa O'Neill's [PCG](https://www.pcg-random.org/) hash in the GPU form of [Hash Functions for GPU Rendering](https://jcgt.org/published/0009/03/02/) (Jarzynski and Olano, JCGT 2020), and bryc's [cyrb53](https://github.com/bryc/code/blob/master/jshash/experimental/cyrb53.js).
+
+The examples load this third-party sample data:
+
+- [Knock Community Hall](https://superspl.at/scene/0ff2e6dc) by [scbenoit](https://superspl.at/user/scbenoit), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- [Sunnyvale Heritage Park Museum](https://superspl.at/scene/d5d397aa) by [zeitgeistarchivescans](https://superspl.at/user/zeitgeistarchivescans), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- [Cluster fly](https://github.com/danybittel/splats/releases/tag/splat) by [Dany Bittel](https://danybittel.ch/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), reduced in size.
+- [SharedTestModels](https://github.com/raymondyfei/SharedTestModels), [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+- Food scans by [Tipatat](https://x.com/tipatat).
+- [Sutro Tower](https://vincentwoo.com/2025/02/18/sutro-tower-in-3d/) by Vincent Woo and Daylen Yang.
+- [Grace Cathedral](https://vincentwoo.com/3d/grace_cathedral/) by Vincent Woo.
+
 ## License
 
 MIT
