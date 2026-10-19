@@ -608,7 +608,7 @@ function feedCamera() {
     position.value.applyMatrix4(toModel);
     forward.value.transformDirection(toModel);
   }
-  // One drawing-buffer pixel at unit depth (the viewer measures blur in those)
+  // One drawing-buffer pixel at unit depth (the depth of field measures blur in those)
   pixelSize.value = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) / Math.max(1, renderer.getDrawingBufferSize(drawingBuffer).y);
 }
 

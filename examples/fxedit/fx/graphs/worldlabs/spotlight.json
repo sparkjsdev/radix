@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "spotlight",
-  "description": "The viewer's spotlight: a smooth cone from a lamp toward a target, brightness over attenuation times distance squared, over a 0.25 floor. The blog lit rooms (a lamp 6 m up, an 80 degree cone, attenuation 0.5); here the lamp hangs above and in front of the scan with a 30 degree cone. Click the scan to aim it.",
-  "source": { "name": "World Labs threeviewer effects (lighting.glsl computeSpotlight; blog: origin (0,-6,5), target (0,0,5), 80, 10, 25, 0.5), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "A smooth cone from a lamp toward a target, brightness over attenuation times distance squared, over a 0.25 floor. The lamp hangs above and in front of the scan with a 30 degree cone. Click the scan to aim it.",
   "nodes": {
     "center": { "type": "input.center" },
     "rgb": { "type": "input.rgb" },

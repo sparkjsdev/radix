@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "waves",
-  "description": "The viewer's waves, as on the blog: height changes by 0.3 sin(dot(p, dir) - t) with dir (-1, 0, 5) normalized, measured from the viewer's origin, so a plane wave rolls through the scene.",
-  "source": { "name": "World Labs threeviewer effects (newEffects.glsl waves; blog: wavesEffect((-1, 0, 5), 0.3)), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "Height changes by 0.3 sin(dot(p, dir) - t) with dir (-1, 0, 5) normalized, measured from the start view, so a plane wave rolls through the scene.",
   "nodes": {
     "center": { "type": "input.center" },
     "time": { "type": "input.time" },

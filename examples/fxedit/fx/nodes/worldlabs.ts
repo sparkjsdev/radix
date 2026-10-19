@@ -1,24 +1,16 @@
-// World Labs threeviewer ("Looking Glass") effects, ported from the viewer's
-// effects/*.glsl, lighting.glsl, pixelDepth.glsl and splatterPreFragment.glsl
-// with the parameters its "Generating Worlds" blog demos use. The viewer
-// runs some of these per quad vertex or per pixel; here they run once per
-// splat at its center, which matches for the small splats of a scene.
+// Depth, camera, click and wave effects. Some are usually computed per quad
+// vertex or per pixel; here they run once per splat at its center, which
+// matches for the small splats of a scene.
 //
-// The viewer's world is y-down with the camera starting at the origin
+// The effects' space is y-down with the camera starting at the origin
 // looking along +z. Nodes whose math depends on absolute position take an
-// `origin` (where that viewer origin sits in this space, e.g. the start
-// camera) and use p_wl = (p.x - o.x, o.y - p.y, o.z - p.z); offsets are
-// turned back the same way.
+// `origin` (where that origin sits in this space, e.g. the start camera)
+// and use p_wl = (p.x - o.x, o.y - p.y, o.z - p.z); offsets are turned back
+// the same way.
 import { TSL, type TslNode } from "@sparkjsdev/radix";
-import type { NodeDef, NodeSource, PortType } from "../types.js";
+import type { NodeDef, PortType } from "../types.js";
 
 const { abs, clamp, cos, dot, exp, float, length, log2, max, min, mix, mod, normalize, radians, select, sin, smoothstep, vec3 } = TSL;
-
-export const WORLD_LABS: NodeSource = {
-  name: "World Labs threeviewer effects (effects/*.glsl)",
-  url: "wlt/apps/threeviewer/src/effects",
-  license: "World Labs internal, ported with the author's permission",
-};
 
 const PI = Math.PI;
 const f = (value: number, min?: number, max?: number) => ({ type: "float" as PortType, default: value, min, max });
@@ -29,7 +21,7 @@ const origin = v3([0, 0, 3.2], -10, 10);
 const toWorldLabs = (p: TslNode, o: TslNode) => vec3(p.x.sub(o.x), o.y.sub(p.y), o.z.sub(p.z));
 const fromWorldLabs = (d: TslNode) => vec3(d.x, d.y.negate(), d.z.negate());
 
-// colormaps.js: 32 sRGB colors per palette, base64 of 96 bytes
+// The depth view's palettes: 32 sRGB colors each, base64 of 96 bytes
 const PALETTE_DATA: Record<string, string> = {
   torch: "AAAAAgMFBAoVBBMnAxs7ASJTAyVvGSWMMSWYQyuYUzKVYTmScD+QfkSOjEmMm02JqlGFulWAyVl42V5v52Rk821Z+3lP/4lN/ptW+6xp+L2A9cya9Nq19OfQ9/Tp////",
   magma: "AAAEAwMSCggiEw00HhFJKhFcOBBsRRB3VBN9YBiAbR2BeSKCiCeBlCyAoTB+rjR7vTl3yj5y1kVs4k1m7Fhg82Vc+HRc+4Nf/ZRn/qNv/rJ6/sGF/tGU/eCh/O6w/P2/",
@@ -44,8 +36,8 @@ const PALETTES = Object.fromEntries(Object.entries(PALETTE_DATA).map(([name, dat
 }));
 const PALETTE_CHOICES = Object.keys(PALETTES).flatMap((name) => [name, `${name}_reverse`]);
 
-// color.glsl sampleDepthPalette: linear between the 32 entries, as a sum of
-// hat weights (no dynamic array indexing)
+// Linear between the 32 entries, as a sum of hat weights (no dynamic array
+// indexing)
 function samplePalette(name: string, t: TslNode) {
   const reverse = name.endsWith("_reverse");
   const colors = PALETTES[reverse ? name.slice(0, -"_reverse".length) : name] ?? PALETTES.torch;
@@ -58,7 +50,7 @@ function samplePalette(name: string, t: TslNode) {
   return sum;
 }
 
-// newEffects.glsl colorWave(rgba, p, t)
+// The color wave at p (in the effects' space) and time t
 function colorWave(rgb: TslNode, alpha: TslNode, p: TslNode, t: TslNode) {
   const len = length(p).toVar();
   const magnitude = sin(len.add(t).add(p.x.mul(1.7)).add(p.z.mul(2.3)))
@@ -73,7 +65,7 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.depthColor",
     label: "Depth color",
-    description: "The viewer's depth view: view depth on a log scale between near and far, through a 32-color palette",
+    description: "View depth on a log scale between near and far, through a 32-color palette",
     category: "effect",
     inputs: {
       position,
@@ -85,9 +77,8 @@ export const worldLabsNodes: NodeDef[] = [
     },
     options: { palette: { default: "torch_reverse", choices: PALETTE_CHOICES } },
     outputs: { value: "color", t: "float" },
-    source: WORLD_LABS,
     build: ({ position: p, cameraPosition, cameraForward, near, far, reverse }, ctx) => {
-      // pixelDepth.glsl getDepthColor (depth = view depth, as getDepth(ndc.z))
+      // The view depth along the camera's forward axis
       const depth = max(dot(p.sub(cameraPosition), normalize(cameraForward)), 0.0);
       const t = log2(depth.add(1)).sub(log2(near.add(1))).div(log2(far.add(1)).sub(log2(near.add(1)))).toVar();
       const u = select(reverse, float(1).sub(t), t).toVar();
@@ -97,7 +88,7 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.focusBlur",
     label: "Focus blur",
-    description: "The viewer's depth of field: a blur circle of diameter * |depth - focus| / depth pixels, as a world size",
+    description: "A blur circle of diameter * |depth - focus| / depth pixels, as a world size",
     category: "effect",
     inputs: {
       position,
@@ -109,9 +100,8 @@ export const worldLabsNodes: NodeDef[] = [
     },
     // blur: world std-dev to add (splat.write blur); pixels: its radius on screen
     outputs: { blur: "float", pixels: "float" },
-    source: WORLD_LABS,
     build: ({ position: p, cameraPosition, cameraForward, pixelSize, focus, diameter }) => {
-      // splatterPreFragment.glsl: focusRadius = 0.5 * focalDiameter * |depth - focalDistance| / depth (px, <= 512)
+      // Blur radius = 0.5 * diameter * |depth - focus| / depth pixels, at most 512
       const depth = dot(p.sub(cameraPosition), normalize(cameraForward)).toVar();
       const pixels = select(depth.greaterThan(0), min(diameter.mul(0.5).mul(abs(depth.sub(focus)).div(depth)), 512.0), float(512)).toVar();
       return { blur: pixels.mul(max(depth, 0.0)).mul(pixelSize), pixels };
@@ -120,7 +110,7 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.dollyZoom",
     label: "Dolly zoom",
-    description: "The blog's dolly zoom: the camera moves in while the field of view widens so the subject keeps its size (as a warp of the splats)",
+    description: "The camera moves in while the field of view widens so the subject keeps its size (as a warp of the splats)",
     category: "effect",
     inputs: {
       position,
@@ -132,7 +122,6 @@ export const worldLabsNodes: NodeDef[] = [
       subjectZ: f(4, 0, 10),
     },
     outputs: { value: "vec3", keep: "bool" },
-    source: WORLD_LABS,
     build: ({ position: p, cameraPosition, cameraForward, subject, dolly, minZ, subjectZ }) => {
       // Camera at z = dolly with fov 2 atan((subjectZ - minZ) / (subjectZ - dolly) tan 45deg): relative to
       // the camera at minZ, a move in of (dolly - minZ) and focal (zf - move) / zf, zf the subject distance
@@ -149,7 +138,7 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.ripple",
     label: "Ripple",
-    description: "The viewer's click ripple: a decaying radial wave from the click that also brightens the crests",
+    description: "A decaying radial wave from the click that also brightens the crests",
     category: "effect",
     inputs: {
       position,
@@ -159,13 +148,12 @@ export const worldLabsNodes: NodeDef[] = [
       scale: f(3, 0.1, 20),
       duration: f(3, 0.1, 10),
       outward: { type: "bool", default: false },
-      // Scales the viewer's wave (1: as in the viewer)
+      // Scales the wave (1: the constants below)
       amplitude: f(1, 0, 2),
     },
     outputs: { offset: "vec3", rgb: "color" },
-    source: WORLD_LABS,
     build: ({ position: p, rgb, center, age, scale, duration, outward, amplitude }) => {
-      // ripple.glsl with RIPPLE_DECAY 15, AMPLITUDE 0.001, LENGTH 0.1, SPEED 0.4, EPSILON 0.001; dir = !outward
+      // Decay 15, amplitude 0.001, wavelength 0.1, speed 0.4, epsilon 0.001
       const s = age.div(duration).toVar();
       const delta = p.sub(center).toVar();
       const r = length(delta).toVar();
@@ -181,13 +169,12 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.sonar",
     label: "Sonar",
-    description: "The viewer's sonar: a gaussian pulse around the click and a ring wave running out at 3 units/s, lighting splats green",
+    description: "A gaussian pulse around the click and a ring wave running out at 3 units/s, lighting splats green",
     category: "effect",
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, center: v3([0, 0, 0]), age: f(10, 0, 10), duration: f(1, 0.1, 10) },
     outputs: { rgb: "color", intensity: "float" },
-    source: WORLD_LABS,
     build: ({ position: p, rgb, center, age, duration }) => {
-      // sonar.glsl sonarPulse(s, pos, center, 1) and gaussianPulse
+      // A ring wave running out from the center, and a gaussian pulse around it
       const s = age.div(duration).toVar();
       const waveCycle = 2.0;
       const wavePeriod = 0.15;
@@ -197,7 +184,7 @@ export const worldLabsNodes: NodeDef[] = [
       const amplitude = float(1).div(max(toCenter.div(5.0), 1.0));
       const within = mod(timeInEffect, waveCycle).toVar();
       const wave = select(within.lessThan(wavePeriod), max(amplitude.mul(sin(within.mul(2 * PI / wavePeriod))), 0.0), float(0));
-      // gaussianPulse(timeToCenter, s, 4 * period, 2.5 * period)
+      // The pulse lasts 4 wave periods, its radius at most 2.5 periods
       const maxTime = 4 * wavePeriod;
       const maxRadius = 2.5 * wavePeriod;
       const minRadius = maxRadius / 4;
@@ -213,7 +200,7 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.spotlight",
     label: "Spotlight",
-    description: "The viewer's spotlight: a smooth cone from a lamp toward a target, falling off with distance squared, over a 0.25 floor",
+    description: "A smooth cone from a lamp toward a target, falling off with distance squared, over a 0.25 floor",
     category: "effect",
     inputs: {
       position,
@@ -226,9 +213,7 @@ export const worldLabsNodes: NodeDef[] = [
       attenuation: f(0.5, 0.01, 10),
     },
     outputs: { rgb: "color", light: "float" },
-    source: WORLD_LABS,
     build: ({ position: p, rgb, lamp, target, fov, smooth, brightness, attenuation }) => {
-      // lighting.glsl computeSpotlight (effects.js passes s[2] = 25 as brightness, s[3] = 0.5 as attenuation)
       const toPoint = p.sub(lamp).toVar();
       const distance = length(toPoint).toVar();
       const cosAngle = dot(toPoint.div(max(distance, 1e-6)), normalize(target.sub(lamp)));
@@ -241,14 +226,12 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.colorWave",
     label: "Color wave",
-    description: "The viewer's color wave: interfering radial waves from the viewer's origin recolor splats by direction and nudge them",
+    description: "Interfering radial waves from the origin recolor splats by direction and nudge them",
     category: "effect",
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, opacity: f(1, 0, 1), time: f(0), origin },
     outputs: { rgb: "color", alpha: "float", offset: "vec3" },
-    source: WORLD_LABS,
     build: ({ position: p, rgb, opacity, time, origin: o }) => {
-      // pixelWorld: rgba = mix(rgba, colorWave(rgba, p, s), blend); vertexWorld (same inputs):
-      // worldVertex += 0.02 * displace.xyz * (1 - displace.w)
+      // Recolored by the wave, and moved by 0.02 * wave color * (1 - wave alpha)
       const wave = colorWave(rgb, opacity, toWorldLabs(p, o), time);
       const rgbOut = wave.rgb.toVar();
       const alpha = wave.alpha.toVar();
@@ -258,13 +241,12 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.rustle",
     label: "Rustle",
-    description: "The viewer's rustle: the color wave's field used only to nudge splats, like leaves in wind",
+    description: "The color wave's field used only to nudge splats, like leaves in wind",
     category: "effect",
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, opacity: f(1, 0, 1), time: f(0), origin },
     outputs: { offset: "vec3" },
-    source: WORLD_LABS,
     build: ({ position: p, rgb, opacity, time, origin: o }) => {
-      // vertexWorld: worldVertex += 0.02 * displace.xyz * displace.w
+      // Moved by 0.02 * wave color * wave alpha
       const displace = colorWave(rgb, opacity, toWorldLabs(p, o), time);
       return { offset: fromWorldLabs(displace.rgb.mul(displace.alpha).mul(0.02)) };
     },
@@ -272,13 +254,12 @@ export const worldLabsNodes: NodeDef[] = [
   {
     id: "wl.waves",
     label: "Waves",
-    description: "The viewer's waves: height += amplitude sin(dot(p, dir) - t), a plane wave rolling along a direction",
+    description: "A plane wave rolling along a direction: height += amplitude sin(dot(p, dir) - t)",
     category: "effect",
     inputs: { position, time: f(0), origin, direction: v3([-1, 0, 5], -10, 10), amplitude: f(0.3, 0, 2) },
     outputs: { offset: "vec3" },
-    source: WORLD_LABS,
     build: ({ position: p, time, origin: o, direction, amplitude }) => {
-      // newEffects.glsl waves (dir normalized in effects.js)
+      // The direction is normalized
       const q = toWorldLabs(p, o);
       const a = amplitude.mul(sin(dot(q, normalize(direction)).sub(time)));
       return { offset: fromWorldLabs(vec3(0, a, 0)) };

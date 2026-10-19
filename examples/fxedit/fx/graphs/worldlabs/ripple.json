@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "ripple",
-  "description": "The viewer's ripple, as on the blog: click the scan and a wave runs inward over 3 seconds, its size scaled by the hit point's distance to the camera; splats move along the direction from the hit point and brighten on the crests (at 0.3 of the viewer's amplitude, which is a lot on an object).",
-  "source": { "name": "World Labs threeviewer effects (ripple.glsl; blog: rippleEffect(time, 3.0, outward false, hit, distance to camera)), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "Click the scan and a wave runs inward over 3 seconds, its size scaled by the hit point's distance to the camera; splats move along the direction from the hit point and brighten on the crests (at amplitude 0.3, since 1 is a lot on an object).",
   "nodes": {
     "click": { "type": "input.click" },
     "center": { "type": "input.center" },

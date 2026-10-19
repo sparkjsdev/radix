@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "colorWave",
-  "description": "The viewer's color wave, as on the blog: two interfering waves in distance from the viewer's origin, times exp(-0.01 r^2), recolor splats by the direction to them (abs of the unit vector), fade their opacity with the wave, and nudge them by 0.02.",
-  "source": { "name": "World Labs threeviewer effects (newEffects.glsl colorWave, pixelWorld + vertexWorld), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "Two interfering waves in distance from the start view, times exp(-0.01 r^2), recolor splats by the direction to them (abs of the unit vector), fade their opacity with the wave, and nudge them by 0.02.",
   "nodes": {
     "center": { "type": "input.center" },
     "rgb": { "type": "input.rgb" },

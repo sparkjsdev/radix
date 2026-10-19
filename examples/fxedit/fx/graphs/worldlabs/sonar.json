@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "sonar",
-  "description": "The viewer's sonar, as on the blog: click the scan and a gaussian pulse swells and shrinks around the hit point while a ring runs out at 3 units a second, fading past 5 units, lighting splats toward green (1, 4, 1). One emission, over in 2 seconds.",
-  "source": { "name": "World Labs threeviewer effects (sonar.glsl; blog: sonarEffect(time, 1.0, hit)), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "Click the scan and a gaussian pulse swells and shrinks around the hit point while a ring runs out at 3 units a second, fading past 5 units, lighting splats toward green (1, 4, 1). One emission, over in 2 seconds.",
   "nodes": {
     "click": { "type": "input.click", "note": "Where and how long ago you clicked" },
     "center": { "type": "input.center" },

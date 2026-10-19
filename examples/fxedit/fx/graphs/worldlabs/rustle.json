@@ -1,8 +1,7 @@
 {
   "version": 1,
   "name": "rustle",
-  "description": "The viewer's rustle, as on the blog: the color wave's interference field, measured from the viewer's origin (the start view), nudges each splat by 0.02 of its wave color, so the scene shivers like leaves.",
-  "source": { "name": "World Labs threeviewer effects (newEffects.glsl colorWave, vertexWorld rustle), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "description": "The color wave's interference field, measured from the start view, nudges each splat by 0.02 of its wave color, so the scene shivers like leaves.",
   "nodes": {
     "center": { "type": "input.center" },
     "rgb": { "type": "input.rgb" },
