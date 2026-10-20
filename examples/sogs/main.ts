@@ -45,9 +45,9 @@
 //     sutro-10.ply -l 3 sutro-5.ply -l 4 sutro-lod/lod-meta.json --filter-nan
 // It is uploaded with gcloud storage rsync -r --cache-control="public,
 // max-age=3600" (the CORS-open bucket in catalog.ts). validate()'s
-// reference for sutro-2m.sog is splat-transform's decompression,
-// splat-transform sutro-2m.sog sutro-2m.ref.ply (local only:
-// radixSogs.validate({ reference: "/splats/sogs/sutro-2m.ref.ply" })).
+// reference for sutro-2m.sog is splat-transform's decompression of the
+// hosted file, splat-transform sutro-2m.sog sutro-2m.ref.ply, saved in
+// splats/sogs/ (radixSogs.validate({ reference: "/splats/sogs/sutro-2m.ref.ply" })).
 // `radixSogs` in the console holds the viewer: validate({ reference }),
 // measure({ frames, from, to, target }).
 import * as THREE from "three";

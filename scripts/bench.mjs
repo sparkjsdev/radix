@@ -3,15 +3,14 @@
 // recordings/bench/<label>.json, one PNG per config in
 // recordings/bench/<label>/, and a markdown table. Needs npm run build:test
 // and npm run serve (the page, --base). The scans load from the hosted
-// samples (scripts/data.mjs); the Coit matrices and --matrix sh read local
-// files from --splats (<base>/splats/).
+// samples (scripts/data.mjs).
 //
 //   node scripts/bench.mjs [--matrix baseline] [--only <regex>]
 //     [--label name] [--compare <label>] [--frames 90] [--headed]
 //
-//   node scripts/bench.mjs --matrix sh [--file splats/sutro_2m.ply] [--gpu webgpu | webgpu-gl] [--frames 60] [--rounds 3]
+//   node scripts/bench.mjs --matrix sh [--gpu webgpu | webgpu-gl] [--frames 60] [--rounds 3]
 //     (radixBench.shBench: the projection with and without spherical
-//     harmonics, per splat and through palettes, for one SH3 file)
+//     harmonics, per splat and through palettes, for the hosted SH3 Sutro)
 //
 // --compare reports each screenshot's PSNR and largest channel difference
 // against the same config in another run. GPU times are timestamp queries
@@ -21,7 +20,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
-import { RADIX_DATA_URL } from "./data.mjs";
+import { RADIX_DATA_URL, radixUrl } from "./data.mjs";
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -29,7 +28,6 @@ const option = (name, fallback) => {
   return index >= 0 ? args[index + 1] : fallback;
 };
 const base = option("--base", "http://localhost:8000");
-const splatsBase = option("--splats", "http://localhost:8000");
 const samples = `${RADIX_DATA_URL}rdx/`;
 const matrixName = option("--matrix", "baseline");
 const only = option("--only") ? new RegExp(option("--only")) : undefined;
@@ -50,11 +48,6 @@ const FILES = {
   bicycle: { url: `${samples}bicycle.rdx`, kind: "object", up: [-0.015, 0.97, 0.244], view: { position: [-3.5, 0.9, 0], target: [0, -0.7, 0] } },
   // In the middle of the nave, about 2.5 above the floor, looking along it
   grace: { url: `${samples}grace-interior-10m.rdx`, kind: "scene", view: { position: [-14, 8, -3], target: [-4, 8, -3] } },
-  // Coit Tower, 39M splats: npm run convert:ply -- splats/coit-40m-sh0.ply splats/coit-40m.rdx
-  // (an aerial capture, flat: seen from above at an angle, orbiting the middle)
-  coit40: { url: `${splatsBase}/splats/coit-40m.rdx`, kind: "object", layout: "packedSplats", view: { position: [0, 1.1, 2.2], target: [0, -0.05, 0.1] } },
-  // 92M splats, the same place: past the 256 MiB storage binding baseline
-  coit100: { url: `${splatsBase}/splats/coit-100m.rdx`, kind: "object", layout: "packedSplats", view: { position: [0, 1.1, 2.2], target: [0, -0.05, 0.1] } },
 };
 
 // Name, backend and config of every run
@@ -113,16 +106,6 @@ function matrix(name) {
         add(file, "webgpu", { mode: "gpu", method, overdraw: true, frames: 15 });
       }
     }
-  } else if (name === "coit100") {
-    add("coit100", "webgpu", { mode: "gpu", frames: 9 });
-    add("coit100", "webgpu", { mode: "gpu", frames: 30, tag: "adapter-limits" }, "&limits=adapter");
-    add("coit100", "webgpu-gl", { mode: "cpu", frames: 9 });
-  } else if (name === "coit") {
-    for (const bits of [16, 24, 32]) {
-      add("coit40", "webgpu", { mode: "gpu", bits });
-    }
-    add("coit40", "webgpu", { mode: "gpu", method: "3dgut" });
-    add("coit40", "webgpu-gl", { mode: "cpu", params: { sortGuard: 0.5 }, tag: "guard0.5" });
   } else if (name === "guard") {
     for (const file of files) {
       for (const sortGuard of [0, 0.5, 0.25]) {
@@ -189,7 +172,7 @@ async function sortMain() {
 // --matrix sh: radixBench.shBench, the cost of SH per encoding
 async function shMain() {
   const gpu = option("--gpu", "webgpu");
-  const file = option("--file", "splats/sutro_2m.ply");
+  const url = `${radixUrl("rdx-sh")}sutro-2m.rdx`;
   const browser = await chromium.launch({
     channel: "chrome", headless: true,
     args: ["--enable-unsafe-webgpu", "--enable-webgpu-developer-features", "--disable-gpu-vsync", "--disable-frame-rate-limit", "--js-flags=--max-old-space-size=16384"],
@@ -198,12 +181,12 @@ async function shMain() {
     const page = await browser.newPage();
     await page.goto(`${base}/build/test/bench/index.html?gpu=${gpu}`);
     await page.waitForFunction(() => "radixBench" in window, null, { timeout: 60000 });
-    const result = await page.evaluate((options) => window.radixBench.shBench(options), { url: `${splatsBase}/${file}`, frames: Number(option("--frames", 60)), rounds: Number(option("--rounds", 3)) });
+    const result = await page.evaluate((options) => window.radixBench.shBench(options), { url, frames: Number(option("--frames", 60)), rounds: Number(option("--rounds", 3)) });
     await mkdir(outDir, { recursive: true });
     await writeFile(path.join(outDir, `${label}.json`), JSON.stringify({ label, date: new Date().toISOString(), ...result }, null, 2));
     const none = result.rows[0];
     const lines = [
-      `${file}: ${(result.splats / 1e6).toFixed(2)}M splats, SH${result.degree}, ${result.backend}${result.timestamps ? "" : " (no timestamps)"}`, "",
+      `sutro-2m.rdx: ${(result.splats / 1e6).toFixed(2)}M splats, SH${result.degree}, ${result.backend}${result.timestamps ? "" : " (no timestamps)"}`, "",
       "| variant | project GPU ms | vs none | draw GPU ms | wall ms |", "|---|---:|---:|---:|---:|",
     ];
     for (const r of result.rows) {

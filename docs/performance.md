@@ -46,8 +46,6 @@ From the comparison of Oct 9, 2026: five scenes from 0.5M to 10M splats, timed o
 
 ## Large scenes
 
-- 39M splats (packed) loaded in 3.2 s and drew at 149 ms of GPU per frame on WebGPU; the per-splat draw cost is the limit.
-- 92M splats exceed the 256 MiB storage binding baseline, and the sorter throws an error that names the limit. With `createRenderer({ limits: { maxStorageBufferBindingSize: "adapter" } })` they drew at 357 ms per frame on the M3. On WebGL2 the projection textures of 92M splats are not renderable, so its limit is somewhere between 39M and 92M splats.
 - Headset GPUs (Quest 3's Adreno 7xx) mostly offer 128 MiB storage bindings: 32M keys.
 
 ## Measuring
