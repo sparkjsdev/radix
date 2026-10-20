@@ -22,7 +22,7 @@ cd radix && npm install          # also builds dist/
 cd ../my-app && npm install three@0.186 ../radix
 ```
 
-Or as a tarball: `npm pack` in the checkout, then `npm install path/to/sparkjsdev-radix-0.0.1.tgz`.
+Or as a tarball: `npm pack` in the checkout, then `npm install path/to/sparkjsdev-radix-0.0.0.tgz`.
 
 TypeScript apps need TypeScript 5.7 or newer, and the WebGPU types: TypeScript 6's DOM types include them, older versions need `@webgpu/types`.
 
