@@ -1,7 +1,7 @@
 // Time in the film: seconds, and the bars of the score (100 BPM, 4/4), so
 // cuts, captions and music line up. A shot is a span of bars with its own
-// scene and camera; the film draws the one under the playhead. The other
-// films (film2/, film3/) take their own tempo from tempo().
+// scene and camera; the film draws the one under the playhead. Other
+// scores, such as the fractal demo's tunes, take their tempo from tempo().
 import type * as THREE from "three";
 
 // Beats and 4/4 bars at `bpm`, in seconds

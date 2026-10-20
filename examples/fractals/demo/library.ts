@@ -94,7 +94,7 @@ export class Library {
       }
       const kind = kindById.get(preset.kind)!;
       this.fractals.set(name, { preset, kind, look: { ...LOOK_DEFAULTS, ...kind.look, ...STYLES[preset.style], ...preset.look } });
-      // The seeds the teaser videos were rendered with
+      // A fixed seed per preset, so every bake gives the same samples
       this.seeds.set(name, 101 + n * 7);
     });
     this.sorter = new TableSorter(renderer, count, Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1)));

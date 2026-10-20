@@ -3,14 +3,14 @@
 // before Play), each chunk's buffer is transferred to the AudioWorklet in
 // scoreSink.ts, and the film's clock is the audio clock. Rendering keeps up
 // to AHEAD seconds ahead, which rides out the film's own stalls (a shader
-// compiled on a shot's first frame, the water replaying its simulation in
-// the montage, the 6M-splat galaxy at a few frames a second). Each readback
-// waits for the frames queued before it, so the pump tops up gently (CALM
-// chunks a readback, a few ms of GPU work between frames) and only renders
-// in bursts of up to BURST chunks once the lead falls under LOW seconds. A
-// chunk that came too late plays as silence and is counted in `missing`
-// (frames). pause() and resume() suspend the context, which stops the
-// clock; restart() starts over from a film time, paused.
+// compiled on a shot's first frame, a heavy scene at a few frames a
+// second). Each readback waits for the frames queued before it, so the pump
+// tops up gently (CALM chunks a readback, a few ms of GPU work between
+// frames) and only renders in bursts of up to BURST chunks once the lead
+// falls under LOW seconds. A chunk that came too late plays as silence and
+// is counted in `missing` (frames). pause() and resume() suspend the
+// context, which stops the clock; restart() starts over from a film time,
+// paused.
 import { CHUNK, type GpuScore } from "./gpuAudio.js";
 import { RATE } from "./score.js";
 

@@ -5,15 +5,14 @@
 // biquad filter, a waveshaper and a gain, with automation curves for the
 // gain, the first oscillator's pitch, the filter's cutoff and an FM index,
 // then panned and sent to the buses (dry or sidechain-ducked, reverb, the
-// ping-pong delay). Sections follow the shots:
-//   0-2    a drone and one bell: one Gaussian
-//   2-4    a pluck on every doubling of the splat count, faster and faster
-//   4-8.5  pads as the galaxy condenses into the capture
-//   8.5    a shutter, then a clock ticking in the silence (the photograph)
-//   9.3    a riser into the drop at bar 10: the title, half-time drums
-//   13-34  the groove under the features (arps from 15, zaps on the
-//          modifier wipes, hits on the numbers, an 8-bit bass from 32)
-//   34-36  hits on the montage words; 36-38 the breakdown; 38 the end chord
+// ping-pong delay). The sections, in bars:
+//   0-2    a drone and one bell
+//   2-4    plucks climbing a D minor arpeggio, further apart as they rise
+//   4-8.5  pads
+//   8.5    a shutter, then a clock ticking in the silence
+//   9.3    a riser into the drop at bar 10, half-time drums
+//   13-34  the groove (arps from 15, zaps, hits, an 8-bit bass from 32)
+//   34-36  a hit every half bar; 36-38 the breakdown; 38 the end chord
 import { BAR, BEAT, bars, beats } from "./timeline.js";
 
 export const RATE = 48000;
@@ -326,8 +325,8 @@ export class Score {
   }
 }
 
-// Times of the doublings in shots/genesis.ts: grow runs from -23.5 to 0 as
-// 1 - (1 - g)^1.6 over bars 2-4, and the count doubles at each integer
+// Times of the plucks in bars 2-4: one each time -23.5 (1 - g)^1.6 reaches
+// an integer, as g runs from 0 to 1 over the two bars
 function doublings() {
   const times: number[] = [];
   for (let n = -23; n <= 0; n += 1) {
@@ -356,7 +355,7 @@ function compose(s: Score) {
   s.bell(bars(7.1), 72, 0.12, 4);
   [69, 67, 65, 64].forEach((note, i) => s.pluck(bars(7.5) + beats(i), note, 0.11, { delay: 0.4, decay: 0.9 }));
 
-  // The photograph: a shutter, then only the clock
+  // A shutter, then only the clock
   s.shutter(bars(8.5), 0.45);
   for (let i = 0; i < 4; i += 1) {
     s.tick(bars(8.5) + beats(1 + i * 0.7), 0.085, i % 2 === 0);
@@ -364,7 +363,7 @@ function compose(s: Score) {
   s.riser(bars(9.3), bars(10), 0.2);
   s.pad(bars(9.3), beats(2.8), [62, 65, 69], 0.028, 2600);
 
-  // --- The drop: half time under the title ---
+  // --- The drop: half time ---
   s.impact(bars(10), 0.7);
   for (let bar = 10; bar < 13; bar += 1) {
     const chord = chordAt(bar);
@@ -407,7 +406,7 @@ function compose(s: Score) {
         }
       }
     }
-    // Arps from the generators on: sixteenths over the chord
+    // Arps from bar 15: sixteenths over the chord
     if (bar >= 15) {
       for (let i = 0; i < 16; i += 1) {
         const notes = chord.notes;
@@ -416,7 +415,7 @@ function compose(s: Score) {
       }
     }
   }
-  // Each feature arrives with a whoosh
+  // A whoosh every two or three bars
   for (const bar of [13, 15, 18, 21, 24, 27, 29, 32]) {
     s.whoosh(bars(bar), 0.09);
   }
@@ -425,19 +424,19 @@ function compose(s: Score) {
     s.hat(bars(bar), 0.08, true, 0);
     s.bell(bars(bar), 81, 0.04, 3);
   }
-  // Zaps on the modifier wipes
+  // Five zaps, two beats apart
   for (let k = 1; k <= 5; k += 1) {
     s.zap(bars(21) + beats(2 * k));
   }
-  // The numbers
+  // Hits in bars 29-31
   s.impact(bars(29.25), 0.35);
   s.impact(bars(30.2), 0.4);
   s.tick(bars(31.05), 0.05);
-  // Two hits before the montage
+  // Two hits leading into bar 34
   s.impact(bars(32), 0.3);
   s.impact(bars(33), 0.45);
 
-  // --- The montage: a hit per word ---
+  // --- Bars 34-36: a hit and a chord every half bar ---
   for (const [i, bar] of [34, 34.5, 35, 35.5].entries()) {
     s.impact(bars(bar), 0.45 + i * 0.05);
     s.pad(bars(bar), beats(2), CHORDS[["Dm9", "Bbmaj7", "Fmaj7", "Cadd9"][i]].notes, 0.04, 3000);
@@ -450,7 +449,7 @@ function compose(s: Score) {
   }
   s.riser(bars(35.5), bars(36), 0.1);
 
-  // --- The breakdown under the last line ---
+  // --- The breakdown ---
   s.pad(bars(36), BAR, CHORDS.Bbmaj7.notes, 0.04, 1200);
   s.pad(bars(37), beats(2), CHORDS.Gm9.notes, 0.04, 1200);
   s.pad(bars(37.5), beats(2), CHORDS.Cadd9.notes, 0.04, 1400);

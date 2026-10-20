@@ -1,9 +1,9 @@
-// The teasers' instruments, for the GPU synthesizer of film/gpuAudio.ts,
+// The demo's instruments, for the GPU synthesizer of film/gpuAudio.ts,
 // on film/score.ts's Score: glassy FM bells, a kalimba, airy pads, a
 // choir, pitched vocal chops, ocean and wind, soft drums, and the house
 // kit. Every instrument the picture follows leaves a mark (kicks, melodic
 // hits, chord changes, impacts, risers), so the film's bloom, sparkle,
-// colors and flashes move with the music it hears (film.ts).
+// colors and flashes move with the music it hears (video.ts).
 import { Score, env, midi } from "../../film/score.js";
 
 export type MarkKind = "kick" | "hit" | "chord" | "impact" | "rise";
@@ -293,7 +293,7 @@ export class AirScore extends Score {
     });
   }
 
-  // --- The house kit (the first teaser's) ---
+  // --- The house kit ---
 
   stab(at: number, notes: number[], level = 0.035, bright = 3200) {
     notes.forEach((note, i) => this.add({

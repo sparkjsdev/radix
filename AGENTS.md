@@ -365,7 +365,7 @@ for some). `docs/checks.md` lists what each covers.
   chops, breath, soft drums), whose instruments leave marks (kicks, hits,
   chords, impacts, risers). `library.ts` keeps the tune's presets in a pool
   of tables sized to the device's memory (`../device.ts`), baked just in
-  time in the order the cues need them (with the teaser videos' fixed
+  time in the order the cues need them (with fixed
   seeds; a table is freed from the preset needed furthest ahead and never
   from one drawn), their orders sorted by `TableSorter` on a pool of up to
   4 workers; `fits` says whether the rest bakes during playback before each
