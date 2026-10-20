@@ -30,7 +30,6 @@ Radix has three sets of checks: core checks in Node (no browser), GPU checks in 
   - `SpzFile.unpack` of streams in chunks of 1, 7, and random sizes gives the same columns, rejects early ends, and with `sh: false` stops before SPZ 4's SH stream.
   - Tampered SPZ 4 files are rejected: table of contents, stream counts and sizes, trailing bytes, point counts, truncated and corrupt streams.
   - RAD with several chunks and a LoD tree, format detection, and `SplatFiles.encode` / `decode` for every format.
-  - When `splats/spz4/` holds SharedTestModels' SPZ 4 samples: each against its gzip version, and the backpack against its PLY.
 - zstd: Radix's encoder is read by fzstd and by Node's zstd, and Node's frames by fzstd, on random, skewed, RLE, and mixed data across block edges. A wrong size is refused.
 - Axes: all 256 pairs of the 16 coordinate systems round trip; SH matches when seen from the converted direction; quaternions and permuted scales match M Σ Mᵀ; flips change only SH signs. `Axes.convert` on ext, cov, and packed tables (per-splat SH and a palette) matches converting one splat at a time.
 - Spherical harmonics:
@@ -43,8 +42,6 @@ Radix has three sets of checks: core checks in Node (no browser), GPU checks in 
   - RAD clustered SH written from a palette (`f32`, `f16`, and `s8` codes; labels over several chunks) reads back as that palette, in the `sh` codec or skipped. The PLY and RDX writers expand it per splat.
   - A hand-built RAD in Spark's clustered layout (`s8` codes in chunk 0, `u16` then `u32` labels) reads as an ext palette of its codes; one with 70,000 entries expands to per-splat SH.
   - `Sh.evaluate` along the axes, and for bands 1 to 4 against real SH computed from associated Legendre polynomials.
-  - When `splats/grace-interior-10m-sh3.ply` and its SPZ copy exist: the SPZ reader against sampled records of the float PLY.
-  - When `splats/sh4/` holds `sparkling_water` and `scarf` (`.ply` and gzip version-4 `.spz`, CC0, from github.com/raymondyfei/SharedTestModels): each SPZ against its PLY at degree 4. Order and centers match, SH is within half of SPZ's 5-bit (band 1) or 4-bit step plus rounding, and no signs flip.
 - Sort keys: keys are monotonic in distance and order splats back to front at 16, 24, and 32 bits, and non-finite distances give invalid keys. `SortKeys.sort` is stable, puts invalid keys last, and gives the same order at every key width. `ArrayData.INDICES` has the expected definition.
 
 `tsconfig.core.json` also typechecks the script, so its `@ts-expect-error` lines test the types.
