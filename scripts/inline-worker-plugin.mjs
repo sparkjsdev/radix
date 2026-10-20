@@ -1,5 +1,8 @@
 import esbuild from "esbuild";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // `import Worker from "./file?worker&inline"` bundles file.ts as its own ESM
 // bundle and exports a Worker subclass that runs it from a blob URL, so the
@@ -11,15 +14,20 @@ export function inlineWorkerPlugin({ minify = false, define = {} } = {}) {
   return {
     name: "inline-worker",
     setup(build) {
-      build.onResolve({ filter: /\?(worker|module)&inline$/ }, (args) => ({
-        path: path.resolve(args.resolveDir, args.path.replace(/\?(worker|module)&inline$/, "")),
-        namespace: "inline-worker",
-        pluginData: { kind: args.path.match(/\?(worker|module)&inline$/)[1] },
-      }));
+      // esbuild prints the path of a module outside the file namespace as
+      // given, in the bundle and its source map, so it is repo-relative
+      build.onResolve({ filter: /\?(worker|module)&inline$/ }, (args) => {
+        const file = path.resolve(args.resolveDir, args.path.replace(/\?(worker|module)&inline$/, ""));
+        return {
+          path: path.relative(root, file).split(path.sep).join("/"),
+          namespace: "inline-worker",
+          pluginData: { kind: args.path.match(/\?(worker|module)&inline$/)[1], file },
+        };
+      });
 
       build.onLoad({ filter: /.*/, namespace: "inline-worker" }, async (args) => {
         const result = await esbuild.build({
-          entryPoints: [args.path],
+          entryPoints: [args.pluginData.file],
           bundle: true,
           format: "esm",
           platform: "browser",

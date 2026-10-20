@@ -15,7 +15,7 @@
 //   --lib-only                   dist/ alone (npm's prepare)
 import { execFileSync } from "node:child_process";
 import { watch } from "node:fs";
-import { readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
@@ -31,6 +31,20 @@ async function checkCore() {
   const imports = (await readFile(CORE, "utf8")).match(/^\s*(import|export)\b[^;]*?\bfrom\s*["'][^"']+["']/gm) ?? [];
   if (imports.length > 0) {
     throw new Error(`${CORE} imports other modules: ${imports.join(", ")}`);
+  }
+}
+
+// The bundles and their source maps must not name the folder they are
+// built in
+async function checkPaths() {
+  const named = [];
+  for (const file of await readdir("dist")) {
+    if ((await readFile(path.join("dist", file), "utf8")).includes(root)) {
+      named.push(`dist/${file}`);
+    }
+  }
+  if (named.length > 0) {
+    throw new Error(`${named.join(", ")} name the build folder ${root}`);
   }
 }
 
@@ -73,6 +87,7 @@ if (process.argv.includes("--watch")) {
   await rm("dist", { recursive: true, force: true });
   await esbuild.build(options);
   await checkCore();
+  await checkPaths();
   buildTypes();
   console.log("Built dist/radix.module.js, dist/radix-core.module.js and dist/types/");
   if (!libOnly) {
