@@ -25,7 +25,7 @@ const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 1
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-splat-painter", settings: { mode: "fly" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
 const MODES = ["View", "Paint", "Erase", "Restore"];
 const mode = uniform(0);

@@ -1,17 +1,15 @@
 // CameraControls driven by synthetic events: targets, mode switches, keys,
-// drags, the double-press slide, zoom limits and saved settings
+// drags, the double-press slide and zoom limits
 import * as THREE from "three";
 import { CameraControls } from "@sparkjsdev/radix";
 
 type Check = (name: string, fn: () => Promise<string | undefined | "skip">) => Promise<void>;
 
-const STORAGE_KEY = "radix-gpu-tests";
 const frame = () => new Promise((resolve) => setTimeout(resolve, 16));
 const near = (a: THREE.Vector3, b: THREE.Vector3, tolerance = 1e-4) => a.distanceTo(b) < tolerance;
 
 // Controls of a fresh camera at (0, 0, 5) facing the origin: the defaults
-// without inertia or inversions, whatever this browser saved (set on the
-// settings directly, so nothing is saved)
+// without inertia or inversions
 function make() {
   const canvas = document.createElement("canvas");
   const camera = new THREE.PerspectiveCamera();
@@ -22,10 +20,6 @@ function make() {
   };
   controls.lookAt(new THREE.Vector3());
   return { canvas, camera, controls };
-}
-
-function saved(storageKey: string) {
-  return new CameraControls({ canvas: document.createElement("canvas"), object: new THREE.Object3D(), storageKey });
 }
 
 function pointer(canvas: HTMLCanvasElement, type: string, x: number, y: number, button = 0) {
@@ -176,27 +170,6 @@ export async function runControlsTests(check: Check) {
       return Math.abs(nearest - 1) < 1e-4 && Math.abs(farthest - 10) < 1e-4 && near(controls.getTarget(), target) ? undefined : `distances ${nearest}, ${farthest}`;
     } finally {
       controls.dispose();
-    }
-  });
-
-  await check("CameraControls saves page settings per storageKey and resets them", async () => {
-    const key = `radix-controls:${STORAGE_KEY}`;
-    const first = saved(STORAGE_KEY);
-    try {
-      first.set({ moveSpeed: 7, mode: "orbit" });
-      const stored = JSON.parse(localStorage.getItem(key) ?? "{}") as Record<string, unknown>;
-      const second = saved(STORAGE_KEY);
-      const loaded = second.settings.moveSpeed;
-      second.dispose();
-      first.reset();
-      const third = saved(STORAGE_KEY);
-      const reset = third.settings.moveSpeed;
-      third.dispose();
-      return stored.moveSpeed === 7 && stored.mode === "orbit" && loaded === 7 && reset === CameraControls.DEFAULTS.moveSpeed && localStorage.getItem(key) === null
-        ? undefined : `saved ${JSON.stringify(stored)}, loaded ${loaded}, after reset ${reset}`;
-    } finally {
-      first.dispose();
-      localStorage.removeItem(key);
     }
   });
 }

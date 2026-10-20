@@ -36,7 +36,7 @@ document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 1000);
 camera.position.set(0, 0, 3);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "radix-spz", settings: { mode: "orbit" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 const model = new THREE.Object3D();
 scene.add(model);
 const splats = new SplatRenderer({

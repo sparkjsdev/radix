@@ -8,7 +8,6 @@ Code: `src/controls/CameraControls.ts` (imports three.js only; nothing else in R
 const controls = new CameraControls({
   canvas: renderer.domElement,
   object: camera,
-  storageKey: "my-page",
   settings: { mode: "orbit" },
 });
 // Face a point and orbit around it
@@ -45,7 +44,7 @@ The state is the object's pose plus `distance`. The orbit target lies that dista
 
 | Member | What it does |
 |---|---|
-| `new CameraControls({ canvas, object, settings?, storageKey?, xr?, rig? })` | `settings`: the page's defaults over `CameraControls.DEFAULTS`. `storageKey`: saves this page's settings apart from other pages'. `xr`: `renderer.xr`. `rig`: the object the XR sticks move (default the object's parent) |
+| `new CameraControls({ canvas, object, settings?, xr?, rig? })` | `settings`: the page's defaults over `CameraControls.DEFAULTS`. `xr`: `renderer.xr`. `rig`: the object the XR sticks move (default the object's parent) |
 | `update()` | applies the input since the last call; whether the object moved |
 | `mode` | `"fly"` or `"orbit"` (`CameraControlsMode`); settable |
 | `lookAt(target)` | faces a point and sets `distance` to it |
@@ -53,10 +52,9 @@ The state is the object's pose plus `distance`. The orbit target lies that dista
 | `distance` | the orbit radius (default 2) |
 | `object` | the moved object; settable |
 | `enabled` | `false` ignores input (a gizmo drag sets it) |
-| `settings` | the current settings; assigning changes them without saving |
-| `set(partial)` | changes and saves settings |
-| `save({ personal? })` | saves the current settings |
-| `reset({ personal? })` | forgets saved settings: the page's, and with `personal: true` the personal ones too |
+| `settings` | the current settings; assigning changes them without calling `onChange` |
+| `set(partial)` | changes settings |
+| `reset()` | goes back to the page's `settings` |
 | `onChange` | called after settings change (by `set`, `reset`, or the mode key) |
 | `pick` | `(x, y) => Promise<Vector3 \| undefined>`: the point under a canvas position, in CSS pixels |
 | `xr`, `rig` | as in the constructor |
@@ -83,10 +81,7 @@ The state is the object's pose plus `distance`. The orbit target lies that dista
 | `stickDeadZone` | 0.1 | |
 | `xrMoveSpeed`, `xrTurnSpeed` | 1, 4 | XR sticks |
 
-`controls.settings` starts from `CameraControls.DEFAULTS`, then the page's `settings`, then the saved settings.
-
-- **Personal settings** (the inversions, pointer lock, inertia, and pointer look speed) are saved in `localStorage` under `radix-controls` and apply on every page.
-- **Page settings** (the rest) are saved under `radix-controls:<storageKey>`, only where they differ from the page's defaults. Without a `storageKey`, only the personal settings persist.
+`controls.settings` starts from `CameraControls.DEFAULTS`, then the page's `settings`. Nothing is saved between visits: to keep settings, an app saves them in `onChange` and passes them back as `settings`.
 
 Types: `CameraControlsSettings`, `CameraControlsInertia`, `CameraControlsMode`, and `XrInput` (the part of `renderer.xr` the controls read: `isPresenting` and `getSession()`).
 

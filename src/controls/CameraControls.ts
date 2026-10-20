@@ -22,10 +22,6 @@
 //   WebXR (xr given)          left stick moves the rig, left trigger / grip
 //                             up / down, right stick turns, right trigger /
 //                             grip fast / slow
-//
-// Settings persist in localStorage: the personal ones (inversions, pointer
-// lock, inertia, pointer speed) under "radix-controls" for every page, all
-// that differ from the page's own defaults under "radix-controls:<storageKey>".
 import * as THREE from "three";
 
 export type CameraControlsMode = "fly" | "orbit";
@@ -80,12 +76,6 @@ export interface XrInput {
   isPresenting: boolean;
   getSession(): XRSession | null;
 }
-
-// Settings that follow the person rather than the page
-const PERSONAL: (keyof CameraControlsSettings)[] = [
-  "invertLookX", "invertLookY", "invertPan", "invertZoom", "invertStickY", "pointerLock", "inertia", "pointerLookSpeed",
-];
-const STORAGE_PREFIX = "radix-controls";
 
 const MOVE_KEYS: Record<string, [number, number, number]> = {
   KeyW: [0, 0, -1], KeyS: [0, 0, 1], KeyA: [-1, 0, 0], KeyD: [1, 0, 0], KeyE: [0, 1, 0], KeyQ: [0, -1, 0],
@@ -158,7 +148,6 @@ export class CameraControls {
   // undefined for nothing there (the drag then orbits the point `distance`
   // ahead). An async depth readback fits: the drag waits for it.
   pick?: (x: number, y: number) => Promise<THREE.Vector3 | undefined>;
-  readonly storageKey?: string;
 
   private pageDefaults: CameraControlsSettings;
   // The current right drag's pivot (once picked), its look delta in pixels,
@@ -188,14 +177,11 @@ export class CameraControls {
   private lastTime?: number;
   private abort = new AbortController();
 
-  constructor({ canvas, object, settings, storageKey, xr, rig }: {
+  constructor({ canvas, object, settings, xr, rig }: {
     canvas: HTMLCanvasElement;
     object: THREE.Object3D;
-    // The page's own defaults over CameraControls.DEFAULTS (saved settings win)
+    // The page's own defaults over CameraControls.DEFAULTS
     settings?: Partial<CameraControlsSettings>;
-    // Saves this page's settings apart from other pages' ("" or none: only
-    // the personal settings persist)
-    storageKey?: string;
     // WebXR manager (renderer.xr): its controllers move the rig while presenting
     xr?: XrInput;
     // Object the XR sticks move (default: the object's parent); its parent
@@ -204,11 +190,10 @@ export class CameraControls {
   }) {
     this.canvas = canvas;
     this.object = object;
-    this.storageKey = storageKey || undefined;
     this.xr = xr;
     this.rig = rig;
     this.pageDefaults = mergeSettings(CameraControls.DEFAULTS, settings ?? {});
-    this.settings = mergeSettings(mergeSettings(this.pageDefaults, loadSettings(STORAGE_PREFIX)), this.storageKey ? loadSettings(`${STORAGE_PREFIX}:${this.storageKey}`) : {});
+    this.settings = mergeSettings(this.pageDefaults, {});
 
     const signal = this.abort.signal;
     canvas.style.touchAction = "none";
@@ -246,40 +231,18 @@ export class CameraControls {
     this.set({ mode });
   }
 
-  // Change settings and save them (the personal ones only when one of them
-  // is among the changes, so pages switching modes do not pin the defaults)
+  // Change some settings
   set(settings: Partial<CameraControlsSettings>) {
     this.settings = mergeSettings(this.settings, settings);
     if (this.settings.mode !== "fly" && document.pointerLockElement === this.canvas) {
       document.exitPointerLock();
     }
-    this.save({ personal: Object.keys(settings).some((key) => PERSONAL.includes(key as keyof CameraControlsSettings)) });
     this.onChange?.(this.settings);
   }
 
-  // Personal settings for every page; the rest that differ from the page's
-  // defaults for this storageKey
-  save({ personal = true }: { personal?: boolean } = {}) {
-    if (personal) {
-      writeStorage(STORAGE_PREFIX, Object.fromEntries(PERSONAL.map((key) => [key, this.settings[key]])));
-    }
-    if (this.storageKey) {
-      const page = Object.fromEntries(Object.entries(this.settings).filter(([key, value]) =>
-        !PERSONAL.includes(key as keyof CameraControlsSettings) && JSON.stringify(value) !== JSON.stringify(this.pageDefaults[key as keyof CameraControlsSettings])));
-      writeStorage(`${STORAGE_PREFIX}:${this.storageKey}`, page);
-    }
-  }
-
-  // Back to the page's defaults, forgetting this page's saved settings (and
-  // with `personal`, the personal ones every page shares)
-  reset({ personal = false }: { personal?: boolean } = {}) {
-    if (this.storageKey) {
-      writeStorage(`${STORAGE_PREFIX}:${this.storageKey}`, undefined);
-    }
-    if (personal) {
-      writeStorage(STORAGE_PREFIX, undefined);
-    }
-    this.settings = mergeSettings(this.pageDefaults, personal ? {} : loadSettings(STORAGE_PREFIX));
+  // Back to the page's defaults
+  reset() {
+    this.settings = mergeSettings(this.pageDefaults, {});
     this.onChange?.(this.settings);
   }
 
@@ -714,7 +677,7 @@ function decay(tau: number, dt: number) {
 }
 
 // `over` on `base`, keeping only keys of the settings with matching types
-function mergeSettings(base: CameraControlsSettings, over: Partial<CameraControlsSettings> | Record<string, unknown>): CameraControlsSettings {
+function mergeSettings(base: CameraControlsSettings, over: Partial<CameraControlsSettings>): CameraControlsSettings {
   const merged = { ...base, inertia: { ...base.inertia } } as CameraControlsSettings;
   for (const [key, value] of Object.entries(over)) {
     const current = (base as unknown as Record<string, unknown>)[key];
@@ -732,28 +695,6 @@ function mergeSettings(base: CameraControlsSettings, over: Partial<CameraControl
     merged.mode = base.mode;
   }
   return merged;
-}
-
-function loadSettings(key: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) ?? "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-// Storage can be full or disabled (private modes); controls work without it
-function writeStorage(key: string, value: object | undefined) {
-  try {
-    if (value === undefined || Object.keys(value).length === 0) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
-  } catch {
-    // Not persisted
-  }
 }
 
 function isMobile() {

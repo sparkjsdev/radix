@@ -283,7 +283,6 @@ camera.position.set(center.x, center.y + 0.1 * extent, center.z + 0.1 * extent);
 const controls = new CameraControls({
   canvas: renderer.domElement,
   object: camera,
-  storageKey: "radix-mpm",
   settings: { mode: params.get("controls") === "orbit" ? "orbit" : "fly", minDistance: extent * 0.02, maxDistance: extent * 10 },
 });
 controls.lookAt(center);

@@ -16,7 +16,7 @@ const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 1
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-extsplats" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 // The group undoes the files' offset; each holder places one copy in it
 const group = new THREE.Group();

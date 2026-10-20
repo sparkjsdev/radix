@@ -23,7 +23,7 @@ camera.position.set(0, 0.3, -2.5);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-dynamic-lighting" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const emberLayer = new SdfEdit({ rgbaBlendMode: SdfBlend.ADD_RGBA, sdfSmooth: 0.1, softEdge: 0.8, maxSdfs: 1 });
 const fireLayer = new SdfEdit({ rgbaBlendMode: SdfBlend.ADD_RGBA, sdfSmooth: 0.1, softEdge: 1.4, maxSdfs: 1 });

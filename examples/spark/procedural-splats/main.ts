@@ -19,7 +19,7 @@ const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 10
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-procedural-splats" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 // `count` round splats of one size, each placed and colored by `place`
 function points(count: number, size: number, place: (center: THREE.Vector3, color: THREE.Color) => void) {

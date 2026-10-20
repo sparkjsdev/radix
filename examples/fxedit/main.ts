@@ -197,7 +197,7 @@ camera.position.set(0, 0.25, 3);
 // Orbit (default) or fly (drag looks, WASD moves, a right drag orbits the
 // splat under the pointer); the render bar switches, no mode key (F fits
 // the graph)
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "radix-fxedit", settings: { mode: "orbit", modeKey: "" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit", modeKey: "" } });
 controls.settings.modeKey = "";
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 

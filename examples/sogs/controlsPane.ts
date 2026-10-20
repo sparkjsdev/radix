@@ -1,13 +1,12 @@
-// Tweakpane folder for Radix's CameraControls: every setting, saved as it
-// changes (personal settings for all pages, the rest for the page's
-// storageKey), plus buttons to reset them.
+// Tweakpane folder for Radix's CameraControls: every setting, plus a button
+// to reset them.
 import type { FolderApi } from "tweakpane";
 import type { CameraControls, CameraControlsSettings } from "@sparkjsdev/radix";
 
 export function addControlsFolder(parent: Pick<FolderApi, "addFolder">, controls: CameraControls) {
   const folder = parent.addFolder({ title: "Controls", expanded: false });
-  // Bindings edit a copy; set() applies and saves each change (not the
-  // changes refresh() makes while following the controls)
+  // Bindings edit a copy; set() applies each change (not the changes
+  // refresh() makes while following the controls)
   const state = structuredClone(controls.settings);
   let syncing = false;
   const apply = (settings: Partial<CameraControlsSettings>) => {
@@ -38,8 +37,7 @@ export function addControlsFolder(parent: Pick<FolderApi, "addFolder">, controls
     inertia.addBinding(state.inertia, key, { label, min: 0, max: 1 }).on("change", () => apply({ inertia: { ...state.inertia } }));
   }
 
-  folder.addButton({ title: "reset this page" }).on("click", () => controls.reset());
-  folder.addButton({ title: "reset all (personal too)" }).on("click", () => controls.reset({ personal: true }));
+  folder.addButton({ title: "reset" }).on("click", () => controls.reset());
 
   // Follow changes made elsewhere (the mode key, the quick bar, reset, code)
   controls.onChange = (settings) => {

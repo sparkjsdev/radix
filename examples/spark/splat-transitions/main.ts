@@ -47,7 +47,7 @@ const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 2
 const renderer = await windowRenderer(camera, { antialias: true, directCanvas: false, pixelRatio: devicePixelRatio });
 
 // Only the Explosion effect enables them
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-splat-transitions", settings: { moveSpeed: 3 } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { moveSpeed: 3 } });
 controls.enabled = false;
 
 const splats = new SplatSet({ renderer, scene, animate: true });

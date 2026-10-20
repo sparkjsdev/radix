@@ -17,7 +17,7 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 10
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-splat-dissolve-effects", settings: { mode: "orbit" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3(0, 0, -0.5));
 
 // Seconds since the scan loaded

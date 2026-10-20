@@ -50,7 +50,7 @@ const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() }
 
 // The controls move the local frame (it carries the camera), in XR too; the
 // idle bee drifts the worlds and the snow
-const controls = new CameraControls({ canvas: renderer.domElement, object: localFrame, rig: localFrame, storageKey: "spark-lofi" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: localFrame, rig: localFrame });
 
 const idleBee = new THREE.Group();
 scene.add(idleBee);

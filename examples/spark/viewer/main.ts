@@ -16,7 +16,7 @@ camera.position.set(0, 0, 1);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-viewer", settings: { mode: "fly" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
 // Most captures are stored upside down: half a turn about x
 const holder = new THREE.Object3D();

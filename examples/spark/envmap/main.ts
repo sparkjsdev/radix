@@ -21,7 +21,7 @@ camera.position.set(0, 0.5, 0);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { directCanvas: false });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-envmap" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 // Two copies of one upload
 const splats = new SplatSet({ renderer, scene });

@@ -24,7 +24,7 @@ camera.position.set(0, -0.3, -3);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: Math.min(devicePixelRatio, 2) });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-interactive-holes" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 controls.lookAt(new THREE.Vector3(0, -0.3, 1));
 
 const FRICTION = 0.98;

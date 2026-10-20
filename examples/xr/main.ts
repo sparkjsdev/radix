@@ -105,7 +105,7 @@ async function makeBuild() {
   const rig = new THREE.Group();
   rig.add(camera);
   const controls = new CameraControls({
-    canvas: renderer.domElement, object: camera, settings: { mode: "orbit" }, storageKey: "radix-xr", xr: renderer.xr, rig,
+    canvas: renderer.domElement, object: camera, settings: { mode: "orbit" }, xr: renderer.xr, rig,
   });
 
   // One view for the head: the desktop, stereo and XR cameras share its sort

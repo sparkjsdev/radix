@@ -28,7 +28,6 @@ camera.position.set(0, 0.5, 3);
 const controls = new CameraControls({
   canvas: renderer.domElement,
   object: camera,
-  storageKey: "my-page",
   settings: { mode: "orbit" },
 });
 controls.lookAt(new THREE.Vector3(0, 0, 0));

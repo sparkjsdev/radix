@@ -202,9 +202,8 @@ for some). `docs/checks.md` lists what each covers.
   controls for pointer, touch, keys, gamepad and WebXR controllers, after
   Spark's SparkControls, plus a double-press slide.
   One state for both modes (the pose plus `distance`), so switching never
-  moves the view; settings saved per person (`radix-controls`) and per
-  page (`radix-controls:<storageKey>`). Imports three only; nothing
-  imports it.
+  moves the view; it stores nothing (saving settings is the app's job).
+  Imports three only; nothing imports it.
 - `index.ts` (`@sparkjsdev/radix`) re-exports all six. `core/` imports no other
   layer; `gpu/` and `worker/` do not import each other, and neither imports
   `wgpu/` or `render/`; `render/` imports all but `controls/`.

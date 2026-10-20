@@ -21,7 +21,7 @@ camera.position.set(0, 1.6, 0);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: Math.min(devicePixelRatio, 2) });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-mobile-joystick" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const valley = new THREE.Object3D();
 valley.quaternion.set(1, 0, 0, 0);

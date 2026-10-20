@@ -22,7 +22,7 @@ camera.position.set(0, 0, 3);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: devicePixelRatio });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-interactive-ripples" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 
 const time = uniform(0);

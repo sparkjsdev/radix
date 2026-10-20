@@ -16,7 +16,7 @@ camera.position.set(0, 0, 6.5);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-multiple-splats", settings: { mode: "orbit" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 
 const [butterfly, cat] = await Promise.all([

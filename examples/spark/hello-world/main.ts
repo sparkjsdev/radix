@@ -13,7 +13,7 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 10
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-hello-world" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 // Most captures are stored upside down: half a turn about x, 3 m ahead
 const butterfly = new THREE.Object3D();

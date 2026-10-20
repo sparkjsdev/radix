@@ -27,7 +27,7 @@ scene.add(localFrame);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-webxr" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const edit = new SdfEdit({ rgbaBlendMode: SdfBlend.ADD_RGBA, sdfSmooth: 0.02, softEdge: 0.02, maxSdfs: 10 });
 localFrame.add(edit);

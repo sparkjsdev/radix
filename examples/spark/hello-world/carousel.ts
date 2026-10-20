@@ -17,7 +17,7 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 10
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({
-  canvas: renderer.domElement, object: camera, storageKey: "spark-hello-world", settings: { mode: "orbit", minDistance: 2, maxDistance: 3 },
+  canvas: renderer.domElement, object: camera, settings: { mode: "orbit", minDistance: 2, maxDistance: 3 },
 });
 controls.lookAt(new THREE.Vector3(0, 0, -3));
 

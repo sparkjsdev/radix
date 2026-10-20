@@ -71,7 +71,7 @@ const scene = new THREE.Scene();
 const background = new THREE.Color();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 1000);
 camera.position.set(0, 0, 3);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "radix-splats", settings: { mode: "orbit" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3());
 
 // --- The splats: one file's GpuArrays, the one object of the renderer's collection ---

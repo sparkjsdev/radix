@@ -24,7 +24,7 @@ scene.add(localFrame);
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-basic-xr" });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const splats = new SplatRenderer({ renderer, params: { maxStdDev: Math.sqrt(4) } });
 scene.add(splats);

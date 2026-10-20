@@ -29,7 +29,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101014);
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 1000);
 camera.position.set(0, 0.6, 3.2);
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "radix-scenes", settings: { mode: "orbit" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3());
 
 // Every splat renderer of the scene, in the page's sort mode

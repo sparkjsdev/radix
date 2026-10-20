@@ -135,10 +135,9 @@ document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 100);
 camera.position.set(0, 0.6, 3.4);
-// The page's camera settings and nothing saved: no storage key, and the
-// personal settings other Radix pages save are set aside too. A drag
-// turns the fractal with the finger or mouse on every device (the defaults
-// invert look on touch screens, which suits fly mode, not an orbit)
+// The page's camera settings. A drag turns the fractal with the finger or
+// mouse on every device (the defaults invert look on touch screens, which
+// suits fly mode, not an orbit)
 const CAMERA = {
   mode: "orbit" as const, minDistance: 0.02, maxDistance: 20, moveSpeed: 0.6,
   invertLookX: false, invertLookY: false,
@@ -146,7 +145,6 @@ const CAMERA = {
   inertia: { look: 0.15, move: 0.15, pointerLook: 0.7, pointerMove: 0.45 },
 };
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: CAMERA });
-controls.settings = { ...CameraControls.DEFAULTS, ...CAMERA };
 controls.lookAt(new THREE.Vector3());
 const motion = new Motion(renderer.domElement);
 const director = new Director();

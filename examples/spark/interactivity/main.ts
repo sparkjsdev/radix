@@ -42,7 +42,7 @@ const renderer = await windowRenderer(camera, { directCanvas: false });
 renderer.shadowMap.enabled = true;
 
 const controls = new CameraControls({
-  canvas: renderer.domElement, object: camera, storageKey: "spark-interactivity",
+  canvas: renderer.domElement, object: camera,
   settings: { mode: "orbit", minDistance: 0.8, maxDistance: 2.3 },
 });
 controls.lookAt(new THREE.Vector3(0.2, 0, 0));

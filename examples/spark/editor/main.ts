@@ -26,7 +26,7 @@ const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 1
 // createRenderer, sized to the window and added to the page; it follows
 // window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { pixelRatio: devicePixelRatio });
-const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "spark-editor", settings: { mode: "fly" } });
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
 // Files go in `frame` (the coordinate system's axes), turned by `spin`
 const FRAMES: Record<string, [number, number, number, number]> = {
