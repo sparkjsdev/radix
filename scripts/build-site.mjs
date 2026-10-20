@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = path.join(root, "build/site");
 const DOCS = "docs";
+const REPO = "https://github.com/sparkjsdev/radix";
 
 // What the examples' import maps load (three.webgpu.js imports three.core.js
 // beside it; GLTFLoader and TransformControls import their jsm helpers;
@@ -98,8 +99,6 @@ const git = (...args) => {
     return "";
   }
 };
-const remote = git("remote", "get-url", "origin") || "https://github.com/sparkjsdev/radix.git";
-const repo = remote.replace(/^git@github\.com:/, "https://github.com/").replace(/\.git$/, "");
 const commit = git("rev-parse", "--short", "HEAD");
 const rev = git("rev-parse", "HEAD") || "main";
 
@@ -113,7 +112,7 @@ for (const page of (await listFiles(path.join(SITE, DOCS))).filter((file) => fil
     }
     const target = posix(path.relative(SITE, path.resolve(path.dirname(page), link)));
     const source = SOURCE.test(target) && !target.startsWith("..") && !target.startsWith("build/") && isFile(path.join(root, target));
-    return source ? `href="${repo}/blob/${rev}/${target}${rest}"` : all;
+    return source ? `href="${REPO}/blob/${rev}/${target}${rest}"` : all;
   });
   await writeFile(page, linked);
 }
@@ -140,7 +139,7 @@ const sparkHtml = await readFile(sparkIndex, "utf8");
 if (!sparkHtml.includes(built)) {
   throw new Error(`build/examples/spark/index.html: no ${built} to point at GitHub`);
 }
-await writeFile(sparkIndex, sparkHtml.replace(built, `href="${repo}/blob/${rev}/examples/spark/\${example.name}/main.ts">Radix source</a>`));
+await writeFile(sparkIndex, sparkHtml.replace(built, `href="${REPO}/blob/${rev}/examples/spark/\${example.name}/main.ts">Radix source</a>`));
 
 // --- 3. The landing page ---
 
@@ -166,11 +165,11 @@ ${ICON}
 <p>3D Gaussian splats in typed-array tables on the CPU and GPU, drawn by three.js's <code>WebGPURenderer</code> on WebGPU or its WebGL2 backend. This site has the example pages and the documentation.</p>
 
 <h2>The code</h2>
-<p>The repository is <a href="${repo}">${repo.replace(/^https:\/\//, "")}</a>; the library (npm package <code>@sparkjsdev/radix</code>) lives in <code>src/</code>.</p>
+<p>The repository is <a href="${REPO}">${REPO.replace(/^https:\/\//, "")}</a>; the library (npm package <code>@sparkjsdev/radix</code>) lives in <code>src/</code>.</p>
 <p class="meta">Built from ${commit || "a working copy"} on ${new Date().toISOString().slice(0, 10)}</p>
 
 <h2>Getting started</h2>
-<pre class="lang-sh"><code>git clone ${remote}
+<pre class="lang-sh"><code>git clone ${REPO}.git
 cd radix
 npm install
 npm run build   # dist/, the example pages and the test pages
