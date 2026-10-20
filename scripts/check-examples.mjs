@@ -16,10 +16,8 @@
 //     [--shots dir]   (a PNG of each page's canvas)
 //     [--single]      (the other pages' single-file builds, <name>/<name>.html:
 //                     npm run build:single; no Spark ports)
-//     [--lcc url]     (the LCC pages' samples from elsewhere; LCC2 ones
-//                     from its lcc2/ sibling)
 //     [--spz url]     (the SPZ page's samples from elsewhere)
-/* global document, window, Image, requestAnimationFrame -- functions run in the page */
+/* global document, window, Image -- functions run in the page */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
@@ -40,65 +38,7 @@ if (shots) {
   mkdirSync(shots, { recursive: true });
 }
 
-const lccRoot = option("--lcc");
 const spzRoot = option("--spz");
-
-// The LCC walk page, once its scene shows: the walker stands on the ground
-// with the eye at its height, and driven 2 m/s toward the nearest wall
-// around it stops in front of it (its knee and chest spheres never sink
-// into the mesh)
-async function checkWalk() {
-  const v = window.radixLcc;
-  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  for (let i = 0; i < 300 && v.walker.state !== "grounded"; i += 1) {
-    await wait(100);
-  }
-  const w = v.walker;
-  const c = v.collision();
-  if (w.state !== "grounded" || !c) {
-    return { ok: false, reason: `walker ${w.state}, collision ${c ? "loaded" : "none"}` };
-  }
-  const Vector3 = v.camera.position.constructor;
-  const scale = v.model.scale.x;
-  const toFile = v.model.matrixWorld.clone().invert();
-  const eye = v.camera.position.clone().applyMatrix4(toFile);
-  const ground = c.set.raycast(eye, w.up.clone().negate(), 100 / scale);
-  const height = ground ? ground.t * scale : Infinity;
-  if (Math.abs(height - w.settings.eyeHeight) > 0.05) {
-    return { ok: false, reason: `eye ${height.toFixed(3)} above the ground, not ${w.settings.eyeHeight}` };
-  }
-  const radius = w.settings.radius / scale;
-  const knee = (w.settings.stepHeight + w.settings.radius) / scale;
-  let wall;
-  for (let k = 0; k < 16; k += 1) {
-    const a = (k / 16) * Math.PI * 2;
-    const side = Math.abs(w.up.z) > 0.9 ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1);
-    const s = side.clone().cross(w.up).normalize();
-    const t = w.up.clone().cross(s).normalize();
-    const dir = s.multiplyScalar(Math.cos(a)).add(t.multiplyScalar(Math.sin(a)));
-    const hit = c.set.raycast(w.feet.clone().addScaledVector(w.up, knee), dir, 6 / scale);
-    if (hit && hit.t > radius * 2 && (!wall || hit.t < wall.t)) {
-      wall = { dir, t: hit.t };
-    }
-  }
-  if (!wall) {
-    return { ok: true, reason: `eye ${height.toFixed(3)} above the ground (no wall within 6 m)` };
-  }
-  const start = w.feet.clone();
-  let closest = Infinity;
-  w.driveFor(wall.dir.clone().transformDirection(v.model.matrixWorld).multiplyScalar(2), (wall.t * scale) / 2 + 1);
-  const end = performance.now() + ((wall.t * scale) / 2 + 1.3) * 1000;
-  while (performance.now() < end) {
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    for (const h of [knee, w.settings.eyeHeight / scale - radius]) {
-      const center = w.feet.clone().addScaledVector(w.up, h);
-      c.set.sphere(center, radius * 2, (p) => (closest = Math.min(closest, Math.hypot(p.x - center.x, p.y - center.y, p.z - center.z))));
-    }
-  }
-  const moved = w.feet.clone().sub(start).dot(wall.dir);
-  const ok = closest >= radius * 0.95;
-  return { ok, reason: `eye ${height.toFixed(3)} m up; toward a wall ${(wall.t * scale).toFixed(2)} m away, moved ${(moved * scale).toFixed(2)} m, closest ${(closest * scale).toFixed(3)} m (radius ${w.settings.radius})` };
-}
 
 const SPARK_READY = "window.example?.ready || window.example?.error";
 const sparkPages = EXAMPLES
@@ -116,16 +56,6 @@ const radixPages = [
     name: "fractals", path: "fractals/index.html", query: `preset=${preset}&splats=500000`, ready: "window.radixFractals?.ready",
   })),
   { name: "fxedit", path: "fxedit/index.html", query: "", ready: "window.radixFxedit?.ready" },
-  // LCC scenes (hosted samples): a Portable one with 3 cells and a Quality one
-  // (SH); XGRIDS' LCC2 street (.sog), a converted LCC2 scene (.spz, SH); and
-  // walking on the temple's collision mesh
-  ...["unreal", "sutro", "street", "sutro-spz"].map((scene) => ({
-    name: "lcc", path: "lcc/index.html", query: `scene=${scene}${lccRoot ? `&lcc=${lccRoot}` : ""}`, ready: "window.radixLcc?.ready || window.radixLcc?.error",
-  })),
-  {
-    name: "lcc", path: "lcc/index.html", query: `scene=unreal&camera=walk${lccRoot ? `&lcc=${lccRoot}` : ""}`, ready: "window.radixLcc?.ready || window.radixLcc?.error",
-    check: checkWalk,
-  },
 ].filter((page) => !only || only.includes(page.name));
 const pages = args.includes("--single")
   ? radixPages.map((page) => ({ ...page, path: page.path.replace(/^([^/]+)\/index\.html$/, "$1/$1.html") }))
@@ -135,7 +65,7 @@ const browser = await chromium.launch({ channel: "chrome", headless: true, args:
 const results = [];
 try {
   for (const gpu of backends) {
-    for (const { path, query: search, ready, wait, check } of pages.filter((page) => (!page.backends || page.backends.includes(gpu)))) {
+    for (const { path, query: search, ready, wait } of pages.filter((page) => (!page.backends || page.backends.includes(gpu)))) {
       const query = new URLSearchParams(search);
       query.set("gpu", gpu);
       const url = `${base}/build/examples/${path}?${query}`;
@@ -180,10 +110,6 @@ try {
             return Math.sqrt(Math.max(0, sumSquares / n - (sum / n) ** 2));
           }, png.toString("base64"));
           outcome = spread > 2 ? { ok: true, reason: `luma spread ${spread.toFixed(1)}` } : { ok: false, reason: `blank canvas (luma spread ${spread.toFixed(2)})` };
-          if (outcome.ok && check) {
-            const checked = await page.evaluate(check);
-            outcome = { ok: checked.ok, reason: `${outcome.reason}; ${checked.reason}` };
-          }
         }
       } catch (error) {
         outcome = { ok: false, reason: error.message.split("\n")[0] };

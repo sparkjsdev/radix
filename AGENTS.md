@@ -274,7 +274,7 @@ for some). `docs/checks.md` lists what each covers.
   flip (`?flip=1` for y-down files).
 - Hosted data: dated GCS folders (`scripts/data.mjs`) hold every example's
   data in a subfolder (`rdx/`,
-  `rdx-sh/`, `spz/`, `sogs/`, `lcc/`, `lcc2/`). Files in a
+  `rdx-sh/`, `spz/`, `sogs/`). Files in a
   dated folder are never replaced, so the pages' addresses (the catalogs)
   stay valid. `npm run check:examples` loads them with the Spark
   ports.
@@ -536,7 +536,7 @@ record (no object or array literals per splat) and avoid `Math.hypot`.
   an `ShPalette` table of entries `stride` texels apart (a power of two by
   default), bound as `StoredSplats.shPalette`. A codec writes an entry's
   bands in order, so a lower degree reads a prefix. Codecs have no per-file
-  values: other encodings (SOG's codebooks, LCC's words) decode into ext.
+  values: other encodings (SOG's codebooks) decode into ext.
   Coefficient arrays of `Sh.VALUES` (72) fit any degree. PLY, SPZ and RDX
   keep degree 4; compressed PLY and RAD write the first 3 bands.
   `docs/sh.md` has the layouts and measured errors.

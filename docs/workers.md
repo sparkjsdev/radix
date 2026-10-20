@@ -87,7 +87,7 @@ self.onmessage = async (event) => {
 };
 ```
 
-The LCC example's decoders work this way (`examples/lcc/LccDecoders.ts`, `lccWorker.ts`). The module also exports `serveWorker`, which an app's worker does not call.
+The module also exports `serveWorker`, which an app's worker does not call.
 
 `npm run build` also writes `dist/radix-core.module.js`: `core/` alone (formats, tables, codecs, the CPU encoder), with no imports at all, for Node and for pages that load workers without the library. Such a page maps it in its import map (`"@sparkjsdev/radix/core": "/dist/radix-core.module.js"`) and hands `import.meta.resolve("@sparkjsdev/radix/core")` to its workers. The build fails if `core/` gains an import.
 

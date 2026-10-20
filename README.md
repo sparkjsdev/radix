@@ -81,7 +81,7 @@ npm run serve      # http-server on the repo root, port 8000
 Then open:
 
 - `http://localhost:8000/build/site/`: the place to start, after `npm run build:site`. It's a landing page that links to the examples and the docs, all copied into one folder that can be put on any static host.
-- `http://localhost:8000/build/examples/index.html`: the example pages (a splat viewer, short scenes, WebXR, an SPZ reader and writer, MPM water, the fx node editor, fractals, and LCC and SOG viewers) and the ports of the SparkJS 2.3.1 examples.
+- `http://localhost:8000/build/examples/index.html`: the example pages (a splat viewer, short scenes, WebXR, an SPZ reader and writer, MPM water, the fx node editor, fractals, and a SOG viewer) and the ports of the SparkJS 2.3.1 examples.
 - `http://localhost:8000/docs/index.html`: the docs (guide, API reference, recipes, and the comparison with SparkJS).
 - `http://localhost:8000/build/test/gpu/index.html`: the GPU checks (`?gpu=webgpu-gl` for the WebGL2 backend).
 

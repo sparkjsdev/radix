@@ -30,7 +30,7 @@ There are two codecs, named by strings (`ShCodecName`). A name means the same co
 
 The error is the RMS color error over all view directions, `sqrt(sum of squared coefficient errors / 4 pi)` (the basis is orthonormal). It was measured on the float SH3 scans Garden, Bicycle, Grace interior, and Sutro; Sutro has outliers up to ±4.9. Neither codec uses per-file ranges, so outliers never clip. Ranges do worse on the same data: one signed byte over ±1 (RAD's `s8`) clips Sutro's outliers by up to 382 steps, and one signed byte over each band's largest value errs by 2.7 steps RMS.
 
-Because neither codec has per-file values, all files of a codec share one program. Other formats' SH encodings are converted on load: SOG's codebook palettes into ext palettes (within one ext step of the codebook values), and LCC's 11-10-11 words into `extSh` on the worker that reads the file.
+Because neither codec has per-file values, all files of a codec share one program. Other formats' SH encodings are converted on load: SOG's codebook palettes into ext palettes (within one ext step of the codebook values).
 
 ## Storage
 
