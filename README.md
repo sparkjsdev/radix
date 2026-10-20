@@ -98,6 +98,7 @@ The pages load their splat files from Google Cloud Storage and sparkjs.dev, so t
 | `npm run check:examples` | every example page on both backends in headless Chrome (needs `npm run serve`) |
 | `npm run bench` / `npm run bench:core` | the GPU benchmark page over the hosted samples / core benchmarks in Node |
 | `npm run build:site` / `npm run serve:site` | a static site of the examples and docs in `build/site/`, served on port 8002 |
+| `npm run serve:lan` | `npm run serve` open to a network you trust, for phones (WebGL2 backend only, `.git` readable) |
 
 ## Layout
 
