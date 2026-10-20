@@ -27,7 +27,8 @@ const drop = document.getElementById("drop")!;
 const picker = document.getElementById("picker") as HTMLInputElement;
 const panel = document.getElementById("panel")!;
 
-const renderer = await createRenderer();
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 const webgpu = getGpuCaps(renderer).backend === "webgpu";
 renderer.setPixelRatio(devicePixelRatio);
 renderer.setSize(innerWidth, innerHeight);

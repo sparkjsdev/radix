@@ -73,8 +73,9 @@ const toast = document.getElementById("toast")!;
 const drop = document.getElementById("drop")!;
 const picker = document.getElementById("picker") as HTMLInputElement;
 
+const gpu = params.get("gpu");
 const hdr = params.get("hdr");
-const renderer = await createRenderer({ profile: true, hdr: hdr === "1" ? true : hdr === "0" ? false : "auto" });
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", profile: true, hdr: hdr === "1" ? true : hdr === "0" ? false : "auto" });
 const caps = getGpuCaps(renderer);
 const webgpu = caps.backend === "webgpu";
 const profiler = renderer.inspector instanceof GpuProfiler ? renderer.inspector : undefined;

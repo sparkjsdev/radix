@@ -175,7 +175,8 @@ applySplit();
 
 // --- Renderer, camera, controls ---
 
-const renderer = await createRenderer();
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 const caps = getGpuCaps(renderer);
 const webgpu = caps.backend === "webgpu";
 const applyIn = params.get("apply") === "generator" || (!webgpu && params.get("apply") !== "renderer") ? "generator" : "renderer";

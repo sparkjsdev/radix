@@ -19,7 +19,8 @@ const name = SCENES[params.get("scene") ?? ""] ? params.get("scene")! : "multi";
 const status = document.getElementById("status")!;
 const bar = document.getElementById("bar")!;
 
-const renderer = await createRenderer();
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 const webgpu = getGpuCaps(renderer).backend === "webgpu";
 renderer.setPixelRatio(devicePixelRatio);
 renderer.setSize(innerWidth, innerHeight);

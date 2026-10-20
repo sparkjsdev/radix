@@ -12,7 +12,8 @@ const print = (line: string) => {
   console.log(line);
 };
 
-const renderer = await createRenderer();
+const gpu = new URLSearchParams(location.search).get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 print(`backend ${getGpuCaps(renderer).backend}  ${JSON.stringify(getGpuCaps(renderer))}`);
 
 async function run() {

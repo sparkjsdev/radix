@@ -52,7 +52,7 @@ From the comparison of Oct 9, 2026: five scenes from 0.5M to 10M splats, timed o
 
 ## Measuring
 
-- `createRenderer({ profile: true })` (or `?profile=1`) installs a `GpuProfiler`; set `splatRenderer.phase = (name, run) => profiler.phase(name, run)` for separate "project" and "sort" rows ([renderer.md](renderer.md#gpuprofiler)).
+- `createRenderer({ profile: true })` installs a `GpuProfiler`; set `splatRenderer.phase = (name, run) => profiler.phase(name, run)` for separate "project" and "sort" rows ([renderer.md](renderer.md#gpuprofiler)).
 - `splatRenderer.readSortedCount()` reads the GPU sort's visible count; `SplatProjector.programs` counts compiled programs (it should stop growing after the first frames).
 - `node scripts/bench.mjs --matrix <name>` runs `/build/test/bench/index.html` in headless Chrome: files x modes x methods x bits, with GPU time per phase and screenshots ([checks.md](checks.md#benchmarks)).
 - Measure with the GPU otherwise idle: an emulator tab or another page rendering distorts the results.

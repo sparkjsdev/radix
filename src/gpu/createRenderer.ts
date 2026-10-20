@@ -11,11 +11,6 @@ export type GpuBackend = "webgpu" | "webgpu-gl";
 // for the adapter's full limit
 export type LimitRequest = number | "adapter";
 
-// An option passed always wins; one left out comes from its URL parameter,
-// else its default: backend ?gpu=webgpu | webgpu-gl (auto), hdr ?hdr=1 |
-// auto (off), profile ?profile=1, timing ?timing=1, multiview ?multiview=1,
-// directCanvas ?direct=0 (on). A page wanting its own default and URL
-// control passes the parameter's value itself.
 export interface CreateRendererOptions {
   // "auto": WebGPU when available, else the WebGL2 backend
   backend?: GpuBackend | "auto";
@@ -32,9 +27,9 @@ export interface CreateRendererOptions {
   // Both XR eyes in one draw where supported: OVR_multiview2 on the WebGL2
   // backend (three's WebGPU XR has no multiview yet)
   multiview?: boolean;
-  // Draw straight to the canvas instead of through three's linear
-  // intermediate target and output pass; materials then write sRGB-encoded
-  // colors themselves
+  // On by default: draw straight to the canvas instead of through three's
+  // linear intermediate target and output pass; materials then write
+  // sRGB-encoded colors themselves
   directCanvas?: boolean;
   // rgba16float canvas with extended tone mapping on WebGPU (hdr.ts): true,
   // "auto" (when the display reports high dynamic range) or false.
@@ -49,15 +44,12 @@ export interface CreateRendererOptions {
 // A WebGPURenderer on WebGPU or its WebGL2 fallback, initialized, asking for
 // the device baselines in baseline.ts
 export async function createRenderer(options: CreateRendererOptions = {}): Promise<WebGPURenderer> {
-  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const gpuParam = params.get("gpu");
-  const hdrParam = params.get("hdr");
-  const requested = options.backend ?? (gpuParam === "webgpu" || gpuParam === "webgpu-gl" ? gpuParam : "auto");
-  const profile = options.profile ?? params.get("profile") === "1";
-  const timing = profile || (options.timing ?? params.get("timing") === "1");
-  const multiview = options.multiview ?? params.get("multiview") === "1";
-  const directCanvas = options.directCanvas ?? params.get("direct") !== "0";
-  const hdrOption = options.hdr ?? (hdrParam === "1" ? true : hdrParam === "auto" ? "auto" : false);
+  const requested = options.backend ?? "auto";
+  const profile = options.profile ?? false;
+  const timing = profile || (options.timing ?? false);
+  const multiview = options.multiview ?? false;
+  const directCanvas = options.directCanvas ?? true;
+  const hdrOption = options.hdr ?? false;
   const xr = options.xr ?? false;
 
   const forceWebGL = requested === "webgpu-gl" || !navigator.gpu;

@@ -237,7 +237,7 @@ On the CPU sort, `onInvalidate` asks for the renders that show each landed order
 
 ## One code path for both backends
 
-The app needs no separate code for WebGL2: `createRenderer` picks the backend, and the renderer picks `sortMode`. Test the WebGL2 path with `?gpu=webgpu-gl`, or with `sortMode: "cpu"` on WebGPU. The differences an app may need to handle:
+The app needs no separate code for WebGL2: `createRenderer` picks the backend, and the renderer picks `sortMode`. Test the WebGL2 path with `createRenderer({ backend: "webgpu-gl" })`, or with `sortMode: "cpu"` on WebGPU. The differences an app may need to handle:
 
 - the first frames draw nothing until the first order lands, and a new collection shows a few frames after it is set;
 - free data in `release`, not when replacing a collection;

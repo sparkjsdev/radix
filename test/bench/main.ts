@@ -91,7 +91,8 @@ const status = document.getElementById("status")!;
 // ?limits=adapter: the adapter's whole storage binding and buffer sizes
 // (scenes past the 256 MiB baseline)
 const fullLimits = params.get("limits") === "adapter";
-const renderer = await createRenderer({ profile: true, ...(fullLimits ? { limits: { maxStorageBufferBindingSize: "adapter", maxBufferSize: "adapter" } } : {}) });
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", profile: true, ...(fullLimits ? { limits: { maxStorageBufferBindingSize: "adapter", maxBufferSize: "adapter" } } : {}) });
 const caps = getGpuCaps(renderer);
 const profiler = renderer.inspector as GpuProfiler;
 const gl = (renderer.backend as unknown as { gl?: WebGL2RenderingContext }).gl;

@@ -107,7 +107,8 @@ if (params.get("ui") === "0") {
   document.body.classList.add("bare");
 }
 
-const renderer = await createRenderer();
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 const webgpu = getGpuCaps(renderer).backend === "webgpu";
 const tier = deviceTier(webgpu);
 const rendering = params.get("render") === "1";

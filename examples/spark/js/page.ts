@@ -96,7 +96,8 @@ type RendererOptions = NonNullable<Parameters<typeof createRenderer>[0]>;
 // does the camera's aspect. pixelRatio: only where the Spark example sets
 // one (else three's 1).
 export async function windowRenderer(camera: THREE.PerspectiveCamera, { pixelRatio, ...options }: RendererOptions & { pixelRatio?: number } = {}) {
-  const renderer = (await createRenderer(options)) as WebGPURenderer;
+  const gpu = new URLSearchParams(location.search).get("gpu");
+  const renderer = (await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", ...options })) as WebGPURenderer;
   if (pixelRatio !== undefined) {
     renderer.setPixelRatio(pixelRatio);
   }

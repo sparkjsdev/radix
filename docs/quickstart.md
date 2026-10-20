@@ -64,7 +64,7 @@ addEventListener("resize", () => {
 
 ## What each step does
 
-1. **`createRenderer()`** returns an initialized `WebGPURenderer`. It picks WebGPU when the browser has it and the WebGL2 backend otherwise, and asks the device for the limits that about 95% of devices support. URL parameters can override its options: `?gpu=webgpu-gl` forces WebGL2, `?profile=1` turns on GPU timing ([renderer.md](renderer.md)).
+1. **`createRenderer()`** returns an initialized `WebGPURenderer`. It picks WebGPU when the browser has it and the WebGL2 backend otherwise, and asks the device for the limits that about 95% of devices support. Options passed to it override the defaults: `backend: "webgpu-gl"` forces WebGL2, `profile: true` turns on GPU timing ([renderer.md](renderer.md)).
 2. **`CameraControls`** moves the camera from the pointer, touch, keyboard, and gamepads. `update()` applies the input once per frame. Press F to switch between orbit and fly ([controls.md](controls.md)).
 3. **`loadSplats(url)`** downloads and decodes PLY, SPZ, RAD, or RDX on a worker and returns an `ArrayData`: a table with one row per splat, here in the `extSplats` layout (32 bytes per splat). **`GpuArrays.fromData`** uploads the table into textures, so row `i` on the CPU is row `i` on the GPU ([files.md](files.md), [gpu-arrays.md](gpu-arrays.md)).
 4. **`SplatCollection`** lists what to draw: here one object, the uploaded splats placed in the world by `model.matrixWorld`. **`SplatRenderer`** is a `THREE.Mesh` that draws a collection. The matrix is read on every render, so moving `model` moves the splats ([rendering.md](rendering.md)).
@@ -72,7 +72,7 @@ addEventListener("resize", () => {
 
 ## Test the WebGL2 fallback
 
-Open the page with `?gpu=webgpu-gl`. The page works unchanged, with two visible differences:
+Call `createRenderer({ backend: "webgpu-gl" })`. The rest of the page works unchanged, with two visible differences:
 
 - The sort runs on a worker. The first frames draw nothing until the first order arrives, and while the camera moves the order lags a few frames behind it.
 - The splats appear a moment after loading, and a new collection replaces the old one a few frames after it is set.

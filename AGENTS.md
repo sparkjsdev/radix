@@ -149,8 +149,8 @@ for some). `docs/checks.md` lists what each covers.
   `shLabel`). Every writer writes SH (`sh: true`); given `shPalette`, RAD
   writes clustered SH and the others expand it.
 - `gpu/`: three.js r186 `WebGPURenderer` on its WebGPU backend or WebGL2
-  fallback, TSL only. `createRenderer` (survey baselines; options from the
-  call, else the URL, else defaults), `Hdr`, `GpuProfiler`, `GpuArrays`
+  fallback, TSL only. `createRenderer` (survey baselines), `Hdr`,
+  `GpuProfiler`, `GpuArrays`
   (one array texture per channel), `GpuArrayReader`, `GpuArrayWriter`
   (fragment-pass writes), the splat readers (`GpuSplatReader`,
   `splatAccess.ts`), the TSL codecs (`GpuSplats`, `GpuEncoding`,

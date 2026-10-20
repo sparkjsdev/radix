@@ -63,7 +63,8 @@ function numberParam(name: string, fallback: number) {
   return params.has(name) && Number.isFinite(value) ? value : fallback;
 }
 
-const renderer = await createRenderer({ profile: true });
+const gpu = params.get("gpu");
+const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", profile: true });
 if (getGpuCaps(renderer).backend !== "webgpu") {
   renderer.dispose();
   status.textContent = "";

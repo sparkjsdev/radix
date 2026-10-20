@@ -14,23 +14,21 @@ Shaders in Radix are written in TSL (three.js Shading Language) only, with no ra
 
 ## createRenderer
 
-An option passed to the call takes precedence over its URL parameter. An option left out comes from its URL parameter, or else from its default. A page that wants its own default and still wants the URL to override it reads the parameter and passes the value itself.
+| Option | Default | What it does |
+|---|---|---|
+| `backend` | `"auto"` | `"webgpu"`, `"webgpu-gl"` (the WebGL2 backend), or `"auto"`: WebGPU when available |
+| `canvas` | a new canvas | the canvas to draw into |
+| `antialias` | three's default | MSAA |
+| `hdr` | off | an rgba16float canvas with extended tone mapping (WebGPU): `true`, `"auto"` (when the display reports high dynamic range), or `false`. `getGpuCaps(renderer).hdr` tells whether it was enabled |
+| `profile` | off | timestamp queries plus a `GpuProfiler` as `renderer.inspector` |
+| `timing` | off | timestamp queries only |
+| `multiview` | off | both XR eyes in one draw where supported (`OVR_multiview2` on WebGL2) |
+| `directCanvas` | on | draws straight to the canvas, without three's linear target and output pass: materials write sRGB-encoded colors themselves |
+| `xr` | off | enables `renderer.xr` before init: the WebGPU adapter must be requested XR-compatible for the WebXR / WebGPU binding |
+| `limits` | | WebGPU limits added to or replacing the baselines below: a number (capped at the adapter's) or `"adapter"` for the adapter's full limit (`LimitRequest`) |
+| `logarithmicDepthBuffer` | off | a logarithmic depth buffer, for scenes from centimeters to kilometers. Splats get it too: three derives a material's depth from its clip-space position when it has its own vertex shader |
 
-| Option | URL | Default | What it does |
-|---|---|---|---|
-| `backend` | `?gpu=webgpu \| webgpu-gl` | `"auto"` | `"webgpu"`, `"webgpu-gl"` (the WebGL2 backend), or `"auto"`: WebGPU when available |
-| `canvas` | | a new canvas | the canvas to draw into |
-| `antialias` | | three's default | MSAA |
-| `hdr` | `?hdr=1 \| auto` | off | an rgba16float canvas with extended tone mapping (WebGPU): `true`, `"auto"` (when the display reports high dynamic range), or `false`. `getGpuCaps(renderer).hdr` tells whether it was enabled |
-| `profile` | `?profile=1` | off | timestamp queries plus a `GpuProfiler` as `renderer.inspector` |
-| `timing` | `?timing=1` | off | timestamp queries only |
-| `multiview` | `?multiview=1` | off | both XR eyes in one draw where supported (`OVR_multiview2` on WebGL2) |
-| `directCanvas` | `?direct=0` | on | draws straight to the canvas, without three's linear target and output pass: materials write sRGB-encoded colors themselves |
-| `xr` | | off | enables `renderer.xr` before init: the WebGPU adapter must be requested XR-compatible for the WebXR / WebGPU binding |
-| `limits` | | | WebGPU limits added to or replacing the baselines below: a number (capped at the adapter's) or `"adapter"` for the adapter's full limit (`LimitRequest`) |
-| `logarithmicDepthBuffer` | | off | a logarithmic depth buffer, for scenes from centimeters to kilometers. Splats get it too: three derives a material's depth from its clip-space position when it has its own vertex shader |
-
-- If WebGPU was asked for (`?gpu=webgpu`) and device creation fails, three falls back to WebGL2 by itself and Radix logs a warning.
+- If WebGPU was asked for (`backend: "webgpu"`) and device creation fails, three falls back to WebGL2 by itself and Radix logs a warning.
 - On WebGL2, timer queries cannot nest, so only `profile` keeps them (its phases render outside the frame's passes); `timing` alone has no effect there.
 - On WebGL2, `createRenderer` enables `EXT_color_buffer_float` (float render targets and readback; it warns when the extension is missing) and `EXT_float_blend`, and logs which parameters fall below the WebGL2 baseline.
 
