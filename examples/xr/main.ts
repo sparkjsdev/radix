@@ -5,8 +5,7 @@
 // session the desktop camera orbits the splats; in one, the controller sticks
 // move the rig (CameraControls).
 //
-// Served statically (build/examples/xr/). radixXr.configure() and the dev link (scripts/dev-link.mjs,
-// polled only with ?link=<url>; ?link=1 is http://127.0.0.1:8001) switch any
+// Served statically (build/examples/xr/). radixXr.configure() switches any
 // option in place, rebuilding the renderer when the backend changes, so an
 // emulator-paired tab never reloads. Query parameters (configure()'s keys):
 //   ?url=       splat file (default the butterfly)
@@ -63,7 +62,7 @@ type XrConfig = typeof config;
 const status = document.getElementById("status")!;
 const enterButton = document.getElementById("enter") as HTMLButtonElement;
 
-// Errors go to the status line, measure() and the dev link
+// Errors go to the status line and measure()
 const errors: string[] = [];
 const consoleError = console.error.bind(console);
 console.error = (...args: unknown[]) => {
@@ -393,7 +392,7 @@ async function measure({ seconds = 6, turn = 360 }: { seconds?: number; turn?: n
   };
 }
 
-// Once a second, whether frames come or not: the status line and the dev link's report
+// Once a second, whether frames come or not: the status line
 let last = { time: performance.now(), frame: 0, cpu: 0 };
 setInterval(() => {
   const now = { time: performance.now(), frame: frameNumber, cpu: cpuTotal };
@@ -419,49 +418,6 @@ async function report(b: Build) {
     stats.gpu ? GpuProfiler.format(stats.gpu) : "",
     errors.length > 0 ? `errors: ${errors.length}, last: ${errors[errors.length - 1]}` : "",
   ].filter(Boolean).join("\n");
-
-  if (linkBase) {
-    const state = {
-      time: new Date().toISOString(), config: { ...config }, backend: b.backend, gpuSort: b.gpuSort, hasGpuBinding,
-      xr: {
-        session: session !== undefined, presenting, features: session?.enabledFeatures ?? [],
-        eyes: b.splats ? projected.count : 0, eyeSize: b.splats ? projected.size : [],
-      },
-      splats, stats: { ...stats, frameErrors }, errors: errors.slice(-20),
-    };
-    const body = JSON.stringify(state);
-    await fetch(`${linkBase}/report/radix-xr`, { method: "POST", body, headers: { "content-type": "application/json" } }).catch(() => {});
-  }
-}
-
-// The dev link: config changes in (control.json), stats out (report())
-const linkParam = params.get("link");
-const linkBase = !linkParam || linkParam === "0" ? undefined : linkParam === "1" ? "http://127.0.0.1:8001" : linkParam;
-
-async function pollLink(base: string) {
-  let seq: unknown;
-  for (;;) {
-    try {
-      type Control = { seq?: unknown; config?: Partial<XrConfig>; reload?: boolean; endSession?: boolean };
-      const control = (await (await fetch(`${base}/control/radix-xr`, { cache: "no-store" })).json()) as Control;
-      // The control found at load is old: act only on later ones
-      const fresh = control.seq !== undefined && seq !== undefined && control.seq !== seq;
-      seq = control.seq ?? seq;
-      if (fresh && control.reload) {
-        location.reload();
-        return;
-      }
-      if (fresh && control.endSession) {
-        await session?.end();
-      }
-      if (fresh && control.config) {
-        await configure(control.config);
-      }
-      await sleep(1000);
-    } catch {
-      await sleep(5000);
-    }
-  }
 }
 
 function sleep(ms: number) {
@@ -514,8 +470,5 @@ addEventListener("resize", () => {
 
 enterButton.hidden = !navigator.xr;
 await configure();
-if (linkBase) {
-  void pollLink(linkBase);
-}
 
 Object.assign(window, { radixXr: { configure, measure, config, stats, get build() { return build; } } });

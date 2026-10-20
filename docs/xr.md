@@ -63,7 +63,7 @@ The WebGL2 backend's XR uses the CPU sort. The order lags the head by a few fram
 
 ## /build/examples/xr/index.html
 
-The example page reads its options from the URL and from `radixXr.configure()`: `url`, `layout`, `method`, `bits`, `sort` (`gpu` or `cpu`), `gpu` (`webgpu` or `webgpu-gl`), `xrScale` (the eye-buffer scale), `multiview`, `stereo`, `profile`, `threshold` (the re-sort distance), and `guard` (the `sortGuard`). With `?link=<url>` (`?link=1`: `http://127.0.0.1:8001`) it polls `scripts/dev-link.mjs` for configuration changes and posts its stats there. `radixXr.measure({ seconds, turn })` turns the head and returns frame rates, GPU time per phase, and sort statistics.
+The example page reads its options from the URL and from `radixXr.configure()`: `url`, `layout`, `method`, `bits`, `sort` (`gpu` or `cpu`), `gpu` (`webgpu` or `webgpu-gl`), `xrScale` (the eye-buffer scale), `multiview`, `stereo`, `profile`, `threshold` (the re-sort distance), and `guard` (the `sortGuard`). `radixXr.measure({ seconds, turn })` turns the head and returns frame rates, GPU time per phase, and sort statistics.
 
 ## Gotchas
 

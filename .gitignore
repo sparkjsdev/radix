@@ -2,7 +2,7 @@ node_modules/
 dist/
 build/
 .DS_Store
-# Recordings from the bench and the dev link scripts
+# Recordings from the bench script
 recordings/
 # Local splat files for the benchmarks and convert:ply
 /splats/

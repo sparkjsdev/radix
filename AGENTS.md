@@ -232,8 +232,7 @@ for some). `docs/checks.md` lists what each covers.
   `examples/xr/` (`/build/examples/xr/index.html`: WebGPU XR with the GPU sort, or
   the WebGL2 backend's XR with the worker sort through one view of the
   page's key for every camera it renders; switched in place by
-  `radixXr.configure` or `scripts/dev-link.mjs` (`?link=1` or
-  `?link=<url>`), so an emulator-paired tab never reloads).
+  `radixXr.configure`, so an emulator-paired tab never reloads).
   `npm run convert:ply` streams PLY files past 2 GiB into RDX.
 - `examples/`: TypeScript sources of static pages on the
   `dist/radix.module.js` bundle. `npm run build`
