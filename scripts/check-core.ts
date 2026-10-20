@@ -309,6 +309,34 @@ await check("chunked files: encodeRdxFiles names, loadRdx with chunked", async (
   }
 });
 
+await check("errors show a URL's file name only", async () => {
+  const loads: [() => unknown, string][] = [
+    [() => SplatFiles.fetch("https://cdn.example/token=SECRET/missing.ply?sig=SECRET#a"), "Failed to load missing.ply: 403"],
+    [() => SplatFiles.fetch("https://cdn.example/token=SECRET/scene.bin?sig=SECRET#a"), "Unknown splat file format: scene.bin"],
+    [() => RdxFile.load("https://cdn.example/token=SECRET/missing.rdx?sig=SECRET#a"), "Failed to load missing.rdx: 403"],
+    [() => RdxFile.chunkName("https://cdn.example/token=SECRET/scene.bin?sig=SECRET#a", 0), "scene.bin does not end in .rdx"],
+    [() => SplatFiles.fetch("https://cdn.example/token=SECRET/missing/?sig=SECRET#a"), "Failed to load missing: 403"],
+    [() => SplatFiles.fetch("https://missing.example?sig=SECRET#a"), "Failed to load missing.example: 403"],
+  ];
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url) => String(url).includes("missing") ? new Response(null, { status: 403 }) : new Response("not a splat file", { status: 200 });
+    for (const [load, expected] of loads) {
+      try {
+        await load();
+        return `no error, expected "${expected}"`;
+      } catch (error) {
+        if ((error as Error).message !== expected) {
+          return (error as Error).message;
+        }
+      }
+    }
+    return undefined;
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 // --- Splat codecs ---
 
 const N = 20000;

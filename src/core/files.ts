@@ -18,6 +18,7 @@ import { RDX_MAGIC, RdxFile } from "./rdx";
 import { Sh, type ShPalette, type ShTarget } from "./sh";
 import { Splats, type LoadedSplats, type SplatLayout, type SplatReadOptions } from "./splats";
 import { SPZ_MAGIC, SpzFile } from "./spz";
+import { fileName } from "./url";
 
 export type SplatFormat = "ply" | "compressed-ply" | "spz" | "rad" | "rdx";
 
@@ -125,9 +126,9 @@ export class SplatFiles {
   } = {}): Promise<LoadedSplats<L>> {
     const response = await fetch(url, init);
     if (!response.ok) {
-      throw new Error(`Failed to load ${url}: ${response.status}`);
+      throw new Error(`Failed to load ${fileName(url)}: ${response.status}`);
     }
     const bytes = await readResponse(response, span(progress, 0, 0.4));
-    return SplatFiles.decode(bytes, { ...target, name: url, progress: span(progress, 0.4, 1) });
+    return SplatFiles.decode(bytes, { ...target, name: fileName(url), progress: span(progress, 0.4, 1) });
   }
 }

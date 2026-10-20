@@ -4,6 +4,7 @@ import { Compression } from "./compress";
 import { ArrayFormats } from "./formats";
 import { TextureLayout } from "./layout";
 import type { Progress } from "./progress";
+import { fileName } from "./url";
 
 // RDX files: the serialized bundles of an ArrayData, split into chunks of
 // rows. Every piece is a container:
@@ -124,7 +125,7 @@ async function encodeRdxChunks(data: ArrayData, { chunkSize = RDX_CHUNK_SIZE, pr
 function rdxChunkName(headerName: string, chunk: number) {
   const at = headerName.search(/\.rdx($|[?#])/);
   if (at < 0) {
-    throw new Error(`${headerName} does not end in .rdx`);
+    throw new Error(`${fileName(headerName)} does not end in .rdx`);
   }
   return `${headerName.slice(0, at)}-${chunk}${headerName.slice(at)}`;
 }
@@ -255,7 +256,7 @@ async function openRdx(readRange: (start: number, end: number) => Promise<Uint8A
 async function fetchBytes(url: string, init: RequestInit) {
   const response = await fetch(url, init);
   if (!response.ok) {
-    throw new Error(`Failed to load ${url}: ${response.status}`);
+    throw new Error(`Failed to load ${fileName(url)}: ${response.status}`);
   }
   return { status: response.status, bytes: new Uint8Array(await response.arrayBuffer()) };
 }
