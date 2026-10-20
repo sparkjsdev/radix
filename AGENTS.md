@@ -392,7 +392,9 @@ for some). `docs/checks.md` lists what each covers.
   builds `build/site/` (gitignored), one folder to preview
   (`npm run serve:site`, :8002) and copy to any static host: the bundle and
   built examples, the docs, the `node_modules/` files the import maps load,
-  and a landing `index.html` (the GitHub repo, getting started, links). The
+  and a landing `index.html` (the GitHub repo, getting started, links). Of
+  `docs/` and `examples/` it takes only the files git tracks and what is
+  built from them, so a new page needs a `git add` first. The
   sources stay on GitHub: the docs' links to repo files and the Spark list's
   "Radix source" name the commit the site is built from, and the top bar's
   Radix logo goes to the landing page, in the site's copies only. Repo paths

@@ -9,6 +9,8 @@
 //                              scripts/build-single.mjs)
 //   docs/                      the docs
 //   node_modules/...           what the examples' import maps load
+// Of docs/ and examples/, the site has the files git tracks and what the
+// build makes from them, not other files in the working tree.
 // The sources stay on GitHub: links to them (the docs' links to repo files,
 // the Spark list's "Radix source") name the commit the site is built from.
 // Then every relative link, src and import-map address in the site's HTML is
@@ -55,6 +57,27 @@ async function copy(from) {
   await cp(path.join(root, from), path.join(SITE, from), { recursive: true });
 }
 
+const git = (...args) => {
+  try {
+    return execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return "";
+  }
+};
+
+// Whether a file of docs/ or build/examples/ goes in the site: git tracks it,
+// or it is built from a file git tracks (an example's .js from its .ts, a
+// page's single file <name>/<name>.html from its index.html, and the docs'
+// reference pages, which npm run build writes to the ignored docs/ref/)
+function published(file, tracked) {
+  if (file.startsWith("build/examples/")) {
+    const source = file.slice("build/".length);
+    const page = source.match(/^examples\/([^/]+)\/\1\.html$/)?.[1];
+    return tracked.has(source) || tracked.has(source.replace(/\.js$/, ".ts")) || (page !== undefined && tracked.has(`examples/${page}/index.html`));
+  }
+  return tracked.has(file) || /^docs\/ref\/[^/]+\.html$/.test(file);
+}
+
 // The relative links of an HTML page (href, src, import-map addresses and
 // inline imports), without query or hash; template literals and code
 // samples (<pre>) are skipped
@@ -82,9 +105,19 @@ execFileSync(process.execPath, [path.join(root, "scripts/build-single.mjs"), "--
 await rm(SITE, { recursive: true, force: true });
 await mkdir(SITE, { recursive: true });
 
+const tracked = new Set(git("ls-files", "-z", "--", DOCS, "examples").split("\0").filter(Boolean));
+if (tracked.size === 0) {
+  throw new Error("git ls-files lists no files in docs/ or examples/: the site is built from a git checkout");
+}
+
 await copy("dist");
-await copy("build/examples");
-await copy(DOCS);
+for (const dir of ["build/examples", DOCS]) {
+  for (const file of (await listFiles(path.join(root, dir))).map((file) => posix(path.relative(root, file)))) {
+    if (published(file, tracked)) {
+      await copy(file);
+    }
+  }
+}
 for (const dir of MODULES) {
   await copy(path.join("node_modules", dir));
 }
@@ -92,13 +125,6 @@ for (const dir of MODULES) {
 // --- 2. Links in the site's copies: sources on GitHub, at the commit the
 // site is built from ---
 
-const git = (...args) => {
-  try {
-    return execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch {
-    return "";
-  }
-};
 const commit = git("rev-parse", "--short", "HEAD");
 const rev = git("rev-parse", "HEAD") || "main";
 
