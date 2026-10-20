@@ -1242,7 +1242,8 @@ arrays.count = ...;`,
     const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer()), f = detect(bytes, file.name);
     const hexs = [...bytes.slice(0, 8)].map((v) => v.toString(16).padStart(2, "0")).join(" ");
     $$(".fmt").forEach((c) => c.classList.toggle("hit", c.dataset.f === f));
-    $("#dropOut").innerHTML = `<b>${file.name}</b> · first bytes <span class="mono">${hexs}</span> → ${f ? `<span class="yes">${f.toUpperCase()}</span>` : `<span class="no">not a splat file</span>`}`;
+    $("#dropOut").innerHTML = ` · first bytes <span class="mono">${hexs}</span> → ${f ? `<span class="yes">${f.toUpperCase()}</span>` : `<span class="no">not a splat file</span>`}`;
+    $("#dropOut").prepend(Object.assign(document.createElement("b"), { textContent: file.name }));
   });
 })();
 
