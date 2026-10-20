@@ -3,16 +3,15 @@
 // download, decoded whole into Web Audio, so
 // it never starves and the clock stays sample-accurate) or synthesized live
 // on the GPU (film/gpuAudio.ts, streamed to an AudioWorklet; WebGPU only).
-// The file is looked for at ?audio= (a folder), else the hosted folder,
-// else build/data/fractals/ from the server's root (npm run serve);
-// `failed` once none has it (the demo then synthesizes or plays silent).
+// The file is looked for at ?audio= (a folder), else the hosted folder;
+// `failed` if it isn't there (the demo then synthesizes or plays silent).
 // Both pause by suspending their audio context, which stops the clock.
 import type { WebGPURenderer } from "three/webgpu";
 import { ScoreStream, heardTime } from "../../film/audioStream.js";
 import { GpuScore } from "../../film/gpuAudio.js";
 import type { ScoreData } from "../../film/score.js";
 
-// The hosted files: the dated GCS folder of scripts/data.mjs
+// The hosted files: a dated GCS folder
 export const AUDIO_ROOT = "https://storage.googleapis.com/forge-dev-public/asundqui/radix/261011/fractals/";
 
 export interface Clock {
@@ -61,7 +60,7 @@ export class WallClock implements Clock {
 // The folders the file may be in, in order
 function audioFolders() {
   const asked = new URLSearchParams(location.search).get("audio");
-  return asked ? [asked] : [AUDIO_ROOT, new URL("/build/data/fractals/", location.origin).href];
+  return asked ? [asked] : [AUDIO_ROOT];
 }
 
 export class FileMusic implements Music {

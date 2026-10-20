@@ -1,8 +1,7 @@
 // Sample splats: single-file RDX of ext splats, hosted on Google Cloud
 // Storage: the butterfly and the ceramic without spherical harmonics (in
 // rdx/; ?splats= reads the same names elsewhere), the scans with SH3 (extSh,
-// in rdx-sh/; ?splatsSh= reads them elsewhere, such as
-// http://localhost:8000/build/data/rdx-sh). Every sample is stored
+// in rdx-sh/; ?splatsSh= reads them elsewhere). Every sample is stored
 // y-down, so it is flipped upright.
 import * as THREE from "three";
 

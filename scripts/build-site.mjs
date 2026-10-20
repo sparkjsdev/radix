@@ -15,7 +15,7 @@
 // checked against its files.
 //
 // The examples read their data from the dated GCS folder in
-// scripts/data.mjs (build/data/ is not copied).
+// scripts/data.mjs.
 //
 //   npm run build:site          (runs npm run build first)
 //   npm run serve:site          http://localhost:8002/
