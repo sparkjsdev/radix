@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Mea+Culpa&display=swap");
-
 body {
   margin: 0;
   background-color: black;
@@ -7,7 +5,7 @@ body {
 }
 
 h1 {
-  font-family: "Mea Culpa", cursive;
+  font-family: "Snell Roundhand", "Segoe Script", cursive;
   font-weight: 500;
   font-size: 5rem;
 }
@@ -19,7 +17,7 @@ h2 {
 }
 
 h3 {
-  font-family: "Mea Culpa", cursive;
+  font-family: "Snell Roundhand", "Segoe Script", cursive;
   margin: 0;
 }
 
