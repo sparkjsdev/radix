@@ -1,9 +1,3 @@
-// TSL twin of core/sh.ts: the SH basis (GpuSh.evaluate), the built-in
-// codecs' decoders, and GpuShReader, the reader generators hold to add a
-// splat's SH color (fromSplats uses it too). A codec decodes one band at a
-// time from texels it loads on demand; the bands are nested branches on a
-// degree cap (GpuSh.maxDegree, set per object from objectParams.maxShDegree),
-// so bands above it cost nothing and a texel two bands share loads once.
 import type { WebGPURenderer } from "three/webgpu";
 import { defineBundle } from "../core/bundles";
 import { Sh, ShPalette, type FoundSh, type ShCodecName, type ShDegree } from "../core/sh";
@@ -16,11 +10,15 @@ const { If, exp2, float, int, max, min, normalize, select, uint, uniform, vec3 }
 
 const COMPONENTS = ["x", "y", "z", "w"] as const;
 
-// The TSL side of a codec (same name): band `band`'s coefficients (vec3
-// each, Sh.COEFFICIENTS[band - 1] to Sh.COEFFICIENTS[band] - 1) from
-// texel(j), the entry's texel j (uvec4)
+/** A codec's TSL decoder, where texel(j) gives the entry's uvec4 texel j. */
 export interface GpuShCodec {
   readonly name: ShCodecName;
+  /**
+   * Decodes a band's coefficients.
+   *
+   * @param texel Gives the entry's uvec4 texel j.
+   * @return The band's vec3 coefficients.
+   */
   decodeBand(band: ShDegree, texel: (j: number) => TslNode): TslNode[];
 }
 
@@ -40,9 +38,8 @@ const packed: GpuShCodec = {
   decodeBand(band, texel) {
     const start = PACKED_BAND_START[band];
     const code = byteOf(texel, start).toVar();
-    // A value byte moved to the top of its word and read as an int is its
-    // signed code times 2^24, so 2^-24 joins the scale (powers of two: the
-    // products are exactly code * scale)
+    // A byte at the top of a word, read as int, is its signed code times 2^24,
+    // so the scale takes 2^-24, exactly
     const scale = select(code.equal(uint(0)), float(0), exp2(float(code).sub(192).div(16))).div(127).mul(2 ** -24).toVar();
     const signed = (b: number) => float(int(wordOf(texel, b >> 2).shiftLeft(uint(24 - (b & 3) * 8)).bitAnd(uint(0xff000000))));
     const first = Sh.COEFFICIENTS[band - 1];
@@ -55,8 +52,7 @@ const packed: GpuShCodec = {
 
 const CODECS: Record<ShCodecName, GpuShCodec> = { ext, packed };
 
-// The basis of band `band` along unit `d` (x, y, z nodes); bands 2 to 4
-// share the squares (made in band 2's scope, which nests the others)
+// Bands 2 to 4 share the squares, made in band 2's scope, which nests the others
 function basis(band: ShDegree, d: TslNode, squares: { xx?: TslNode; yy?: TslNode; zz?: TslNode }): TslNode[] {
   const { x, y, z } = d;
   if (band === 1) {
@@ -85,7 +81,7 @@ function basis(band: ShDegree, d: TslNode, squares: { xx?: TslNode; yy?: TslNode
       x.mul(xx.sub(yy.mul(3))).mul(-0.5900436),
     ];
   }
-  // Band 4 uses xx + yy + zz = 1 (`d` is unit)
+  // Uses xx + yy + zz = 1, since d is unit
   const zz7m1 = zz.mul(7).sub(1).toVar();
   const zz7m3 = zz.mul(7).sub(3).toVar();
   return [
@@ -101,24 +97,28 @@ function basis(band: ShDegree, d: TslNode, squares: { xx?: TslNode; yy?: TslNode
   ];
 }
 
-// Spherical harmonics in TSL: the basis, the codecs' decoders and the degree
-// cap. Sh is the CPU twin.
+/** Spherical harmonics in TSL, the twin of Sh. */
 export class GpuSh {
-  // The drawn degree's cap (uint): set per object from objectParams.maxShDegree
-  // by the renderer, read by every GpuShReader
+  /**
+   * The drawn degree cap, set per object from objectParams.maxShDegree.
+   *
+   * @default Sh.MAX_DEGREE
+   */
   static readonly maxDegree: TslNode = uniform(Sh.MAX_DEGREE, "uint");
 
-  // A codec's TSL decoder by name
   static codec(name: ShCodecName): GpuShCodec {
     return CODECS[Sh.codec(name).name];
   }
 
-  // The SH color (vec3) along unit `dir` through `degree`: band b's
-  // coefficients come from coefficients(b), called inside a branch on
-  // min(maxDegree, limit) >= b, each band's nested in the one below it, so
-  // a band above the cap costs nothing and values (texels) made for one
-  // band can be reused by the next (`limit`: a uint node, such as the
-  // degree a reader is bound to; cap false: no branch)
+  /**
+   * The SH color along a unit direction. coefficients(b) runs in a branch on
+   * min(maxDegree, limit) >= b, nested in band b - 1's.
+   *
+   * @param dir The unit direction.
+   * @param coefficients Gives a band's vec3 coefficients.
+   * @param [options.cap=true] Whether to branch on the degree cap.
+   * @param [options.limit] A uint node that also caps the degree.
+   */
   static evaluate(dir: TslNode, degree: number, coefficients: (band: ShDegree) => TslNode[], { cap = true, limit }: { cap?: boolean; limit?: TslNode } = {}): TslNode {
     const d = dir.toVar();
     const sum = vec3(0, 0, 0).toVar();
@@ -139,26 +139,25 @@ export class GpuSh {
   }
 }
 
-// The SH of stored splats, for any generator: per-splat (a codec's bundle
-// beside the splats, found by Sh.find) or palette (bundle shLabel, then an
-// ShPalette's entries). bind() points it at an object's arrays (and
-// palette) before its dispatch: arrays with SH of a lower degree than the
-// reader's, or none, read what they have (the bands above cost nothing).
-// color(index, origin, center) is the SH color of stored splat `index` seen
-// from `origin`, to add to its rgb.
+/** Reads the SH of stored splats, per splat or from a palette. */
 export class GpuShReader {
   readonly codec: ShCodecName;
   readonly degree: ShDegree;
+  /** Whether it reads labels and palette entries rather than per-splat SH. */
   readonly palette: boolean;
   private gpuCodec: GpuShCodec;
-  // One reader per channel (per splat), so a lower-degree bundle binds
-  // the channels it has; one for the palette's entries
+  // Per-splat channels, so a lower-degree bundle binds what it has
   private channels: { name: string; reader: GpuArrayReader }[];
   private labels: GpuArrayReader | undefined;
   private stride: TslNode;
-  // The degree of the SH bound (0: none)
+  // The degree of the SH bound, 0 for none
   private bound: TslNode;
 
+  /**
+   * Builds a reader, bound to nothing.
+   *
+   * @param [options.palette=false] Whether to read labels and palette entries.
+   */
   constructor({ codec, degree, palette = false }: { codec: ShCodecName; degree: ShDegree; palette?: boolean }) {
     this.codec = codec;
     this.degree = degree;
@@ -171,8 +170,12 @@ export class GpuShReader {
     this.bound = uniform(0, "uint");
   }
 
-  // The reader of the SH in `arrays` (and `palette`), or undefined when
-  // they have none, at most `degree`
+  /**
+   * A reader of the SH in arrays and a palette.
+   *
+   * @param [options.degree=Sh.MAX_DEGREE] The highest band, 0 for no reader.
+   * @return The reader, or undefined without SH.
+   */
   static for(arrays: GpuArrays, { palette, degree }: { palette?: GpuArrays; degree?: number } = {}): GpuShReader | undefined {
     const found = GpuShReader.find(arrays, palette);
     if (!found || degree === 0) {
@@ -181,7 +184,12 @@ export class GpuShReader {
     return new GpuShReader({ codec: found.codec, degree: Math.min(degree ?? Sh.MAX_DEGREE, found.degree) as ShDegree, palette: found.palette });
   }
 
-  // What SH `arrays` (and `palette`) hold: { codec, degree, palette }
+  /**
+   * What SH arrays and a palette hold.
+   *
+   * @return The codec, the degree and whether it is a palette, or undefined
+   *   without SH.
+   */
   static find(arrays: GpuArrays, palette?: GpuArrays): (Pick<FoundSh, "codec" | "degree"> & { palette: boolean }) | undefined {
     if (palette && arrays.bundles.shLabel) {
       const meta = palette.bundle("shPalette").meta;
@@ -191,8 +199,10 @@ export class GpuShReader {
     return found && { codec: found.codec, degree: found.degree, palette: false };
   }
 
-  // Read the SH of `arrays` (per splat), or its labels and `palette`'s
-  // entries; nothing reads zero
+  /**
+   * Reads the SH of arrays from now on. Lower degrees read what they have, and
+   * no SH reads zero.
+   */
   bind(arrays?: GpuArrays, palette?: GpuArrays): this {
     if (this.labels) {
       const ok = !!(arrays?.bundles.shLabel && palette?.bundles.shPalette);
@@ -214,8 +224,7 @@ export class GpuShReader {
     return this;
   }
 
-  // Texel j of stored splat `index`'s entry, each loaded on first use and
-  // kept (the palette's label too): use it in one scope or nested ones
+  // Loads each texel once and keeps it, so use it in one scope or nested ones
   private texels(index: TslNode): (j: number) => TslNode {
     const loaded: TslNode[] = [];
     let first: TslNode | undefined;
@@ -236,28 +245,46 @@ export class GpuShReader {
     return this.gpuCodec.decodeBand(band, texel);
   }
 
-  // Band `band`'s coefficients of stored splat `index` (vec3 each); texels
-  // are loaded once per call
+  /**
+   * Decodes a band of a stored splat.
+   *
+   * @param index The stored splat's index.
+   * @return Its vec3 coefficients.
+   */
   band(index: TslNode, band: ShDegree): TslNode[] {
     return this.decode(band, this.texels(index));
   }
 
-  // All coefficients through the reader's degree (no cap), each texel
-  // loaded once
+  /**
+   * Decodes every band through the reader's degree, ignoring the cap.
+   *
+   * @param index The stored splat's index.
+   * @return The vec3 coefficients.
+   */
   coefficients(index: TslNode): TslNode[] {
     const texel = this.texels(index);
     return ([1, 2, 3, 4] as const).filter((b) => b <= this.degree).flatMap((b) => this.decode(b, texel));
   }
 
-  // The SH color of stored splat `index` at `center` seen from `origin`
-  // (both in the splats' space); add it to rgb and clamp at 0. Each texel
-  // (and the label) loads once, in the branch of the first band needing it.
+  /**
+   * The SH color of a stored splat. Add it to rgb and clamp at 0.
+   *
+   * @param index The stored splat's index.
+   * @param origin The viewpoint, in the splats' space.
+   * @param center The splat's center, in the splats' space.
+   */
   color(index: TslNode, origin: TslNode, center: TslNode): TslNode {
     const texel = this.texels(index.toVar());
     return GpuSh.evaluate(normalize(center.sub(origin)), this.degree, (band) => this.decode(band, texel), { limit: this.bound });
   }
 
-  // splat.rgb plus the SH color, clamped at 0, for a splat node of either form
+  /**
+   * Adds the SH color to a splat's rgb, clamped at 0.
+   *
+   * @param splat A splat node of either form.
+   * @param index The stored splat's index.
+   * @param origin The viewpoint, in the splats' space.
+   */
   apply(splat: TslNode, index: TslNode, origin: TslNode): TslNode {
     const out = splat.toVar();
     const rgb = out.get("rgb");
@@ -266,13 +293,19 @@ export class GpuShReader {
   }
 }
 
-// Palettes on the GPU: an ShPalette's table uploaded, or an empty one for a
-// GPU writer to fill (element t is entry floor(t / stride), texel t % stride)
+/** SH palettes on the GPU, where element t is entry floor(t / stride), texel t % stride. */
 export class GpuShPalette {
   static upload(renderer: WebGPURenderer, palette: ShPalette): GpuArrays {
     return GpuArrays.fromData(renderer, palette.data);
   }
 
+  /**
+   * Makes an empty palette for a GPU writer to fill.
+   *
+   * @param options.size The entries.
+   * @param [options.stride=ShPalette.strideOf(codec, degree)] Texels per entry.
+   * @param [options.storage=false] Whether compute can write it.
+   */
   static create<Storage extends boolean = false>(renderer: WebGPURenderer, { codec, degree, size, stride, storage }: {
     codec: ShCodecName;
     degree: ShDegree;

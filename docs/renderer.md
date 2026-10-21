@@ -46,9 +46,9 @@ On WebGPU, `createRenderer` asks for these limits above WebGPU's defaults. Each 
 | `maxColorAttachmentBytesPerSample` | 32 | 64 |
 | `maxStorageBuffersPerShaderStage`, `...InVertexStage`, `...InFragmentStage` | 8 | 10 |
 
-Kept at the default because the next tier is under 95%: 4 storage textures per stage, 256 compute invocations per workgroup, 16 sampled textures per stage, 16 inter-stage variables, 4 bind groups. Optional features at or above 95%: `timestamp-query`, `indirect-first-instance`, `depth32float-stencil8`, `rg11b10ufloat-renderable`, `depth-clip-control`, and `bgra8unorm-storage`; `shader-f16`, `float32-filterable`, `float32-blendable`, `subgroups`, and texture compression need a fallback.
+Kept at the default because the next tier is under 95%: 4 storage textures per stage, 256 compute invocations per workgroup, 16 sampled textures per stage, 16 inter-stage variables, 16 vertex attributes, 4 bind groups, 64 KiB uniform buffer bindings, and the dynamic buffers per pipeline layout. 8 color attachments and 65535 workgroups per dimension are never higher. three requests every optional feature the adapter has. Those at or above 95% are `timestamp-query`, `indirect-first-instance`, `depth32float-stencil8`, `rg11b10ufloat-renderable`, `depth-clip-control`, and `bgra8unorm-storage`; `shader-f16`, `float32-filterable`, `float32-blendable`, `texture-formats-tier1`, `texture-formats-tier2`, `subgroups`, `dual-source-blending`, `clip-distances`, `primitive-index`, and texture compression need a fallback.
 
-WebGL2 parameters to design against: 8192 texture size, 512 array layers, 4 draw buffers, 16 texture units per stage, 16 KiB uniform blocks, 15 varying vectors, 16 vertex attributes, and 4 MSAA samples. `snorm8` is not renderable there (`EXT_render_snorm` is at 80%).
+WebGL2 parameters to design against: 8192 texture size, 512 array layers, 4 draw buffers, 16 texture units per stage, 16 KiB uniform blocks, 15 varying vectors, 16 vertex attributes, and 4 MSAA samples. `snorm8` is not renderable there (`EXT_render_snorm` is at 80%), and `EXT_texture_norm16`, `EXT_disjoint_timer_query_webgl2`, `KHR_parallel_shader_compile`, and `OVR_multiview2` are not baseline either. three enables `OES_draw_buffers_indexed`, `WEBGL_multi_draw`, `OES_texture_float_linear`, and `EXT_clip_control` when present.
 
 ## getGpuCaps
 

@@ -8,8 +8,7 @@ import { TSL, type TslNode } from "./tsl";
 
 const { float, uint, uintBitsToFloat, uniform, vec3, vec4 } = TSL;
 
-// The splat bundle of `arrays` in `layout`: `name` when given, else the
-// standard name, else any bundle of that layout
+// name, else the standard name, else any bundle of the layout
 function splatBundleName(arrays: GpuArrays, layout: SplatLayout, name?: string) {
   const bundles = arrays.bundles as Record<string, BundleLike>;
   const match = (name !== undefined ? [name] : [layout, ...Object.keys(bundles)]).find((n) => bundles[n] && Splats.layoutOf(bundles[n]) === layout);
@@ -19,18 +18,11 @@ function splatBundleName(arrays: GpuArrays, layout: SplatLayout, name?: string) 
   return match;
 }
 
-// Splat reads in TSL, one class per bundle layout, with the CPU names
-// (Splats.load...): loadSplat (a SplatNode) and loadCovSplat (a
-// CovSplatNode) for every layout, converting when the layout stores the
-// other form; loadCenter, loadRgb, loadOpacity; loadPbr on ext. Each load
-// fetches only the channels it needs and reads zero past count; splats carry
-// the index loaded. SplatGenerator.fromSplats wraps one as a generator.
-// bind() defaults the bundle to the layout's standard name
-// (arrays.bundles.extSplats).
+/** Splat reads in TSL, one class per layout, whose loads read zero past count and set the index. */
 export abstract class GpuSplatReader<D extends BundleDef = BundleDef> extends GpuArrayReader<D> {
   abstract readonly layout: SplatLayout;
 
-  // The reader of a layout, unbound
+  /** A reader of a layout, bound to nothing. */
   static for(layout: "extSplats"): GpuExtSplatReader;
   static for(layout: "covSplats"): GpuCovSplatReader;
   static for(layout: "packedSplats"): GpuPackedSplatReader;
@@ -39,8 +31,12 @@ export abstract class GpuSplatReader<D extends BundleDef = BundleDef> extends Gp
     return layout === "extSplats" ? new GpuExtSplatReader() : layout === "covSplats" ? new GpuCovSplatReader() : new GpuPackedSplatReader();
   }
 
-  // The reader of the splat bundle of `arrays` (`name`, else the standard
-  // names, else any splat layout), bound to it; `reader.layout` narrows it
+  /**
+   * A reader bound to a splat bundle of arrays. Narrow it by layout.
+   *
+   * @param [name] The bundle, by default a standard name, else any splat
+   *   bundle.
+   */
   static from(arrays: GpuArrays, name?: string): AnyGpuSplatReader {
     const found = Splats.findBundle(arrays.bundles as Record<string, BundleLike>, name);
     if (!found) {
@@ -49,20 +45,32 @@ export abstract class GpuSplatReader<D extends BundleDef = BundleDef> extends Gp
     return GpuSplatReader.for(found.layout).bind(arrays, found.name);
   }
 
+  /**
+   * Reads a splat bundle of arrays from now on.
+   *
+   * @param [arrays] The arrays, or none to read zero.
+   * @param [name] The bundle, by default the layout's standard one, else any of
+   *   the layout.
+   */
   bind(arrays?: GpuArrays, name?: string): this {
     return super.bind(arrays, arrays && splatBundleName(arrays, this.layout, name));
   }
 
+  /** Loads a splat in 3DGS form, converting when the layout stores covariances. */
   abstract loadSplat(index: TslNode): SplatNode;
+  /** Loads a splat in covariance form, converting when the layout stores 3DGS splats. */
   abstract loadCovSplat(index: TslNode): CovSplatNode;
   abstract loadCenter(index: TslNode): TslNode;
+  /** Loads a splat's base color. */
   abstract loadRgb(index: TslNode): TslNode;
   abstract loadOpacity(index: TslNode): TslNode;
 }
 
+/** Reads extSplats bundles. */
 export class GpuExtSplatReader extends GpuSplatReader<typeof Splats.EXT> {
   readonly layout = "extSplats";
 
+  /** Builds an extSplats reader, bound to nothing. */
   constructor() {
     super(Splats.EXT);
   }
@@ -92,14 +100,16 @@ export class GpuExtSplatReader extends GpuSplatReader<typeof Splats.EXT> {
   }
 }
 
+/** Reads covSplats bundles. */
 export class GpuCovSplatReader extends GpuSplatReader<typeof Splats.COV> {
   readonly layout = "covSplats";
 
+  /** Builds a covSplats reader, bound to nothing. */
   constructor() {
     super(Splats.COV);
   }
 
-  // Diagonalized (a Jacobi eigen decomposition per call)
+  /** Loads a splat in 3DGS form, by a Jacobi eigen decomposition per call. */
   loadSplat(index: TslNode) {
     return GpuSplats.fromCov(this.loadCovSplat(index));
   }
@@ -121,18 +131,26 @@ export class GpuCovSplatReader extends GpuSplatReader<typeof Splats.COV> {
   }
 }
 
+/** Reads packedSplats bundles. */
 export class GpuPackedSplatReader extends GpuSplatReader<typeof Splats.PACKED> {
   readonly layout = "packedSplats";
-  // vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax), set by bind from the
-  // bundle's meta.encoding
+  /** vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax), set by bind. */
   readonly encoding: TslNode;
 
+  /** Builds a packedSplats reader, bound to nothing. */
   constructor() {
     super(Splats.PACKED);
     const { rgbMin, rgbMax, lnScaleMin, lnScaleMax } = Splats.DEFAULT_PACKED_ENCODING;
     this.encoding = uniform(vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax));
   }
 
+  /**
+   * Reads a splat bundle of arrays from now on.
+   *
+   * @param [arrays] The arrays, or none to read zero.
+   * @param [name] The bundle, by default the layout's standard one, else any of
+   *   the layout.
+   */
   bind(arrays?: GpuArrays, name?: string): this {
     const bundle = arrays && splatBundleName(arrays, this.layout, name);
     super.bind(arrays, bundle);
@@ -163,4 +181,5 @@ export class GpuPackedSplatReader extends GpuSplatReader<typeof Splats.PACKED> {
   }
 }
 
+/** A reader of any layout, narrowed by layout. */
 export type AnyGpuSplatReader = GpuExtSplatReader | GpuCovSplatReader | GpuPackedSplatReader;

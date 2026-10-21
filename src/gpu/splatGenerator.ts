@@ -12,80 +12,112 @@ import { TSL, type TslNode } from "./tsl";
 
 const { uniform } = TSL;
 
-// What Radix knows about the object being projected and the viewpoint, in
-// one space: for a generator its splats' own (object) space, for a modifier
-// the modifier's space. TSL nodes (uniforms set before each object's
-// dispatch); more members may join later.
+/**
+ * The object and viewpoint, as uniforms in the generator's or modifier's space.
+ * Members may be added.
+ */
 export interface SplatGeneratorContext {
-  // The head (camera, or the eye pair's center) position
+  /** The head's position, the camera's or the eyes' center. */
   viewOrigin: TslNode;
-  // The head's viewing direction, unit
+  /** The head's unit viewing direction. */
   viewForward: TslNode;
-  // This space to head space and back (mat4)
+  /** A mat4 from this space to head space. */
   objectToHead: TslNode;
+  /** A mat4 from head space to this space. */
   headToObject: TslNode;
-  // This space to world space (mat4)
+  /** A mat4 from this space to world space. */
   objectToWorld: TslNode;
 }
 
-// The same values for bind, as three.js objects (read them in bind; they
-// change for the next object)
+/**
+ * SplatGeneratorContext's values for bind. They change for the next object, so
+ * read them in bind.
+ */
 export interface SplatBindContext {
+  /** The head's position, the camera's or the eyes' center. */
   viewOrigin: THREE.Vector3;
+  /** The head's unit viewing direction. */
   viewForward: THREE.Vector3;
   objectToHead: THREE.Matrix4;
   headToObject: THREE.Matrix4;
   objectToWorld: THREE.Matrix4;
 }
 
-// Makes splat `index` in TSL: a program built once, whose inputs are slots
-// (readers, uniforms) that bind(data, context) points at before each
-// dispatch. It gives the forms it has; the pipeline converts to the other
-// when it needs it (splat to cov is cheap, cov to splat an eigen
-// decomposition). Generators set the index field. `context` tells it about
-// the object and the viewpoint (SplatGeneratorContext; the projection
-// always passes it, a wrapping generator may leave it out: it defaults to
-// SplatGenerator.context). `Data` is what the data of its splat objects is
-// (StoredSplats for fromSplats).
+/**
+ * Makes splat index in TSL, built once and bound to data before each dispatch.
+ * Set the index field.
+ */
 export type SplatGenerator<Data = unknown> =
   | {
+    /**
+     * Makes a splat in 3DGS form.
+     *
+     * @param [context=SplatGenerator.context] What Radix knows about the object
+     *   and the viewpoint.
+     * @return The splat, with its index field set.
+     */
     generateSplat(index: TslNode, context?: SplatGeneratorContext): SplatNode;
+    /**
+     * Makes a splat in covariance form.
+     *
+     * @param [context=SplatGenerator.context] What Radix knows about the object
+     *   and the viewpoint.
+     * @return The splat, with its index field set.
+     */
     generateCovSplat?(index: TslNode, context?: SplatGeneratorContext): CovSplatNode;
+    /** Points the program at an object's data before its dispatch. */
     bind?: (data: Data, context?: SplatBindContext) => void;
   }
   | {
+    /**
+     * Makes a splat in 3DGS form.
+     *
+     * @param [context=SplatGenerator.context] What Radix knows about the object
+     *   and the viewpoint.
+     * @return The splat, with its index field set.
+     */
     generateSplat?(index: TslNode, context?: SplatGeneratorContext): SplatNode;
+    /**
+     * Makes a splat in covariance form.
+     *
+     * @param [context=SplatGenerator.context] What Radix knows about the object
+     *   and the viewpoint.
+     * @return The splat, with its index field set.
+     */
     generateCovSplat(index: TslNode, context?: SplatGeneratorContext): CovSplatNode;
+    /** Points the program at an object's data before its dispatch. */
     bind?: (data: Data, context?: SplatBindContext) => void;
   };
 
-// A generator of any data
+/** A generator of any data. */
 export type AnySplatGenerator = SplatGenerator<never>;
 
-// TSL functions of a splat in either form (fromSplats steps, a renderer's
-// or view's modifier); `context` is in the modifier's space
+/** A TSL function of a splat, with context in the modifier's space. */
 export type SplatModifier = (splat: SplatNode, context?: SplatGeneratorContext) => SplatNode;
+/** A SplatModifier of covariance splats. */
 export type CovSplatModifier = (cov: CovSplatNode, context?: SplatGeneratorContext) => CovSplatNode;
 
-// The data of a fromSplats generator's splat objects: the splat arrays, an
-// index list (SplatGenerator.indices) with remap "indices", and the SH
-// palette with sh palette mode
+/** The data of fromSplats objects. */
 export interface StoredSplats {
   splats: GpuArrays;
+  /** The index list for remap "indices". */
   indices?: GpuArrays;
+  /** The palette for sh with palette. */
   shPalette?: GpuArrays;
 }
 
-// Spherical harmonics a fromSplats generator adds: a codec and degree, per
-// splat (the codec's bundle in the splat arrays) or through a palette
-// (bundle shLabel and StoredSplats.shPalette)
+/** SH for fromSplats, per splat or from a palette. */
 export interface SplatShOptions {
   codec: ShCodecName;
   degree: ShDegree;
+  /**
+   * Whether the SH comes from a palette.
+   *
+   * @default false
+   */
   palette?: boolean;
 }
 
-// One set of context uniforms and their values
 function makeContext() {
   const values: SplatBindContext = {
     viewOrigin: new THREE.Vector3(),
@@ -101,7 +133,6 @@ function makeContext() {
     headToObject: uniform(values.headToObject),
     objectToWorld: uniform(values.objectToWorld),
   };
-  // From this space's matrices to world and to head
   const set = (toWorld: THREE.Matrix4, toHead: THREE.Matrix4) => {
     values.objectToWorld.copy(toWorld);
     values.objectToHead.copy(toHead);
@@ -112,23 +143,24 @@ function makeContext() {
   return { nodes, values, set };
 }
 
-// The generator's context (object space) and the modifier's (its space):
-// render/ sets both before each object's dispatch (gpu/ cannot import it)
+// render/ sets both before each dispatch, since gpu/ cannot import it
 export const generatorContext = makeContext();
 export const modifierContext = makeContext();
 
-// Generators from templates (SplatGenerator is also the type)
+/** Generator templates, under the same name as the SplatGenerator type. */
 export const SplatGenerator = {
-  // The context nodes generators get, for code outside a generator call
-  // (modifiers of fromSplats, tests)
+  /** The generator context, for code outside a generator call. */
   context: generatorContext.nodes,
 
-  // A generator of stored splats of `layout`: splat i is the arrays' splat
-  // remap(i) (entry i of an index list with "indices", or any TSL function
-  // of the index; default i itself), its SH color added with `sh` (seen
-  // from context.viewOrigin; GpuShReader), then each of `modifiers` in
-  // turn. Its data is { splats, indices?, shPalette? }. Make it once: every
-  // file of the layout and every index list then runs one program.
+  /**
+   * A generator of stored splats at remap(i). Make it once, so every object
+   * shares one program.
+   *
+   * @param [options.layout="extSplats"] The layout of the splat arrays.
+   * @param [options.remap] "indices" to read an index list, or a TSL function
+   *   of the index, by default the index itself.
+   * @param [options.modifiers=[]] Functions run in turn after the SH is added.
+   */
   fromSplats({ layout = "extSplats", remap, modifiers = [], sh }: {
     layout?: SplatLayout;
     remap?: "indices" | ((index: TslNode) => TslNode);
@@ -166,10 +198,15 @@ export const SplatGenerator = {
     };
   },
 
-  // The generator for `arrays` (and `shPalette`): fromSplats of their splat
-  // layout, with the SH they hold (per splat, or a palette with shPalette),
-  // shared by every set of arrays of the same kind. `sh` caps the degree (0
-  // or false: none); modifiers make a generator of its own.
+  /**
+   * fromSplats for the arrays' layout and SH, shared per kind unless modifiers
+   * are given.
+   *
+   * @param [options.remap] "indices" to read an index list.
+   * @param [options.modifiers] Functions run in turn, which make a generator of
+   *   its own.
+   * @param [options.sh] Caps the SH degree, 0 or false for none.
+   */
   forArrays(arrays: GpuArrays, { remap, modifiers, sh, shPalette }: {
     remap?: "indices";
     modifiers?: SplatModifier[];
@@ -194,8 +231,11 @@ export const SplatGenerator = {
     return generator;
   },
 
-  // An index list as GpuArrays (bundle "indices" of ArrayData.INDICES),
-  // uploaded into `into` when given (its count becomes the list's)
+  /**
+   * An index list as GpuArrays.
+   *
+   * @param [into] Arrays to upload into instead of new ones.
+   */
   indices(renderer: WebGPURenderer, list: ArrayLike<number>, into?: GpuArrays): GpuArrays {
     const data = new ArrayData({ count: list.length }).addBundle("indices", ArrayData.INDICES);
     data.bundles.indices.channels.index.data.set(list);
@@ -204,10 +244,11 @@ export const SplatGenerator = {
     return arrays;
   },
 
-  // Sets the generator's context for an object placed by `objectToWorld`,
-  // seen from `worldToHead`, and with `space` (a modifier's space: its
-  // matrices to world and head) the modifier's (render/ calls this before
-  // each object's dispatch)
+  /**
+   * Sets the context uniforms for an object's dispatch. The renderer calls it.
+   *
+   * @param [space] A modifier space's matrices to world and head.
+   */
   setContext(objectToWorld: THREE.Matrix4, worldToHead: THREE.Matrix4, space?: { toWorld: THREE.Matrix4; toHead: THREE.Matrix4 }) {
     generatorContext.set(objectToWorld, scratch.multiplyMatrices(worldToHead, objectToWorld));
     if (space) {

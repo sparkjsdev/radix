@@ -1,8 +1,6 @@
 import type { WebGPURenderer } from "three/webgpu";
 
-// The parts of a WebGPURenderer backend this module reaches into: the raw
-// device or GL context and the per-object GPU resources three keeps.
-// Structural, so no backend class import is needed.
+// Typed structurally, so no backend class is imported
 export interface Backend {
   isWebGPUBackend?: boolean;
   isWebGLBackend?: boolean;
@@ -19,7 +17,7 @@ export function isWebGPUBackend(renderer: WebGPURenderer) {
   return backendOf(renderer).isWebGPUBackend === true;
 }
 
-// The GPUTexture / WebGLTexture three created for `texture` (after initTexture)
+// Valid after initTexture
 export function gpuTextureOf(renderer: WebGPURenderer, texture: object): GPUTexture {
   return backendOf(renderer).get(texture).texture as GPUTexture;
 }

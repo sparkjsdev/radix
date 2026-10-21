@@ -1,6 +1,4 @@
-// TSL twin of the codecs in core/splats.ts (Splats): the same bit layouts
-// (documented there), encoded and decoded in shaders, plus the conversions
-// between the 3DGS and covariance forms.
+// Bit layouts are documented in core/splats.ts
 import { Splats, type PackedEncoding } from "../core/splats";
 import { GpuEncoding, roundHalfUp } from "./encoding.tsl";
 import { GpuSplatMath } from "./math.tsl";
@@ -9,22 +7,21 @@ import { TSL, type TslNode } from "./tsl";
 
 const { Fn, clamp, exp, float, floatBitsToUint, log, max, min, normalize, select, sign, sqrt, struct, uint, uintBitsToFloat, uvec4, vec3, vec4, abs } = TSL;
 
-// A TSL struct node whose fields are known: get() takes only those names,
-// and the brand keeps one kind of struct from standing in for another
 declare const structBrand: unique symbol;
+/** A struct node of known fields, branded so one kind cannot stand in for another. */
 export interface StructNode<Fields extends string, Brand extends string> {
   readonly [structBrand]: Brand;
   get(field: Fields): TslNode;
   toVar(name?: string): StructNode<Fields, Brand>;
-  // On a var: the whole struct
+  /** Assigns the whole struct, on a var. */
   assign(value: StructNode<Fields, Brand>): unknown;
 }
 
-// The standard 3DGS fields (Splat in core/splats.ts), plus the index of the
-// splat in what made it (uint, 0 when unset)
+/** A splat's 3DGS fields, plus the uint index in what made it, 0 when unset. */
 export type SplatNode = StructNode<"center" | "scales" | "quaternion" | "rgb" | "opacity" | "index", "Splat">;
-// Covariance as its diagonal (xx, yy, zz) and off-diagonal (xy, xz, yz)
+/** A splat in covariance form, with diagonal (xx, yy, zz) and off-diagonal (xy, xz, yz). */
 export type CovSplatNode = StructNode<"center" | "xxyyzz" | "xyxzyz" | "rgb" | "opacity" | "normal" | "index", "CovSplat">;
+/** The PBR fields of a splat. */
 export type PbrNode = StructNode<"normal" | "roughness" | "metallic", "Pbr">;
 
 const SplatStruct = struct({
@@ -58,8 +55,6 @@ const EncodedSplat = struct({ a: "uvec4", b: "uvec4" }, "EncodedSplat");
 const lnHalf = (v: TslNode) => GpuEncoding.encodeHalf(log(v));
 const expHalf = (h: TslNode) => exp(GpuEncoding.decodeHalf(h));
 
-// --- Ext ---
-
 const decodeExt = Fn(([a, b]: [TslNode, TslNode]) => {
   const s = SplatStruct().toVar();
   s.get("center").assign(uintBitsToFloat(a.xyz));
@@ -92,8 +87,6 @@ const encodeExt = Fn(([s, p]: [TslNode, TslNode]) => {
   );
   return EncodedSplat(a, b);
 });
-
-// --- Cov ---
 
 const encodeCorrelation = Fn(([value, a, b]: [TslNode, TslNode, TslNode]) => {
   const c = clamp(value.div(sqrt(a.mul(b))), -1.0, 1.0).toVar();
@@ -136,8 +129,7 @@ const encodeCov = Fn(([c]: [TslNode]) => {
   return EncodedSplat(a, b);
 });
 
-// --- Packed; encoding = vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax) ---
-
+// encoding is vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax)
 const decodePacked = Fn(([p, encoding]: [TslNode, TslNode]) => {
   const s = SplatStruct().toVar();
   const byte = (word: TslNode, shift: number) => float(word.shiftRight(uint(shift)).bitAnd(uint(0xff)));
@@ -171,8 +163,6 @@ const encodePacked = Fn(([s, encoding]: [TslNode, TslNode]) => {
   );
 });
 
-// --- Conversions ---
-
 const toCov = Fn(([s]: [TslNode]) => {
   const c = CovSplatStruct().toVar();
   c.get("center").assign(s.get("center"));
@@ -198,97 +188,174 @@ const fromCov = Fn(([c]: [TslNode]) => {
   return s;
 });
 
-// vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax) of a plain encoding, or the node as is
+// A plain encoding as a vec4, a node as is
 const encodingVec4 = (encoding: PackedEncoding | TslNode): TslNode =>
   (encoding as TslNode).isNode ? encoding : vec4(encoding.rgbMin, encoding.rgbMax, encoding.lnScaleMin, encoding.lnScaleMax);
 
-// Splat codecs in TSL. decode* take a layout's words and return a struct
-// node; encode* the reverse; store* fill a writer's outputs for one splat
-// (GpuArrayWriter / WgpuArrayWriter write(index, out)).
+/** The TSL twin of the Splats codecs, plus 3DGS and covariance conversions. */
 export class GpuSplats {
-  // Struct constructors: GpuSplats.Splat(center, scales, quaternion, rgb,
-  // opacity, index?), GpuSplats.CovSplat(center, xxyyzz, xyxzyz, rgb,
-  // opacity, normal, index?); fields left out are zero
+  /**
+   * Builds a splat struct. Missing fields are zero.
+   *
+   * @param fields The center, scales, quaternion, rgb, opacity and index.
+   */
   static readonly Splat: (...fields: TslNode[]) => SplatNode = SplatStruct;
+  /**
+   * Builds a covariance splat struct. Missing fields are zero.
+   *
+   * @param fields The center, xxyyzz, xyxzyz, rgb, opacity, normal and index.
+   */
   static readonly CovSplat: (...fields: TslNode[]) => CovSplatNode = CovSplatStruct;
+  /**
+   * Builds a PBR struct. Missing fields are zero.
+   *
+   * @param fields The normal, roughness and metallic.
+   */
   static readonly Pbr: (...fields: TslNode[]) => PbrNode = PbrStruct;
 
+  /**
+   * Decodes an ext splat.
+   *
+   * @param a The extA word.
+   * @param b The extB word.
+   */
   static decodeExt(a: TslNode, b: TslNode): SplatNode {
     return decodeExt(a, b);
   }
 
+  /**
+   * Decodes an ext splat's PBR fields.
+   *
+   * @param a The extA word.
+   * @param b The extB word.
+   */
   static decodeExtPbr(a: TslNode, b: TslNode): PbrNode {
     return decodeExtPbr(a, b);
   }
 
-  // The words { a, b } (a struct) of a splat and its PBR fields
+  /**
+   * Encodes an ext splat.
+   *
+   * @return A struct of words a and b.
+   */
   static encodeExt(s: SplatNode, p: PbrNode): TslNode {
     return encodeExt(s, p);
   }
 
+  /**
+   * Decodes a cov splat.
+   *
+   * @param a The covA word.
+   * @param b The covB word.
+   */
   static decodeCov(a: TslNode, b: TslNode): CovSplatNode {
     return decodeCov(a, b);
   }
 
+  /**
+   * Encodes a cov splat.
+   *
+   * @return A struct of words a and b.
+   */
   static encodeCov(c: CovSplatNode): TslNode {
     return encodeCov(c);
   }
 
-  // `encoding`: a PackedEncoding or a vec4 node (GpuPackedSplatReader.encoding)
+  /**
+   * Decodes a packed splat.
+   *
+   * @param [encoding=Splats.DEFAULT_PACKED_ENCODING] A PackedEncoding or a vec4
+   *   node.
+   */
   static decodePacked(p: TslNode, encoding: PackedEncoding | TslNode = Splats.DEFAULT_PACKED_ENCODING): SplatNode {
     return decodePacked(p, encodingVec4(encoding));
   }
 
+  /**
+   * Encodes a packed splat.
+   *
+   * @param [encoding=Splats.DEFAULT_PACKED_ENCODING] A PackedEncoding or a vec4
+   *   node.
+   */
   static encodePacked(s: SplatNode, encoding: PackedEncoding | TslNode = Splats.DEFAULT_PACKED_ENCODING): TslNode {
     return encodePacked(s, encodingVec4(encoding));
   }
 
-  // Without pbr: no normal, roughness 0, metallic 0
+  /**
+   * Writes an ext splat to a writer's outputs.
+   *
+   * @param [pbr] Its PBR fields, by default no normal, roughness 0 and metallic
+   *   0.
+   */
   static storeExt(out: { extA: TslNode; extB: TslNode }, s: SplatNode, pbr?: PbrNode) {
     const encoded = encodeExt(s, pbr ?? PbrStruct(vec3(0.0), float(0.0), float(0.0))).toVar();
     out.extA.assign(encoded.get("a"));
     out.extB.assign(encoded.get("b"));
   }
 
+  /** Writes a cov splat to a writer's outputs. */
   static storeCov(out: { covA: TslNode; covB: TslNode }, c: CovSplatNode) {
     const encoded = encodeCov(c).toVar();
     out.covA.assign(encoded.get("a"));
     out.covB.assign(encoded.get("b"));
   }
 
+  /**
+   * Writes a packed splat to a writer's output.
+   *
+   * @param [encoding=Splats.DEFAULT_PACKED_ENCODING] A PackedEncoding or a vec4
+   *   node.
+   */
   static storePacked(out: { packed: TslNode }, s: SplatNode, encoding: PackedEncoding | TslNode = Splats.DEFAULT_PACKED_ENCODING) {
     out.packed.assign(encodePacked(s, encodingVec4(encoding)));
   }
 
-  // The covariance of a splat; the normal is zero
+  /** Converts a splat to covariance form, with a zero normal. */
   static toCov(s: SplatNode): CovSplatNode {
     return toCov(s);
   }
 
-  // Diagonalizes the covariance (a Jacobi eigen decomposition)
+  /** Converts a cov splat to 3DGS form by a Jacobi eigen decomposition. */
   static fromCov(c: CovSplatNode): SplatNode {
     return fromCov(c);
   }
 
-  // A generator's splat i in the 3DGS form, converted when it only has
-  // covariances (context: default the generator context Radix sets)
+  /**
+   * Generates a splat in 3DGS form, converting when the generator has only
+   * covariances.
+   *
+   * @param [context=SplatGenerator.context] The generator context.
+   */
   static splatOf(generator: AnySplatGenerator, index: TslNode, context: SplatGeneratorContext = generatorContext.nodes): SplatNode {
     return generator.generateSplat ? generator.generateSplat(index, context) : GpuSplats.fromCov(generator.generateCovSplat!(index, context));
   }
 
-  // A generator's splat i as a covariance, converted when it only has 3DGS splats
+  /**
+   * Generates a splat in covariance form, converting when the generator has
+   * only 3DGS splats.
+   *
+   * @param [context=SplatGenerator.context] The generator context.
+   */
   static covSplatOf(generator: AnySplatGenerator, index: TslNode, context: SplatGeneratorContext = generatorContext.nodes): CovSplatNode {
     return generator.generateCovSplat ? generator.generateCovSplat(index, context) : GpuSplats.toCov(generator.generateSplat!(index, context));
   }
 
-  // `node` (a splat struct) with its index field set
+  /**
+   * Sets a splat struct's index field.
+   *
+   * @return A var of the struct.
+   */
   static withIndex<N extends SplatNode | CovSplatNode>(node: N, index: TslNode): N {
     const v = (node as SplatNode).toVar();
     v.get("index").assign(uint(index));
     return v as N;
   }
 
-  // The unit axis of the smallest scale (a flat splat's normal), rotated
+  /**
+   * The rotated axis of a splat's smallest scale, a flat splat's normal.
+   *
+   * @return The unit normal.
+   */
   static normalOf(s: SplatNode): TslNode {
     const scales = s.get("scales").toVar();
     const axis = select(scales.x.lessThanEqual(min(scales.y, scales.z)), vec3(1.0, 0.0, 0.0), select(scales.y.lessThanEqual(scales.z), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)));

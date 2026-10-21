@@ -9,35 +9,38 @@ import type { ArrayWriter, WriteItem, WriteRange, WriterOutput } from "./GpuArra
 import { gpuFormatInfo } from "./gpuFormats";
 import { copyTexels, readTexels, uploadTexels } from "./textureIo";
 
+/** A channel of a GpuBundle, in an array texture. */
 export interface GpuChannel {
   format: ArrayFormat;
-  // One texel holds `packing` elements: "uint32" packed 4 is "uint32x4"
+  /** The format of a texel of packing elements, so uint32 packed 4 is uint32x4. */
   texelFormat: ArrayFormat;
   texture: THREE.DataArrayTexture;
-  // Compute shaders can write it (arrays made with storage: true, storable format)
+  /** Whether compute can write it, in storage arrays and storable formats. */
   storage: boolean;
 }
 
+/** A bundle's channels on the GPU. */
 export interface GpuBundle<D extends BundleDef = BundleDef> {
   def: D;
-  // ceil(capacity / packing) texels for every channel
+  /** The texture layout, ceil(capacity / packing) texels per channel. */
   layout: TextureLayout;
   channels: { [K in keyof D["channels"]]: GpuChannel };
+  /** The bundle's metadata, carried by upload, read and copyFrom. */
   meta: Record<string, unknown>;
 }
 
+/** The GPU bundles of a schema, by name. */
 export type GpuBundles<S extends Schema> = { [K in keyof S]: GpuBundle<S[K]> };
 
-// The writers arrays accept: fragment writers always, compute writers
-// (WgpuArrayWriter) only on arrays made with storage: true
+/**
+ * The writers GpuArrays accept. Compute writers need storage: true.
+ */
 export type WriterFor<Storage extends boolean> = [Storage] extends [true] ? ArrayWriter : ArrayWriter<Schema, false>;
 
 let nextTextureVersion = 1;
 
-// An array texture of `format` texels for `layout`, labeled `name` on the
-// GPU. Without `internalFormat` three picks one from format / type, which
-// only matches for 32-bit and float formats but has the right sampled type
-// (enough for placeholders).
+// Without internalFormat, three's choice is right only for 32-bit and float
+// formats, but its sampled type is right, which placeholders need
 export function makeArrayTexture(name: string, format: ArrayFormat, layout: TextureLayout, internalFormat?: string) {
   const info = gpuFormatInfo(format);
   const texture = new THREE.DataArrayTexture(null, layout.width, layout.height, layout.layers);
@@ -51,33 +54,40 @@ export function makeArrayTexture(name: string, format: ArrayFormat, layout: Text
   texture.colorSpace = THREE.NoColorSpace;
 
   texture.needsUpdate = true;
-  // Three only rebuilds a bind group for a texture whose version differs from
-  // the one bound, so a rebound reader would keep reading the old arrays if
-  // versions could be equal
+  // three rebuilds a bind group only when a texture's version differs, so
+  // versions are unique
   texture.version = nextTextureVersion++;
   // Texels go in through uploadTexels, never through three
   texture.source.dataReady = false;
   return texture;
 }
 
-// The GPU copy of an ArrayData schema: one array texture per channel, on
-// WebGPU or the WebGL2 backend. `count` elements are valid.
+/** An ArrayData schema on the GPU, one array texture per channel. */
 export class GpuArrays<S extends Schema = Schema, Storage extends boolean = boolean> {
   readonly renderer: WebGPURenderer;
   readonly schema: S;
-  // Storable channels can also be written from compute (wgpu/,
-  // WebGPU only)
+  /**
+   * Whether storable channels are writable from compute, on WebGPU only.
+   *
+   * @default false
+   */
   readonly storage: Storage;
+  /** The valid elements. */
   count = 0;
-  // Elements the textures hold, including the layout's padding
+  /** The elements the textures hold, including the layout's padding. */
   capacity = 0;
-  // Grows whenever these arrays' methods change their contents (upload,
-  // copyFrom, write, writeBatch, swap, a reallocation)
+  /** Grows whenever these methods change the contents. */
   version = 0;
   bundles: GpuBundles<S>;
-  // Render targets over channel textures, per output set
   private targets = new Map<string, THREE.RenderTarget>();
 
+  /**
+   * Allocates the textures of a schema.
+   *
+   * @param [options.capacity=1] The elements to hold.
+   * @param [options.storage=false] Whether storable channels are writable from
+   *   compute, which needs WebGPU.
+   */
   constructor({ renderer, bundles, capacity = 1, storage = false as Storage }: { renderer: WebGPURenderer; bundles: S; capacity?: number; storage?: Storage }) {
     if (storage && !isWebGPUBackend(renderer)) {
       throw new Error("GpuArrays with storage: true need the WebGPU backend");
@@ -89,7 +99,7 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     this.allocate(capacity);
   }
 
-  // Whether every channel of a bundle can live on the GPU
+  /** Tells whether every channel of a bundle can live on the GPU. */
   static supports(def: BundleDef) {
     return Object.values(def.channels).every((format) => {
       const { scalar, components } = ArrayFormats.info(format);
@@ -97,7 +107,12 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     });
   }
 
-  // GPU copy of `data` (its GPU-capable bundles, or `bundles`), uploaded
+  /**
+   * Uploads data's GPU-capable bundles, or the named ones.
+   *
+   * @param [options.storage=false] Whether storable channels are writable from
+   *   compute.
+   */
   static fromData<S extends Schema, Storage extends boolean = false>(renderer: WebGPURenderer, data: ArrayData<S>, { bundles, storage }: {
     bundles?: string[];
     storage?: Storage;
@@ -109,10 +124,17 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     return arrays;
   }
 
-  // Elements [srcStart, srcStart + count) of `data` to dstStart. With no
-  // range, all of data (growing; count = data.count). A range starting on a
-  // texture row is rounded up to whole rows, from data's spare capacity.
-  // Packed bundles need starts that are multiples of the packing.
+  /**
+   * Uploads elements of data, growing to fit when no range is given. Packed
+   * starts must be multiples of the packing, and a range starting on a row
+   * rounds up to whole rows.
+   *
+   * @param [options.bundles] The bundles to upload, by default those data
+   *   holds.
+   * @param [options.srcStart=0] The first element read.
+   * @param [options.dstStart=0] The first element written.
+   * @param [options.count=data.count - srcStart] The elements to upload.
+   */
   upload(data: ArrayData, { bundles, srcStart = 0, dstStart = 0, count }: {
     bundles?: string[];
     srcStart?: number;
@@ -164,8 +186,13 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     this.version += 1;
   }
 
-  // Elements [start, start + count) as an ArrayData of count elements (into
-  // `into` when given), every channel in its own typed array
+  /**
+   * Reads elements back into a new ArrayData, or into.
+   *
+   * @param [options.bundles] The bundles to read, by default all.
+   * @param [options.start=0] The first element.
+   * @param [options.count=count - start] The elements to read.
+   */
   async read({ bundles, start = 0, count = this.count - start, into }: {
     bundles?: string[];
     start?: number;
@@ -201,7 +228,14 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     return out;
   }
 
-  // GPU copy of elements from `src`, whose bundles must match
+  /**
+   * Copies elements from src on the GPU. The bundles must match.
+   *
+   * @param [options.bundles] The bundles to copy, by default those both hold.
+   * @param [options.srcStart=0] The first element read.
+   * @param [options.dstStart=0] The first element written.
+   * @param [options.count=src.count - srcStart] The elements to copy.
+   */
   copyFrom(src: GpuArrays, { bundles, srcStart = 0, dstStart = 0, count }: {
     bundles?: string[];
     srcStart?: number;
@@ -236,8 +270,12 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     this.version += 1;
   }
 
-  // Reallocate every texture: contents are discarded and count reset.
-  // Nothing happens when the layouts would stay the same.
+  /**
+   * Reallocates the textures, discarding the contents.
+   *
+   * @param capacity The elements to hold.
+   * @return False when the layouts stay the same.
+   */
   setCapacity(capacity: number) {
     const unchanged = Object.values(this.anyBundles).every((bundle) =>
       TextureLayout.for(Math.ceil(capacity / bundle.def.packing)).texels === bundle.layout.texels);
@@ -251,6 +289,12 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     return true;
   }
 
+  /**
+   * Grows at least twofold when smaller than capacity, discarding the contents.
+   *
+   * @param capacity The elements needed.
+   * @return Whether it reallocated.
+   */
   ensureCapacity(capacity: number) {
     if (capacity <= this.capacity) {
       return false;
@@ -258,22 +302,24 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     return this.setCapacity(Math.max(capacity, this.capacity * 2));
   }
 
-  // Whether compute can write these arrays (made with storage: true);
-  // narrows the type so compute writers are accepted
+  /**
+   * Narrows the type so compute writers are accepted.
+   *
+   * @return Whether compute can write these arrays.
+   */
   hasStorage(): this is GpuArrays<S, true> {
     return this.storage === true;
   }
 
-  // Run a writer (fragment GpuArrayWriter, or compute WgpuArrayWriter on
-  // storage arrays) over elements [at, at + count): count = max(count, end)
+  /** Runs a writer over a range, and count becomes at least its end. */
   write(writer: WriterFor<Storage>, range: WriteRange) {
     writer.run(this as unknown as GpuArrays, [{ writer, ...range }]);
     this.version += 1;
   }
 
-  // Several writers or ranges, each kind run together: fragment items
-  // overlapping a layer are drawn in that layer's single pass. Ranges
-  // should not overlap.
+  /**
+   * Runs each writer kind together. Ranges should not overlap.
+   */
   writeBatch(items: (WriteRange & { writer: WriterFor<Storage> })[]) {
     const kinds = new Map<ArrayWriter["run"], WriteItem[]>();
     for (const item of items) {
@@ -285,8 +331,11 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     this.version += 1;
   }
 
-  // Swap contents with `other` (same renderer). Readers bound to either
-  // must be bound again.
+  /**
+   * Swaps contents with other. Readers bound to either must be bound again.
+   *
+   * @param other Arrays of the same renderer and storage.
+   */
   swap(other: GpuArrays<S, Storage>) {
     if (other.renderer !== this.renderer || other.storage !== this.storage) {
       throw new Error("Cannot swap arrays of different renderers or storage settings");
@@ -299,7 +348,7 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     other.version += 1;
   }
 
-  // A render target whose attachments are these channel textures (cached)
+  /** A cached render target over these channel textures. */
   renderTarget(outputs: WriterOutput[]): THREE.RenderTarget {
     const key = outputs.map(({ bundle, channel }) => `${bundle}.${channel}`).join(",");
     let target = this.targets.get(key);
@@ -314,9 +363,8 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
       target = new THREE.RenderTarget(layout.width, layout.height, { depth: layout.layers, depthBuffer: false, count: outputs.length });
       target.textures = textures;
       if (this.storage) {
-        // On a target's first use three sees its size change from nothing
-        // and flags the attachments for update, which recreates storage
-        // textures (losing their texels), so record the size it compares
+        // On first use three sees the size change and recreates storage textures,
+        // losing their texels, so set the size it compares
         const textureData = (this.renderer as unknown as { _textures: { get(object: object): Record<string, unknown> } })._textures.get(target);
         Object.assign(textureData, { width: layout.width, height: layout.height, sampleCount: 1 });
       }
@@ -325,6 +373,7 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
     return target;
   }
 
+  /** A bundle by name, throwing when it is missing. */
   bundle(name: string): GpuBundle {
     const bundle = this.anyBundles[name];
     if (!bundle) {
@@ -361,8 +410,7 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
         const texture = makeArrayTexture(`radix_${name}_${label}`, texelFormat, layout, webgpu ? info.webgpu : info.gl);
         const storage = this.storage && info.storable;
         if (storage) {
-          // STORAGE_BINDING usage; isArrayTexture makes the WGSL builder
-          // declare texture_storage_2d_array
+          // STORAGE_BINDING usage, and texture_storage_2d_array in WGSL
           Object.assign(texture, { isStorageTexture: true, isArrayTexture: true });
         }
         this.renderer.initTexture(texture);
@@ -393,7 +441,7 @@ export class GpuArrays<S extends Schema = Schema, Storage extends boolean = bool
   }
 }
 
-// values[start, start + length), zero-padded when the array ends early
+// Zero-padded when values end early
 function padded(values: TypedArray, start: number, length: number): TypedArray {
   if (start + length <= values.length) {
     return values.subarray(start, start + length) as TypedArray;

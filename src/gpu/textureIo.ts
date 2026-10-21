@@ -5,9 +5,7 @@ import type { CopySpan, TexelSpan } from "../core/layout";
 import { backendOf, glTextureOf, gpuTextureOf } from "./backend";
 import { gpuFormatInfo } from "./gpuFormats";
 
-// Raw texel transfers between CPU arrays and array textures, and between
-// textures, on either backend. `values` / `dest` hold whole texels of
-// `format` starting at span offset 0.
+// values and dest hold whole texels from span offset 0
 
 export function uploadTexels(renderer: WebGPURenderer, texture: THREE.Texture, format: ArrayFormat, spans: TexelSpan[], values: TypedArray) {
   const { bytes, components } = ArrayFormats.info(format);
@@ -36,7 +34,7 @@ export function uploadTexels(renderer: WebGPURenderer, texture: THREE.Texture, f
   });
 }
 
-// Texels beyond dest's length are dropped (a partly used last texel)
+// Drops texels past dest's length
 export async function readTexels(renderer: WebGPURenderer, texture: THREE.Texture, format: ArrayFormat, spans: TexelSpan[], dest: TypedArray) {
   const backend = backendOf(renderer);
   if (backend.isWebGPUBackend) {
@@ -81,7 +79,7 @@ export function copyTexels(renderer: WebGPURenderer, src: THREE.Texture, dst: TH
 async function readWebGPU(device: GPUDevice, texture: GPUTexture, format: ArrayFormat, spans: TexelSpan[], dest: TypedArray) {
   const { bytes } = ArrayFormats.info(format);
 
-  // copyTextureToBuffer needs bytesPerRow (and so offsets) aligned to 256
+  // copyTextureToBuffer needs bytesPerRow aligned to 256
   const align = (n: number) => Math.ceil(n / 256) * 256;
   const offsets: number[] = [];
   let size = 0;
@@ -105,7 +103,7 @@ async function readWebGPU(device: GPUDevice, texture: GPUTexture, format: ArrayF
   const mapped = new Uint8Array(buffer.getMappedRange());
   const out = new Uint8Array(dest.buffer, dest.byteOffset, dest.byteLength);
 
-  // Rows are 256-byte aligned in the buffer, tightly packed in dest
+  // Rows are 256-byte aligned in the buffer, packed in dest
   spans.forEach((span, i) => {
     for (let row = 0; row < span.rows; row += 1) {
       const at = (span.offset + row * span.width) * bytes;
@@ -121,8 +119,7 @@ async function readWebGPU(device: GPUDevice, texture: GPUTexture, format: ArrayF
   buffer.destroy();
 }
 
-// WebGL2 only guarantees readPixels of RGBA with the widest type of the
-// format's kind, so read that and narrow each texel into dest
+// WebGL2 only guarantees RGBA readPixels of the widest type, so narrow into dest
 async function readWebGL(gl: WebGL2RenderingContext, texture: WebGLTexture, format: ArrayFormat, spans: TexelSpan[], dest: TypedArray) {
   const info = gpuFormatInfo(format);
   if (info.scalar === "snorm8") {
@@ -136,7 +133,6 @@ async function readWebGL(gl: WebGL2RenderingContext, texture: WebGLTexture, form
   const texelBytes = 4 * read.array.BYTES_PER_ELEMENT;
   const total = spans.reduce((sum, span) => sum + span.width * span.rows, 0);
 
-  // Queue every span into one pixel pack buffer, then wait on a fence
   const pack = gl.createBuffer();
   withGlState(gl, () => {
     const framebuffer = gl.createFramebuffer();
@@ -158,7 +154,6 @@ async function readWebGL(gl: WebGL2RenderingContext, texture: WebGLTexture, form
   const components = info.components;
   const half = info.scalar === "float16";
 
-  // RGBA texels of dest's own type: straight from the buffer into dest
   if (components === 4 && !half && dest instanceof read.array) {
     withGlState(gl, () => {
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pack);
@@ -182,7 +177,6 @@ async function readWebGL(gl: WebGL2RenderingContext, texture: WebGLTexture, form
   });
   gl.deleteBuffer(pack);
 
-  // Keep the format's components of each RGBA texel
   let at = 0;
   for (const span of spans) {
     for (let i = 0; i < span.width * span.rows; i += 1, at += 1) {
@@ -215,8 +209,7 @@ async function glFence(gl: WebGL2RenderingContext) {
   }
 }
 
-// Three caches GL bindings, so restore every binding and unpack parameter
-// these transfers touch
+// three caches GL bindings, so restore every binding and parameter touched
 function withGlState(gl: WebGL2RenderingContext, fn: () => void) {
   const bindings = {
     readFramebuffer: gl.getParameter(gl.READ_FRAMEBUFFER_BINDING),
@@ -254,7 +247,7 @@ function glEnum(gl: WebGL2RenderingContext, name: string): number {
 const floatView = new Float32Array(1);
 const bitsView = new Uint32Array(floatView.buffer);
 
-// Half-float bits of a float that came from a half-float texture (exact)
+// Exact for values read from half-float textures
 function toHalfBits(value: number) {
   floatView[0] = value;
   const bits = bitsView[0];

@@ -1,8 +1,5 @@
-// TSL twin of core/encoding.ts (Encoding): the same layouts as the CPU.
-// Half floats use the GPU's packHalf2x16 / unpackHalf2x16; Math.round is
-// floor(x + 0.5). Where f32 math (or the GPU's half rounding) meets a
-// rounding boundary that the CPU's f64 lands on the other side of, a code
-// can come out one step off.
+// Math.round is floor(x + 0.5). Near a rounding boundary f32 math can leave a
+// code one step off the CPU's f64 result.
 import { TSL, type TslNode } from "./tsl";
 
 const {
@@ -15,13 +12,12 @@ const PI = Math.PI;
 // Math.round for x >= 0
 export const roundHalfUp = (x: TslNode) => floor(x.add(0.5));
 
-// 8-bit magnitudes, 3 sign bits and a 5-bit shared exponent
 const encodeExtRgb = Fn(([rgb]: [TslNode]) => {
   const absRgb = abs(rgb).toVar();
   const maxAbs = max(absRgb.x, max(absRgb.y, absRgb.z)).toVar();
   const base = clamp(int(select(maxAbs.greaterThan(0.0), ceil(log2(maxAbs)), float(0.0))).add(int(15)), int(0), int(31)).toVar();
-  // 255 * 2^(15 - base), 2^(15 - base) from its float bits (exponent field
-  // 142 - base): exact, so halfway magnitudes round up as on the CPU
+  // 255 * 2^(15 - base) from float bits, exact so halfway magnitudes round up
+  // as on the CPU
   const scale = uintBitsToFloat(uint(int(142).sub(base)).shiftLeft(uint(23))).mul(255.0).toVar();
   const magnitude = (v: TslNode) => uint(min(roundHalfUp(v.mul(scale)), 255.0));
 
@@ -33,8 +29,7 @@ const encodeExtRgb = Fn(([rgb]: [TslNode]) => {
 });
 
 const decodeExtRgb = Fn(([encoded]: [TslNode]) => {
-  // 2^(e - 15) from its float bits (exponent field e + 112), not exp2: exact
-  // and no transcendental
+  // 2^(e - 15) from float bits, exact and cheaper than exp2
   const unit = uintBitsToFloat(encoded.shiftRight(uint(27)).add(uint(112)).shiftLeft(uint(23))).div(255.0).toVar();
   const channel = (shift: number, signBit: number) => {
     const value = float(encoded.shiftRight(uint(shift)).bitAnd(uint(0xff))).mul(unit);
@@ -42,8 +37,6 @@ const decodeExtRgb = Fn(([encoded]: [TslNode]) => {
   };
   return vec3(channel(0, 0x1000000), channel(8, 0x2000000), channel(16, 0x4000000));
 });
-
-// --- Octahedral directions and quaternions, one function per size ---
 
 const octDecoders = new Map<number, TslNode>();
 const octEncoders = new Map<number, TslNode>();
@@ -67,8 +60,7 @@ function octDecoder(bits: number) {
   return decode;
 }
 
-// Folded onto the octahedron, each coordinate rounded; a direction rounding
-// to code 0 (which means "no vector") gets the all-ones code, the same -Z
+// Code 0 means no vector, so a direction rounding to it gets all ones, also -Z
 function octEncoder(bits: number) {
   let encode = octEncoders.get(bits);
   if (!encode) {
@@ -95,8 +87,6 @@ function octEncoder(bits: number) {
   return encode;
 }
 
-// Axis (octahedral, 2 * axisBits) in the low bits, angle 0..pi above, for
-// the quaternion with w >= 0; a zero quaternion encodes as 0 (identity)
 function encodeQuatOct(q: TslNode, axisBits: number, angleBits: number): TslNode {
   const angleMax = 2 ** angleBits - 1;
   const result = uint(0).toVar();
@@ -117,78 +107,104 @@ function decodeQuatOct(code: TslNode, axisBits: number, angleBits: number): TslN
   return vec4(axis.mul(sin(half)), cos(half));
 }
 
-// Scalar and vector packers in TSL. Fixed-size codecs name the total bits
-// of the code: Oct24 is a 12 + 12 bit octahedral direction, QuatOct32 a 10
-// + 10 bit octahedral axis and a 12-bit angle, QuatOct24 8 + 8 and 8.
+/** The TSL twin of Encoding, with the same bit layouts. */
 export class GpuEncoding {
-  // Half-float bits of a float, in the low 16 bits of a uint
+  /** Encodes a float as half-float bits in the low 16 bits. */
   static encodeHalf(f: TslNode): TslNode {
     return packHalf2x16(vec2(f, 0.0)).bitAnd(uint(0xffff));
   }
 
-  // Two half floats in one uint: x low, y high
+  /** Encodes two half floats in a uint, x in the low 16 bits and y in the high. */
   static encodeHalf2(v: TslNode): TslNode {
     return packHalf2x16(v);
   }
 
+  /** Decodes two half floats, x from the low 16 bits and y from the high. */
   static decodeHalf2(word: TslNode): TslNode {
     return unpackHalf2x16(word);
   }
 
-  // Float of the half bits in the low 16 bits of h
+  /** Decodes the half float in the low 16 bits. */
   static decodeHalf(h: TslNode): TslNode {
     return unpackHalf2x16(h.bitAnd(uint(0xffff))).x;
   }
 
+  /** Encodes a value from 0 to 1 as a byte, clamping it. */
   static encodeUnorm8(v: TslNode): TslNode {
     return uint(roundHalfUp(clamp(v, 0.0, 1.0).mul(255.0)));
   }
 
-  // 128 = 1.0, up to 255 / 128
+  /** Encodes an opacity as a byte where 128 is 1, up to 255 / 128. */
   static encodeLodOpacity(opacity: TslNode): TslNode {
     return uint(clamp(roundHalfUp(max(opacity, 0.0).mul(128.0)), 0.0, 255.0));
   }
 
+  /** Decodes an opacity byte where 128 is 1. */
   static decodeLodOpacity(byte: TslNode): TslNode {
     return float(byte).div(128.0);
   }
 
+  /** Encodes RGB as 8-bit magnitudes, 3 sign bits and a 5-bit shared exponent. */
   static readonly encodeExtRgb: (rgb: TslNode) => TslNode = encodeExtRgb;
+  /** Decodes RGB from 8-bit magnitudes, 3 sign bits and a 5-bit shared exponent. */
   static readonly decodeExtRgb: (encoded: TslNode) => TslNode = decodeExtRgb;
 
-  // Octahedral direction with `bits` per axis (a JavaScript number: the
-  // shader is specialized to it)
+  /**
+   * Encodes a direction as an octahedral code.
+   *
+   * @param bits Bits per axis, a number the shader is specialized to.
+   * @return The code, 0 for a zero vector.
+   */
   static encodeOct(v: TslNode, bits: number): TslNode {
     return octEncoder(bits)(v);
   }
 
+  /**
+   * Decodes an octahedral code.
+   *
+   * @param bits Bits per axis.
+   * @return The unit direction, zero for code 0.
+   */
   static decodeOct(code: TslNode, bits: number): TslNode {
     return octDecoder(bits)(code);
   }
 
+  /**
+   * Encodes a quaternion as an octahedral axis in the low 2 * axisBits bits and
+   * an angle from 0 to pi above, with w >= 0.
+   *
+   * @return The code, 0 for a zero quaternion.
+   */
   static readonly encodeQuatOct = encodeQuatOct;
+  /** Decodes a quaternion from an octahedral axis and an angle. */
   static readonly decodeQuatOct = decodeQuatOct;
 
+  /** Encodes a direction in 12 + 12 bits. */
   static encodeOct24(v: TslNode): TslNode {
     return octEncoder(12)(v);
   }
 
+  /** Decodes a direction from 12 + 12 bits. */
   static decodeOct24(code: TslNode): TslNode {
     return octDecoder(12)(code);
   }
 
+  /** Encodes a quaternion as a 10 + 10 bit axis and a 12-bit angle. */
   static encodeQuatOct32(q: TslNode): TslNode {
     return encodeQuatOct(q, 10, 12);
   }
 
+  /** Decodes a quaternion from a 10 + 10 bit axis and a 12-bit angle. */
   static decodeQuatOct32(code: TslNode): TslNode {
     return decodeQuatOct(code, 10, 12);
   }
 
+  /** Encodes a quaternion as an 8 + 8 bit axis and an 8-bit angle. */
   static encodeQuatOct24(q: TslNode): TslNode {
     return encodeQuatOct(q, 8, 8);
   }
 
+  /** Decodes a quaternion from an 8 + 8 bit axis and an 8-bit angle. */
   static decodeQuatOct24(code: TslNode): TslNode {
     return decodeQuatOct(code, 8, 8);
   }

@@ -5,44 +5,78 @@ import { WEBGL2_BASELINE, WEBGL2_OPTIONAL_EXTENSIONS, WEBGL2_REQUIRED_EXTENSIONS
 import { GpuProfiler } from "./GpuProfiler";
 import { Hdr } from "./hdr";
 
+/** The backend a renderer runs on, WebGPU or three's WebGL2 backend. */
 export type GpuBackend = "webgpu" | "webgpu-gl";
 
-// A requested WebGPU limit: a target (capped at the adapter's) or "adapter"
-// for the adapter's full limit
+/** A WebGPU limit to request, capped at the adapter's, or "adapter" for its full limit. */
 export type LimitRequest = number | "adapter";
 
+/** The options of createRenderer. */
 export interface CreateRendererOptions {
-  // "auto": WebGPU when available, else the WebGL2 backend
+  /**
+   * The backend, where "auto" uses WebGPU when available, else WebGL2.
+   *
+   * @default "auto"
+   */
   backend?: GpuBackend | "auto";
   canvas?: HTMLCanvasElement;
   antialias?: boolean;
-  // Enable renderer.xr before init: the WebGPU adapter must be requested
-  // XR-compatible for the WebXR / WebGPU binding
+  /**
+   * Whether to enable renderer.xr before init, so the WebGPU adapter is
+   * XR-compatible.
+   *
+   * @default false
+   */
   xr?: boolean;
-  // GPU timestamp queries; see also `profile`
+  /**
+   * Whether to make GPU timestamp queries, which WebGL2 keeps only with
+   * profile.
+   *
+   * @default false
+   */
   timing?: boolean;
-  // Timestamp queries plus a GpuProfiler as renderer.inspector (WebGPU, or
-  // WebGL2 with EXT_disjoint_timer_query_webgl2)
+  /**
+   * Whether to add timestamp queries and a GpuProfiler as renderer.inspector.
+   *
+   * @default false
+   */
   profile?: boolean;
-  // Both XR eyes in one draw where supported: OVR_multiview2 on the WebGL2
-  // backend (three's WebGPU XR has no multiview yet)
+  /**
+   * Whether to draw both XR eyes at once, on WebGL2 with OVR_multiview2 only.
+   *
+   * @default false
+   */
   multiview?: boolean;
-  // On by default: draw straight to the canvas instead of through three's
-  // linear intermediate target and output pass; materials then write
-  // sRGB-encoded colors themselves
+  /**
+   * Whether to draw without a linear target or output pass, so materials write
+   * sRGB-encoded colors.
+   *
+   * @default true
+   */
   directCanvas?: boolean;
-  // rgba16float canvas with extended tone mapping on WebGPU (hdr.ts): true,
-  // "auto" (when the display reports high dynamic range) or false.
-  // getGpuCaps().hdr tells whether it took.
+  /**
+   * Whether to make an rgba16float canvas with extended tone mapping on WebGPU,
+   * or "auto" for HDR displays.
+   *
+   * @default false
+   */
   hdr?: boolean | "auto";
-  // Added to or replacing WEBGPU_BASELINE_LIMITS
+  /** WebGPU limits added to or replacing the baselines. */
   limits?: Record<string, LimitRequest>;
-  // A logarithmic depth buffer, for scenes from centimeters to kilometers
+  /**
+   * Whether to use a logarithmic depth buffer.
+   *
+   * @default false
+   */
   logarithmicDepthBuffer?: boolean;
 }
 
-// A WebGPURenderer on WebGPU or its WebGL2 fallback, initialized, asking for
-// the device baselines in baseline.ts
+/**
+ * Creates a WebGPURenderer on WebGPU or WebGL2, requesting the device
+ * baselines.
+ *
+ * @return The renderer, once initialized.
+ */
 export async function createRenderer(options: CreateRendererOptions = {}): Promise<WebGPURenderer> {
   const requested = options.backend ?? "auto";
   const profile = options.profile ?? false;
@@ -62,21 +96,20 @@ export async function createRenderer(options: CreateRendererOptions = {}): Promi
     trackTimestamp: timing,
     multiview,
     logarithmicDepthBuffer: options.logarithmicDepthBuffer ?? false,
-    // three configures an rgba16float canvas with extended tone mapping for this
+    // three makes this an rgba16float canvas with extended tone mapping
     ...(hdr ? { outputType: THREE.HalfFloatType } : {}),
     ...(requiredLimits ? { requiredLimits } : {}),
   });
   renderer.xr.enabled = xr;
   await renderer.init();
 
-  // WebGPURenderer falls back to WebGL2 by itself when device creation fails
+  // three falls back to WebGL2 when device creation fails
   const internals = backendOf(renderer) as { trackTimestamp?: boolean; gl?: WebGL2RenderingContext };
   if (internals.gl) {
     if (requested === "webgpu") {
       console.warn("WebGPU unavailable, using the WebGL2 backend");
     }
-    // Its timer queries cannot nest, so only profiling (whose phases render
-    // outside the frame's passes) keeps them
+    // WebGL2 timer queries cannot nest, so only profiling keeps them
     internals.trackTimestamp = profile && internals.gl.getExtension("EXT_disjoint_timer_query_webgl2") !== null;
     checkWebGL2(internals.gl);
   }
@@ -94,11 +127,9 @@ export async function createRenderer(options: CreateRendererOptions = {}): Promi
   return renderer;
 }
 
-// WEBGPU_BASELINE_LIMITS merged with `overrides`, each capped at the
-// adapter's value so the device request cannot fail. The adapter is
-// requested the way WebGPUBackend.init requests its own. Limits it does not
-// name are skipped (requestDevice rejects unknown keys), as are values no
-// better than the default.
+// Each limit is capped at the adapter's so requestDevice cannot fail, and the
+// adapter is requested as WebGPUBackend.init does. Unknown keys, which
+// requestDevice rejects, and values no better than the default are dropped.
 async function adapterLimits(xrCompatible: boolean, overrides: Record<string, LimitRequest> = {}) {
   const adapter = await navigator.gpu.requestAdapter({ featureLevel: "compatibility", xrCompatible } as GPURequestAdapterOptions);
   if (!adapter) {
@@ -113,7 +144,7 @@ async function adapterLimits(xrCompatible: boolean, overrides: Record<string, Li
       continue;
     }
 
-    // min* limits (alignments) are better when lower
+    // The min* limits are alignments, better when lower
     const lowerIsBetter = name.startsWith("min");
     const available = supported[name];
     let value = available;
@@ -155,29 +186,36 @@ function checkWebGL2(gl: WebGL2RenderingContext) {
   }
 }
 
+/** What a renderer's device supports. */
 export interface GpuCaps {
   backend: GpuBackend;
-  // Compute shaders, storage buffers and textures (WebGPU only)
+  /** Whether compute shaders and storage resources are available, on WebGPU only. */
   compute: boolean;
+  /** The largest texture width or height, in texels. */
   maxTextureSize: number;
   maxTextureLayers: number;
   maxColorAttachments: number;
+  /**
+   * The most sampled textures per shader stage, on WebGL2 the lower of the
+   * fragment and vertex units.
+   */
   maxTexturesPerStage: number;
+  /** The most storage textures per shader stage, 0 on WebGL2. */
   maxStorageTexturesPerStage: number;
+  /** The most storage buffers per shader stage, 0 on WebGL2. */
   maxStorageBuffersPerStage: number;
+  /** Workgroup storage in bytes, 0 on WebGL2. */
   maxWorkgroupStorage: number;
   float32Blendable: boolean;
   float32Filterable: boolean;
-  // WebGPU subgroup operations
   subgroups: boolean;
-  // Both eyes in one draw: OVR_multiview2 on the WebGL2 backend, the WebGPU
-  // multiview feature (not yet used by three's WebGPU XR), or neither
+  /** Both XR eyes in one draw, with OVR_multiview2 on WebGL2 or the WebGPU feature. */
   multiview: "ovr" | "webgpu" | false;
-  // The canvas shows values above 1 brighter than white (createRenderer({ hdr }))
+  /** Whether the canvas shows values above 1 brighter than white. */
   hdr: boolean;
 }
 
-// Valid after createRenderer (the renderer is initialized)
+/** Reads what the device of an initialized renderer supports. */
 export function getGpuCaps(renderer: WebGPURenderer): GpuCaps {
   const backend = backendOf(renderer);
   if (backend.isWebGPUBackend) {

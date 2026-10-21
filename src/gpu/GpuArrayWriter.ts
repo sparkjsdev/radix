@@ -10,48 +10,59 @@ import { TSL, type TslNode } from "./tsl";
 
 const { Discard, If, float, int, ivec4, mix, positionGeometry, uint, uniform, uvec2, uvec4, vec4 } = TSL;
 
-// Limits of one writer on both backends: WebGL2 MAX_DRAW_BUFFERS is 4 on
-// 100% of devices, WebGPU maxColorAttachmentBytesPerSample 64 on 98%
+// The WebGL2 baseline's 4 draw buffers and WebGPU's 64 bytes per sample
 const MAX_WRITER_CHANNELS = 4;
 const MAX_WRITER_BYTES = 64;
 
-// One TSL var per output channel, typed by its texel format
+/** A TSL var per output channel. */
 export type WriterOutputs<O extends Schema> = { [B in keyof O]: { [C in keyof O[B]["channels"]]: TslNode } };
 
+/** The elements a writer writes. */
 export interface WriteRange {
-  // First element written and number of elements; for packed bundles both
-  // are multiples of the packing (count is rounded up)
+  /**
+   * The first element, a multiple of the packing.
+   *
+   * @default 0
+   */
   at?: number;
+  /** The elements to write, rounded up to a multiple of the packing. */
   count: number;
-  // Index write() sees at element `at` (default 0)
+  /**
+   * The index write() gets for element at.
+   *
+   * @default 0
+   */
   first?: number;
 }
 
+/** An output channel of a writer. */
 export interface WriterOutput {
   bundle: string;
   channel: string;
   texelFormat: ArrayFormat;
 }
 
-// What GpuArrays.write / writeBatch run: a fragment GpuArrayWriter or a
-// compute WgpuArrayWriter (wgpu/), with the same outputs and write()
+/** A writer GpuArrays.write runs, a fragment GpuArrayWriter or a compute WgpuArrayWriter. */
 export interface ArrayWriter<O extends Schema = Schema, Storage extends boolean = boolean> {
   readonly outputs: O;
+  /** The elements per texel. */
   readonly packing: number;
-  // Channels in output order
+  /** The channels in output order. */
   readonly channels: WriterOutput[];
-  // Whether it writes from compute, into arrays made with storage: true
+  /** Whether it writes from compute, into storage arrays. */
   readonly storage: Storage;
-  // Runs items of writers of this kind (the same function for all of
-  // them, so writeBatch groups by it)
+  /**
+   * Runs items of writers of this kind. It is one function per kind, so
+   * writeBatch groups by it.
+   */
   readonly run: (arrays: GpuArrays, items: WriteItem[]) => void;
 }
 
+/** A range and its writer. */
 export interface WriteItem extends WriteRange {
   writer: ArrayWriter;
 }
 
-// The channels of `outputs` and their shared packing
 export function writerChannels(outputs: Schema): { channels: WriterOutput[]; packing: number } {
   const channels: WriterOutput[] = [];
   const packings = new Set<number>();
@@ -71,8 +82,7 @@ export function writerChannels(outputs: Schema): { channels: WriterOutput[]; pac
   return { channels, packing: [...packings][0] };
 }
 
-// A zeroed TSL var per channel, as write(index, out) receives them, in
-// channel order
+// Zeroed, as write(index, out) receives them
 export function writerVars(channels: WriterOutput[]) {
   const out: Record<string, Record<string, TslNode>> = {};
   const vars = channels.map(({ bundle, channel, texelFormat }) => {
@@ -83,7 +93,7 @@ export function writerVars(channels: WriterOutput[]) {
   return { out, vars };
 }
 
-// Checks an item against `arrays`; its range in texels
+// Validates an item, returning its range in texels
 export function writeItemTexels(arrays: GpuArrays, item: WriteItem) {
   const { writer } = item;
   const at = item.at ?? 0;
@@ -101,7 +111,6 @@ export function writeItemTexels(arrays: GpuArrays, item: WriteItem) {
   return { start: at / writer.packing, end: Math.ceil((at + item.count) / writer.packing) };
 }
 
-// count = max(count, end) for every item written
 export function countWrites(arrays: GpuArrays, items: WriteItem[]) {
   for (const item of items) {
     if (item.count > 0) {
@@ -110,27 +119,31 @@ export function countWrites(arrays: GpuArrays, items: WriteItem[]) {
   }
 }
 
-// Writes bundles of a GpuArrays from TSL: write(index, out) assigns one
-// value per output channel (a whole texel). Runs as a fragment pass on
-// both backends (GpuArrays.write / writeBatch). With packing p, each call
-// writes p elements at once and `index` is the first of them.
+/** Writes bundles from TSL in a fragment pass, a whole texel per call starting at element index. */
 export class GpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O, false> {
-  // Output channels and bytes per texel one writer may have
   static readonly MAX_CHANNELS = MAX_WRITER_CHANNELS;
+  /** Bytes per texel, with rgba8unorm counted as 8. */
   static readonly MAX_BYTES = MAX_WRITER_BYTES;
 
   readonly outputs: O;
+  /** The elements per texel. */
   readonly packing: number;
-  // Channels in attachment order
+  /** The channels in attachment order. */
   readonly channels: WriterOutput[];
   readonly material: NodeMaterial;
   readonly storage = false;
   readonly run = runWriters;
 
+  /**
+   * Builds the fragment pass.
+   *
+   * @param options.write Assigns each output channel a texel for index.
+   * @param [options.label] Names the pipeline in WebGPU errors and debuggers,
+   *   by default after the channels.
+   */
   constructor({ outputs, write, label }: {
     outputs: O;
     write: (index: TslNode, out: WriterOutputs<O>) => void;
-    // Names the render pipeline and its shaders in WebGPU errors and debuggers
     label?: string;
   }) {
     this.outputs = outputs;
@@ -159,9 +172,7 @@ export class GpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O,
     const height = range("height");
     const flip = uniform(1).onObjectUpdate(({ object }: { object: THREE.Object3D }) => (object.userData as DrawRange).flip);
 
-    // The quad covers rows [rowStart, rowEnd) of the layer. Fragment
-    // coordinates count texture rows top-down on WebGPU and bottom-up on
-    // WebGL, so flip is -1 there.
+    // Fragment rows run top-down on WebGPU and bottom-up on WebGL, hence flip
     const row = mix(float(rowStart), float(rowEnd), positionGeometry.y);
     this.material = new NodeMaterial();
     this.material.name = label ?? `radix_write_${channels.map(({ bundle, channel }) => `${bundle}_${channel}`).join("_")}`;
@@ -190,7 +201,7 @@ export class GpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O,
   }
 }
 
-// Per-draw values read by the writer's uniforms (mesh.userData), in texels
+// Per-draw values in texels, read from mesh.userData
 interface DrawRange {
   start: number;
   end: number;
@@ -216,14 +227,11 @@ const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const meshes: THREE.Mesh[] = [];
 
-// Run GpuArrayWriter `items` into `arrays`: one render pass per layer and
-// output set, with every item overlapping that layer drawn in it. Items
-// should not overlap.
+// One render pass per layer and output set. Items should not overlap.
 export function runWriters(arrays: GpuArrays, items: WriteItem[]) {
   const renderer = arrays.renderer;
   const flip = isWebGPUBackend(renderer) ? 1 : -1;
 
-  // Grouped by render target (output set)
   const groups = new Map<THREE.RenderTarget, DrawItem[]>();
   for (const item of items) {
     if (item.count <= 0) {
@@ -253,7 +261,6 @@ export function runWriters(arrays: GpuArrays, items: WriteItem[]) {
       const lastLayer = Math.max(...group.map((item) => Math.floor((item.end - 1) / layerSize)));
 
       for (let layer = firstLayer; layer <= lastLayer; layer += 1) {
-        // One quad per item overlapping this layer, over the item's rows
         scene.clear();
         for (const item of group) {
           const start = Math.max(item.start, layer * layerSize);
@@ -295,8 +302,7 @@ interface DrawItem {
   first: number;
 }
 
-// Fragment outputs and storage writes take 4 components; the texture keeps
-// what its format has
+// Fragment outputs and storage writes take 4 components
 export function widen(texelFormat: ArrayFormat, value: TslNode): TslNode {
   const { components, kind } = gpuFormatInfo(texelFormat);
   if (components === 4) {
@@ -307,8 +313,7 @@ export function widen(texelFormat: ArrayFormat, value: TslNode): TslNode {
   return components === 1 ? make(value, zero, zero, zero) : make(value, zero, zero);
 }
 
-// Raw fragment coordinate (gl_FragCoord.xy / @builtin(position).xy) without
-// TSL's y-flip, so y indexes texture memory rows on both backends
+// gl_FragCoord.xy without TSL's y-flip, so y is the texture row on both backends
 class FragCoordNode extends Node {
   constructor() {
     super("vec2");
@@ -319,11 +324,9 @@ class FragCoordNode extends Node {
   }
 }
 
-// MRT output whose members come from a TSL body run in its own stack. The
-// builders detect MRT by `fragmentNode.isOutputStructNode`, so the struct
-// itself must be the fragmentNode (a Fn wrapper hides it, and mrt() coerces
-// members to vec4). The body's statements go into a stack that becomes the
-// first member, so they are emitted before any member is read.
+// Builders detect MRT by fragmentNode.isOutputStructNode, so the struct must
+// be the fragmentNode, not in a Fn, and mrt() would coerce members to vec4.
+// The body runs in a stack that becomes the first member, so it comes first.
 class WriterOutputNode extends OutputStructNode {
   private body: () => TslNode[];
   constructor(body: () => TslNode[]) {

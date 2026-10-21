@@ -1,5 +1,3 @@
-// TSL twin of core/math.ts (SplatMath): quaternions, rotation matrices and
-// covariances of splats in shaders
 import { TSL, type TslNode } from "./tsl";
 
 const { Break, Fn, If, Loop, abs, atan, cos, cross, dot, float, int, inverseSqrt, mat3, max, normalize, select, sin, struct, transpose, vec3, vec4 } = TSL;
@@ -8,13 +6,11 @@ const Eigens = struct({ values: "vec3", basis: "mat3" }, "SplatEigens");
 
 const at = (m: TslNode, col: TslNode | number, row: TslNode | number) => m.element(col).element(row);
 
-// Rotate v by the unit quaternion q
 const quatRotate = Fn(([q, v]: [TslNode, TslNode]) => {
   const t = cross(q.xyz, v).mul(2.0).toVar();
   return v.add(q.w.mul(t)).add(cross(q.xyz, t));
 });
 
-// q1 applied after q2
 const quatMul = Fn(([q1, q2]: [TslNode, TslNode]) => vec4(
   q1.w.mul(q2.x).add(q1.x.mul(q2.w)).add(q1.y.mul(q2.z)).sub(q1.z.mul(q2.y)),
   q1.w.mul(q2.y).sub(q1.x.mul(q2.z)).add(q1.y.mul(q2.w)).add(q1.z.mul(q2.x)),
@@ -22,7 +18,6 @@ const quatMul = Fn(([q1, q2]: [TslNode, TslNode]) => vec4(
   q1.w.mul(q2.w).sub(q1.x.mul(q2.x)).sub(q1.y.mul(q2.y)).sub(q1.z.mul(q2.z)),
 ));
 
-// Columns: R(q) * diag(s)
 const scaleQuatMatrix = Fn(([s, q]: [TslNode, TslNode]) => {
   return mat3(
     vec3(
@@ -43,8 +38,7 @@ const scaleQuatMatrix = Fn(([s, q]: [TslNode, TslNode]) => {
   );
 });
 
-// Eigenvalues (descending) and eigenvectors (columns, right-handed) of the
-// symmetric matrix (xx, yy, zz | xy, xz, yz), by Jacobi rotations
+// By Jacobi rotations
 const symEigens = Fn(([xxyyzz, xyxzyz]: [TslNode, TslNode]) => {
   const eps = float(1e-6).mul(abs(xxyyzz.x).add(abs(xxyyzz.y)).add(abs(xxyyzz.z))).toVar();
   const a = mat3(vec3(xxyyzz.x, xyxzyz.x, xyxzyz.y), vec3(xyxzyz.x, xxyyzz.y, xyxzyz.z), vec3(xyxzyz.y, xyxzyz.z, xxyyzz.z)).toVar();
@@ -112,8 +106,7 @@ const symEigens = Fn(([xxyyzz, xyxzyz]: [TslNode, TslNode]) => {
   return Eigens(vec3(l0, l1, l2), mat3(v0, v1, v2));
 });
 
-// Quaternion (w >= 0) of an orthonormal basis (columns), after glam's
-// Quat::from_rotation_axes (SplatMath.basisToQuat)
+// After glam's Quat::from_rotation_axes, as SplatMath.basisToQuat
 const basisToQuat = Fn(([basis]: [TslNode]) => {
   const x = basis.element(0).toVar();
   const y = basis.element(1).toVar();
@@ -150,42 +143,54 @@ const basisToQuat = Fn(([basis]: [TslNode]) => {
   return select(q.w.lessThan(0.0), q.negate(), q);
 });
 
+/** The TSL twin of SplatMath. */
 export class GpuSplatMath {
-  // Rotate v by the unit quaternion q
+  /** Rotates a vector by a unit quaternion. */
   static readonly quatRotate: (q: TslNode, v: TslNode) => TslNode = quatRotate;
-  // q1 applied after q2
+  /** Multiplies quaternions, q1 applied after q2. */
   static readonly quatMul: (q1: TslNode, q2: TslNode) => TslNode = quatMul;
 
   static quatConj(q: TslNode): TslNode {
     return vec4(q.xyz.negate(), q.w);
   }
 
-  // Upper-left 3x3 of a mat4 (WGSL has no mat3x3(mat4x4) constructor)
+  /** The upper-left 3x3 of a mat4, since WGSL has no mat3x3(mat4x4) constructor. */
   static mat3FromMat4(m: TslNode): TslNode {
     return mat3(m.element(0).xyz, m.element(1).xyz, m.element(2).xyz);
   }
 
-  // R(q) * diag(s), as columns
+  /**
+   * R(q) * diag(s), as columns.
+   *
+   * @param quat The unit quaternion.
+   */
   static readonly scaleQuatMatrix: (scales: TslNode, quat: TslNode) => TslNode = scaleQuatMatrix;
 
-  // Sigma = M M^T with M = R(q) diag(scales), as a mat3 (q normalized here)
+  /** The covariance M M^T with M = R(q) diag(scales), normalizing q. */
   static covFromScaleQuat(scales: TslNode, quat: TslNode): TslNode {
     const m = scaleQuatMatrix(scales, normalize(quat)).toVar();
     return m.mul(transpose(m));
   }
 
-  // The symmetric matrix of a covariance's diagonal (xx, yy, zz) and
-  // off-diagonal (xy, xz, yz)
+  /** The symmetric matrix of a covariance. */
   static covMatrix(xxyyzz: TslNode, xyxzyz: TslNode): TslNode {
     const d = xxyyzz.toVar();
     const o = xyxzyz.toVar();
     return mat3(vec3(d.x, o.x, o.y), vec3(o.x, d.y, o.z), vec3(o.y, o.z, d.z));
   }
 
-  // Eigenvalues (descending, .get("values")) and eigenvectors (columns,
-  // right-handed, .get("basis")) of a symmetric matrix
+  /**
+   * Diagonalizes a symmetric matrix by Jacobi rotations.
+   *
+   * @return A struct of descending eigenvalues in "values" and right-handed
+   *   eigenvector columns in "basis".
+   */
   static readonly symEigens: (xxyyzz: TslNode, xyxzyz: TslNode) => TslNode = symEigens;
 
-  // Quaternion (w >= 0) of an orthonormal basis (columns)
+  /**
+   * The quaternion of an orthonormal basis, with w >= 0.
+   *
+   * @param basis The basis, as columns.
+   */
   static readonly basisToQuat: (basis: TslNode) => TslNode = basisToQuat;
 }

@@ -9,11 +9,8 @@ import { TSL, texelCoord, type TslNode } from "./tsl";
 
 const { int, ivec2, nodeObject, select, uint, uniform } = TSL;
 
-// Texture node for raw texel reads with .load(). TextureNode flips Y on the
-// WebGL backend for render-target textures and adds a UV transform uniform
-// per clone; array data is addressed by raw coordinate on both backends, so
-// skip both. clone() (every .load() / .depth()) passes uv, level and bias
-// through this constructor.
+// For raw texel loads, without TextureNode's WebGL y-flip and per-clone UV
+// uniform. clone() passes uv, level and bias through this constructor.
 class ArrayTextureNode extends TextureNode {
   constructor(value: THREE.Texture, uvNode?: TslNode, levelNode?: TslNode, biasNode?: TslNode) {
     super(value, uvNode, levelNode, biasNode);
@@ -25,18 +22,17 @@ class ArrayTextureNode extends TextureNode {
   }
 }
 
-// TSL access to one bundle of a GpuArrays, in any shader stage. The shader
-// is built from the definition alone; bind() points it at data, so one
-// shader can read different arrays from draw to draw.
+/** TSL reads of one bundle, bound to any GpuArrays without rebuilding the shader. */
 export class GpuArrayReader<D extends BundleDef = BundleDef> {
   readonly def: D;
-  // Elements readable through load() (uint uniform)
+  /** A uint uniform, past which load() reads zero. */
   readonly count: TslNode;
   // log2 and mask of the bound layout's height
   private yBits: TslNode;
   private yMask: TslNode;
   private channels: Record<string, { format: ArrayFormat; texelFormat: ArrayFormat; node: TslNode }> = {};
 
+  /** Builds the reads of a bundle, bound to nothing. */
   constructor(def: D) {
     this.def = def;
     this.count = uniform(0, "uint");
@@ -50,8 +46,12 @@ export class GpuArrayReader<D extends BundleDef = BundleDef> {
     }
   }
 
-  // Read bundle `name` of `arrays` from now on (count 0 without arrays).
-  // Rebind after the arrays' count changes or they are resized.
+  /**
+   * Reads a bundle of arrays from now on. Rebind after the arrays' count or
+   * capacity changes.
+   *
+   * @param [arrays] The arrays, or none to read zero.
+   */
   bind(arrays?: GpuArrays, name?: string): this {
     if (!arrays || !name) {
       this.count.value = 0;
@@ -81,13 +81,13 @@ export class GpuArrayReader<D extends BundleDef = BundleDef> {
     return this;
   }
 
-  // Element `index` of `channel` (typed by its format), zero past count
+  /** Reads an element, typed by the channel's format, or zero past count. */
   load(channel: keyof D["channels"] & string, index: TslNode): TslNode {
     const { node } = gpuFormatInfo(this.channel(channel).format);
     return select(index.lessThan(this.count), this.fetch(channel, index), TSL[node as keyof typeof TSL](0));
   }
 
-  // Element `index` without a bounds check
+  /** Reads an element without a bounds check. */
   fetch(channel: keyof D["channels"] & string, index: TslNode): TslNode {
     const { format, node } = this.channel(channel);
     const components = ArrayFormats.info(format).components;
@@ -112,7 +112,7 @@ export class GpuArrayReader<D extends BundleDef = BundleDef> {
   }
 }
 
-// Empty texture per texel format, bound while no arrays are
+// Bound while no arrays are
 const placeholders = new Map<string, THREE.DataArrayTexture>();
 
 function placeholder(texelFormat: ArrayFormat) {

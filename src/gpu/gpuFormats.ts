@@ -1,17 +1,15 @@
 import * as THREE from "three";
 import { ArrayFormats, type ArrayFormat, type ScalarType } from "../core/formats";
 
-// How a GPU format (1, 2 or 4 components) becomes a texture on each backend.
-// Three derives the sampled type (f32 / u32 / i32) only from texture.type
-// being UnsignedIntType or IntType, so all integer formats use those types,
-// and the real storage format goes in texture.internalFormat per backend.
+// three derives the sampled type only from texture.type, so integer formats
+// use UnsignedIntType or IntType and the real format goes in internalFormat
 export interface GpuFormatInfo {
   format: ArrayFormat;
   components: number;
   scalar: ScalarType;
   kind: "uint" | "sint" | "float";
   webgpu: GPUTextureFormat;
-  // WebGL2 internal format and texSubImage format / type (gl constant names)
+  // WebGL2 internal format, and texSubImage format and type
   gl: string;
   glFormat: string;
   glType: string;
@@ -19,12 +17,10 @@ export interface GpuFormatInfo {
   threeType: THREE.TextureDataType;
   // TSL type of one element
   node: string;
-  // snorm8 is not renderable on either backend (WebGL2 EXT_render_snorm: 80%)
+  // snorm8 needs EXT_render_snorm, which is not baseline
   renderable: boolean;
-  // Compute shaders can write it as a storage texture. Three declares the
-  // WGSL storage format from format / type, not internalFormat, so 8 and
-  // 16-bit integers (typed UnsignedIntType / IntType) would be declared
-  // 32-bit; that leaves 32-bit formats, rgba8unorm, rgba8snorm, rgba16float.
+  // three declares the WGSL storage format from format and type, so 8 and 16-bit
+  // integers would be 32-bit. That leaves 32-bit, rgba8unorm, rgba8snorm, rgba16float.
   storable: boolean;
 }
 
