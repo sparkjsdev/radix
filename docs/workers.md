@@ -67,7 +67,7 @@ A call's `signal` (`CallOptions`) rejects the call with `signal.reason` as soon 
 
 ## Bundling
 
-The workers' code is one ES module in the bundle: `worker/coreModule.ts` (`core/` plus `serveWorker` from `coreWorker.ts`), imported as a string (`import coreModule from "./coreModule?module&inline"`, built by `scripts/inline-worker-plugin.mjs`, minified in the library build, since an app's minifier cannot shrink a string). `WorkerPool.coreUrl` is a blob URL of it, made on first use, and each pool worker starts from a one-line blob that imports `serveWorker` from that URL and calls it. Pages therefore need no separate worker file, and every worker loads the same code. A bundler other than this repo's esbuild setup needs the same `?module&inline` import support. Pages need `worker-src blob:` if they set a Content Security Policy.
+The workers' code is one ES module in the bundle: `worker/coreModule.ts` (`core/` plus `serveWorker` from `coreWorker.ts`), imported as a string (`import coreModule from "./coreModule?module&inline"`, built by `scripts/inline-worker-plugin.mjs`, minified in the library build, since an app's minifier cannot shrink a string). `WorkerPool.coreUrl` is a blob URL of it, made on first use, and each pool worker starts from a one-line blob that imports `serveWorker` from that URL and calls it. Pages therefore need no separate worker file, and every worker loads the same code. A bundler other than this repo's esbuild setup needs the same `?module&inline` import support. Pages need `worker-src blob:` if they set a Content Security Policy, and `script-src blob:` too if their own workers import `WorkerPool.coreUrl`.
 
 ## Your own workers and the core module
 
