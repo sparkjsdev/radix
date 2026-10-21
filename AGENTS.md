@@ -45,8 +45,8 @@ Docs live in `docs/`, in two forms:
   `model.html` (how the classes fit together: chapters, a live class map;
   its class cards and code must match the exports), `data.html` and
   `pipeline.html` (in depth, with live codecs), and `multi-splat.html`.
-  `bench.html` (the benchmarks summary, in the guide's row), `bench-report.html`
-  (every result) and `img/bench-*.jpg` hold the benchmarks of Oct 9, 2026.
+  `bench.html` (the benchmarks summary, in the guide's row) and
+  `bench-report.html` (every result) hold the benchmarks against SparkJS.
   `site.js` draws every page's top bar: Radix, then the sections Guide
   (these pages, a second row; `GUIDE`), Examples (`build/examples/`,
   whose two index pages load the bar with `data-section="examples"`) and

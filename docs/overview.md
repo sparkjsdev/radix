@@ -78,7 +78,7 @@ Anything named `Wgpu*` needs WebGPU. Everything else also runs on WebGL2.
 | keep data of your own on the GPU, or run compute | [arraydata.md](arraydata.md), [gpu-arrays.md](gpu-arrays.md), [wgpu.md](wgpu.md) |
 | understand why it works this way | [multi-splat.md](multi-splat.md), [projection.md](projection.md) |
 | make it faster | [performance.md](performance.md) |
-| compare it with SparkJS or PlayCanvas | [why.html](why.html), [bench.html](bench.html) |
+| compare it with SparkJS | [why.html](why.html), [bench.html](bench.html) |
 | find any export | [api.md](api.md) |
 
 ## Naming
@@ -142,7 +142,7 @@ Anything named `Wgpu*` needs WebGPU. Everything else also runs on WebGL2.
 
 - [index.html](index.html): the front page, with a summary of Radix and a map of its layers
 - [why.html](why.html): a comparison with SparkJS
-- [bench.html](bench.html) and [bench-report.html](bench-report.html): benchmarks against SparkJS and PlayCanvas, a summary and every result
+- [bench.html](bench.html) and [bench-report.html](bench-report.html): benchmarks against SparkJS, a summary and every result
 - [ideas.html](ideas.html): the main design ideas, with interactive examples
 - [model.html](model.html): how the classes fit together, frame by frame
 - [data.html](data.html) and [pipeline.html](pipeline.html): detailed pages on the data and the render pipeline

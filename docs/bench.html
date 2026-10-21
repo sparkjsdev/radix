@@ -14,19 +14,6 @@
 .bars .v { font: 13px var(--mono); text-align: right; }
 .bars .base { position: relative; }
 .bars .base::after { content: ""; position: absolute; top: -4px; bottom: -4px; left: var(--one); border-left: 1px dashed #ffffff55; }
-.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.shots figure { margin: 0; }
-.shots img { width: 100%; display: block; border-radius: 10px; border: 1px solid var(--line); cursor: zoom-in; }
-.shots figcaption { font-size: 13px; color: var(--dim); margin-top: 6px; }
-#zoom { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: #000e; cursor: zoom-out; }
-#zoom[hidden] { display: none; }
-#zoom figure { margin: 0; text-align: center; }
-#zoom img { display: block; max-width: calc(100vw - 140px); max-height: calc(100vh - 90px); border-radius: 10px; }
-#zoom figcaption { margin-top: 10px; font-size: 15px; color: var(--text); }
-#zoom button { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 64px; border-radius: 10px; border: 1px solid var(--line); background: #ffffff12; color: var(--text); font-size: 28px; cursor: pointer; }
-#zoom button:hover { background: #ffffff24; }
-#zoom .prev { left: 16px; }
-#zoom .next { right: 16px; }
 td.best { color: var(--worker); font-weight: 600; }
 .stbl td { font-variant-numeric: tabular-nums; }
 </style>
@@ -38,135 +25,65 @@ td.best { color: var(--worker); font-weight: 600; }
 <header class="hero" id="top">
   <div class="inner">
     <h1>Benchmarks</h1>
-    <p class="lead">Radix, SparkJS 2.3.1, and PlayCanvas 2.23.1 drawing the same 5 scans (546k to 10.0M splats) along the same camera path. Set to cull the same splats, Radix and PlayCanvas run at about the same speed on WebGPU.</p>
-    <p class="small">Oct 9, 2026; Apple M3 Max, Google Chrome 154.0.8037.98, 1920x1080. All results and the method: <a href="bench-report.html">the full report</a>.</p>
+    <p class="lead">Radix and SparkJS 2.3.1 drawing the same 4 scans (546k to 10.0M splats) along the same camera path, each with its default settings. On WebGPU, Radix is 1.35× as fast as Spark on WebGL2.</p>
+    <p class="small">Apple M3 Max, Google Chrome 154.0.8037.98, 1920x1080. All results and the method: <a href="bench-report.html">the full report</a>.</p>
   </div>
 </header>
 
 <section id="speed" data-title="Speed">
   <div class="eyebrow">01 · Speed</div>
-  <h2>Frame times with the same culling</h2>
-  <p class="lede">Radix and Spark set to cull and blur splats as PlayCanvas does by default (section 03), so all three draw the same splats. Speed relative to Radix on WebGPU: the geometric mean over the scenes of the ratio of mean frame times; longer is faster.</p>
-  <div class="panel reveal"><div class="bars" style="--one:86.6%"><div>Radix · WebGPU</div><div class="base"><div class="bar" style="--c:#f472b6;width:86.6%"></div></div><div class="v">1.00×</div><div>Radix · WebGL2</div><div class="base"><div class="bar" style="--c:#f9a8d4;width:49.4%"></div></div><div class="v">0.57×</div><div>Spark · WebGL2</div><div class="base"><div class="bar" style="--c:#fb923c;width:53.3%"></div></div><div class="v">0.62×</div><div>PlayCanvas · WebGPU</div><div class="base"><div class="bar" style="--c:#2dd4bf;width:89.3%"></div></div><div class="v">1.03×</div><div>PlayCanvas · WebGL2</div><div class="base"><div class="bar" style="--c:#99f6e4;width:67.4%"></div></div><div class="v">0.78×</div></div></div>
+  <h2>Frame times</h2>
+  <p class="lede">Radix and Spark with their default settings, which cull and blur splats alike, so both draw the same splats. Speed relative to Radix on WebGPU: the geometric mean over the scenes of the ratio of mean frame times; longer is faster.</p>
+  <div class="panel reveal"><div class="bars" style="--one:86.6%"><div>Radix · WebGPU</div><div class="base"><div class="bar" style="--c:#f472b6;width:86.6%"></div></div><div class="v">1.00×</div><div>Radix · WebGL2</div><div class="base"><div class="bar" style="--c:#f9a8d4;width:58.0%"></div></div><div class="v">0.67×</div><div>Spark · WebGL2</div><div class="base"><div class="bar" style="--c:#fb923c;width:64.0%"></div></div><div class="v">0.74×</div></div></div>
   <ul class="reveal">
-    <li><b>WebGPU:</b> Radix is 1.03× slower than PlayCanvas; the widest gap is on Grace interior (8.09 against 7.55 ms).</li>
-    <li><b>WebGL2</b>, where all three sort on a worker: relative to Radix, Spark · WebGL2 1.08×, PlayCanvas · WebGL2 1.36×. Spark has no WebGPU path.</li>
+    <li><b>WebGPU:</b> Radix is 1.35× as fast as Spark on WebGL2; the widest gap is on Grace interior (9.21 against 16.52 ms). Spark has no WebGPU path.</li>
+    <li><b>WebGL2</b>, where both sort on a worker: relative to Radix, Spark · WebGL2 1.10×.</li>
   </ul>
   <div class="panel reveal" style="overflow-x: auto">
     <table class="stbl">
-      <thead><tr><th>Scene</th><th>Splats</th><th>Radix · WebGPU</th><th>Radix · WebGL2</th><th>Spark · WebGL2</th><th>PlayCanvas · WebGPU</th><th>PlayCanvas · WebGL2</th></tr></thead>
-      <tbody><tr><td>Butterfly</td><td>546k</td><td class="best">3.4</td><td class="">4.5</td><td class="">3.7</td><td class="">3.5</td><td class="">3.5</td></tr><tr><td>Ceramic (cave)</td><td>2.0M</td><td class="">5.8</td><td class="">8.7</td><td class="">7.8</td><td class="best">5.5</td><td class="">6.2</td></tr><tr><td>Sutro</td><td>2.0M</td><td class="best">3.4</td><td class="">6.0</td><td class="">5.4</td><td class="">3.4</td><td class="">4.1</td></tr><tr><td>Bicycle</td><td>6.1M</td><td class="">4.8</td><td class="">12.5</td><td class="">12.1</td><td class="best">4.5</td><td class="">9.4</td></tr><tr><td>Grace interior</td><td>10.0M</td><td class="">8.1</td><td class="">15.1</td><td class="">16.1</td><td class="best">7.6</td><td class="">11.3</td></tr></tbody>
+      <thead><tr><th>Scene</th><th>Splats</th><th>Radix · WebGPU</th><th>Radix · WebGL2</th><th>Spark · WebGL2</th></tr></thead>
+      <tbody><tr><td>Butterfly</td><td>546k</td><td class="best">3.7</td><td class="">4.6</td><td class="">3.8</td></tr><tr><td>Ceramic (cave)</td><td>2.0M</td><td class="best">6.3</td><td class="">9.2</td><td class="">7.9</td></tr><tr><td>Sutro</td><td>2.0M</td><td class="best">4.5</td><td class="">7.2</td><td class="">6.4</td></tr><tr><td>Grace interior</td><td>10.0M</td><td class="best">9.2</td><td class="">15.6</td><td class="">16.5</td></tr></tbody>
     </table>
-    <div class="small">Mean frame time over the path in milliseconds, the median of 5 rounds, culling matched. Green: the fastest.</div>
+    <div class="small">Mean frame time over the path in milliseconds, the median of 5 rounds, defaults. Green: the fastest.</div>
   </div>
 </section>
 
 <section id="vsync" data-title="With vsync">
   <div class="eyebrow">02 · With vsync</div>
   <h2>Frame rate in a vsync loop</h2>
-  <p class="lede">The frame times above measure each frame alone. Here the same path runs in a <code>requestAnimationFrame</code> loop on a 120 Hz display with vsync on, as in an app, culling matched.</p>
+  <p class="lede">The frame times above measure each frame alone. Here the same path runs in a <code>requestAnimationFrame</code> loop on a 120 Hz display with vsync on, as in an app, with the defaults.</p>
   <div class="panel reveal" style="overflow-x: auto">
     <table class="stbl">
-      <thead><tr><th>Scene</th><th>Splats</th><th>Radix · WebGPU</th><th>Radix · WebGL2</th><th>Spark · WebGL2</th><th>PlayCanvas · WebGPU</th><th>PlayCanvas · WebGL2</th></tr></thead>
-      <tbody><tr><td>Butterfly</td><td>546k</td><td class="best">120</td><td class="best">120</td><td class="best">120</td><td class="best">120</td><td class="best">120</td></tr><tr><td>Ceramic (cave)</td><td>2.0M</td><td class="best">120</td><td class="best">119</td><td class="best">120</td><td class="best">120</td><td class="best">120</td></tr><tr><td>Sutro</td><td>2.0M</td><td class="best">120</td><td class="best">120</td><td class="best">120</td><td class="best">120</td><td class="best">120</td></tr><tr><td>Bicycle</td><td>6.1M</td><td class="best">120</td><td class="">102 <span class="small">(9% late)</span></td><td class="">96 <span class="small">(12% late)</span></td><td class="best">120</td><td class="best">120</td></tr><tr><td>Grace interior</td><td>10.0M</td><td class="">118 <span class="small">(2% late)</span></td><td class="">81 <span class="small">(23% late)</span></td><td class="">73 <span class="small">(27% late)</span></td><td class="best">120</td><td class="">116 <span class="small">(3% late)</span></td></tr></tbody>
+      <thead><tr><th>Scene</th><th>Splats</th><th>Radix · WebGPU</th><th>Radix · WebGL2</th><th>Spark · WebGL2</th></tr></thead>
+      <tbody><tr><td>Butterfly</td><td>546k</td><td class="best">120</td><td class="best">120</td><td class="best">120</td></tr><tr><td>Ceramic (cave)</td><td>2.0M</td><td class="best">120</td><td class="">116 <span class="small">(3% late)</span></td><td class="best">120</td></tr><tr><td>Sutro</td><td>2.0M</td><td class="best">120</td><td class="best">120</td><td class="best">120</td></tr><tr><td>Grace interior</td><td>10.0M</td><td class="">108 <span class="small">(11% late)</span></td><td class="">78 <span class="small">(26% late)</span></td><td class="">72 <span class="small">(30% late)</span></td></tr></tbody>
     </table>
     <div class="small">Frames per second, the median of 3 rounds; late: frames that missed a vsync. Green: full rate.</div>
   </div>
-  <ul class="reveal"><li><b>Over the 8.30 ms budget when timed, but at full rate with vsync</b> (consecutive frames overlap CPU and GPU work): Radix · WebGL2 on Ceramic (cave) (8.74 ms, 119 fps); PlayCanvas · WebGL2 on Bicycle (9.36 ms, 120 fps).</li><li><b>Under the budget when timed, but dropping frames with vsync:</b> Radix · WebGPU on Grace interior (8.09 ms, 118 fps).</li><li><b>Frame rate</b> (capped by the display, which shrinks differences): Radix on WebGPU 1.00× PlayCanvas on WebGPU; on WebGL2, Spark 0.97× and PlayCanvas 1.11× Radix.</li></ul>
+  <ul class="reveal"><li><b>Frame rate</b> (capped by the display, which shrinks differences): Radix on WebGPU 1.11× Spark; on WebGL2, Spark 0.99× Radix.</li></ul>
   <p class="deeper">See also: <a href="bench-report.html#vsync">Vsync results for every setting</a></p>
 </section>
 
-<section id="culling" data-title="Culling">
-  <div class="eyebrow">03 · Culling</div>
-  <h2>Why the defaults are not like for like</h2>
-  <p class="lede">By default PlayCanvas skips splats drawn under a 1-pixel radius and, on WebGPU, splats whose opacity × area is under 0.75 px². Radix and Spark draw them, as the reference 3DGS rasterizer does. The culls are aggressive: on WebGPU they remove most of the bicycle's wheel spokes (section 04). PlayCanvas's dilation is also fixed at 0.075 px², a quarter of the 0.3 px² of standard 3DGS training, so its splats are drawn smaller than trained. So at defaults PlayCanvas does less work per frame, and on WebGPU Radix is 1.30× slower than it. With no culling in any renderer, Radix on WebGPU is 1.05× slower than PlayCanvas.</p>
-  <div class="panel reveal" style="overflow-x: auto">
-    <table class="stbl">
-      <thead><tr><th>Culling</th><th>Radix · WebGPU</th><th>Radix · WebGL2</th><th>Spark · WebGL2</th><th>PlayCanvas · WebGPU</th><th>PlayCanvas · WebGL2</th></tr></thead>
-      <tbody><tr><td>Defaults</td><td>1.00×</td><td>0.67×</td><td>0.73×</td><td>1.30×</td><td>0.98×</td></tr><tr><td>No culling</td><td>1.00×</td><td>0.67×</td><td>0.72×</td><td>1.05×</td><td>0.92×</td></tr><tr><td>Matched culling</td><td>1.00×</td><td>0.57×</td><td>0.62×</td><td>1.03×</td><td>0.78×</td></tr></tbody>
-    </table>
-    <div class="small">Speed relative to Radix on WebGPU with the same setting. Matched: Radix and Spark with PlayCanvas's default culling and blur. No culling: every renderer draws every splat above alpha 1/255.</div>
-  </div>
-  <p class="reveal">The same culling makes Radix on WebGPU 1.26× as fast as its defaults, through <code>objectParams.minContribution</code>, <code>minPixelRadius</code>, and <code>params.minAlpha</code>. PlayCanvas's thresholds are set in half pixels (it measures splats with twice the focal length), so its <code>minContribution: 3</code> is 0.75 here.</p>
-  <p class="deeper">See also: <a href="ref/params.html">Params</a> <a href="ref/performance.html">Performance</a></p>
-</section>
-
-<section id="look" data-title="The image">
-  <div class="eyebrow">04 · The image</div>
-  <h2>The same view in each renderer</h2>
-  <p class="lede">The bicycle scan (6.1M splats) from the benchmark's start view, with each renderer's defaults; Radix and Spark use <code>blurAmount: 0, preBlurAmount: 0.3</code>, as the scan was trained without anti-aliasing. PlayCanvas on WebGPU culls faint splats by default, which removes most of the wheel spokes.</p>
-  <div class="shots reveal"><figure><img src="img/bench-bicycle-radix-webgpu.jpg" tabindex="0" role="button" alt="The bicycle scan drawn by Radix · WebGPU"><figcaption>Radix · WebGPU · 8.9 ms</figcaption></figure><figure><img src="img/bench-bicycle-radix-webgl2.jpg" tabindex="0" role="button" alt="The bicycle scan drawn by Radix · WebGL2"><figcaption>Radix · WebGL2 · 13.5 ms</figcaption></figure><figure><img src="img/bench-bicycle-spark-webgl2.jpg" tabindex="0" role="button" alt="The bicycle scan drawn by Spark · WebGL2"><figcaption>Spark · WebGL2 · 12.9 ms</figcaption></figure><figure><img src="img/bench-bicycle-playcanvas-webgpu.jpg" tabindex="0" role="button" alt="The bicycle scan drawn by PlayCanvas · WebGPU"><figcaption>PlayCanvas · WebGPU · 4.5 ms</figcaption></figure><figure><img src="img/bench-bicycle-playcanvas-webgl2.jpg" tabindex="0" role="button" alt="The bicycle scan drawn by PlayCanvas · WebGL2"><figcaption>PlayCanvas · WebGL2 · 9.4 ms</figcaption></figure></div>
-  <p class="small">Click an image to enlarge it; ← and → step between them, Esc closes.</p>
-</section>
-
 <section id="gaps" data-title="Where Radix is behind">
-  <div class="eyebrow">05 · Known gaps</div>
+  <div class="eyebrow">03 · Known gaps</div>
   <h2>Where Radix is behind</h2>
   <ul class="reveal">
-    <li><b>Re-sort stalls on WebGL2.</b> Radix's worker-sort cycle (a keys pass, a readback, then the order's upload) lands in rendered frames: 724 frames took over twice the median across the scenes at defaults, against 7 for Spark and PlayCanvas on WebGL2.</li>
-    <li><b>Loading.</b> From the start of loading a PLY to the first frame: Radix 0.3 to 2.2 s, Spark 0.1 to 1.6 s, PlayCanvas 0.3 to 5.0 s.</li>
+    <li><b>Re-sort stalls on WebGL2.</b> Radix's worker-sort cycle (a keys pass, a readback, then the order's upload) runs in rendered frames, where Spark's worker sort shows almost no stalls.</li>
+    <li><b>Loading.</b> From the start of loading a PLY to the first frame: Radix 0.3 to 2.2 s, Spark 0.1 to 1.6 s.</li>
   </ul>
 </section>
 
 <section id="method" data-title="Method">
-  <div class="eyebrow">06 · Method</div>
+  <div class="eyebrow">04 · Method</div>
   <h2>How it was measured</h2>
   <ul class="reveal">
-    <li>Every renderer loads the same degree-0 PLY of each scan (Radix has no spherical harmonics) and draws the same camera poses: held still, a level turn, then a tilted turn, orbiting objects and looking around inside scenes.</li>
+    <li>Both renderers load the same degree-0 PLY of each scan, so both draw degree-0 color only, and draw the same camera poses: held still, a level turn, then a tilted turn, orbiting objects and looking around inside scenes.</li>
     <li>Frames are drawn one at a time, each timed until the GPU has finished it, after a warm-up of at least 3 seconds. Each configuration ran 5 rounds in a shuffled order, in a fresh tab, with the laptop's thermal state and a canary configuration checked between runs.</li>
-    <li>The matched culling was checked on a grid of splats of known size and opacity: the renderers drew or culled the same splats, apart from a few right at a threshold.</li>
   </ul>
-  <p class="deeper">See also: <a href="bench-report.html">The full report</a> <a href="why.html">Radix and SparkJS</a> <a href="ref/performance.html#against-sparkjs-and-playcanvas">Performance</a></p>
+  <p class="deeper">See also: <a href="bench-report.html">The full report</a> <a href="why.html">Radix and SparkJS</a> <a href="ref/performance.html#against-sparkjs">Performance</a></p>
 </section>
 
 <footer>Radix docs · <a href="index.html">home</a> · <a href="bench-report.html">full report</a></footer>
 
-<div id="zoom" hidden><button class="prev" type="button" aria-label="Previous image">‹</button><figure><img alt=""><figcaption></figcaption></figure><button class="next" type="button" aria-label="Next image">›</button></div>
 <script src="site.js"></script>
-<script>
-// The images, enlarged: click to open, arrows to step, Esc or a click to close
-(() => {
-  const shots = [...document.querySelectorAll(".shots img")];
-  const zoom = document.getElementById("zoom");
-  const img = zoom.querySelector("img");
-  const caption = zoom.querySelector("figcaption");
-  let at = 0;
-  const show = (i) => {
-    at = (i + shots.length) % shots.length;
-    img.src = shots[at].src;
-    img.alt = shots[at].alt;
-    caption.textContent = shots[at].closest("figure").querySelector("figcaption").textContent + " · bicycle, defaults (" + (at + 1) + " of " + shots.length + ")";
-    zoom.hidden = false;
-  };
-  shots.forEach((shot, i) => {
-    shot.addEventListener("click", () => show(i));
-    shot.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        show(i);
-      }
-    });
-  });
-  const step = (d) => (e) => {
-    e.stopPropagation();
-    show(at + d);
-  };
-  zoom.querySelector(".prev").addEventListener("click", step(-1));
-  zoom.querySelector(".next").addEventListener("click", step(1));
-  zoom.addEventListener("click", () => (zoom.hidden = true));
-  document.addEventListener("keydown", (e) => {
-    if (zoom.hidden) {
-      return;
-    }
-    if (e.key === "ArrowLeft") {
-      show(at - 1);
-    } else if (e.key === "ArrowRight") {
-      show(at + 1);
-    } else if (e.key === "Escape") {
-      zoom.hidden = true;
-    }
-  });
-})();
-</script>
 </body>
 </html>

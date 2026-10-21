@@ -24,10 +24,6 @@
 .bars .base { position: relative; }
 .bars .base::after { content: ""; position: absolute; top: -4px; bottom: -4px; left: var(--one); border-left: 1px dashed #ffffff55; }
 
-.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.shots figure { margin: 0; }
-.shots img { width: 100%; display: block; border-radius: 10px; border: 1px solid var(--line); }
-.shots figcaption { font-size: 13px; color: var(--dim); margin-top: 6px; }
 td.best { color: var(--worker); font-weight: 600; }
 .stbl td { font-variant-numeric: tabular-nums; }
 .stbl td.c { text-align: center; }
@@ -41,7 +37,7 @@ td.best { color: var(--worker); font-weight: 600; }
   <div class="inner">
     <h1>Radix and SparkJS</h1>
     <p class="lead">Radix is a Gaussian splat renderer for three.js's WebGPURenderer. This page compares it with SparkJS 2.3.1: the main differences in design, measurements on the same scenes, what porting Spark's examples showed, and the features of each side by side.</p>
-    <p class="small">The measurements were taken on Oct 9, 2026 (Apple M3 Max, Chrome 154, 1920x1080, each renderer's defaults). All results, PlayCanvas included: <a href="bench.html">Benchmarks</a>.</p>
+    <p class="small">The measurements were taken on an Apple M3 Max (Chrome 154, 1920x1080) with each renderer's defaults. All results: <a href="bench.html">Benchmarks</a>.</p>
   </div>
 </header>
 
@@ -50,12 +46,12 @@ td.best { color: var(--worker); font-weight: 600; }
   <h2>How Radix differs from Spark</h2>
   <p class="lede">Both draw many splat objects sorted together inside a three.js scene, from several viewpoints, with effects written as shader code. They differ in the GPU API they target, how shaders are written, how data is stored, and what happens while the set of splats changes.</p>
   <div class="feat reveal">
-    <div class="panel" style="--c: var(--gpu)"><div class="ic">WebGPU</div><h3>Compute shaders and a sort in the frame</h3><p>On WebGPU the projection and a radix sort run as compute shaders before the draw, so every frame is drawn in the order for its own camera, with nothing read back. Over five scenes Radix on WebGPU is 1.37x as fast as Spark, and 1.8x at 10M splats. Apps can use compute as well: a generator can read arrays that a simulation writes on the GPU (section 02).</p></div>
+    <div class="panel" style="--c: var(--gpu)"><div class="ic">WebGPU</div><h3>Compute shaders and a sort in the frame</h3><p>On WebGPU the projection and a radix sort run as compute shaders before the draw, so every frame is drawn in the order for its own camera, with nothing read back. Over four scenes Radix on WebGPU is 1.35x as fast as Spark, and 1.8x at 10M splats. Apps can use compute as well: a generator can read arrays that a simulation writes on the GPU (section 02).</p></div>
     <div class="panel" style="--c: var(--core)"><div class="ic">Shaders</div><h3>TSL instead of Dyno</h3><p>Spark's shaders are Dyno graphs: typed blocks of GLSL that Spark compiles for WebGL2. Radix's shaders are TSL, three.js's own shading language: JavaScript functions that compile to WGSL on WebGPU and to GLSL on WebGL2. Effects can use three's TSL nodes (noise, color, math) and TSL code published by others, and are shared and imported like any JavaScript module.</p></div>
     <div class="panel" style="--c: var(--yellow)"><div class="ic">Data</div><h3>Generic tables</h3><p>All data is stored in tables: named bundles of typed-array channels, one row per element. The same layout is used on the CPU, in workers, in RDX files, and on the GPU (<code>GpuArrays</code>, one array texture per channel), with readers and writers in TSL. A new kind of data is a new bundle definition, not a new class; spherical harmonics are bundles beside the splats this way.</p></div>
     <div class="panel" style="--c: var(--pink)"><div class="ic">Rendering</div><h3>More rendering options</h3><p>Four projection methods: EWA splatting, and three that evaluate each splat along the pixel's ray (3DGUT, HTGS, ray Gaussians) and stay accurate for large and close splats. Sort keys of 16, 24, or 32 bits. Output to an HDR canvas (rgba16float) with headroom tone mapping, or to any three.js render target, half-float included.</p></div>
     <div class="panel" style="--c: var(--worker)"><div class="ic">Changes</div><h3>Motion continues while the set changes</h3><p>Every render projects every object with its current matrix and its generator's current uniforms. When the set of splats changes (a new LoD subset, objects added or removed), WebGPU draws the new set in the same frame, and WebGL2 keeps drawing and animating the previous set until the new order is ready (section 03).</p></div>
-    <div class="panel" style="--c: var(--blue)"><div class="ic">Features</div><h3>Side by side</h3><p>Spark is more mature and has features Radix lacks: level of detail, skinning, and more file formats. Section 07 compares the two feature by feature, including where Radix is slower.</p></div>
+    <div class="panel" style="--c: var(--blue)"><div class="ic">Features</div><h3>Side by side</h3><p>Spark is more mature and has features Radix lacks: level of detail, skinning, and more file formats. Section 06 compares the two feature by feature, including where Radix is slower.</p></div>
   </div>
   <h3>Other differences</h3>
   <ul class="reveal">
@@ -72,7 +68,7 @@ td.best { color: var(--worker); font-weight: 600; }
   <p class="lede">Radix is built on three.js's WebGPURenderer and uses WebGPU wherever the browser has it. WebGPU adds compute shaders and storage buffers and textures to what WebGL2 offers, and Radix uses each of them.</p>
   <div class="feat reveal">
     <div class="panel" style="--c: var(--gpu)"><div class="ic">Sort</div><h3>The sort in the frame</h3><p>The projection writes a sort key per splat, then compaction and a radix sort run as compute passes, and the draw reads the visible count from a GPU buffer. Nothing is read back to the CPU, so each frame is drawn in the order for its own camera, even while the camera turns fast or the set of splats changes.</p></div>
-    <div class="panel" style="--c: var(--pink)"><div class="ic">Speed</div><h3>Faster frames</h3><p>Over five scenes from 0.5M to 10M splats, Radix on WebGPU is 1.37x as fast as Spark on WebGL2, and 1.8x at 10M splats (section 04). The projection runs once per splat in compute, and the draw only decodes what it wrote.</p></div>
+    <div class="panel" style="--c: var(--pink)"><div class="ic">Speed</div><h3>Faster frames</h3><p>Over four scenes from 0.5M to 10M splats, Radix on WebGPU is 1.35x as fast as Spark on WebGL2, and 1.8x at 10M splats (section 04). The projection runs once per splat in compute, and the draw only decodes what it wrote.</p></div>
     <div class="panel" style="--c: var(--core)"><div class="ic">Compute</div><h3>Compute for apps</h3><p>The building blocks Radix uses are exported: compute kernels (<code>WgpuCompute</code>), storage buffers, arrays that compute shaders can write, a radix sort, and compaction. A simulation can update splat arrays on the GPU every frame, and a generator can draw them without a copy.</p></div>
     <div class="panel" style="--c: var(--yellow)"><div class="ic">More</div><h3>Other WebGPU features</h3><p>An HDR canvas (rgba16float) with headroom tone mapping, WebXR through the WebXR / WebGPU binding with one projection and one sort for both eyes, and GPU time for every compute and render pass (<code>GpuProfiler</code>).</p></div>
   </div>
@@ -94,8 +90,8 @@ td.best { color: var(--worker); font-weight: 600; }
 
 <section id="speed" data-title="Speed">
   <div class="eyebrow">04 · Speed</div>
-  <h2>Frame times on five scenes</h2>
-  <p class="lede">Five scans from 0.5M to 10M splats, each loaded from the same PLY by both renderers and drawn along the same camera path (held still, a level turn, a tilted turn), with each renderer's default settings. Each frame was timed after the GPU finished it.</p>
+  <h2>Frame times on four scenes</h2>
+  <p class="lede">Four scans from 0.5M to 10M splats, each loaded from the same PLY by both renderers and drawn along the same camera path (held still, a level turn, a tilted turn), with each renderer's default settings. Each frame was timed after the GPU finished it.</p>
   <div class="panel reveal">
     <div class="small" style="margin-bottom: 10px">Speed relative to Radix on WebGPU (geometric mean over the scenes of the ratio of mean frame times; longer is faster)</div>
     <div class="bars" id="bars"></div>
@@ -108,26 +104,16 @@ td.best { color: var(--worker); font-weight: 600; }
     <div class="small">Mean frame time over the whole path in milliseconds, the median of 5 rounds. Green: the fastest.</div>
   </div>
   <ul class="reveal">
-    <li><b>Radix on WebGPU is 1.37x as fast as Spark</b> over the five scenes, and 1.8x at 10M splats (Grace Cathedral, inside: 9.2 ms against 16.5 ms).</li>
-    <li><b>On WebGL2, Spark is 1.09x as fast as Radix,</b> faster on four scenes and slower on the cathedral. Radix's worker sort costs more per frame when the camera moves, as it does in both interiors.</li>
-    <li><b>With vsync</b> on a 120 Hz display, Radix on WebGPU delivered 1.14x Spark's frame rate, and Radix on WebGL2 1.02x. On the 6M and 10M-splat scenes both WebGL2 paths drop frames, Spark more often.</li>
-    <li><b>The same splats:</b> by default Radix and Spark cull the same splats and blur them alike, so their defaults compare like for like. Radix sorts 24-bit keys by default and Spark 32-bit. PlayCanvas culls more by default (enough to remove thin detail such as wheel spokes) and draws splats smaller than trained (a fixed 0.075 px² dilation instead of 0.3); it is compared with culling matched on the <a href="bench.html">benchmarks page</a>.</li>
+    <li><b>Radix on WebGPU is 1.35x as fast as Spark</b> over the four scenes, and 1.8x at 10M splats (Grace Cathedral, inside: 9.2 ms against 16.5 ms).</li>
+    <li><b>On WebGL2, Spark is 1.10x as fast as Radix,</b> faster on three scenes and slower on the cathedral. Radix's worker sort costs more per frame when the camera moves, as it does in both interiors.</li>
+    <li><b>With vsync</b> on a 120 Hz display, Radix on WebGPU delivered 1.11x Spark's frame rate, and Radix on WebGL2 1.01x. On the 10M-splat scene both WebGL2 paths drop frames, Spark more often.</li>
+    <li><b>The same splats:</b> by default Radix and Spark cull the same splats and blur them alike, so their defaults compare like for like. Radix sorts 24-bit keys by default and Spark 32-bit.</li>
   </ul>
   <p class="deeper">See also: <a href="bench.html">Benchmarks</a> <a href="bench-report.html">The full report</a> <a href="ref/performance.html">Performance</a> <a href="ref/params.html">Params</a></p>
 </section>
 
-<section id="look" data-title="The look">
-  <div class="eyebrow">05 · Images</div>
-  <h2>The same view in both renderers</h2>
-  <p class="lede">The bicycle scan (6.1M splats) from the benchmark's start view. It was trained without anti-aliasing, so both draw it with <code>blurAmount: 0, preBlurAmount: 0.3</code> (no opacity compensation), which keeps the wheel spokes. The images match closely.</p>
-  <div class="shots reveal">
-    <figure><img src="img/bicycle-radix-webgpu.jpg" alt="The bicycle scene drawn by Radix on WebGPU"><figcaption>Radix · WebGPU · 8.9 ms</figcaption></figure>
-    <figure><img src="img/bicycle-spark-webgl2.jpg" alt="The bicycle scene drawn by SparkJS on WebGL2"><figcaption>Spark · WebGL2 · 12.9 ms</figcaption></figure>
-  </div>
-</section>
-
 <section id="ports" data-title="Spark's examples">
-  <div class="eyebrow">06 · Spark's examples</div>
+  <div class="eyebrow">05 · Spark's examples</div>
   <h2>What porting Spark's examples showed</h2>
   <p class="lede">31 of the 42 SparkJS 2.3.1 examples run on Radix as it is, as static pages on the library bundle (<a href="../build/examples/spark/index.html">the ports</a>), on both WebGPU and WebGL2. Nothing in Radix was changed for them.</p>
   <ul class="reveal">
@@ -138,7 +124,7 @@ td.best { color: var(--worker); font-weight: 600; }
 </section>
 
 <section id="gaps" data-title="Side by side">
-  <div class="eyebrow">07 · Features</div>
+  <div class="eyebrow">06 · Features</div>
   <h2>Side by side</h2>
   <p class="lede">The features of each, as of SparkJS 2.3.1. Where Radix has no built-in feature but the Spark ports added it in example code, the table says so.</p>
   <div class="panel reveal" style="overflow-x: auto">
@@ -164,8 +150,8 @@ td.best { color: var(--worker); font-weight: 600; }
         <tr><td>Raycasting</td><td class="meh">not built in; the ports pick splats on the CPU</td><td class="ok"><code>SplatMesh.raycast</code></td></tr>
         <tr><td>Skeletal animation</td><td class="meh">not built in; possible with a custom generator or modifier that blends bone matrices per splat</td><td class="ok">yes (<code>SplatSkinning</code>)</td></tr>
         <tr><td>File formats</td><td>PLY (also compressed), SPZ, RAD, and RDX (Radix's own: chunked, range reads); SOG in example code</td><td class="ok">PLY (also compressed), SPZ, SPLAT, KSPLAT, SOG, and more</td></tr>
-        <tr><td>Speed on WebGPU</td><td class="ok">1.37x Spark over five scenes, 1.8x at 10M splats</td><td>no WebGPU path</td></tr>
-        <tr><td>Speed on WebGL2</td><td class="meh">Spark is 1.09x as fast; frames that upload a new order stall (588 frames over twice the median)</td><td class="ok">no stalls</td></tr>
+        <tr><td>Speed on WebGPU</td><td class="ok">1.35x Spark over four scenes, 1.8x at 10M splats</td><td>no WebGPU path</td></tr>
+        <tr><td>Speed on WebGL2</td><td class="meh">Spark is 1.10x as fast; frames that upload a new order stall</td><td class="ok">no stalls</td></tr>
         <tr><td>Loading (PLY to first frame)</td><td class="meh">0.3 to 2.3 s</td><td class="ok">0.1 to 1.7 s</td></tr>
         <tr><td>Device reach</td><td>WebGPU limits that 95% of devices meet; WebGL2 fallback</td><td class="ok">98%+ of WebGL2 devices, low-powered mobile included</td></tr>
         <tr><td>Maturity</td><td class="meh">new; tested by its own checks on both backends</td><td class="ok">released, with many examples and a community</td></tr>
@@ -193,10 +179,10 @@ td.best { color: var(--worker); font-weight: 600; }
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
 
-// ---------- Speed bars and the per-scene table (Oct 9, 2026) ----------
+// ---------- Speed bars and the per-scene table ----------
 (() => {
   const ENGINES = [
-    ["Radix · WebGPU", 1.0, "#f472b6"], ["Radix · WebGL2", 0.67, "#f472b6"], ["Spark · WebGL2", 0.73, "#60a5fa"],
+    ["Radix · WebGPU", 1.0, "#f472b6"], ["Radix · WebGL2", 0.67, "#f472b6"], ["Spark · WebGL2", 0.74, "#60a5fa"],
   ];
   const max = 1.1;
   $("#bars").innerHTML = ENGINES.map(([name, v, c]) =>
@@ -205,7 +191,6 @@ const $ = (s, r = document) => r.querySelector(s);
     ["Butterfly", "0.5M", [3.7, 4.6, 3.8]],
     ["Ceramic (cave)", "2.0M", [6.3, 9.2, 7.9]],
     ["Sutro", "2.0M", [4.5, 7.2, 6.4]],
-    ["Bicycle", "6.1M", [8.9, 13.5, 12.9]],
     ["Grace interior", "10.0M", [9.2, 15.6, 16.5]],
   ];
   const row = (ms) => {

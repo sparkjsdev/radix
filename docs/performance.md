@@ -1,6 +1,6 @@
 # Performance
 
-This page shows where a frame's time goes and which settings change it. The numbers here come from benchmarks of Radix alone and of Radix against SparkJS and PlayCanvas on the same scenes, both measured on an Apple M3 Max in Chrome at 1920x1080. Treat them as relative: GPU times drift by up to 1.5x from run to run.
+This page shows where a frame's time goes and which settings change it. The numbers here come from benchmarks of Radix alone and of Radix against SparkJS on the same scenes, both measured on an Apple M3 Max in Chrome at 1920x1080. Treat them as relative: GPU times drift by up to 1.5x from run to run.
 
 ## Where the time goes
 
@@ -23,7 +23,7 @@ GPU milliseconds per frame on WebGPU (`ewa`, 24-bit keys, turning):
 | Setting | Effect | Trade-off |
 |---|---|---|
 | `method` | `ewa` is the cheapest; `raygs` within 10%; `3dgut` and `htgs` within 25% from outside an object but 4-25x slower inside a scene, where splats around the camera cover the screen | the ray methods are exact for large and close splats |
-| `objectParams.minContribution` (`ewa`) and `minPixelRadius` | cull faint and tiny splats before the sort; `minContribution: 0.75` and `minPixelRadius: 1`, with `params.minAlpha: 1/255`, `blurAmount: 0`, and `preBlurAmount: 0.075` (PlayCanvas's defaults), made Radix 1.26x as fast over the benchmark scenes (1.07-1.30x; 1.85x on the 6M-splat bicycle, drawn by default with `preBlurAmount: 0.3`) | faint splats are dropped: a slight loss of soft detail |
+| `objectParams.minContribution` (`ewa`) and `minPixelRadius` | cull faint and tiny splats before the sort; `minContribution: 0.75` and `minPixelRadius: 1`, with `params.minAlpha: 1/255`, `blurAmount: 0`, and `preBlurAmount: 0.075`, made Radix 1.15x as fast over the benchmark scenes (1.07-1.30x) | faint splats are dropped: a slight loss of soft detail |
 | `params.minAlpha` | culls splats and fragments below an alpha | as above |
 | `sortBits` | 16 bits saves 35-55% of either sort; 32 bits costs about 5% of the frame on WebGPU | 16 bits ties splats within 0.1% of their distance |
 | `objectParams.sortGuard` (CPU sort) | 0.5 cut the WebGL2 draw by 24-68% on full turns | re-sort on turns as well as moves (`autoSort` does) |
@@ -32,16 +32,15 @@ GPU milliseconds per frame on WebGPU (`ewa`, 24-bit keys, turning):
 | pixel ratio | the draw is fill-bound inside scenes: ratio 1 instead of 2 draws a quarter of the pixels | resolution |
 | `params.maxStdDev` | smaller quads | slightly harder edges |
 
-## Against SparkJS and PlayCanvas
+## Against SparkJS
 
-From the comparison of Oct 9, 2026: five scenes from 0.5M to 10M splats, timed one frame at a time (5 rounds) and in a vsync loop on a 120 Hz display (3 rounds). In the two interiors the camera moves while it turns, so distance sorts must re-sort. The bicycle is drawn with `blurAmount: 0, preBlurAmount: 0.3`, as it was trained. Results: the [benchmarks page](bench.html) and the [full report](bench-report.html).
+From a comparison on four scenes from 0.5M to 10M splats, timed one frame at a time (5 rounds) and in a vsync loop on a 120 Hz display (3 rounds). In the two interiors the camera moves while it turns, so distance sorts must re-sort. Results: the [benchmarks page](bench.html) and the [full report](bench-report.html).
 
-- **Same culling:** Radix on WebGPU was 1.03x slower than PlayCanvas 2.23.1 on WebGPU (7% at most). By default PlayCanvas also culls splats under a 1-pixel radius and, on WebGPU, under 0.75 px² of opacity × area; at defaults it was 1.30x as fast. Those culls remove visible detail (most of the bicycle's wheel spokes on WebGPU), and its fixed 0.075 px² dilation, a quarter of the 0.3 px² of standard 3DGS training, draws splats smaller than trained, so its defaults do less work than a like-for-like render.
-- **SparkJS 2.3.1** culls like Radix and has no WebGPU path. Radix on WebGPU was 1.37x as fast; at 10M splats (Grace Cathedral, inside), 9.2 ms against 16.5 ms.
-- **WebGL2**, where all three sort on a worker: at defaults Spark was 1.09x as fast as Radix and PlayCanvas 1.47x. Radix stalls in the frames that upload a new order, and a moving camera makes it re-sort all the time: on Grace its turning frames took 16 ms, against 10 ms turning in place. This is the main weakness of Radix's WebGL2 path.
-- **Vsync:** with culling matched, Radix on WebGPU held 120 fps on four scenes and 118 on Grace (108 at defaults); PlayCanvas on WebGPU held 120 on all. On Grace the WebGL2 worker sorts drop frames: Radix 81 fps and Spark 73, with 23% and 27% of frames late and p99 frames of 50 and 59 ms. Timed, Spark showed almost no stalls. PlayCanvas on WebGL2 held 116 fps.
+- **SparkJS 2.3.1** culls like Radix and has no WebGPU path. Radix on WebGPU was 1.35x as fast; at 10M splats (Grace Cathedral, inside), 9.2 ms against 16.5 ms.
+- **WebGL2**, where both sort on a worker: at defaults Spark was 1.10x as fast as Radix. Radix stalls in the frames that upload a new order, and a moving camera makes it re-sort all the time: on Grace its turning frames took 16 ms, against 10 ms turning in place. This is the main weakness of Radix's WebGL2 path.
+- **Vsync:** at defaults, Radix on WebGPU held 120 fps on three scenes and 108 on Grace. On Grace the WebGL2 worker sorts drop frames: Radix 78 fps and Spark 72, with 26% and 30% of frames late and p99 frames of 51 and 59 ms. Timed, Spark showed almost no stalls.
 - **Level of detail** helps most with very large scenes: Spark can build a LoD tree on load and draw a budget of splats chosen for the view. Radix loads and saves LoD trees but does not yet choose LoD subsets itself; the SOG example chooses them in example code.
-- **Loading** a PLY to the first frame took Radix 0.3-2.2 s, Spark 0.1-1.6 s, and PlayCanvas 0.3-5.0 s.
+- **Loading** a PLY to the first frame took Radix 0.3-2.2 s and Spark 0.1-1.6 s.
 
 ## Large scenes
 

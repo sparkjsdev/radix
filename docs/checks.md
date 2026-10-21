@@ -119,4 +119,4 @@ Collections, renderers, and views (`sceneTests.ts`):
 
 ## Benchmarks
 
-Performance is measured by benchmarks rather than by the checks: `npm run bench:core` (core benchmarks in Node, on files in `splats/` or given with `--file`) and `npm run bench -- --matrix <name>` (`/build/test/bench/index.html` in headless Chrome, on the hosted samples). A summary of the results is in [performance.md](performance.md). Radix is compared with SparkJS and PlayCanvas on the same scenes and camera paths in [bench.html](bench.html), the summary, and [bench-report.html](bench-report.html), every result.
+Performance is measured by benchmarks rather than by the checks: `npm run bench:core` (core benchmarks in Node, on files in `splats/` or given with `--file`) and `npm run bench -- --matrix <name>` (`/build/test/bench/index.html` in headless Chrome, on the hosted samples). A summary of the results is in [performance.md](performance.md). Radix is compared with SparkJS on the same scenes and camera paths in [bench.html](bench.html), the summary, and [bench-report.html](bench-report.html), every result.
