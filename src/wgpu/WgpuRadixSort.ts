@@ -8,28 +8,26 @@ import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan, type Scan
 
 const { If, Loop, atomicAdd, atomicLoad, atomicStore, max, min, select, uint, uniform, workgroupArray, workgroupBarrier } = TSL;
 
+/** The keys each thread of a WgpuRadixSort sorts. */
 export type RadixKeysPerThread = 8 | 16;
 
 const RADIX_BITS = 8;
 const BINS = 1 << RADIX_BITS;
 const MAX_PASSES = 4;
-// Bits of the packed local-sort word holding the position in the block
-// (BLOCK <= 4096); the digit sits above them
+// Bits of the packed word holding the position in the block, at most 4096
 const PACK_SHIFT = 12;
-// Digit of padding past `count` in the last block: sorts after every element
+// Sorts the padding past count last
 const PAD_DIGIT = BINS - 1;
 
 function scatterWorkgroupBytes(block: number) {
   return block * 4 + 3 * BINS * 4;
 }
 
-// Count and blocks of one sort as TSL nodes: uniforms, or reads of a
-// count buffer the GPU wrote
+// Uniforms, or reads of a count buffer the GPU wrote
 interface SortCounts {
   count: TslNode;
   numBlocks: TslNode;
-  // A uniform at least numBlocks: loops holding barriers need a uniform
-  // trip count
+  // A uniform trip count, since loops with barriers need one
   loopBlocks: TslNode;
 }
 
@@ -40,46 +38,41 @@ interface Kernels {
   dispose(): void;
 }
 
-// GPU LSD radix sort of uint32 keys with uint32 values (WebGPU backend
-// only). Stable, so ties keep their input order and the result equals the
-// CPU sortKeys. 2, 3 or 4 passes of 8-bit digits; each pass is reduce then
-// scan, 3 dispatches, with no forward-progress assumptions:
-//   histogram  (one workgroup per block): per-block digit counts
-//   scanBlocks (one workgroup per digit): exclusive scan of that digit's
-//              block counts, digit totals out
-//   scatter    (one workgroup per block): exclusive scan of the digit totals
-//              (redundant per workgroup, saving a dispatch), a stable local
-//              sort of (digit, position) words in workgroup memory, then
-//              dst = binOffset + blockOffset + rank
-// One kernel per pass with the shift built in, so a whole sort is one
-// WgpuComputeBatch: one compute pass, queued synchronously.
+/**
+ * A stable LSD radix sort of uint32 keys and values on the WebGPU backend only,
+ * in the order of SortKeys.sort.
+ */
 export class WgpuRadixSort {
   readonly renderer: WebGPURenderer;
   readonly tier: ScanTier;
-  // Keys per thread and per block (256 threads)
   readonly keysPerThread: RadixKeysPerThread;
+  /** The keys per workgroup. */
   readonly blockSize: number;
-  // The caller's buffers, sorted in place
+  /** The keys, sorted in place. */
   readonly keys: WgpuBuffer<"uint32">;
+  /** The values, sorted in place with their keys. */
   readonly values: WgpuBuffer<"uint32">;
 
   private keysB: WgpuBuffer<"uint32">;
   private valuesB: WgpuBuffer<"uint32">;
-  // blockHistograms[digit * numBlocks + block]: per-block digit counts, then
-  // each block's exclusive offset within its digit
+  // At digit * numBlocks + block: digit counts, then offsets within the digit
   private blockHistograms: WgpuBuffer<"uint32">;
   private digitTotals: WgpuBuffer<"uint32">;
   private count = uniform(0, "uint");
   private numBlocks = uniform(0, "uint");
-  // The keys' capacity and its blocks, bounds of an indirect sort
+  // Bounds of an indirect sort
   private capacity = uniform(0, "uint");
   private maxBlocks = uniform(0, "uint");
   private direct?: Kernels;
   private indirect?: Kernels & { countBuffer: WgpuBuffer<"uint32">; args: WgpuCompute; argsBuffer: WgpuBuffer<"uint32"> };
 
-  // keysPerThread 8 (default) or 16: 16 needs about 19 KB of workgroup
-  // storage and sorted 10-25% slower on an Apple M3 (fewer workgroups in
-  // flight)
+  /**
+   * Builds the sort over the caller's buffers.
+   *
+   * @param [options.tier="auto"] The scan tier, where "auto" picks "subgroup"
+   *   if the device has subgroups.
+   * @param [options.keysPerThread=8] The keys each thread sorts.
+   */
   constructor({ renderer, keys, values, tier = "auto", keysPerThread = 8 }: {
     renderer: WebGPURenderer;
     keys: WgpuBuffer<"uint32">;
@@ -106,15 +99,18 @@ export class WgpuRadixSort {
     this.digitTotals = buffer(BINS, "radix_sortDigitTotals");
   }
 
-  // Grow the scratch buffers to the keys' and values' capacity
+  /** Grows the scratch buffers to the capacity of keys and values. */
   ensureCapacity() {
     this.keysB.ensureCapacity(this.keys.capacity);
     this.valuesB.ensureCapacity(this.values.capacity);
     this.blockHistograms.ensureCapacity(BINS * this.blocksFor(this.keys.capacity));
   }
 
-  // Sort the first `count` keys and values in place (ascending, stable);
-  // keys must be below 2^bits
+  /**
+   * Sorts the first count keys and their values in place, ascending and stable.
+   *
+   * @param [options.bits=32] The key width. Keys must be below 2^bits.
+   */
   sort(count: number, { bits = 32 }: { bits?: SortKeyBits } = {}) {
     if (count <= 0) {
       return;
@@ -127,8 +123,12 @@ export class WgpuRadixSort {
     this.run(this.direct, bits, [numBlocks]);
   }
 
-  // Sort the first countBuffer[0] keys and values (at most the capacity),
-  // with every dispatch sized on the GPU: nothing is read back
+  /**
+   * Sorts keys and values in place, with the count read on the GPU.
+   *
+   * @param countBuffer Element 0 holds the count, at most the capacity.
+   * @param [options.bits=32] The key width. Keys must be below 2^bits.
+   */
   sortIndirect(countBuffer: WgpuBuffer<"uint32">, { bits = 32 }: { bits?: SortKeyBits } = {}) {
     this.ensureCapacity();
     this.capacity.value = this.keys.capacity;
@@ -160,8 +160,7 @@ export class WgpuRadixSort {
     }
     batch.submit();
 
-    // An odd number of passes leaves the result in the B buffers: trade
-    // them for the caller's (no copy; the kernels follow the nodes)
+    // Odd pass counts end in the B buffers. A swap moves them back, and kernels follow the nodes.
     if (passes % 2 === 1) {
       this.keys.swap(this.keysB);
       this.values.swap(this.valuesB);
@@ -172,6 +171,7 @@ export class WgpuRadixSort {
     return Math.max(1, Math.ceil(count / this.blockSize));
   }
 
+  // Per pass a histogram, block scan and scatter with the shift built in, so a sort is one batch
   private makeKernels(counts: SortCounts): Kernels {
     const { keys, values, keysB, valuesB } = this;
     const histogram: WgpuCompute[] = [];
@@ -213,6 +213,7 @@ export class WgpuRadixSort {
     };
   }
 
+  // One workgroup per block
   private makeHistogram({ count, numBlocks }: SortCounts, shift: number, keys: WgpuBuffer<"uint32">) {
     const { tier, keysPerThread, blockSize, blockHistograms } = this;
     return new WgpuCompute({
@@ -238,8 +239,7 @@ export class WgpuRadixSort {
     });
   }
 
-  // One workgroup per digit: exclusive scan over that digit's block counts
-  // in chunks of 256 with a carry; the digit total to digitTotals[digit]
+  // One workgroup per digit, scanning its block counts with a carry
   private makeScanBlocks({ numBlocks, loopBlocks }: SortCounts) {
     const { tier, blockHistograms, digitTotals } = this;
     return new WgpuCompute({
@@ -271,11 +271,8 @@ export class WgpuRadixSort {
     });
   }
 
-  // One workgroup per block: scan the digit totals into bin offsets, sort
-  // the block's (digit, position) words by digit in workgroup memory (8
-  // stable one-bit splits), rank = position - first position of the digit,
-  // then gather each element from the source block and scatter it to
-  // binOffset[d] + blockOffset[d][block] + rank
+  // One workgroup per block. Each repeats the digit totals' scan, which saves a
+  // dispatch, sorts the block by digit locally, then scatters.
   private makeScatter({ count, numBlocks }: SortCounts, shift: number, srcKeys: WgpuBuffer<"uint32">, srcValues: WgpuBuffer<"uint32">, dstKeys: WgpuBuffer<"uint32">, dstValues: WgpuBuffer<"uint32">) {
     const { tier, keysPerThread, blockSize, blockHistograms, digitTotals } = this;
     const posMask = (1 << PACK_SHIFT) - 1;
@@ -291,8 +288,7 @@ export class WgpuRadixSort {
         const binOffsets = workgroupArray("uint", BINS);
         const n = count.toVar();
 
-        // `rank` is a bijection onto the digits and the scan runs in rank
-        // order, so the result is indexed by digit
+        // rank covers each digit once, so the scan is indexed by digit
         const { exclusive: binOffset } = workgroupExclusiveScan(tier, scratch, rank, digitTotals.element(rank).toVar());
         binOffsets.element(rank).assign(binOffset);
 
@@ -300,8 +296,6 @@ export class WgpuRadixSort {
         const blockCount = select(n.sub(blockBase).lessThan(uint(blockSize)), n.sub(blockBase), uint(blockSize)).toVar();
         const threadBase = rank.mul(uint(keysPerThread)).toVar();
 
-        // keysPerThread consecutive elements per thread as packed
-        // (digit << PACK_SHIFT | position) words; padding sorts last
         for (let j = 0; j < keysPerThread; j += 1) {
           const p = threadBase.add(uint(j)).toVar();
           const i = blockBase.add(p);
@@ -309,7 +303,7 @@ export class WgpuRadixSort {
           packedWords.element(p).assign(digit.shiftLeft(uint(PACK_SHIFT)).bitOr(p));
         }
 
-        // Stable one-bit splits over the digit's bits: zeros first
+        // Stable one-bit splits, zeros first
         for (let bit = 0; bit < RADIX_BITS; bit += 1) {
           workgroupBarrier();
           const words: TslNode[] = [];
@@ -343,7 +337,7 @@ export class WgpuRadixSort {
         }
         workgroupBarrier();
 
-        // The real elements occupy [0, blockCount) after the local sort
+        // Real elements fill [0, blockCount) after the local sort
         for (let j = 0; j < keysPerThread; j += 1) {
           const p = threadBase.add(uint(j));
           If(p.lessThan(blockCount), () => {

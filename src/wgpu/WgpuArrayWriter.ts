@@ -11,29 +11,37 @@ import { requireWebGPU, WgpuCompute } from "./WgpuCompute";
 
 const { If, uint, uniform } = TSL;
 
-// Storage textures one compute writer can write: WebGPU's
-// maxStorageTexturesPerShaderStage default, which baseline devices keep
+// WebGPU's default maxStorageTexturesPerShaderStage
 const MAX_COMPUTE_WRITER_CHANNELS = 4;
 
-// The compute twin of GpuArrayWriter (WebGPU backend only), with the same
-// outputs and write(index, out): GpuArrays.write / writeBatch run it as one
-// dispatch per range, one thread per texel, writing the same texels with
-// the same indices as the fragment pass. Outputs must be storable formats
-// of GpuArrays made with storage: true. write() must not read the arrays
-// it writes (a texture cannot be sampled and stored in one dispatch).
+/**
+ * The compute version of GpuArrayWriter, on the WebGPU backend only. write must
+ * not read the arrays it writes.
+ */
 export class WgpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O, true> {
-  // Output channels one compute writer may have
   static readonly MAX_CHANNELS = MAX_COMPUTE_WRITER_CHANNELS;
 
   readonly outputs: O;
+  /** The elements per texel of every output. */
   readonly packing: number;
   readonly channels: WriterOutput[];
+  /** Whether it writes from compute into arrays made with storage: true, always true. */
   readonly storage = true;
+  /** Runs writes of this kind, called by GpuArrays.write and writeBatch. */
   readonly run = runComputeWriters;
   readonly kernel: WgpuCompute;
   private stores: Record<string, WgpuArrayStore> = {};
   private range = { start: uniform(0, "uint"), count: uniform(0, "uint"), first: uniform(0, "uint") };
 
+  /**
+   * Builds the writer's kernel.
+   *
+   * @param options.write Assigns one texel per output channel, given the
+   *   element index.
+   * @param [options.workgroupSize=64] The threads per workgroup.
+   * @param [options.label] The kernel's name in GPU profilers, by default made
+   *   from the channel names.
+   */
   constructor({ outputs, write, workgroupSize = 64, label }: {
     outputs: O;
     write: (index: TslNode, out: WriterOutputs<O>) => void;
@@ -72,7 +80,13 @@ export class WgpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O
     });
   }
 
-  // Point the stores at `arrays` and set the range of one dispatch
+  /**
+   * Binds the arrays and sets the range, called before each dispatch.
+   *
+   * @param start The first texel.
+   * @param end The texel after the last.
+   * @param first The element index of the first texel.
+   */
   prepare(arrays: GpuArrays<Schema, true>, start: number, end: number, first: number) {
     for (const [bundle, store] of Object.entries(this.stores)) {
       store.bind(arrays, bundle);
@@ -87,8 +101,7 @@ export class WgpuArrayWriter<O extends Schema = Schema> implements ArrayWriter<O
   }
 }
 
-// Run WgpuArrayWriter `items` into `arrays`, one dispatch each (a uniform
-// holds one value per compute pass)
+// One dispatch per item, since a uniform holds one value per pass
 export function runComputeWriters(arrays: GpuArrays, items: WriteItem[]) {
   requireWebGPU(arrays.renderer, "WgpuArrayWriter");
   for (const item of items) {

@@ -7,28 +7,41 @@ import { requireWebGPU } from "./WgpuCompute";
 
 const { storage } = TSL;
 
-// Typed, resizable storage buffer (WebGPU backend only) of a 32-bit format
-// with 1, 2 or 4 components ("uint32", "float32x4", ...). Kernels and
-// shaders access it through element(i); with `atomic` the elements are
-// atomic<u32|i32>. Growing swaps the attribute under the same node, so
-// shaders built on it keep working.
+/**
+ * A resizable storage buffer of a 32-bit format, on the WebGPU backend only.
+ * Growing or swapping keeps its TSL node, so shaders built on it keep working.
+ */
 export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   readonly renderer: WebGPURenderer;
   readonly format: F;
   readonly atomic: boolean;
+  /** Whether the buffer holds indirect dispatch arguments. */
   readonly indirect: boolean;
+  /** three's attribute for the buffer, replaced when it grows or swaps. */
   attribute: StorageBufferAttribute;
   node: TslNode;
+  /** The size in elements. */
   capacity: number;
 
+  /**
+   * Makes the buffer.
+   *
+   * @param options.renderer The renderer to make it on, with the WebGPU
+   *   backend.
+   * @param options.format A 32-bit format with 1, 2 or 4 components.
+   * @param options.count The size in elements.
+   * @param [options.atomic=false] Makes the elements atomic<u32> or
+   *   atomic<i32>.
+   * @param [options.indirect=false] Holds dispatch arguments, 3 uint32 each.
+   * @param [options.label=""] The GPU buffer's name in WebGPU errors and
+   *   debuggers.
+   */
   constructor({ renderer, format, count, atomic = false, indirect = false, label = "" }: {
     renderer: WebGPURenderer;
     format: F;
     count: number;
     atomic?: boolean;
-    // Indirect dispatch arguments (uint32, 3 per dispatch)
     indirect?: boolean;
-    // The GPU buffer's name in WebGPU errors and debuggers
     label?: string;
   }) {
     requireWebGPU(renderer, "WgpuBuffer");
@@ -62,7 +75,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     return this.node.element(index);
   }
 
-  // The GPU buffer, created if three has not yet
+  /** The GPU buffer, made if three has not made it yet. */
   gpuBuffer(): GPUBuffer {
     const backend = this.backend();
     if (!backend.get(this.attribute).buffer) {
@@ -75,7 +88,13 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     return backend.get(this.attribute).buffer!;
   }
 
-  // Resize to `count` elements; with `keep` the old contents are copied over
+  /**
+   * Resizes the buffer.
+   *
+   * @param count The size in elements.
+   * @param [options.keep=false] Copies the old contents over.
+   * @return Whether the size changed.
+   */
   setCapacity(count: number, { keep = false }: { keep?: boolean } = {}) {
     const capacity = Math.max(1, count);
     if (capacity === this.capacity) {
@@ -98,7 +117,13 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     return true;
   }
 
-  // Grows by doubling, at most to the binding limit (count itself must fit)
+  /**
+   * Grows the buffer to fit count, doubling up to the binding limit.
+   *
+   * @param count The size needed, in elements.
+   * @param [options.keep=false] Copies the old contents over.
+   * @return Whether the size changed.
+   */
   ensureCapacity(count: number, options?: { keep?: boolean }) {
     if (count <= this.capacity) {
       return false;
@@ -107,8 +132,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     return this.setCapacity(Math.max(count, Math.min(this.capacity * 2, limit)), options);
   }
 
-  // Trade GPU buffers (and capacities) with `other`, of the same format:
-  // shaders built on either node follow, as when a buffer grows
+  /** Trades GPU buffers and capacities with a buffer of the same format and kind. */
   swap(other: WgpuBuffer<F>) {
     if (other.format !== this.format || other.atomic !== this.atomic || other.indirect !== this.indirect) {
       throw new Error("WgpuBuffer.swap: the buffers differ in format or kind");
@@ -119,13 +143,22 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     other.node.value = other.attribute;
   }
 
-  // Write `data` (scalars of this format) starting at element `offset`
+  /**
+   * Writes elements from the CPU.
+   *
+   * @param [offset=0] The first element to write.
+   */
   upload(data: ArrayOf<F>, offset = 0) {
     const bytes = ArrayFormats.info(this.format).bytes;
     this.backend().device.queue.writeBuffer(this.gpuBuffer(), offset * bytes, data.buffer, data.byteOffset, data.byteLength);
   }
 
-  // Zero elements [offset, offset + count) (default: all)
+  /**
+   * Zeroes elements.
+   *
+   * @param [offset=0] The first element.
+   * @param [count=capacity-offset] The elements to zero.
+   */
   clear(offset = 0, count = this.capacity - offset) {
     const bytes = ArrayFormats.info(this.format).bytes;
     const device = this.backend().device;
@@ -134,7 +167,13 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     device.queue.submit([encoder.finish()]);
   }
 
-  // GPU copy of elements from a buffer of the same format
+  /**
+   * Copies elements on the GPU from a buffer of the same format.
+   *
+   * @param [options.srcStart=0] The first element to read.
+   * @param [options.dstStart=0] The first element to write.
+   * @param [options.count=src.capacity-srcStart] The elements to copy.
+   */
   copyFrom(src: WgpuBuffer<F>, { srcStart = 0, dstStart = 0, count = src.capacity - srcStart }: {
     srcStart?: number;
     dstStart?: number;
@@ -148,7 +187,12 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     this.copyBuffer(src.gpuBuffer(), srcStart * bytes, this.gpuBuffer(), dstStart * bytes, count * bytes);
   }
 
-  // Read back elements [offset, offset + count)
+  /**
+   * Reads elements back from the GPU.
+   *
+   * @param [offset=0] The first element.
+   * @param [count=capacity-offset] The elements to read.
+   */
   async read(offset = 0, count = this.capacity - offset): Promise<ArrayOf<F>> {
     const { bytes, components, array } = ArrayFormats.info(this.format);
     this.gpuBuffer();

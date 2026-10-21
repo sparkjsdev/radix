@@ -5,19 +5,17 @@ import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan } from "./
 
 const { Fn, globalId, instanceIndex, localId, numWorkgroups, workgroupId } = TSL;
 
-// Compute builtins handed to a WgpuCompute body
+/** The builtins a WgpuCompute body gets. */
 export interface ComputeIds {
   globalId: TslNode;
   localId: TslNode;
   workgroupId: TslNode;
   numWorkgroups: TslNode;
-  // Linear thread index: globalId.x, continued over the y rows three
-  // splits large 1D dispatches into
+  /** The linear thread index, which stays linear when three splits a large dispatch into rows. */
   index: TslNode;
 }
 
-// Threads (a number), workgroups per dimension, or workgroup counts the GPU
-// wrote to an indirect buffer (WgpuBuffer with `indirect`, 3 x uint32)
+/** A thread count, workgroups per dimension, or an indirect buffer of 3 uint32 workgroup counts. */
 export type DispatchSize = number | [number, number?, number?] | IndirectStorageBufferAttribute;
 
 export function requireWebGPU(renderer: WebGPURenderer, what: string) {
@@ -26,27 +24,48 @@ export function requireWebGPU(renderer: WebGPURenderer, what: string) {
   }
 }
 
-// A compute kernel built once from a TSL body and dispatched with a size per
-// call (WebGPU backend only). Bodies bounds-check themselves: a thread count
-// is rounded up to whole workgroups, and three adds no `index >= count`
-// return.
+/**
+ * A compute kernel built from a TSL body, on the WebGPU backend only. The body
+ * checks its own bounds.
+ */
 export class WgpuCompute {
-  // Workgroup-wide scans for kernel bodies (workgroupScan.ts): threads per
-  // scan workgroup, the tier a device supports ("subgroup" or "portable"),
-  // each thread's rank in scan order, and an exclusive prefix sum of one
-  // uint per thread plus the total
+  /** The threads in a workgroup of the scan helpers. */
   static readonly SCAN_WORKGROUP = SCAN_WORKGROUP;
+  /**
+   * Picks the scan tier for a device.
+   *
+   * @param [tier="auto"] The tier, where "auto" picks "subgroup" if the device
+   *   has subgroups.
+   */
   static readonly scanTier = scanTier;
+  /** Each thread's rank in scan order, which in the subgroup tier can differ from its local id. */
   static readonly threadRank = threadRank;
+  /**
+   * An exclusive prefix sum of one uint per thread across the workgroup, in
+   * rank order.
+   *
+   * @param scratch A workgroup array of SCAN_WORKGROUP uints, reusable after
+   *   the call.
+   * @param rank The thread's rank from threadRank.
+   * @return The thread's exclusive sum and the workgroup's total.
+   */
   static readonly workgroupExclusiveScan = workgroupExclusiveScan;
 
+  /** The threads per workgroup in x, y and z. */
   readonly workgroupSize: [number, number, number];
   private computeNode: TslNode;
 
+  /**
+   * Builds the kernel.
+   *
+   * @param [options.workgroupSize=[64]] The threads per workgroup, in 1 to 3
+   *   dimensions.
+   * @param options.body Writes the kernel in TSL, given the builtins.
+   * @param [options.label] The kernel's name in GPU profilers.
+   */
   constructor({ workgroupSize = [64], body, label }: {
     workgroupSize?: [number] | [number, number] | [number, number, number];
     body: (ids: ComputeIds) => void;
-    // Node name, shown by GPU profilers
     label?: string;
   }) {
     this.workgroupSize = [workgroupSize[0], workgroupSize[1] ?? 1, workgroupSize[2] ?? 1];
@@ -59,8 +78,7 @@ export class WgpuCompute {
     }
   }
 
-  // A number is a thread count (three divides by the workgroup size); an
-  // array is the workgroup count per dimension
+  /** Runs the kernel now. */
   dispatch(renderer: WebGPURenderer, size: DispatchSize) {
     requireWebGPU(renderer, "WgpuCompute");
     if (typeof size === "number") {
@@ -72,7 +90,7 @@ export class WgpuCompute {
     }
   }
 
-  // The compute node with its dispatch size set, for WgpuComputeBatch
+  /** Sets the dispatch size, called by WgpuComputeBatch before it dispatches. */
   prepare(size: DispatchSize): TslNode {
     this.computeNode.dispatchSize = typeof size === "number" ? size : dispatchArgument(size);
     return this.computeNode;
@@ -87,13 +105,11 @@ function dispatchArgument(size: Exclude<DispatchSize, number>) {
   return Array.isArray(size) ? [size[0], size[1] ?? 1, size[2] ?? 1] : size;
 }
 
-// Dispatches recorded into as few compute passes as possible: submit() hands
-// them to renderer.compute() as one list, which three records into one pass
-// in order (WebGPU makes each dispatch's storage writes visible to the next).
-// A node has one dispatch size per pass, so a kernel queued again with a
-// different size starts a new pass. Uniforms hold one value per pass too:
-// set them before queueing and do not change them until submit. `split`
-// dispatches one by one instead, so GPU profilers time each kernel.
+/**
+ * Dispatches kernels in order, in as few compute passes as possible. A uniform
+ * holds one value per pass, so set uniforms before add and keep them until
+ * submit.
+ */
 export class WgpuComputeBatch {
   readonly renderer: WebGPURenderer;
   private queue: { kernel: WgpuCompute; size: DispatchSize }[] = [];
@@ -103,6 +119,7 @@ export class WgpuComputeBatch {
     this.renderer = renderer;
   }
 
+  /** Queues a dispatch of a kernel. */
   add(kernel: WgpuCompute, size: DispatchSize): this {
     const empty = typeof size === "number" ? size <= 0 : Array.isArray(size) && size[0] <= 0;
     if (!empty) {
@@ -111,6 +128,12 @@ export class WgpuComputeBatch {
     return this;
   }
 
+  /**
+   * Dispatches the queue and empties it.
+   *
+   * @param [options.split=false] Dispatches one kernel at a time, so GPU
+   *   profilers time each.
+   */
   submit({ split = false }: { split?: boolean } = {}) {
     const { renderer, queue } = this;
     this.queue = [];
@@ -122,6 +145,7 @@ export class WgpuComputeBatch {
       return;
     }
 
+    // A node has one dispatch size per pass
     let pass: { kernel: WgpuCompute; size: DispatchSize }[] = [];
     const sizes = new Map<WgpuCompute, string>();
     const flush = () => {

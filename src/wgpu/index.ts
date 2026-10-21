@@ -1,5 +1,3 @@
-// WebGPU backend only: compute kernels, storage buffers, storage-texture
-// stores, compute array writers, sorting and compaction
 export { WgpuArrayStore } from "./WgpuArrayStore";
 export { WgpuArrayWriter } from "./WgpuArrayWriter";
 export { WgpuBuffer } from "./WgpuBuffer";

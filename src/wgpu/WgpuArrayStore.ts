@@ -9,11 +9,11 @@ import { TSL, texelCoord, type TslNode } from "../gpu/tsl";
 
 const { int, storageTexture, textureStore, uint, uniform, uvec2 } = TSL;
 
-// The store-side twin of GpuArrayReader (WebGPU backend only): textureStore
-// into one bundle of a GpuArrays made with storage: true, at any index, from
-// any WgpuCompute kernel (scatter writes). Like the reader, the shader is
-// built from the definition; bind() points it at data. Kernels using it set
-// arrays.count themselves.
+/**
+ * Writes elements at any index from a compute kernel into one bundle of storage
+ * arrays, on the WebGPU backend only. A kernel using it sets arrays.count
+ * itself.
+ */
 export class WgpuArrayStore<D extends BundleDef = BundleDef> {
   readonly def: D;
   // log2 and mask of the bound layout's height
@@ -21,6 +21,7 @@ export class WgpuArrayStore<D extends BundleDef = BundleDef> {
   private yMask: TslNode;
   private channels: Record<string, { format: ArrayFormat; texelFormat: ArrayFormat; node: TslNode }> = {};
 
+  /** Builds the store's shader code from a bundle definition. */
   constructor(def: D) {
     this.def = def;
     this.yBits = uniform(0, "uint");
@@ -36,8 +37,12 @@ export class WgpuArrayStore<D extends BundleDef = BundleDef> {
     }
   }
 
-  // Store into bundle `name` of `arrays` from now on; bind again after the
-  // arrays are resized or swapped
+  /**
+   * Points the store at a bundle of arrays. Call it again after the arrays are
+   * resized or swapped.
+   *
+   * @param name The bundle's name.
+   */
   bind(arrays: GpuArrays<Schema, true>, name: string): this {
     const target = arrays.bundle(name);
     if (target.def.packing !== this.def.packing) {
@@ -59,7 +64,11 @@ export class WgpuArrayStore<D extends BundleDef = BundleDef> {
     return this;
   }
 
-  // Store element `index` (uint) of an unpacked bundle
+  /**
+   * Stores one element of an unpacked bundle.
+   *
+   * @param index The element's index, a TSL uint.
+   */
   store(channel: keyof D["channels"] & string, index: TslNode, value: TslNode) {
     if (this.def.packing !== 1) {
       throw new Error("store() writes unpacked bundles; use storeTexel() for whole packed texels");
@@ -67,8 +76,13 @@ export class WgpuArrayStore<D extends BundleDef = BundleDef> {
     this.storeTexel(channel, index, value);
   }
 
-  // Store a whole texel (uint): `packing` elements of a packed bundle,
-  // valued by the texel format (packing 2 of "uint32x2" is a uvec4)
+  /**
+   * Stores a whole texel of a bundle.
+   *
+   * @param texel The texel's index, a TSL uint.
+   * @param value A value of the texel format, so packing 2 of "uint32x2" takes
+   *   a uvec4.
+   */
   storeTexel(channel: keyof D["channels"] & string, texel: TslNode, value: TslNode) {
     const entry = this.channels[channel];
     if (!entry) {
@@ -80,7 +94,7 @@ export class WgpuArrayStore<D extends BundleDef = BundleDef> {
   }
 }
 
-// Storage texture per texel format, bound until the first bind()
+// Bound until the first bind()
 const placeholders = new Map<string, THREE.DataArrayTexture>();
 
 function placeholder(texelFormat: ArrayFormat) {

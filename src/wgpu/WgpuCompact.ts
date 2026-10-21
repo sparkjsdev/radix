@@ -9,24 +9,24 @@ const { If, Loop, select, uint, uniform, workgroupArray } = TSL;
 const KEYS_PER_THREAD = 8;
 const BLOCK = SCAN_WORKGROUP * KEYS_PER_THREAD;
 
-// Stream compaction (WebGPU backend only): the keys key(i) of the first n
-// indices that are not `invalid`, with their indices as values, written to
-// the front of `keys` and `values` in input order; their number to
-// count[0]. Deterministic (a block prefix scan, no atomics), so a stable
-// sort afterwards matches sorting the uncompacted keys. `key` is any TSL
-// function of the index: a buffer element, a texture read. Three
-// dispatches in one batch:
-//   blockCounts (one workgroup per block): valid elements per block
-//   scan        (one workgroup): exclusive scan of the block counts, total
-//   scatter     (one workgroup per block): per-thread scan, then the writes
+/**
+ * Stream compaction of key(i) over the first n indices, in input order, on the
+ * WebGPU backend only.
+ */
 export class WgpuCompact {
   readonly renderer: WebGPURenderer;
   readonly tier: ScanTier;
+  /** The keys that are not invalid, at the front in input order. */
   readonly keys: WgpuBuffer<"uint32">;
+  /** The index of each key in keys. */
   readonly values: WgpuBuffer<"uint32">;
-  // count[0]: pairs written by the latest compact()
+  /** Element 0 holds the count that the latest compact wrote. */
   readonly count: WgpuBuffer<"uint32">;
-  // The key of the indices to drop
+  /**
+   * The key to drop, a uint uniform.
+   *
+   * @default 0xffffffff
+   */
   readonly invalid = uniform(0xffffffff, "uint");
 
   private blockOffsets: WgpuBuffer<"uint32">;
@@ -34,6 +34,13 @@ export class WgpuCompact {
   private numBlocks = uniform(0, "uint");
   private kernels: WgpuCompute[];
 
+  /**
+   * Builds the kernels.
+   *
+   * @param options.key The key of an index, in TSL.
+   * @param [options.tier="auto"] The scan tier, where "auto" picks "subgroup"
+   *   if the device has subgroups.
+   */
   constructor({ renderer, key, tier = "auto" }: { renderer: WebGPURenderer; key: (index: TslNode) => TslNode; tier?: ScanTier | "auto" }) {
     requireWebGPU(renderer, "WgpuCompact");
     this.renderer = renderer;
@@ -47,7 +54,6 @@ export class WgpuCompact {
     const { n, numBlocks, blockOffsets, count, keys, values, invalid } = this;
     const tierOf = this.tier;
     const valid = (i: TslNode) => i.lessThan(n).and(key(i).notEqual(invalid));
-    // Valid elements of this thread's run of KEYS_PER_THREAD
     const threadCount = (base: TslNode) => {
       const sum = uint(0).toVar();
       for (let j = 0; j < KEYS_PER_THREAD; j += 1) {
@@ -118,7 +124,7 @@ export class WgpuCompact {
     this.kernels = [blockCounts, scan, scatter];
   }
 
-  // Compact the first n indices (queued synchronously)
+  /** Compacts the first n indices. */
   compact(n: number) {
     const blocks = Math.max(1, Math.ceil(n / BLOCK));
     this.keys.ensureCapacity(n);

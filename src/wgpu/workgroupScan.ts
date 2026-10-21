@@ -4,12 +4,12 @@ import { TSL, type TslNode } from "../gpu/tsl";
 
 const { If, Loop, invocationSubgroupIndex, select, subgroupAdd, subgroupExclusiveAdd, subgroupIndex, subgroupSize, uint, workgroupBarrier } = TSL;
 
-// Threads of the scan, sort and compaction workgroups
 export const SCAN_WORKGROUP = 256;
 
-// "portable": Hillis-Steele scans in workgroup memory (core WebGPU);
-// "subgroup": subgroupExclusiveAdd / subgroupAdd where the device has them.
-// Both give identical results.
+/**
+ * "portable" scans in workgroup memory and "subgroup" with subgroup operations,
+ * with equal results.
+ */
 export type ScanTier = "portable" | "subgroup";
 
 export function scanTier(renderer: WebGPURenderer, tier: ScanTier | "auto" = "auto"): ScanTier {
@@ -20,18 +20,12 @@ export function scanTier(renderer: WebGPURenderer, tier: ScanTier | "auto" = "au
   return tier === "auto" ? (subgroups ? "subgroup" : "portable") : tier;
 }
 
-// Rank of this thread in the order workgroupExclusiveScan uses. The portable
-// tier scans in local id order. The subgroup tier scans subgroup by subgroup
-// (subgroup id, then lane), which WGSL does not promise to match local ids;
-// with a workgroup size that is a multiple of the subgroup size it is a
-// bijection onto [0, 256).
+// WGSL does not promise that subgroup order matches local ids
 export function threadRank(tier: ScanTier, localId: TslNode): TslNode {
   return tier === "subgroup" ? subgroupIndex.mul(subgroupSize).add(invocationSubgroupIndex).toVar() : localId.x.toVar();
 }
 
-// Exclusive prefix sum of one uint per thread across the 256-thread
-// workgroup in threadRank order, plus the total. `scratch` is a 256-entry
-// workgroup array; every thread ends past a barrier, so it can be reused.
+// scratch is a 256-entry workgroup array, reusable after the call
 export function workgroupExclusiveScan(tier: ScanTier, scratch: TslNode, rank: TslNode, value: TslNode) {
   if (tier === "subgroup") {
     const inTile = subgroupExclusiveAdd(value).toVar();
@@ -52,7 +46,7 @@ export function workgroupExclusiveScan(tier: ScanTier, scratch: TslNode, rank: T
     return { exclusive: before.add(inTile), total };
   }
 
-  // Hillis-Steele inclusive scan, log2(256) = 8 rounds
+  // Hillis-Steele inclusive scan
   scratch.element(rank).assign(value);
   workgroupBarrier();
   for (let stride = 1; stride < SCAN_WORKGROUP; stride <<= 1) {
