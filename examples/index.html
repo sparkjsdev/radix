@@ -154,10 +154,10 @@
       ["WebXR", "One splat file in an immersive-vr session: WebGPU XR with the GPU sort, or WebGL2 XR with the worker sort through one view for the head. Without a headset the desktop view orbits; stereo previews both eyes side by side.",
         [["desktop", "xr/index.html", ""], ["stereo preview", "xr/index.html", "stereo=1"]]],
       ["SPZ reader / writer", "Reads and writes Niantic SPZ files: v2 and v3 (gzip) and SPZ 4 (NGSP header, zstd streams), with spherical harmonics up to degree 4. A panel shows what the reader found: container, version, SH degree, and records such as Adobe's safe orbit. Write the splats as v2, v3 or SPZ 4, download the file, and read it back. Open or drop any splat file to convert it to SPZ. CC0 samples from SharedTestModels.",
-        [["seashell (SPZ 4)", "spz/index.html", ""], ["sparkling water (SPZ 4, SH 4)", "spz/index.html", "sample=sparkling-v4"],
-          ["backpack (v2)", "spz/index.html", "sample=backpack-v2"], ["scarf (v3, SH 4)", "spz/index.html", "sample=scarf-v3"]]],
+        [["seashell (SPZ 4, CC0)", "spz/index.html", ""], ["sparkling water (SPZ 4, SH 4, CC0)", "spz/index.html", "sample=sparkling-v4"],
+          ["backpack (v2, CC0)", "spz/index.html", "sample=backpack-v2"], ["scarf (v3, SH 4, CC0)", "spz/index.html", "sample=scarf-v3"]]],
       ["SOG viewer + LoD", "PlayCanvas SOG and SOGS files (.sog or .zip bundles, or a meta.json with its WebPs: open, drop a folder or paste a URL) decoded into ext splats, their spherical harmonics as an ext palette (drawn by Radix's built-in SH); and SOG LoD scenes (lod-meta.json) streamed file by file, a level per leaf under a splat budget, drawn as one object per resident file. The splat viewer's bar and panel, plus the SH degree and a LoD panel with level colors.",
-        [["Knock Community Hall", "sogs/index.html", "sample=hall"], ["Sutro (SOGS .zip)", "sogs/index.html", "sample=sutro"],
+        [["Knock Community Hall (CC BY 4.0)", "sogs/index.html", "sample=hall"], ["Sutro (SOGS .zip)", "sogs/index.html", "sample=sutro"],
           ["Sutro (LoD)", "sogs/index.html", "sample=sutro-lod", "2M splats over 5 levels"]]],
       ["MPM water", "MLS-MPM water simulated in WebGPU compute kernels, one splat per particle from a generator that reads the particle buffers, sorted together with a splat scan it collides with (a baked distance field that follows the scan's gizmo); movable walls and live simulation knobs.",
         [["ceramic", "mpm/index.html", ""], ["no scan", "mpm/index.html", "scene=none"], ["GPU timings", "mpm/index.html", "timing=1", "GPU time per kernel"]], { webgpu: true }],
@@ -202,7 +202,7 @@
         const path = `spark/${page}`;
         const name = page === `${example.name}/index.html` ? example.title : `${example.title} (${page.split("/").pop().replace(".html", "")})`;
         spark.insertAdjacentHTML("beforeend", `
-          <div><a href="${url(path, query)}">${name}</a>${example.status === "partial" ? ' <span class="partial">partial</span>' : ""}</div>
+          <div><a href="${url(path, query)}">${name}${example.license ? ` (${example.license})` : ""}</a>${example.status === "partial" ? ' <span class="partial">partial</span>' : ""}</div>
           <div><a class="muted" href="${url(path, query, true)}">WebGL2</a></div>
           <div class="muted">${example.uses ?? ""}</div>`);
       }

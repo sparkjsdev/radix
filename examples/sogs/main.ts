@@ -28,7 +28,7 @@ import {
   CameraControls, GpuArrays, GpuProfiler, GpuShPalette, SplatCollection, SplatRenderer, Splats, createRenderer, getGpuCaps,
   type ArrayData, type ProjectionMethod, type SortKeyBits,
 } from "@sparkjsdev/radix";
-import { SAMPLES, sampleRotation, skyTexture, type Sample } from "./catalog.js";
+import { SAMPLES, creditHtml, sampleRotation, skyTexture, type Sample } from "./catalog.js";
 import { decodeSogGpu } from "./gpuDecode.js";
 import { makeGui } from "./gui.js";
 import { defaultLodSettings, parseLod } from "./lod.js";
@@ -41,6 +41,7 @@ import { validate, type ValidateOptions } from "./validate.js";
 
 const params = new URLSearchParams(location.search);
 const status = document.getElementById("status")!;
+const credit = document.getElementById("credit")!;
 const toast = document.getElementById("toast")!;
 const drop = document.getElementById("drop")!;
 const picker = document.getElementById("picker") as HTMLInputElement;
@@ -224,6 +225,7 @@ async function open(name: string, input: OpenInput, sample?: Sample) {
     const reloaded = shown?.input === input;
     release(shown);
     shown = next;
+    credit.innerHTML = sample?.credit ? creditHtml(sample.credit) : "";
     if (next.stream) {
       splats.collection = SplatCollection.EMPTY;
     } else {

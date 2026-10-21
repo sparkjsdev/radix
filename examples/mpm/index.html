@@ -25,6 +25,15 @@
         text-shadow: 0 1px 2px #000;
         pointer-events: none;
       }
+      #credit {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        text-shadow: 0 1px 2px #000;
+      }
+      #credit a {
+        color: inherit;
+      }
       #needs-webgpu {
         position: fixed;
         inset: 0;
@@ -92,6 +101,7 @@
   </head>
   <body>
     <pre id="status">Loading...</pre>
+    <div id="credit"></div>
     <div id="needs-webgpu" hidden>
       <h1>This example needs WebGPU</h1>
       The water is simulated in WebGPU compute shaders, which the WebGL2 backend does not have. Open it in a browser with

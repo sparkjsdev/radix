@@ -123,6 +123,23 @@
       #status:empty {
         display: none;
       }
+      #credit {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: rgba(18, 20, 26, 0.72);
+        backdrop-filter: blur(8px);
+        color: #aab2c0;
+        font-size: 11px;
+      }
+      #credit:empty {
+        display: none;
+      }
+      #credit a {
+        color: inherit;
+      }
 
       #drop {
         position: fixed;
@@ -249,6 +266,7 @@
   <body>
     <div id="bar"></div>
     <div id="status"></div>
+    <div id="credit"></div>
     <div id="toast"></div>
     <div id="drop"><div>Drop a .sog or .zip, or a SOG folder (meta.json and its .webp files)</div></div>
     <input id="picker" type="file" accept=".sog,.zip,.json,.webp" multiple hidden />

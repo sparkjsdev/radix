@@ -3,6 +3,7 @@
 //   xr         needs an XR session to show everything
 //   smoke      the query string the smoke check loads its pages with
 //   smokeWait  ms the smoke check waits before its screenshot, default 1500
+//   license    the license of the scan it shows, after its link on the examples index
 export interface Example {
   name: string;
   title: string;
@@ -14,6 +15,7 @@ export interface Example {
   xr?: boolean;
   smoke?: string;
   smokeWait?: number;
+  license?: string;
 }
 
 export const EXAMPLES: Example[] = [
@@ -30,7 +32,7 @@ export const EXAMPLES: Example[] = [
   { name: "splat-painter", title: "Splat Painter", status: "ported", listed: true, uses: "a GpuArrayWriter brush rewriting stored splats, restore by copyFrom, readback and SPZ export" },
   { name: "splat-reveal-effects", title: "Splat Reveal Effects", status: "ported", listed: true, smokeWait: 8000, uses: "object-space TSL modifiers driven by uniforms", gaps: "Sutro (SOGS zip) is left out" },
   { name: "splat-shader-effects", title: "Splat Shader Effects", status: "ported", listed: true, uses: "object-space TSL modifiers driven by uniforms" },
-  { name: "splat-dissolve-effects", title: "Splat Dissolve Effects", status: "ported", listed: true, uses: "an object-space TSL modifier driven by time" },
+  { name: "splat-dissolve-effects", title: "Splat Dissolve Effects", status: "ported", listed: true, uses: "an object-space TSL modifier driven by time", license: "CC BY 4.0" },
   { name: "splat-transitions", title: "Splat Transitions", status: "ported", listed: true, uses: "four effect demos: world-space modifiers over several objects, text splats, GLB environments" },
   { name: "stochastic", title: "Stochastic", status: "removed", listed: true, gaps: "listed on sparkjs.dev but no longer in Spark's examples" },
   { name: "sogs", title: "SOGS Compression", status: "blocked", listed: true, gaps: "Radix reads PLY, SPZ, RAD and RDX only: no SOG / SOGS (.sog, .zip) decoder" },

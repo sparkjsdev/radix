@@ -73,3 +73,18 @@ canvas {
   margin-left: 8px;
   color: #999;
 }
+
+#example-credit {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #bbb;
+  font-size: 12px;
+}
+
+#example-credit a {
+  color: #8cf;
+}

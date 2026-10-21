@@ -22,12 +22,13 @@ import {
   CameraControls, GpuArrays, GpuProfiler, GpuShPalette, Sh, SplatCollection, SplatRenderer, Splats, createRenderer, getGpuCaps, loadSplatFile, writeSplats,
   type ArrayData, type ProjectionMethod, type ShPalette, type ShTarget, type SortKeyBits, type SplatSource,
 } from "@sparkjsdev/radix";
-import { SCANS, scanRotation, skyTexture, type Scan } from "./catalog.js";
+import { SCANS, creditHtml, scanRotation, skyTexture, type Scan } from "./catalog.js";
 import { makeGui } from "./gui.js";
 import { formatCount, makeQuickBar } from "./quickBar.js";
 
 const params = new URLSearchParams(location.search);
 const status = document.getElementById("status")!;
+const credit = document.getElementById("credit")!;
 const toast = document.getElementById("toast")!;
 const drop = document.getElementById("drop")!;
 const picker = document.getElementById("picker") as HTMLInputElement;
@@ -140,6 +141,7 @@ async function open(name: string, source: SplatSource, scan?: Scan) {
     splats.collection = new SplatCollection([SplatCollection.arrays(fileArrays, { matrixWorld: model.matrixWorld, shPalette: paletteArrays, release })]);
     const reloaded = current?.source === source;
     current = { name, source, scan };
+    credit.innerHTML = scan?.credit ? creditHtml(scan.credit) : "";
     if (Splats.findLodTree(loaded.splats)) {
       showError(`${baseName(name)} has a LoD tree: every node is drawn (no LoD rendering yet)`);
     }

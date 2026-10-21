@@ -1,8 +1,16 @@
 import * as THREE from "three";
 
+// Shown in the corner while its scan is open
+export interface Credit {
+  title: string;
+  url: string;
+  author: string;
+}
+
 export interface Scan {
   label: string;
   url: string;
+  credit?: Credit;
   // Camera mode it starts in (default orbit)
   mode?: "orbit" | "fly";
   // Trained with the 3DGS screen-space dilation: pre-blur instead of blur
@@ -27,14 +35,18 @@ export const SCANS: Record<string, Scan> = {
   // Spark's SOGS example view, at the tower's foot
   sutro: {
     label: "Sutro (2M, SH3)", url: `${SPLATS_SH}/sutro-2m.rdx`, sky: true,
+    credit: { title: "Sutro Tower", url: "https://vincentwoo.com/2025/02/18/sutro-tower-in-3d/", author: "Vincent Woo and Daylen Yang" },
     view: { position: [0, 1.5, -1.2], target: [0, 1.5, 0], fov: 60 },
   },
   // In the middle of the nave, looking along it
   grace: {
     label: "Grace interior (10M, SH3)", url: `${SPLATS_SH}/grace-interior-10m.rdx`, mode: "fly",
+    credit: { title: "Grace Cathedral", url: "https://vincentwoo.com/3d/grace_cathedral/", author: "Vincent Woo" },
     view: { position: [-14, 8, -3], target: [-4, 8, -3], fov: 60 },
   },
 };
+
+export const creditHtml = ({ title, url, author }: Credit) => `<a href="${url}" target="_blank" rel="noopener">${title}</a> by ${author}`;
 
 // Samples are stored y-down: the flip, then the up correction
 export function scanRotation({ up }: Scan) {

@@ -41,6 +41,9 @@ const SPLATS_SH = params.get("splatsSh") ?? "https://storage.googleapis.com/forg
 const SAMPLES: Record<string, string> = {
   ceramic: `${SPLATS}/ceramic.rdx`, butterfly: `${SPLATS}/butterfly-ai.rdx`, sutro: `${SPLATS_SH}/sutro-2m.rdx`,
 };
+const CREDITS: Record<string, string> = {
+  sutro: '<a href="https://vincentwoo.com/2025/02/18/sutro-tower-in-3d/" target="_blank" rel="noopener">Sutro Tower</a> by Vincent Woo and Daylen Yang',
+};
 
 function numberParam(name: string, fallback: number) {
   const value = Number(params.get(name));
@@ -124,6 +127,7 @@ if (sceneName !== "none") {
   });
   const leaves = leafSplats(data);
   sceneSplatCount = leaves.count;
+  document.getElementById("credit")!.innerHTML = CREDITS[sceneName] ?? "";
   scan = GpuArrays.fromData(renderer, leaves, { bundles: ["extSplats"] });
   if (params.get("flip") !== "0") {
     holder.quaternion.set(1, 0, 0, 0);

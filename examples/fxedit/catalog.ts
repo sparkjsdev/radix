@@ -1,8 +1,16 @@
 import * as THREE from "three";
 
+// Shown under the render while its scan is open
+export interface Credit {
+  title: string;
+  url: string;
+  author: string;
+}
+
 export interface Scan {
   label: string;
   url: string;
+  credit?: Credit;
   scene?: boolean;
   // Trained with the 3DGS screen-space dilation: pre-blur, which keeps thin structures, not blur
   preBlur?: boolean;
@@ -26,9 +34,12 @@ export const SCANS: Record<string, Scan> = {
   // Spark's SOGS example view: at the tower's foot, looking at it
   sutro: {
     label: "Sutro (2M, SH3)", url: `${SPLATS_SH}/sutro-2m.rdx`, scene: true, preBlur: true, sky: true,
+    credit: { title: "Sutro Tower", url: "https://vincentwoo.com/2025/02/18/sutro-tower-in-3d/", author: "Vincent Woo and Daylen Yang" },
     view: { position: [0, 1.5, -1.2], target: [0, 1.5, 0], fov: 60 },
   },
 };
+
+export const creditHtml = ({ title, url, author }: Credit) => `<a href="${url}" target="_blank" rel="noopener">${title}</a> by ${author}`;
 
 // Stored y-down: the flip, then the up correction
 export function scanRotation({ up }: Scan) {

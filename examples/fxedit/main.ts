@@ -17,7 +17,7 @@ import { Pane, type FolderApi } from "tweakpane";
 import {
   CameraControls, GpuArrays, SplatCollection, SplatGenerator, SplatProjector, SplatRenderer, Splats, createRenderer, getGpuCaps, loadSplats, type ArrayData,
 } from "@sparkjsdev/radix";
-import { SCANS, scanRotation, skyTexture, type Scan } from "./catalog.js";
+import { SCANS, creditHtml, scanRotation, skyTexture, type Scan } from "./catalog.js";
 import { VALUE_CHECKS, finite, runGraph } from "./checks.js";
 import { addControlsFolder } from "./controlsPane.js";
 import { inFrame, setFrame } from "./framed.js";
@@ -360,6 +360,7 @@ async function setScan(name: string) {
     return;
   }
   loaded = next;
+  $("credit").innerHTML = scan.credit ? creditHtml(scan.credit) : "";
   normalized.quaternion.copy(next.quaternion);
   normalized.scale.setScalar(next.scale);
   normalized.position.copy(next.translate);
