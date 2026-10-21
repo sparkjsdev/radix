@@ -1,77 +1,178 @@
-// Camera controls for pointer, touch, keyboard, gamepad and WebXR controllers
-// in one update(), after Spark's SparkControls (with its fixes: turning about
-// the object's up axis, frames of no time skipped, the look stick scaled once).
-//
-// One camera state serves both modes: the object's pose plus an orbit
-// distance, the target being that far in front of it. "fly" turns about the
-// camera, "orbit" about the target; switching keeps the pose, so the view
-// never jumps. Everything happens in the object's parent frame.
-//
-//   left drag / one finger    look (fly) or orbit around the target (orbit)
-//   double press, then drag   slide: sideways, and forward / back
-//   right drag (fly, with pick, pointer not locked)  orbit around the
-//                             point under the pointer while held (Shift: pan)
-//   right drag / two fingers  pan (the scene follows the pointer)
-//   middle drag, wheel, pinch forward / back (fly) or zoom (orbit)
-//   WASD / arrows, Q E, PgUp PgDn   move, down / up; Shift fast, Ctrl slow,
-//                             Caps Lock on: capsMultiplier faster (keys and sticks)
-//   Insert Delete, Home End   turn left / right, look up / down
-//   F                         switch mode (settings.modeKey)
-//   gamepad                   left stick move, right stick look, LB / RB
-//                             down / up, LT slow, RT fast
-//   WebXR (xr given)          left stick moves the rig, left trigger / grip
-//                             up / down, right stick turns, right trigger /
-//                             grip fast / slow
+// Based on Spark's SparkControls
 import * as THREE from "three";
 
+/** Fly turns about the camera, and orbit about the target in front of it. */
 export type CameraControlsMode = "fly" | "orbit";
 
+/** The inertia of keys, sticks and pointer glides. */
 export interface CameraControlsInertia {
-  // Seconds. Keys and sticks: time to reach (and leave) full speed.
-  // Pointer: how long the motion glides on after release. 0: none.
+  /**
+   * Seconds for keys and sticks to reach or leave full turn speed, or 0 for
+   * none.
+   *
+   * @default 0.15
+   */
   look: number;
+  /**
+   * Seconds for keys and sticks to reach or leave full speed, or 0 for none.
+   *
+   * @default 0.15
+   */
   move: number;
+  /**
+   * Seconds a pointer turn glides on after release, or 0 for none.
+   *
+   * @default 0.15
+   */
   pointerLook: number;
+  /**
+   * Seconds a pointer pan or slide glides on after release, or 0 for none.
+   *
+   * @default 0.15
+   */
   pointerMove: number;
 }
 
+/** The settings of CameraControls. */
 export interface CameraControlsSettings {
+  /**
+   * The current mode.
+   *
+   * @default "fly"
+   */
   mode: CameraControlsMode;
-  // Keys and sticks: m/s (both modes) and rad/s
+  /**
+   * The speed of keys and sticks, in meters per second.
+   *
+   * @default 1
+   */
   moveSpeed: number;
+  /**
+   * The turn speed of keys and sticks, in radians per second.
+   *
+   * @default 2
+   */
   lookSpeed: number;
-  // Pointer: rad per pixel dragged; m per pixel panned or slid (orbit: distances)
+  /**
+   * Radians turned per pixel dragged.
+   *
+   * @default 0.003
+   */
   pointerLookSpeed: number;
+  /**
+   * Meters panned or slid per pixel, per unit of distance in orbit mode.
+   *
+   * @default 0.002
+   */
   pointerPanSpeed: number;
-  // Wheel / pinch units (a wheel notch is about 100): m each (fly), or
-  // zoom by exp(zoomSpeed) each (orbit)
+  /**
+   * The zoom per wheel unit, about 100 to a notch: meters in fly mode, a factor
+   * of exp(zoomSpeed) in orbit mode.
+   *
+   * @default 0.0015
+   */
   zoomSpeed: number;
+  /**
+   * The closest orbit distance, in meters.
+   *
+   * @default 0.05
+   */
   minDistance: number;
+  /**
+   * The farthest orbit distance, in meters.
+   *
+   * @default 1000
+   */
   maxDistance: number;
+  /**
+   * The speed factor of Shift and the fast gamepad and XR buttons.
+   *
+   * @default 5
+   */
   fastMultiplier: number;
+  /**
+   * The speed factor of Ctrl and the slow gamepad and XR buttons.
+   *
+   * @default 0.2
+   */
   slowMultiplier: number;
-  // While Caps Lock is on (a toggle, so long flights need no held key)
+  /**
+   * The speed factor while Caps Lock is on.
+   *
+   * @default 10
+   */
   capsMultiplier: number;
+  /**
+   * Inverts horizontal pointer turns.
+   *
+   * @default true in mobile browsers, else false
+   */
   invertLookX: boolean;
+  /**
+   * Inverts vertical pointer turns.
+   *
+   * @default true in mobile browsers, else false
+   */
   invertLookY: boolean;
+  /**
+   * Inverts pans and slides.
+   *
+   * @default false
+   */
   invertPan: boolean;
+  /**
+   * Inverts zooming.
+   *
+   * @default false
+   */
   invertZoom: boolean;
+  /**
+   * Inverts the gamepad's look stick vertically.
+   *
+   * @default false
+   */
   invertStickY: boolean;
-  // Fly mode: a click captures the pointer, the mouse then looks without a
-  // button (a left click or Esc releases)
+  /**
+   * In fly mode, a click captures the pointer for looking until a click or Esc.
+   *
+   * @default false
+   */
   pointerLock: boolean;
   inertia: CameraControlsInertia;
-  // Keyboard code that switches mode ("" for none)
+  /**
+   * The KeyboardEvent.code that switches mode, or "" for none.
+   *
+   * @default "KeyF"
+   */
   modeKey: string;
-  // Milliseconds between two presses that make the second drag slide (0: never)
+  /**
+   * Milliseconds between two presses that make the second drag slide, or 0 for
+   * never.
+   *
+   * @default 300
+   */
   doublePress: number;
+  /**
+   * Stick values below this fraction of the travel count as 0.
+   *
+   * @default 0.1
+   */
   stickDeadZone: number;
+  /**
+   * The speed of the XR sticks, in meters per second.
+   *
+   * @default 1
+   */
   xrMoveSpeed: number;
+  /**
+   * The turn speed of the XR sticks, in radians per second.
+   *
+   * @default 4
+   */
   xrTurnSpeed: number;
 }
 
-// The part of THREE.WebXRManager / WebGPURenderer's XRManager the XR
-// locomotion reads
+/** The part of renderer.xr that the controls read. */
 export interface XrInput {
   isPresenting: boolean;
   getSession(): XRSession | null;
@@ -81,16 +182,15 @@ const MOVE_KEYS: Record<string, [number, number, number]> = {
   KeyW: [0, 0, -1], KeyS: [0, 0, 1], KeyA: [-1, 0, 0], KeyD: [1, 0, 0], KeyE: [0, 1, 0], KeyQ: [0, -1, 0],
   ArrowUp: [0, 0, -1], ArrowDown: [0, 0, 1], ArrowLeft: [-1, 0, 0], ArrowRight: [1, 0, 0], PageUp: [0, 1, 0], PageDown: [0, -1, 0],
 };
-// Yaw (right positive), pitch (up positive)
+// Yaw right, pitch up
 const LOOK_KEYS: Record<string, [number, number]> = { Insert: [-1, 0], Delete: [1, 0], Home: [0, 1], End: [0, -1] };
 
 const Y = new THREE.Vector3(0, 1, 0);
 const FORWARD = new THREE.Vector3(0, 0, -1);
 const MAX_PITCH = Math.PI / 2 - 1e-4;
 // A released drag glides at its average speed over this many milliseconds
-// before the release: a pause shorter than this still glides, slower
 const RELEASE_WINDOW = 100;
-// Glides slower than this (pixels per second) stop
+// Pixels per second
 const GLIDE_STOP = 0.5;
 
 interface Pointer {
@@ -98,12 +198,31 @@ interface Pointer {
   y: number;
   button: number;
   touch: boolean;
-  // A right drag orbiting the picked point
+  // Orbits the picked point
   pivots: boolean;
-  // A drag after a double press
+  // Started by a double press
   slides: boolean;
 }
 
+/**
+ * Orbit and fly camera controls for pointer, touch, keys, gamepads and WebXR.
+ *
+ * Fly turns about the camera, orbit about the target distance ahead, both in
+ * the parent frame. Switching mode keeps the view.
+ *
+ * - Left drag, one finger: look, or orbit the target.
+ * - Double press, then drag: slide.
+ * - Right drag, two fingers: pan. In fly mode with pick set, orbit the picked
+ *   point.
+ * - Wheel, middle drag, pinch: move forward and back, or zoom.
+ * - WASD, arrows, Q, E, PgUp, PgDn: move. Shift is fast, Ctrl slow, Caps Lock
+ *   faster.
+ * - Insert, Delete: turn. Home, End: look up and down. F: switch mode.
+ * - Gamepad: left stick moves, right stick looks, LB and RB move down and up,
+ *   LT and RT are slow and fast.
+ * - WebXR: left stick moves, right stick turns, left trigger and grip move up
+ *   and down, right trigger and grip are fast and slow.
+ */
 export class CameraControls {
   static readonly DEFAULTS: CameraControlsSettings = {
     mode: "fly",
@@ -117,7 +236,7 @@ export class CameraControls {
     fastMultiplier: 5,
     slowMultiplier: 0.2,
     capsMultiplier: 10,
-    // Touch screens drag the scene rather than the view
+    // Touch screens drag the scene
     invertLookX: isMobile(),
     invertLookY: isMobile(),
     invertPan: false,
@@ -133,59 +252,78 @@ export class CameraControls {
   };
 
   readonly canvas: HTMLCanvasElement;
-  // The camera, or an object carrying it
+  /** The camera, or an object carrying it. */
   object: THREE.Object3D;
+  /**
+   * The current settings. Assigning them skips onChange.
+   */
   settings: CameraControlsSettings;
-  // Orbit radius: the target is this far in front of the object
+  /**
+   * The orbit radius, in meters.
+   *
+   * @default 2
+   */
   distance = 2;
+  /**
+   * Whether input moves the object.
+   *
+   * @default true
+   */
   enabled = true;
-  // Called after settings change (set, reset, the mode key)
+  /** Called after set, reset or the mode key change the settings. */
   onChange?: (settings: CameraControlsSettings) => void;
+  /** The XR manager whose controllers move the rig while presenting. */
   xr?: XrInput;
+  /**
+   * What the XR sticks move. Its parent must be the scene.
+   *
+   * @default the object's parent
+   */
   rig?: THREE.Object3D;
-  // Fly mode, pointer not locked: the point (parent frame) under a canvas
-  // position in CSS pixels, which a right drag orbits around while held;
-  // undefined for nothing there (the drag then orbits the point `distance`
-  // ahead). An async depth readback fits: the drag waits for it.
+  /**
+   * The point under a canvas position in CSS pixels, in the parent frame, which
+   * a fly-mode right drag orbits.
+   */
   pick?: (x: number, y: number) => Promise<THREE.Vector3 | undefined>;
 
   private pageDefaults: CameraControlsSettings;
-  // The current right drag's pivot (once picked), its look delta in pixels,
-  // and which drag the pending pick belongs to
+  // The right drag's pivot, its look delta in pixels, and the drag a pick is for
   private pivot?: THREE.Vector3;
   private pivotLook = new THREE.Vector2();
   private pivotDrag = 0;
   private pointers = new Map<number, Pointer>();
   private lastPress = -Infinity;
   private keys = new Set<string>();
-  // Caps Lock's state from the latest key or pointer event
   private capsLock = false;
-  // Pointer deltas since the last update: look in pixels, pan (x, y) and
-  // slide forward (z) in pixels, zoom in wheel units
+  // Since the last update: look, pan and slide (z) in pixels, zoom in wheel units
   private look = new THREE.Vector2();
   private pan = new THREE.Vector3();
   private zoom = 0;
   private keyLookVelocity = new THREE.Vector2();
   private keyMoveVelocity = new THREE.Vector3();
-  // The glide after a release, in pixels per second (look; pan and slide)
+  // Pixels per second
   private pointerLookVelocity = new THREE.Vector2();
   private pointerPanVelocity = new THREE.Vector3();
-  // The current drag's start and its recent moves (event times in ms), for
-  // the glide's speed: from events, so frames without one do not stop it
+  // In event time, so frames without an event do not stop the glide
   private dragStart = 0;
   private dragMoves: { time: number; look: THREE.Vector2; pan: THREE.Vector3 }[] = [];
   private lastTime?: number;
   private abort = new AbortController();
 
+  /**
+   * Starts reading input from the canvas and the document.
+   *
+   * @param options.object The camera, or an object carrying it.
+   * @param [options.settings] The page's defaults over CameraControls.DEFAULTS.
+   * @param [options.xr] renderer.xr, for moving the rig with XR controllers.
+   * @param [options.rig=object.parent] What the XR sticks move. Its parent must
+   *   be the scene.
+   */
   constructor({ canvas, object, settings, xr, rig }: {
     canvas: HTMLCanvasElement;
     object: THREE.Object3D;
-    // The page's own defaults over CameraControls.DEFAULTS
     settings?: Partial<CameraControlsSettings>;
-    // WebXR manager (renderer.xr): its controllers move the rig while presenting
     xr?: XrInput;
-    // Object the XR sticks move (default: the object's parent); its parent
-    // must be the scene, since head positions are world space
     rig?: THREE.Object3D;
   }) {
     this.canvas = canvas;
@@ -222,16 +360,18 @@ export class CameraControls {
     }
   }
 
+  /**
+   * The current mode. Switching keeps the view.
+   */
   get mode(): CameraControlsMode {
     return this.settings.mode;
   }
 
-  // Switch at any time: the pose stays, only the pivot changes
   set mode(mode: CameraControlsMode) {
     this.set({ mode });
   }
 
-  // Change some settings
+  /** Changes some settings and calls onChange. */
   set(settings: Partial<CameraControlsSettings>) {
     this.settings = mergeSettings(this.settings, settings);
     if (this.settings.mode !== "fly" && document.pointerLockElement === this.canvas) {
@@ -240,18 +380,22 @@ export class CameraControls {
     this.onChange?.(this.settings);
   }
 
-  // Back to the page's defaults
+  /** Goes back to the settings the page passed, and calls onChange. */
   reset() {
     this.settings = mergeSettings(this.pageDefaults, {});
     this.onChange?.(this.settings);
   }
 
-  // The orbit target in the parent frame
+  /** Returns the orbit target, in the parent frame. */
   getTarget(out = new THREE.Vector3()): THREE.Vector3 {
     return out.copy(FORWARD).applyQuaternion(this.object.quaternion).multiplyScalar(this.distance).add(this.object.position);
   }
 
-  // Face `target` (parent frame) from where the object stands and orbit around it
+  /**
+   * Faces a point and orbits it.
+   *
+   * @param target The point to face, in the parent frame.
+   */
   lookAt(target: THREE.Vector3) {
     const position = this.object.position;
     this.distance = THREE.MathUtils.clamp(position.distanceTo(target), this.settings.minDistance, this.settings.maxDistance);
@@ -261,12 +405,15 @@ export class CameraControls {
     this.object.quaternion.setFromEuler(e).premultiply(up);
   }
 
-  // Call once per frame; true when the object moved
+  /**
+   * Applies the input since the last call. Call it once per frame.
+   *
+   * @return Whether the object moved.
+   */
   update(): boolean {
     const now = performance.now();
     const dt = (now - (this.lastTime ?? now)) / 1000;
-    // Velocities divide by the frame time: a frame of no time keeps its input
-    // for the next one
+    // A frame of no time keeps its input for the next
     if (!(dt > 0)) {
       this.lastTime ??= now;
       return false;
@@ -284,7 +431,6 @@ export class CameraControls {
     const s = this.settings;
     const orbit = s.mode === "orbit";
 
-    // Keys and gamepad: target velocities, eased by the inertia
     const moveInput = new THREE.Vector3();
     const lookInput = new THREE.Vector2();
     for (const code of this.keys) {
@@ -320,13 +466,12 @@ export class CameraControls {
       speed *= THREE.MathUtils.lerp(1, s.fastMultiplier, gamepad.buttons[7]?.value ?? 0);
     }
 
-    // Pans follow the pointer at the orbit distance; keys move at one speed in both modes
+    // Pans follow the pointer at the orbit distance
     const scale = orbit ? this.distance : 1;
     ease(this.keyMoveVelocity, moveInput.multiplyScalar(s.moveSpeed * speed), s.inertia.move, dt);
     ease(this.keyLookVelocity, lookInput.multiplyScalar(s.lookSpeed), s.inertia.look, dt);
 
-    // Pointer: applied as dragged, gliding on after release (pointerUp sets
-    // the glide; holding a pointer stops it)
+    // pointerUp sets the glide, and a held pointer stops it
     if (this.pointers.size > 0 || this.locked()) {
       this.pointerLookVelocity.set(0, 0);
       this.pointerPanVelocity.set(0, 0, 0);
@@ -348,7 +493,7 @@ export class CameraControls {
     this.pan.set(0, 0, 0);
     this.zoom = 0;
 
-    // Yaw right and pitch up, in radians; motion in the object's own axes
+    // Yaw right and pitch up, in radians
     const yaw = lookDelta.x + this.keyLookVelocity.x * dt;
     const pitch = -lookDelta.y + this.keyLookVelocity.y * dt;
     const move = this.keyMoveVelocity.clone().multiplyScalar(dt);
@@ -359,7 +504,7 @@ export class CameraControls {
     const object = this.object;
     const before = object.position.clone();
     const beforeQuaternion = object.quaternion.clone();
-    // Taken before the zoom changes the distance
+    // Before the zoom changes the distance
     const target = this.getTarget();
     if (orbit) {
       this.distance = THREE.MathUtils.clamp(this.distance * Math.exp(zoom), s.minDistance, s.maxDistance);
@@ -375,8 +520,7 @@ export class CameraControls {
     }
     object.position.add(move.applyQuaternion(object.quaternion));
 
-    // Right drag in fly mode: turn as orbit mode does, about the picked point
-    // (the delta waits while the pick is pending)
+    // A fly-mode right drag orbits the picked point once the pick settles
     if (this.pivot && this.pivotLook.lengthSq() > 0) {
       const look = new THREE.Vector2(this.pivotLook.x * (s.invertLookX ? -1 : 1), this.pivotLook.y * (s.invertLookY ? -1 : 1)).multiplyScalar(s.pointerLookSpeed);
       this.pivotLook.set(0, 0);
@@ -409,7 +553,6 @@ export class CameraControls {
     if (!this.enabled) {
       return;
     }
-    // A left click captures the pointer, the next one releases it
     if (this.locked() && event.button === 0) {
       document.exitPointerLock();
       return;
@@ -417,11 +560,10 @@ export class CameraControls {
     if (this.settings.pointerLock && this.settings.mode === "fly" && event.pointerType === "mouse" && event.button === 0 && !this.locked()) {
       void Promise.resolve(this.canvas.requestPointerLock()).catch(() => {});
     }
-    // While the pointer is locked the right drag pans (there is no pointer to
-    // pick under); otherwise it orbits the picked point, lock setting or not
+    // Locked, the right drag pans, since there is no pointer to pick under
     const s = this.settings;
     const pivots = event.button === 2 && event.pointerType === "mouse" && !event.shiftKey && s.mode === "fly" && !this.locked() && this.pick !== undefined;
-    // The second of two quick presses of the first pointer slides
+    // The second of two quick presses slides
     const now = performance.now();
     const primary = event.button === 0 && this.pointers.size === 0;
     const slides = primary && now - this.lastPress < s.doublePress;
@@ -453,7 +595,7 @@ export class CameraControls {
     }
   }
 
-  // Applies the move, and keeps what it added to look and pan for the glide
+  // Keeps the look and pan this move adds, for the glide
   private pointerMove(event: PointerEvent) {
     const [look, pan] = [this.look.clone(), this.pan.clone()];
     this.applyMove(event);
@@ -473,7 +615,7 @@ export class CameraControls {
 
   private applyMove(event: PointerEvent) {
     if (this.locked()) {
-      // Locked: the mouse looks without a button (right / middle still pan / zoom)
+      // Locked, the mouse looks without a button
       const pointer = this.pointers.get(event.pointerId);
       if (pointer?.pivots) {
         this.pivotLook.x += event.movementX;
@@ -491,7 +633,7 @@ export class CameraControls {
 
     const touches = [...this.pointers.values()].filter((p) => p.touch);
     if (pointer.touch && touches.length >= 2) {
-      // Two fingers: the midpoint pans, the spread zooms
+      // The midpoint pans, the spread zooms
       const [a, b] = touches;
       const midBefore = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const spreadBefore = Math.hypot(a.x - b.x, a.y - b.y);
@@ -539,8 +681,7 @@ export class CameraControls {
     }
     this.pointers.delete(event.pointerId);
 
-    // The last pointer up: glide at the drag's average speed over the
-    // window before now (none after a longer pause)
+    // The glide is the drag's average speed over the last RELEASE_WINDOW
     if (this.pointers.size === 0 && !this.locked()) {
       const end = event.timeStamp;
       const start = Math.max(end - RELEASE_WINDOW, this.dragStart);
@@ -559,7 +700,7 @@ export class CameraControls {
     }
 
     if (pointer.pivots) {
-      // Back to plain fly: a late pick is ignored
+      // So a late pick is ignored
       this.pivotDrag += 1;
       this.pivot = undefined;
       this.pivotLook.set(0, 0);
@@ -567,7 +708,7 @@ export class CameraControls {
     try {
       this.canvas.releasePointerCapture(event.pointerId);
     } catch {
-      // Never captured (pointer lock)
+      // Never captured under pointer lock
     }
   }
 
@@ -583,9 +724,7 @@ export class CameraControls {
     this.capsLock = event.getModifierState("CapsLock");
   }
 
-  // Controller locomotion of the rig from the session's handed input sources
-  // (xr-standard mapping: axes 2 / 3 thumbstick, button 0 trigger, 1 grip).
-  // Tracked hands have no controls here.
+  // xr-standard mapping: axes 2 and 3 thumbstick, button 0 trigger, 1 grip
   private updateXr(dt: number) {
     const session = this.xr?.getSession();
     if (!session) {
@@ -623,18 +762,18 @@ export class CameraControls {
     }
 
     const rig = this.rig ?? this.object.parent ?? this.object;
-    // Head pose in world space (three.js writes the XR pose into the camera)
+    // three writes the XR head pose into the camera
     const head = this.object.getWorldPosition(new THREE.Vector3());
     const facing = this.object.getWorldDirection(new THREE.Vector3());
 
-    // Yaw about the head so the viewer pivots in place wherever they stand
+    // Yaw about the head, so the viewer turns in place
     if (turn !== 0) {
       const yaw = new THREE.Quaternion().setFromAxisAngle(Y, -turn * s.xrTurnSpeed * dt);
       rig.quaternion.premultiply(yaw);
       rig.position.sub(head).applyQuaternion(yaw).add(head);
     }
 
-    // Along the head's horizontal facing (the rig's when looking straight up / down)
+    // The head's horizontal facing, or the rig's when looking straight down
     facing.y = 0;
     if (facing.lengthSq() < 1e-6) {
       facing.set(0, 0, -1).applyQuaternion(rig.quaternion);
@@ -648,7 +787,7 @@ export class CameraControls {
   }
 }
 
-// Yaw right about object.up and pitch up, in radians (pitch stops short of straight up / down)
+// Yaw right about object.up and pitch up, in radians, short of vertical
 function turn(object: THREE.Object3D, yaw: number, pitch: number) {
   const up = upFrame(object);
   const e = new THREE.Euler().setFromQuaternion(object.quaternion.clone().premultiply(up.clone().invert()), "YXZ");
@@ -657,8 +796,7 @@ function turn(object: THREE.Object3D, yaw: number, pitch: number) {
   object.quaternion.setFromEuler(e).premultiply(up);
 }
 
-// Rotation taking +Y to the object's up axis in its parent frame (turning
-// is about object.up, not always Y)
+// The rotation from +Y to object.up in the parent frame
 function upFrame(object: THREE.Object3D): THREE.Quaternion {
   const up = object.up.clone().normalize();
   if (object.parent) {
@@ -667,7 +805,7 @@ function upFrame(object: THREE.Object3D): THREE.Quaternion {
   return new THREE.Quaternion().setFromUnitVectors(Y, up);
 }
 
-// Exponential approach of `value` to `target` with time constant `tau` (0: at once)
+// Exponential approach with time constant tau, 0 for at once
 function ease<V extends THREE.Vector2 | THREE.Vector3>(value: V, target: V, tau: number, dt: number) {
   (value as THREE.Vector3).lerp(target as THREE.Vector3, 1 - decay(tau, dt));
 }
@@ -676,7 +814,7 @@ function decay(tau: number, dt: number) {
   return tau > 0 ? Math.exp(-dt / tau) : 0;
 }
 
-// `over` on `base`, keeping only keys of the settings with matching types
+// Keeps only settings keys whose types match
 function mergeSettings(base: CameraControlsSettings, over: Partial<CameraControlsSettings>): CameraControlsSettings {
   const merged = { ...base, inertia: { ...base.inertia } } as CameraControlsSettings;
   for (const [key, value] of Object.entries(over)) {
