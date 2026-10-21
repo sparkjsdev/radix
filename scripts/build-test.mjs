@@ -1,11 +1,7 @@
-// Builds the GPU test page (test/gpu/) and the benchmark page (test/bench/)
-// into build/test/: each main.ts bundled with three and the library from
-// source (the tests deep-import internals, so both must be the same
-// modules), beside a copy of its index.html.
+// Builds the GPU test and benchmark pages into build/test/, on the library's
+// source so that the tests' deep imports share its modules
 //
-//   npm run build:test, then npm run serve:
-//   http://localhost:8000/build/test/gpu/index.html   (?gpu=webgpu | webgpu-gl, ?run=0)
-//   http://localhost:8000/build/test/bench/index.html (scripts/bench.mjs)
+//   npm run build:test
 import { copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

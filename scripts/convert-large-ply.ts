@@ -1,10 +1,9 @@
-// A PLY too large to read in one piece (Node reads at most 2 GiB at a time)
-// into one RDX file, streamed: each chunk of records is decoded by
-// PlyFile.read itself (the original header with the chunk's count, then
-// the chunk's records) and copied into one table of the asked layout, with
-// its spherical harmonics in the asked SH codec (--sh ext | packed | none).
+// Converts a PLY past Node's 2 GiB read limit into one RDX file, a chunk of records at a time
 //
-//   npm run convert:ply -- <in.ply> <out.rdx> [--layout packedSplats] [--sh ext] [--chunk 1000000]
+//   npm run convert:ply -- <in.ply> <out.rdx> [options]
+//   --layout <name>   extSplats | packedSplats (default) | covSplats
+//   --sh <codec>      ext (default) | packed | none
+//   --chunk <n>       records per chunk (default 1000000)
 import { closeSync, openSync, readSync, statSync, writeFileSync } from "node:fs";
 import { ArrayData, PlyFile, RdxFile, Sh, Splats, type SplatLayout } from "../src/core";
 

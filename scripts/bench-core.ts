@@ -1,24 +1,16 @@
-// Benchmarks of src/core in Node: npm run bench:core [-- options]
+// Times src/core in Node: decoding into each layout, encoding with each writer, sorting keys
 //
-//   --file <path>   a splat file (repeatable; default the test corpus below)
+//   npm run bench:core [-- options]
+//   --file <path>   a splat file, repeatable (default the samples in CORPUS)
 //   --only <part>   load | sort (default both)
-//   --rounds <n>    timed sort rounds (default 15; loads run 1 to 3 times)
+//   --rounds <n>    timed sort rounds (default 15)
 //   --json <path>   also write the results as JSON
-//
-// load: decode time per file into each layout (with the time per progress
-// stage), then for files up to 2M splats the encode time of every writer
-// and the decode time of what it wrote (so RAD and RDX loads are measured
-// on real scenes). sort: back-to-front keys from a camera outside each
-// scene, SortKeys.sort at 16, 24 and 32 bits against variants written out
-// here (each checked against SortKeys.sort's order), and how many output
-// neighbours each width leaves out of order.
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import {
   SortKeys, SplatFiles, Splats, type ArrayData, type ProgressStage, type SortKeyBits, type SplatFormat, type SplatLayout, type Vec3,
 } from "../src/core";
 
-// Local copies (splats/ is gitignored), such as the hosted samples:
-// curl -o splats/sutro-2m.rdx <RADIX_DATA_URL in scripts/data.mjs>rdx/sutro-2m.rdx
+// Local copies of the hosted samples (scripts/data.mjs); splats/ is gitignored
 const CORPUS = [
   "splats/butterfly-ai.rdx",
   "splats/ceramic.rdx",
@@ -57,7 +49,7 @@ function table(title: string, header: string[], rows: (string | number)[][]) {
 const fixed = (value: number, digits = 1) => value.toFixed(digits);
 const short = (file: string) => file.split("/").pop()!.replace(/^fb1e7c73-a486-4247-adde-0bff9865d16d_/, "");
 
-// Decode once, timing each progress stage (from its first report to the next stage's)
+// A stage's time runs from its first progress report to the next stage's
 async function timedDecode(bytes: Uint8Array<ArrayBuffer>, name: string, layout: SplatLayout) {
   const stages: Partial<Record<ProgressStage, number>> = {};
   let stage: ProgressStage | undefined;
@@ -146,10 +138,7 @@ async function benchEncode(file: string, data: ArrayData) {
     ["writer", "MiB", "encode ms", "M splats/s", "decode ms", "M splats/s"], rows);
 }
 
-// --- Sort keys from a camera outside the scene ---
-
-// Distances (float32, as the GPU computes them) from a camera on the +z side
-// of the scene's middle 90%, one and a half extents out
+// In float32, as the GPU computes them
 function distancesOf(data: ArrayData) {
   const { bundle } = Splats.get(data);
   const count = data.count;
@@ -185,11 +174,9 @@ function distancesOf(data: ArrayData) {
   return distances;
 }
 
-// --- Sort variants: the same stable order as SortKeys.sort ---
-
 type SortFn = (keys: Uint32Array, count: number, ordering: Uint32Array) => number;
 
-// Two LSD passes over digits of `lo` and `hi` bits, each key read once per pass
+// Two LSD passes over digits of lo and hi bits, each key read once per pass
 function makeTwoPass(loBits: number, hiBits: number, capacity: number): SortFn {
   const loMask = 2 ** loBits - 1;
   const hiMask = 2 ** hiBits - 1;
@@ -289,7 +276,6 @@ function benchSort(file: string, data: ArrayData) {
     return "ok";
   });
 
-  // Interleaved rounds, the order rotated each round
   const times = variants.map(() => [] as number[]);
   const warmup = 3;
   for (let round = 0; round < warmup + rounds; round += 1) {
@@ -309,7 +295,7 @@ function benchSort(file: string, data: ArrayData) {
   });
   table(`Sort ${short(file)} (${count.toLocaleString()} splats, median of ${rounds})`, ["variant", "ms", "M keys/s", "order"], rows);
 
-  // Neighbours in the 16 / 24 / 32-bit order whose distances run front to back
+  // Neighbours in each width's order whose distances run front to back
   const qualityRows = ([32, 24, 16] as const).map((bits) => {
     const order = reference[bits];
     let inverted = 0;

@@ -1,8 +1,9 @@
-// Runs the GPU test page (test/gpu/, built into build/test/gpu/) in headless
-// Chrome on both backends and prints its failures and totals; exits 1 on a
-// failure. Needs npm run build:test and npm run serve (--base).
+// Runs the GPU test page (test/gpu/) in headless Chrome and prints its failures and totals
 //
-//   node scripts/check-test.mjs [--base http://localhost:8000] [--gpu webgpu | webgpu-gl]
+//   npm run build:test && npm run serve
+//   npm run check:test [-- options]
+//   --base <url>   the server (default http://localhost:8000)
+//   --gpu <name>   webgpu | webgpu-gl (default both)
 /* global document -- functions run in the page */
 import { chromium } from "playwright-core";
 

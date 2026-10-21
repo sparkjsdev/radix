@@ -1,21 +1,23 @@
-// Runs the benchmark page (test/bench/, built into build/test/bench/) in
-// headless Chrome over a matrix of configs and writes the results:
-// recordings/bench/<label>.json, one PNG per config in
-// recordings/bench/<label>/, and a markdown table. Needs npm run build:test
-// and npm run serve (the page, --base). The scans load from the hosted
-// samples (scripts/data.mjs).
+// Times the benchmark page (test/bench/) in headless Chrome, with WebGPU
+// developer features on so that GPU timestamps are not quantized
 //
-//   node scripts/bench.mjs [--matrix baseline] [--only <regex>]
-//     [--label name] [--compare <label>] [--frames 90] [--headed]
-//
-//   node scripts/bench.mjs --matrix sh [--gpu webgpu | webgpu-gl] [--frames 60] [--rounds 3]
-//     (radixBench.shBench: the projection with and without spherical
-//     harmonics, per splat and through palettes, for the hosted SH3 Sutro)
-//
-// --compare reports each screenshot's PSNR and largest channel difference
-// against the same config in another run. GPU times are timestamp queries
-// (WebGPU developer features on: not quantized); wall times wait for the
-// GPU after every frame.
+//   npm run build:test && npm run serve
+//   npm run bench [-- options]
+//   --base <url>        the server (default http://localhost:8000)
+//   --label <name>      the results' name in recordings/bench/ (default <matrix>-<date and time>)
+//   --matrix <name>     baseline (default) | quick | default | methods |
+//                       overdraw | guard | project | debugdraw | minpx | ratio
+//   --only <regex>      the runs whose names match (default all)
+//   --frames <n>        frames per run (default 180)
+//   --compare <label>   each screenshot's PSNR and largest channel difference against that run's
+//   --headed            a visible browser
+//   --matrix sort       the GPU sort alone, with
+//     --counts <n,...>  splat counts (default the page's)
+//     --valid <f>       the fraction of valid keys (default 0.9)
+//   --matrix sh         the cost of SH per encoding, with
+//     --gpu <name>      webgpu (default) | webgpu-gl
+//     --frames <n>      frames per variant (default 60)
+//     --rounds <n>      passes over all variants (default 3)
 /* global window, createImageBitmap, OffscreenCanvas -- functions run in the page */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -36,9 +38,8 @@ const compare = option("--compare");
 const frames = Number(option("--frames", 180));
 const outDir = path.resolve("recordings/bench");
 
-// The files, each with the still view it is measured from (world space,
-// after the flip) and how the path moves: "object" orbits the target,
-// "scene" looks all around from the camera's place
+// Still views are in world space, after the flip. An "object" path orbits the
+// target, a "scene" path looks all around from the camera.
 const FILES = {
   butterfly: { url: `${samples}butterfly-ai.rdx`, kind: "object" },
   // In the middle of the cave, looking along it
@@ -49,7 +50,6 @@ const FILES = {
   grace: { url: `${samples}grace-interior-10m.rdx`, kind: "scene", view: { position: [-14, 8, -3], target: [-4, 8, -3] } },
 };
 
-// Name, backend and config of every run
 function matrix(name) {
   const runs = [];
   const add = (file, backend, config, query = "") => {
@@ -145,7 +145,6 @@ function matrix(name) {
 
 const fmt = (value, digits = 2) => (value === undefined || value === null || Number.isNaN(value) ? "" : Number(value).toFixed(digits));
 
-// --matrix sort: radixBench.sortBench, the GPU sort alone
 async function sortMain() {
   const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--enable-unsafe-webgpu", "--enable-webgpu-developer-features"] });
   try {
@@ -168,7 +167,6 @@ async function sortMain() {
   }
 }
 
-// --matrix sh: radixBench.shBench, the cost of SH per encoding
 async function shMain() {
   const gpu = option("--gpu", "webgpu");
   const url = `${radixUrl("rdx-sh")}sutro-2m.rdx`;
@@ -257,7 +255,6 @@ async function main() {
   console.log(`\n${table}\nWrote recordings/bench/${label}.json, .md and ${label}/*.png`);
 }
 
-// PSNR and the largest channel difference of two PNGs, in the page
 async function compareImages(page, before, after) {
   let a;
   try {

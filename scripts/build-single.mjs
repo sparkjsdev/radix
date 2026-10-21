@@ -1,17 +1,9 @@
-// Builds each example page (examples/<name>/, not the
-// Spark ports) as one self-contained HTML file beside its built page,
-// build/examples/<name>/<name>.html: main.ts and all it reaches (the
-// library bundle, three and the page's other import-map modules) bundled and
-// minified by esbuild into one inline module script. What a page loads by URL
-// is inlined too, from blob: URLs: workers and worklets
-// (`new URL("./x.js", import.meta.url)`, bundled from x.ts), stylesheets
-// (`new URL("./x.css", import.meta.url)` and `<link rel="stylesheet">`),
-// import-map modules handed to workers (`import.meta.resolve("@sparkjsdev/radix/core")`)
-// and classic scripts (`<script src>`; ELK's worker as window.ELK_WORKER_URL).
-// Data stays where the page reads it from. The sources are unchanged; the
-// site build (scripts/build-site.mjs) runs this after the library.
+// Builds each example page but the Spark ports as one HTML file with its code and
+// styles inline, build/examples/<name>/<name>.html (data still loads from its URL)
 //
-//   npm run build:single [-- name ...] [-- --no-build]
+//   npm run build:single [-- options]
+//   <name> ...   the pages to build (default all)
+//   --no-build   skip npm run build first
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -23,8 +15,7 @@ const SOURCE = path.join(root, "examples");
 const BUILT = path.join(root, "build/examples");
 const SKIP = new Set(["spark"]);
 
-// Classic scripts that start a worker from the file beside them: the global
-// the page reads the worker's address from instead
+// Scripts that start a worker from a file beside them, and the global holding its address instead
 const COMPANIONS = { "elk-api.js": { global: "ELK_WORKER_URL", file: "elk-worker.min.js" } };
 
 const args = process.argv.slice(2);

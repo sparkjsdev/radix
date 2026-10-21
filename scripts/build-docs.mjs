@@ -1,15 +1,7 @@
-// Builds the Radix reference pages: every docs/*.md becomes
-// docs/ref/<name>.html, in the look of the docs site (site.css,
-// site.js), so the docs read in a browser from disk (file://) with working
-// links. ref/ is gitignored: npm run build writes it. The
-// converter covers the Markdown the docs use: headings, paragraphs, nested
-// lists, fenced code, tables, block quotes, rules, inline code, emphasis,
-// links and images.
+// Converts each docs/<name>.md to docs/ref/<name>.html, with working links when read from disk
 //
-//   node scripts/build-docs.mjs           write ref/
-//   node scripts/build-docs.mjs --check   write ref/, then fail when a
-//     relative link or anchor in a .md or .html page does not resolve, or an
-//     export of @sparkjsdev/radix appears on no .md page
+//   npm run docs [-- options]
+//   --check   fail on a broken link or anchor, or an export on no .md page (npm run check:docs)
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -26,8 +18,7 @@ const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace
 const toPosix = (p) => p.split("\\").join("/");
 const isExternal = (url) => /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//");
 
-// GitHub's heading ids: lowercase, punctuation dropped, spaces to hyphens,
-// repeats numbered
+// Heading ids as GitHub makes them
 function slugger() {
   const seen = new Map();
   return (text) => {
@@ -45,7 +36,6 @@ const plainText = (md) => md
   .replace(/\*\*|__|\*|(?<!\w)_|_(?!\w)/g, "")
   .replace(/<[^>]+>/g, "");
 
-// ---------- Inline Markdown ----------
 // ctx: { href(url) -> url, codeLink(text) -> url | undefined }
 function inline(md, ctx) {
   const held = [];
@@ -59,7 +49,7 @@ function inline(md, ctx) {
   });
   s = s.replace(/\\([\\`*_{}[\]()#+\-.!|<>])/g, (_, c) => hold(escapeHtml(c)));
   s = s.replace(/<(https?:\/\/[^>\s]+)>/g, (_, url) => hold(`<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`));
-  // Inline HTML tags the docs use (<br>, <sup>, <sub>, <kbd>) pass through
+  // Inline HTML tags the docs use pass through
   s = s.replace(/<\/?(br|sup|sub|kbd|b|i|em|strong)\s*\/?>/gi, (tag) => hold(tag));
   s = escapeHtml(s);
   s = s.replace(/(!?)\[((?:[^\]\uE000]|\uE000\d+\uE000)*)\]\(([^)\s]+)(?:\s+&quot;(.*?)&quot;)?\)/g, (_, bang, text, url, title) => {
@@ -75,7 +65,6 @@ function inline(md, ctx) {
   return s;
 }
 
-// ---------- Blocks ----------
 const LIST = /^(\s*)([-*+]|\d{1,9}[.)])(\s+|$)(.*)$/;
 const FENCE = /^(\s*)(`{3,}|~{3,})\s*([\w+-]*)/;
 const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
@@ -222,7 +211,6 @@ function parseList(lines, i, ctx, out) {
   return i;
 }
 
-// ---------- Pages ----------
 const mdNames = readdirSync(DOCS).filter((f) => f.endsWith(".md")).map((f) => f.slice(0, -3)).sort();
 const sources = new Map(mdNames.map((name) => [name, readFileSync(join(DOCS, `${name}.md`), "utf8").replace(/\r\n/g, "\n")]));
 
@@ -258,8 +246,7 @@ function sidebarGroups() {
   return groups;
 }
 
-// Files git ignores (local data such as splats/) exist in some checkouts
-// only, so ref/ never links them
+// Ignored files, such as splats/, exist in some checkouts only, so ref/ never links them
 function gitIgnored(file) {
   try {
     execFileSync("git", ["check-ignore", "-q", file], { cwd: ROOT });
@@ -269,8 +256,7 @@ function gitIgnored(file) {
   }
 }
 
-// A repo file named in inline code (`src/render/SplatRenderer.ts`,
-// `render/SplatRenderer.ts`, `scripts/bench.mjs`): its path from ref/
+// The path from ref/ to a repo or src/ file named in inline code
 function codeLink(text) {
   if (!/^[\w.-]+(\/[\w.-]+)+$/.test(text) || !/\.\w+$/.test(text)) return undefined;
   for (const base of [ROOT, SRC]) {
@@ -280,8 +266,7 @@ function codeLink(text) {
   return undefined;
 }
 
-// A link in a .md page, rewritten for ref/: other pages to their .html,
-// everything else relative to ref/
+// A .md page's link rewritten for ref/: pages to their .html, the rest relative to ref/
 function hrefFor(url) {
   if (isExternal(url) || url.startsWith("#")) return url;
   const [path, hash] = url.split(/(?=#)/);
@@ -305,8 +290,7 @@ const shortTitle = (name) => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-// A link whose text is its target's file name ([views.md](views.md)) reads
-// as the page's title in the HTML
+// A link whose text is its target's file name, [views.md](views.md), shows the page's title
 const titledLinks = (html) => html.replace(/<a href="([\w-]+)\.html(#[^"]*)?">([\w-]+)\.md(#[^<]*)?<\/a>/g, (link, href, hash, text) =>
   href === text && pages.has(href) ? `<a href="${href}.html${hash ?? ""}">${escapeHtml(shortTitle(href))}</a>` : link);
 
@@ -363,7 +347,6 @@ for (const [file, html] of outputs) {
   if (!existsSync(path) || readFileSync(path, "utf8") !== html) writeFileSync(path, html);
 }
 
-// ---------- Links and anchors ----------
 const idsOf = new Map();
 function ids(file) {
   if (!idsOf.has(file)) {
@@ -377,8 +360,7 @@ function ids(file) {
   return idsOf.get(file);
 }
 
-// Links to the built example pages (scripts/build-examples.mjs) are
-// checked against their sources
+// Links to the built example pages are checked against their sources
 const BUILT_EXAMPLES = join(ROOT, "build/examples");
 function sourceOf(target) {
   return target.startsWith(BUILT_EXAMPLES + "/") ? join(ROOT, "examples", relative(BUILT_EXAMPLES, target)).replace(/\.js$/, ".ts") : target;
@@ -418,7 +400,6 @@ for (const file of readdirSync(DOCS).filter((f) => f.endsWith(".html"))) {
   }
 }
 
-// ---------- Every export appears on some .md page ----------
 if (CHECK) {
   // Names in inline code, and in the code blocks
   const documented = new Set();

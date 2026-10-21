@@ -1,18 +1,8 @@
-// Builds src/ into the package's ES modules (three stays external: a
-// bundler or the page's import map resolves it; the workers' core module is
-// inlined as a minified string, WorkerPool.coreUrl) and their declarations,
-// then the example and test pages that import them (scripts/build-examples.mjs,
-// scripts/build-test.mjs) and the docs' reference pages (scripts/build-docs.mjs):
-//   dist/radix.module.js       the library (import "@sparkjsdev/radix")
-//   dist/radix-core.module.js  core/ alone (import "@sparkjsdev/radix/core"):
-//                              no imports at all, for Node and pages without
-//                              the library
-//   dist/types/                the declarations (tsc -p tsconfig.lib.json)
-//   build/examples/, build/test/
-//   docs/ref/                  the docs' .md pages as HTML
+// Builds the library into dist/, then the example and test pages and the docs' reference pages
 //
-//   npm run build [-- --watch]   then npm run serve
-//   --lib-only                   dist/ alone (npm's prepare)
+//   npm run build [-- options]
+//   --watch      rebuild the library, examples and docs as they change (npm run build:watch)
+//   --lib-only   dist/ alone (npm's prepare)
 import { execFileSync } from "node:child_process";
 import { watch } from "node:fs";
 import { readdir, readFile, rm } from "node:fs/promises";
@@ -34,8 +24,7 @@ async function checkCore() {
   }
 }
 
-// The bundles and their source maps must not name the folder they are
-// built in
+// The bundles and their source maps must not name the folder they are built in
 async function checkPaths() {
   const named = [];
   for (const file of await readdir("dist")) {
@@ -60,8 +49,7 @@ const options = {
   external: ["three", "three/webgpu", "three/tsl"],
   target: "es2022",
   sourcemap: true,
-  // The workers' core module is a string in the bundle: an app's minifier
-  // cannot shrink it, so it is minified here
+  // An app's minifier can't shrink the workers' code, a string in the bundle
   plugins: [inlineWorkerPlugin({ minify: true })],
 };
 

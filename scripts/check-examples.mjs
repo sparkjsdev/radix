@@ -1,22 +1,14 @@
-// Loads every ported Spark example (examples/spark/js/examples.ts)
-// and the other example pages (examples/{splats,scenes,xr,...}),
-// as built into build/examples/, in headless Chrome on both backends
-// and checks that each one draws: the page says it is ready (Spark ports:
-// window.example.ready or .error, js/page.ts; the others: their console
-// handle once the splats are loaded), throws nothing, and its canvas is not
-// one flat color. Pages that need WebGPU run on it alone. Every page reads
-// its data from GCS (scripts/data.mjs). Needs the library and pages
-// built and the repo served:
+// Checks in headless Chrome that each built example page and Spark port draws
 //
 //   npm run build && npm run serve
-//   node scripts/check-examples.mjs [--base http://localhost:8000]
-//     (the static site: npm run build:site && npm run serve:site,
-//     then --base http://localhost:8002)
-//     [--gpu webgpu | webgpu-gl] [--only hello-world,glsl,splats] [--timeout 180]
-//     [--shots dir]   (a PNG of each page's canvas)
-//     [--single]      (the other pages' single-file builds, <name>/<name>.html:
-//                     npm run build:single; no Spark ports)
-//     [--spz url]     (the SPZ page's samples from elsewhere)
+//   npm run check:examples [-- options]
+//   --base <url>      the server (default http://localhost:8000, the site's http://localhost:8002)
+//   --gpu <name>      webgpu | webgpu-gl (default both)
+//   --only <names>    comma-separated pages, such as hello-world,splats (default all)
+//   --timeout <s>     seconds a page has to get ready (default 180)
+//   --shots <dir>     also write a PNG of each page's canvas there
+//   --single          the single-file builds (npm run build:single) instead, without Spark ports
+//   --spz <url>       the SPZ page's samples folder (default the hosted one)
 /* global document, window, Image -- functions run in the page */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -80,8 +72,7 @@ try {
         if (error) {
           outcome = { ok: false, reason: error.split("\n")[0] };
         } else {
-          // Let a few more frames land (CPU sorts on WebGL2; reveals that
-          // start blank), then look at the canvas alone
+          // WebGL2's CPU sort and reveals that start blank take a few more frames
           await page.waitForTimeout(wait ?? 1500);
           await page.evaluate(() => document.querySelectorAll("body > :not(canvas)").forEach((element) => (element.style.visibility = "hidden")));
           const png = await page.locator("canvas").first().screenshot();

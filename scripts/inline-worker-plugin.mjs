@@ -4,18 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// `import Worker from "./file?worker&inline"` bundles file.ts as its own ESM
-// bundle and exports a Worker subclass that runs it from a blob URL, so the
-// page needs no separate worker files. `import code from "./file?module&inline"`
-// bundles it the same way and exports its code as a string (for a blob URL
-// that workers import). `define` is passed through to the bundle
-// (RADIX_STATIC); `minify` for the production build.
+// Inlines ?worker&inline and ?module&inline imports, so pages need no worker files
 export function inlineWorkerPlugin({ minify = false, define = {} } = {}) {
   return {
     name: "inline-worker",
     setup(build) {
-      // esbuild prints the path of a module outside the file namespace as
-      // given, in the bundle and its source map, so it is repo-relative
+      // esbuild writes paths outside the file namespace as given, so this one is repo-relative
       build.onResolve({ filter: /\?(worker|module)&inline$/ }, (args) => {
         const file = path.resolve(args.resolveDir, args.path.replace(/\?(worker|module)&inline$/, ""));
         return {

@@ -1,26 +1,7 @@
-// Builds build/site/: the examples and docs as one static site to preview
-// locally or copy to any static host. It
-// keeps the repo's paths, so every relative link that works in the repo works
-// in the site, under any URL prefix:
-//   index.html                 landing page: the repo, getting started, links
-//   dist/                      the library bundles
-//   build/examples/            the built examples, each page but the Spark
-//                              ports also as one file (<name>/<name>.html,
-//                              scripts/build-single.mjs)
-//   docs/                      the docs
-//   node_modules/...           what the examples' import maps load
-// Of docs/ and examples/, the site has the files git tracks and what the
-// build makes from them, not other files in the working tree.
-// The sources stay on GitHub: links to them (the docs' links to repo files,
-// the Spark list's "Radix source") name the commit the site is built from.
-// Then every relative link, src and import-map address in the site's HTML is
-// checked against its files.
+// Builds the examples and docs into build/site/, a static site that keeps the
+// repo's paths so relative links work under any URL prefix
 //
-// The examples read their data from the dated GCS folder in
-// scripts/data.mjs.
-//
-//   npm run build:site          (runs npm run build first)
-//   npm run serve:site          http://localhost:8002/
+//   npm run build:site
 import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -32,9 +13,7 @@ const SITE = path.join(root, "build/site");
 const DOCS = "docs";
 const REPO = "https://github.com/sparkjsdev/radix";
 
-// What the examples' import maps load (three.webgpu.js imports three.core.js
-// beside it; GLTFLoader and TransformControls import their jsm helpers;
-// the fx editor loads ELK's API and worker)
+// The folders the examples' import maps load from, with the files those modules import
 const MODULES = ["three/build", "three/examples/jsm", "lil-gui/dist", "tweakpane/dist", "@tweakpane/plugin-essentials/dist", "elkjs/lib"];
 
 // Repo files the docs link to on GitHub rather than in the site
@@ -52,7 +31,6 @@ async function listFiles(dir) {
   return files.flat();
 }
 
-// Copies a repo path (file or folder) to the same path in the site
 async function copy(from) {
   await cp(path.join(root, from), path.join(SITE, from), { recursive: true });
 }
@@ -65,10 +43,7 @@ const git = (...args) => {
   }
 };
 
-// Whether a file of docs/ or build/examples/ goes in the site: git tracks it,
-// or it is built from a file git tracks (an example's .js from its .ts, a
-// page's single file <name>/<name>.html from its index.html, and the docs'
-// reference pages, which npm run build writes to the ignored docs/ref/)
+// Files git tracks and those built from them, such as the ignored docs/ref/ pages, go in the site
 function published(file, tracked) {
   if (file.startsWith("build/examples/")) {
     const source = file.slice("build/".length);
@@ -78,9 +53,7 @@ function published(file, tracked) {
   return tracked.has(file) || /^docs\/ref\/[^/]+\.html$/.test(file);
 }
 
-// The relative links of an HTML page (href, src, import-map addresses and
-// inline imports), without query or hash; template literals and code
-// samples (<pre>) are skipped
+// A page's relative links, skipping template literals and code samples (<pre>)
 function linksOf(page) {
   const html = page.replace(/<pre[\s>][\s\S]*?<\/pre>/g, "");
   const links = [];
@@ -93,12 +66,9 @@ function linksOf(page) {
   return links.filter((link) => link && !link.includes("${") && !/^([a-z]+:|#|\/\/)/i.test(link)).map((link) => link.split(/[?#]/)[0]).filter(Boolean);
 }
 
-// An HTML page's import-map addresses (those ending in / map a folder)
 function importMapOf(html) {
   return [...html.matchAll(/<script type="importmap">([\s\S]*?)<\/script>/g)].flatMap((map) => Object.values(JSON.parse(map[1]).imports ?? {}));
 }
-
-// --- 1. The library, the examples and the docs ---
 
 execFileSync(process.execPath, [path.join(root, "scripts/build-lib.mjs")], { cwd: root, stdio: "inherit" });
 execFileSync(process.execPath, [path.join(root, "scripts/build-single.mjs"), "--no-build"], { cwd: root, stdio: "inherit" });
@@ -122,14 +92,9 @@ for (const dir of MODULES) {
   await copy(path.join("node_modules", dir));
 }
 
-// --- 2. Links in the site's copies: sources on GitHub, at the commit the
-// site is built from ---
-
 const commit = git("rev-parse", "--short", "HEAD");
 const rev = git("rev-parse", "HEAD") || "main";
 
-// The docs' links to repo sources (the reference pages link the files their
-// text names, and their own Markdown)
 for (const page of (await listFiles(path.join(SITE, DOCS))).filter((file) => file.endsWith(".html"))) {
   const html = await readFile(page, "utf8");
   const linked = html.replace(/\bhref="([^"#?]+)([^"]*)"/g, (all, link, rest) => {
@@ -143,8 +108,7 @@ for (const page of (await listFiles(path.join(SITE, DOCS))).filter((file) => fil
   await writeFile(page, linked);
 }
 
-// The docs top bar: the Radix logo goes to the site's landing page (one
-// folder up from the docs) rather than the docs index
+// The docs' logo links the site's landing page, one folder up, not the docs index
 const siteJs = path.join(SITE, DOCS, "site.js");
 let siteJsText = await readFile(siteJs, "utf8");
 for (const [from, to] of [
@@ -157,8 +121,7 @@ for (const [from, to] of [
 }
 await writeFile(siteJs, siteJsText);
 
-// The Spark list's "Radix source" links: the source on GitHub, not the
-// built JS
+// The Spark list's "Radix source" links go to the .ts on GitHub, not the built JS
 const sparkIndex = path.join(SITE, "build/examples/spark/index.html");
 const built = 'href="./${example.name}/main.js">Radix source</a>';
 const sparkHtml = await readFile(sparkIndex, "utf8");
@@ -166,8 +129,6 @@ if (!sparkHtml.includes(built)) {
   throw new Error(`build/examples/spark/index.html: no ${built} to point at GitHub`);
 }
 await writeFile(sparkIndex, sparkHtml.replace(built, `href="${REPO}/blob/${rev}/examples/spark/\${example.name}/main.ts">Radix source</a>`));
-
-// --- 3. The landing page ---
 
 const ICON = `<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">`;
 
@@ -221,9 +182,7 @@ npm run serve:site   # http://localhost:8002/</code></pre>
 </html>
 `);
 
-// --- 4. Check every link of the site's pages (not the single-file builds:
-// their inline code holds no links) ---
-
+// The single-file builds are not checked: their inline code holds no links
 const single = (page) => /^build\/examples\/([^/]+)\/\1\.html$/.test(posix(path.relative(SITE, page)));
 
 const broken = [];

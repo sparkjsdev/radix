@@ -1,4 +1,6 @@
-// Checks of src/core in Node: npm run check:core
+// Checks src/core in Node
+//
+//   npm run check:core
 import {
   ArrayData, Axes, CompressedPlyFile, Compression, Encoding, PlyFile, RadFile, RdxFile, Sh, ShPalette, SortKeys, SplatFiles, SplatMath, Splats, SpzFile, Zstd,
   defineBundle,
@@ -25,7 +27,6 @@ async function check(name: string, fn: () => string | undefined | Promise<string
   }
 }
 
-// First mismatch of two arrays, or undefined
 function compare(actual: ArrayLike<number>, expected: ArrayLike<number>) {
   if (actual.length !== expected.length) {
     return `length ${actual.length}, expected ${expected.length}`;
@@ -84,10 +85,8 @@ const quatAngle = (a: Quat, b: Quat) => 2 * Math.acos(Math.min(1, Math.abs(a.x *
 const lnError = (actual: number, expected: number) => Math.abs(Math.log(actual) - Math.log(expected));
 // Half-float rounding of ln(v): 2^-11 relative, 2^-25 absolute below the normal range
 const lnHalfBound = (v: number) => Math.max(Math.abs(Math.log(v)) * 2 ** -11, 2 ** -25) + 1e-12;
-// Worst rounded 12 + 12 octahedral error over random directions: about 0.057 degrees
+// Above the worst rounded 12 + 12 octahedral error over random directions
 const OCT24_DEGREES = 0.06;
-
-// --- ArrayData ---
 
 const POINTS = defineBundle({ position: "float32x4", rgba: "unorm8x4" });
 const INDICES = defineBundle({ index: "uint32" }, { packing: 4 });
@@ -164,8 +163,6 @@ await check("transfer round trip", () => {
   return received.count === 3 && received.meta.name === "t" && received.bundles.points.meta.note === "kept" && position[3] === 4
     && received.bundles.points.def.channels.rgba === "unorm8x4" ? undefined : "lost data";
 });
-
-// --- RDX ---
 
 const CHUNK = 4096 * 4;
 const COUNT = 70000; // 5 chunks of CHUNK, the last one partial
@@ -336,8 +333,6 @@ await check("errors show a URL's file name only", async () => {
     globalThis.fetch = realFetch;
   }
 });
-
-// --- Splat codecs ---
 
 const N = 20000;
 
@@ -517,8 +512,6 @@ await check("getSplats / findSplats: by name, then standard names, then channel 
   }
 });
 
-// --- Splat access by bundle type ---
-
 // Splats of every layout from the same random inputs
 function layouts(count: number) {
   const data = new ArrayData({ bundles: { ext: Splats.EXT, cov: Splats.COV, packed: Splats.PACKED }, count });
@@ -626,8 +619,6 @@ await check("splat access is typed by the bundle", () => {
   return Splats.isPacked(plain) && !Splats.isExt(plain) ? undefined : "guards wrong";
 });
 
-// --- Double buffering ---
-
 await check("swap and setFromTransferable keep bundle and channel objects", () => {
   const a = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 10, meta: { name: "a" } });
   const b = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 20, meta: { name: "b" } });
@@ -651,9 +642,7 @@ await check("swap and setFromTransferable keep bundle and channel objects", () =
     && (a.bundles as Record<string, ArrayBundle>).extra.channels.node.data.length === 8192 ? undefined : "objects or data lost";
 });
 
-// --- Splat files ---
-
-// Decoded splats agree within `bounds` (scales and rotation in ln / degrees)
+// Decoded splats agree within bounds (scales and rotation in ln / degrees)
 function closeSplats(a: ArrayData, b: ArrayData, bounds: { center: number; ln: number; rgb: number; opacity: number; degrees: number; pbr?: number }) {
   if (a.count !== b.count) {
     return `count ${a.count} vs ${b.count}`;
@@ -745,10 +734,9 @@ await check("PLY point clouds and SH degree", async () => {
     ? undefined : "SH degree";
 });
 
-// A compressed PLY's quantization of fileSource splats in table order
-// (centers within +-100: 10-bit y over a 200-wide chunk; ln scales over 8;
-// 8-bit colors and opacity over 1; 10-bit smallest-three rotations), plus
-// the ext splats' own rounding
+// A compressed PLY's steps, plus ext's rounding, for fileSource splats in table
+// order: 10-bit y over a 200-wide chunk (centers within +-100), ln scales over
+// 8, 8-bit colors and opacity over 1, 10-bit smallest-three rotations
 const COMPRESSED_BOUNDS = { center: 200 / 1023 / 2 + 1e-3, ln: 8 / 1023 / 2 + 2 ** -9, rgb: 1 / 510 + 2 / 255, opacity: 1 / 510 + 1 / 128, degrees: 0.3 };
 
 await check("compressed PLY round trip in table order", async () => {
@@ -790,8 +778,7 @@ await check("compressed PLY in Morton order: the same splats, in smaller chunks"
     unsortedError += error(centers[i], Splats.loadCenter(inUnsorted, i, c));
     Splats.encodeExt(reordered.bundles.extSplats, i, Splats.decodeExt(from, nearest, s));
   }
-  // The mean (chunks across octant boundaries still span the whole scene),
-  // of 12 chunks of uniformly scattered splats: about 0.6 of the unsorted
+  // The mean only, as chunks across octant boundaries still span the whole scene
   return sortedError < unsortedError * 0.75 ? closeSplats(reordered, sorted, COMPRESSED_BOUNDS)
     : `mean center errors ${sortedError / source.count} sorted, ${unsortedError / source.count} not`;
 });
@@ -829,10 +816,8 @@ await check("compressed PLY of older SuperSplat files: no color ranges, an sh el
     ?? (loaded.meta.compressed === true && Sh.find(loaded.bundles)?.degree === 1 ? undefined : "meta");
 });
 
-// PBR is stored as ext holds it (Oct24 normal, unorm8 roughness and
-// metallic): the same roughness and metallic bits back, and the same
-// normal (Oct24 has duplicate codes on its fold, x = -1, where either code
-// of a pair may come back)
+// The same roughness and metallic bits back, and the same decoded normals,
+// since Oct24 has duplicate codes on its fold (x = -1)
 function samePbr(a: ArrayData, b: ArrayData) {
   const [ea, eb] = [Splats.get(a).bundle, Splats.get(b).bundle];
   if (!Splats.isExt(ea) || !Splats.isExt(eb)) {
@@ -872,14 +857,12 @@ await check("SPZ round trips with PBR and the LoD tree: v3 (gzip) and v4 (NGSP, 
 await check("SPZ version 2 round trip (3-byte rotations)", async () => {
   const source = fileSource(3000, true);
   const { splats: loaded } = await SpzFile.read(await SpzFile.write(source, { version: 2, pbr: true }));
-  // As v3, but x, y, z rotation bytes of 1 / 127.5 each: w = sqrt(1 - |xyz|^2)
-  // loses precision for turns near 180 degrees (a true w of 0.08 can decode
-  // as 0: about 9 degrees), which is why SPZ v3 changed the encoding
+  // As v3, but w = sqrt(1 - |xyz|^2) from bytes of 1 / 127.5 is imprecise for
+  // turns near 180 degrees: a true w of 0.08 can decode as 0, about 9 degrees off
   return loaded.meta.version !== 2 ? `version ${String(loaded.meta.version)}`
     : closeSplats(source, loaded, { center: 2 ** -12, ln: 1 / 32 + 2 ** -9, rgb: 0.006, opacity: 1 / 128, degrees: 15 }) ?? samePbr(source, loaded) ?? sameTree(source, loaded);
 });
 
-// A written SPZ's inner bytes (header then columns) changed by `edit`, gzipped again
 async function editSpz(file: Uint8Array<ArrayBuffer>, edit: (bytes: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>) {
   return Compression.gzip(edit(new Uint8Array(await Compression.gunzip(file))));
 }
@@ -972,8 +955,7 @@ await check("zstd: our encoder read by fzstd and Node, Node's frames read by fzs
   }
 });
 
-// An SPZ 4 file's header and table of contents: [header, extensions, toc
-// entries, streams]
+// An SPZ 4 file: [header, extensions, toc entries, streams]
 function ngspParts(file: Uint8Array) {
   const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
   const toc = view.getUint32(16, true);
@@ -1051,8 +1033,7 @@ await check("SPZ unpack from streams in chunks of 1, 7 and random bytes; early e
   const noSh = await SpzFile.unpack(stream(v4, () => 16, pulled), { sh: false });
   const { view, toc } = ngspParts(v4);
   const shFrame = view.getUint32(toc + 5 * 16, true);
-  // Within the chunk holding the SH frame's start, plus the one chunk the
-  // stream pulls ahead into its queue
+  // Within the SH frame's first chunk, plus the one the stream pulls ahead
   return noSh.sh === undefined && pulled.bytes <= v4.byteLength - shFrame + 32 ? undefined
     : `sh: false read ${pulled.bytes} of ${v4.byteLength} bytes, SH frame ${shFrame}, sh ${noSh.sh?.byteLength}`;
 });
@@ -1132,7 +1113,7 @@ await check("format detection and encodeSplats / decodeSplats", async () => {
   }
 });
 
-// Covariances of two loads of the same splats agree to `relative` of the largest variance
+// Covariances of two loads of the same splats agree to a given share of the largest variance
 function closeCovs(a: ArrayData, b: ArrayData, relative: number) {
   const [fa, fb] = [Splats.get(a).bundle, Splats.get(b).bundle];
   const [sa, sb] = [Splats.makeSplat(), Splats.makeSplat()];
@@ -1256,10 +1237,7 @@ await check("sortKeys: stable, invalid last, the same order at every width", () 
   return ArrayData.INDICES.packing === 4 && ArrayData.INDICES.channels.index === "uint32" ? undefined : "ArrayData.INDICES";
 });
 
-// --- Spherical harmonics ---
-
-// Coefficients like real scans' (|c| mostly below 0.5) with a few outliers
-// up to +-5, and splats to carry them
+// Coefficients like real scans', |c| mostly below 0.5, with a few outliers up to +-5
 function shValues(count: number, degree: ShDegree = 3) {
   return Array.from({ length: count }, (_, i) => Float32Array.from({ length: Sh.COEFFICIENTS[degree] * 3 }, () => (random() - 0.5) * (i % 211 === 0 ? 10 : 0.4 * random())));
 }
@@ -1274,7 +1252,7 @@ function shSource(count: number, codec: ShCodecName = "ext", degree: ShDegree = 
 }
 
 // RMS color error over all directions (orthonormal basis: sqrt(sum e^2 / 4pi)),
-// in 8-bit steps, of `data`'s SH against `values`, and the largest |error|
+// in 8-bit steps, of data's SH against values, and the largest |error|
 function shError(data: ArrayData, values: Float32Array[], degree = 3) {
   const decode = Sh.decoder(data);
   const out = new Float32Array(Sh.VALUES);
@@ -1486,8 +1464,7 @@ await check("SH loading: default ext, a codec asked for, RDX keeps its codec unl
 
 const labelsOf = (data: ArrayData) => data.bundles.shLabel?.channels.label.data.subarray(0, data.count);
 
-// Largest difference of palette entries from `values` (coefficient-major,
-// through `degree`)
+// Largest difference of palette entries from values (coefficient-major, through degree)
 function paletteError(palette: ShPalette, values: Float32Array[], degree: ShDegree = palette.degree) {
   const out = new Float32Array(Sh.VALUES);
   let worst = 0;
@@ -1550,8 +1527,7 @@ await check("RAD clustered SH: palettes written and read back; the other writers
   return undefined;
 });
 
-// A RAD file built by hand, uncompressed columns: Spark's build-lod layout
-// of clustered SH, which the writer's own output above does not cover
+// A hand-built RAD in Spark's build-lod layout of clustered SH, not covered by the writer's output
 function handRad(header: Record<string, unknown>, chunks: { base: number; count: number; columns: [string, string, Uint8Array, { min?: number; max?: number }?][] }[]) {
   const encoder = new TextEncoder();
   const pad8 = (n: number) => (n + 7) & ~7;
@@ -1610,7 +1586,7 @@ function handSplats(base: number, count: number): [string, string, Uint8Array][]
   ];
 }
 
-// Codes of `values` (entries x 45, coefficient-major) as band columns
+// Codes of values (entries x 45, coefficient-major) as band columns
 // sh1_code .. sh<degree>_code, dimension-planar: s8 over each band's
 // largest |value| (and the values they decode to), or f32
 function handCodes(values: Float32Array[], degree: ShDegree, encoding: "s8" | "f32") {
