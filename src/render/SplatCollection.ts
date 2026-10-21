@@ -4,53 +4,56 @@ import type { GpuArrays } from "../gpu/GpuArrays";
 import { SplatGenerator, type AnySplatGenerator, type StoredSplats } from "../gpu/splatGenerator";
 import type { SplatObjectParams } from "./splatParams";
 
-// One object of a collection: `count` splats of a generator, placed in the
-// world by `matrixWorld`. A collection locks generator, data and count on
-// the object itself; matrixWorld, params and release can still be reassigned.
+/** Splats of a generator placed in the world, one entry of a collection. */
 export interface SplatObject<Data = unknown> {
   readonly generator: SplatGenerator<Data>;
-  // What generator.bind gets before the object's dispatch ({ splats,
-  // indices? } for fromSplats); nothing is bound when undefined
+  /** What generator.bind gets before each of the object's dispatches. */
   readonly data?: Data;
   readonly count: number;
-  // The object's world transform (object to world), read every render: a
-  // matrix (an Object3D's matrixWorld, say) or a function returning one;
-  // default the identity. Rotations times a uniform scale take the cheap
-  // path; any other matrix goes through covariances.
+  /**
+   * The object's world transform, or a function returning it, read every render.
+   *
+   * @default the identity
+   */
   matrixWorld?: THREE.Matrix4 | (() => THREE.Matrix4);
-  // Over the view's and renderer's objectParams, read every render
+  /** Object params over the view's and the renderer's, read every render. */
   params?: Partial<SplatObjectParams>;
-  // Runs once this object is in no live collection of any SplatRenderer
-  // (none draws it, sorts it or may still apply an order for it): free or
-  // pool what the object owns. Use one object wherever it is shared.
+  /**
+   * Called once no renderer uses this object any more, to free or pool what it
+   * owns. Where data is shared, share one object, so this runs once.
+   */
   release?: () => void;
 }
 
-// An object of any data
+/** A splat object of any data. */
 export type AnySplatObject = Omit<SplatObject, "generator" | "data"> & { readonly generator: AnySplatGenerator; readonly data?: unknown };
 
-// An object of a collection, at its offset in the projected splats
+/** An object of a collection, at its offset in the projected splats. */
 export interface MappedObject {
   readonly object: AnySplatObject;
+  /** The index of the object's first splat in the projected splats. */
   readonly offset: number;
 }
 
 const IDENTITY = new THREE.Matrix4();
 const LOCKED = ["generator", "data", "count"] as const;
 
-// Which splats to draw: an immutable, ordered collection of objects
-// (generator, data and count locked; matrixWorld and params stay live). Its
-// identity is its version: change which objects it holds or how many
-// splats, and make a new collection. The order of objects matters:
-// projected splat i of the collection is splat i - offset of the object
-// holding it, which is what a CPU sort's order indexes.
+/**
+ * An immutable, ordered list of the objects a renderer draws. A change in which
+ * objects it holds or in their counts needs a new collection.
+ */
 export class SplatCollection {
   static readonly EMPTY = new SplatCollection([]);
 
   readonly objects: readonly MappedObject[];
-  // Splats in all
+  /** The number of splats in all objects. */
   readonly count: number;
 
+  /**
+   * Makes a collection, locking generator, data and count on each object.
+   *
+   * @param objects The objects, in drawing order.
+   */
   constructor(objects: readonly AnySplatObject[]) {
     let offset = 0;
     this.objects = Object.freeze(objects.map((object) => {
@@ -64,16 +67,24 @@ export class SplatCollection {
     this.count = offset;
   }
 
-  // An object whose data is checked against its generator's
+  /**
+   * Checks an object's data against its generator's type.
+   *
+   * @return The object, unchanged.
+   */
   static object<Data>(object: SplatObject<Data>): SplatObject<Data> {
     return object;
   }
 
-  // An object for splat arrays (all of them unless `count` says
-  // otherwise), drawn with the spherical harmonics they hold (per splat, or
-  // through `shPalette`; `sh` caps the degree, 0 or false: none): one shared
-  // generator per kind (SplatGenerator.forArrays), so arrays of the same
-  // kind run one program
+  /**
+   * Makes an object for splat arrays, drawn with their spherical harmonics.
+   *
+   * @param [options] The object's other fields, and its spherical harmonics.
+   * @param [options.count=arrays.count] The number of splats.
+   * @param [options.sh=4] The highest spherical-harmonics degree drawn, 0 to 4,
+   *   or false for none.
+   * @param [options.shPalette] The arrays of an SH palette.
+   */
   static arrays(arrays: GpuArrays, { sh, shPalette, ...object }: Partial<Omit<SplatObject, "generator" | "data">> & {
     sh?: number | false;
     shPalette?: GpuArrays;
@@ -85,7 +96,11 @@ export class SplatCollection {
     return { count: arrays.count, ...object, generator, data: { splats: arrays, shPalette } };
   }
 
-  // An object's world transform this render, or the identity
+  /**
+   * Returns an object's world transform for this render.
+   *
+   * @return Its world transform, or the identity.
+   */
   static matrixWorldOf(object: AnySplatObject): THREE.Matrix4 {
     return (typeof object.matrixWorld === "function" ? object.matrixWorld() : object.matrixWorld) ?? IDENTITY;
   }

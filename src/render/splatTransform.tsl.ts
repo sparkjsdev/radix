@@ -1,10 +1,3 @@
-// Splats through a transform (TransformNodes: a matrix, and when it is a
-// rotation times a uniform scale its quaternion and scale), in either form:
-// covariances take any matrix (Sigma' = M Sigma M^T); 3DGS splats take the
-// quaternion and scale when the transform is uniform, else go through a
-// covariance and back (an eigen decomposition). Each splat object's
-// transforms to head space are uniforms shared by every program, set per
-// dispatch.
 import * as THREE from "three";
 import { GpuSplatMath } from "../gpu/math.tsl";
 import { SplatGenerator } from "../gpu/splatGenerator";
@@ -15,13 +8,10 @@ import { SplatCamera } from "./splatCamera";
 
 const { If, cross, dot, float, length, normalize, select, transpose, uint, uniform, vec3, vec4 } = TSL;
 
-// Where a modifier runs: in view (head) space, world space, the object's
-// own space, or the frame of a matrix (a frame's matrixWorld, read every
-// render)
+/** Where a modifier runs: head space for "view", or the frame of a matrix read every render. */
 export type ModifierSpace = "view" | "world" | "object" | THREE.Matrix4;
 
-// One transform as uniforms: the matrix, and for one that is a rotation
-// times a uniform scale (`uniform` 1) its quaternion and scale
+// uniform is 1, with quat and scale set, when matrix is a rotation times a uniform scale
 export interface TransformNodes {
   matrix: TslNode;
   quat: TslNode;
@@ -36,13 +26,11 @@ const transformNodes = (): TransformNodes => ({
   uniform: uniform(1, "uint"),
 });
 
-// An object's splats to head space: `a`, or `a` to the modifier's space and
-// `b` from there to head space
+// Object to head space as a, or a to the modifier's space and b on to head space
 export const transforms = { a: transformNodes(), b: transformNodes() };
 
-// Whether the 3x3 part M of `m` is a rotation times a uniform scale: with
-// G = M^T M and s2 = trace(G) / 3, every entry of G - s2 I within
-// `tolerance` x s2, and det(M) > 0 (a mirror has no rotation quaternion)
+// With G = M^T M and s2 = trace(G) / 3: G - s2 I within tolerance x s2, and
+// det(M) > 0, since a mirror has no rotation quaternion
 export function isUniformScale(m: THREE.Matrix4, tolerance = 1e-6) {
   const e = m.elements;
   const cols = [[e[0], e[1], e[2]], [e[4], e[5], e[6]], [e[8], e[9], e[10]]];
@@ -73,8 +61,7 @@ function setTransform(t: TransformNodes, m: THREE.Matrix4) {
   }
 }
 
-// Object to head (SplatCamera.head) as `a`, or split around the modifier's
-// space: a (object to that space), then b (that space to head), in float64
+// Splits object to head around the modifier's space, in float64
 export function setTransforms(object: THREE.Matrix4, space: ModifierSpace | undefined) {
   const head = SplatCamera.head;
   const { a, b } = scratch;
@@ -93,8 +80,7 @@ export function setTransforms(object: THREE.Matrix4, space: ModifierSpace | unde
   }
   setTransform(transforms.a, a);
   setTransform(transforms.b, b);
-  // The generator's context (object space), and with a modifier its
-  // context (b: its space to head; the head's inverse made once per camera)
+  // The head's inverse is made once per camera
   if (space === undefined) {
     SplatGenerator.setContext(object, head);
     return;
@@ -139,7 +125,6 @@ export function transformCov(c: CovSplatNode, t: TransformNodes): CovSplatNode {
   return out;
 }
 
-// A uniform transform of a 3DGS splat
 function transformUniform(s: SplatNode, t: TransformNodes): SplatNode {
   const out = GpuSplats.Splat().toVar();
   out.get("center").assign(t.matrix.mul(vec4(s.get("center"), 1.0)).xyz);
@@ -161,8 +146,7 @@ export function transformSplat(s: SplatNode, t: TransformNodes): SplatNode {
   return out;
 }
 
-// A node of `form` through `t`; `next` is the form wanted afterwards: a
-// 3DGS splat wanted as a covariance converts first (exact for any matrix)
+// A 3DGS splat wanted next as a covariance converts first, exact for any matrix
 export function transformForm(node: SplatNode | CovSplatNode, form: SplatForm, t: TransformNodes, next?: SplatForm): { node: SplatNode | CovSplatNode; form: SplatForm } {
   if (form === "cov") {
     return { node: transformCov(node as CovSplatNode, t), form: "cov" };

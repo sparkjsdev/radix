@@ -7,8 +7,7 @@ const { uint, uniform, uniformArray } = TSL;
 
 const MAX_EYES = 2;
 
-// What the projection and the draw read of one eye: head to eye (the
-// identity for an eye that is the head) and its rotation, and its lens
+// fromHead is the identity for an eye that is the head
 export interface EyeNodes {
   fromHead: TslNode;
   fromHeadQuat: TslNode;
@@ -19,7 +18,7 @@ export interface EyeNodes {
 }
 
 export interface EyeSetting {
-  // World to eye (camera.matrixWorldInverse)
+  // World to eye
   view: THREE.Matrix4;
   projection: THREE.Matrix4;
   ortho?: boolean;
@@ -31,22 +30,17 @@ const nodes = {
   projections: uniformArray(Array.from({ length: MAX_EYES }, () => new THREE.Matrix4())),
   orthos: uniformArray(new Array<number>(MAX_EYES).fill(0), "uint"),
   renderSize: uniform(new THREE.Vector2(1, 1)),
-  // NDC depth of the near plane: -1 (WebGL clip convention) or 0 (WebGPU)
+  // Near plane NDC depth: -1 in WebGL's clip convention, 0 in WebGPU's
   ndcZMin: uniform(0),
 };
 
-// Clip z from one convention to the other: WebGL's -w..w to WebGPU's 0..w, and back
+// Clip z from WebGL's -w..w to WebGPU's 0..w, and back
 const TO_WEBGPU = new THREE.Matrix4().set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
 const TO_WEBGL = TO_WEBGPU.clone().invert();
 
-// The camera of one render as uniforms shared by every program and draw
-// (set before each dispatch and draw): splats reach the projection in head
-// space, so it reads each eye's head-to-eye transform and lens. A plain
-// camera is one eye that is also the head; an ArrayCamera (XR, or an app's
-// stereo rig) gives its cameras as eyes and its own pose as the head.
+// The render's camera as uniforms shared by every program and draw
 export class SplatCamera {
-  // In a draw's shaders, the index (uint) of the eye being drawn: one draw
-  // per eye of an ArrayCamera, or both in one with multiview
+  // The eye being drawn, in a draw's shaders
   static readonly viewIndex: TslNode = splatViewIndex;
 
   // Eyes of the latest set()
@@ -54,7 +48,6 @@ export class SplatCamera {
   // World to head of the latest set()
   static readonly head = new THREE.Matrix4();
 
-  // Eye v (a number, or a TSL index such as SplatCamera.viewIndex)
   static eye(v: number | TslNode): EyeNodes {
     const at = typeof v === "number" ? uint(v) : v;
     return {
@@ -67,18 +60,15 @@ export class SplatCamera {
     };
   }
 
-  // The camera of a render: `camera` as three passes it to onBeforeRender.
-  // Eyes whose projection is in the other clip convention than the
-  // renderer's (sub-cameras an app made for WebGL) are converted, not changed.
+  // An eye in the renderer's other clip convention is converted in the uniforms only
   static set(renderer: WebGPURenderer, camera: THREE.Camera) {
     const array = camera as THREE.ArrayCamera;
     const cameras = array.isArrayCamera && array.cameras.length > 0 ? array.cameras : [camera];
     const count = Math.min(cameras.length, MAX_EYES);
     camera.updateMatrixWorld();
 
-    // Eyes share one size: an ArrayCamera's first viewport, else the
-    // current render target, else the canvas viewport (the drawing buffer
-    // unless setViewport narrowed it)
+    // Eyes share one size: an ArrayCamera's first viewport, else the render
+    // target, else the canvas viewport
     const size = scratch.size;
     const viewport = (cameras[0] as { viewport?: THREE.Vector4 }).viewport;
     const target = renderer.getRenderTarget();
@@ -115,7 +105,7 @@ export class SplatCamera {
     SplatCamera.setViews({ head: scratch.head.copy(camera.matrixWorld).invert(), eyes: scratch.eyes, size, ndcZMin: webgpu ? 0 : -1 });
   }
 
-  // The views directly: `head` and each eye's `view` map world to view
+  // head and each eye's view map world to view
   static setViews({ head, eyes, size, ndcZMin }: { head: THREE.Matrix4; eyes: EyeSetting[]; size: THREE.Vector2; ndcZMin: number }) {
     if (eyes.length < 1 || eyes.length > MAX_EYES) {
       throw new Error(`SplatCamera: 1 or ${MAX_EYES} eyes, not ${eyes.length}`);
@@ -124,7 +114,7 @@ export class SplatCamera {
     SplatCamera.head.copy(head);
     const headWorld = scratch.headWorld.copy(head).invert();
     eyes.forEach(({ view, projection, ortho = false }, v) => {
-      // Exactly the identity for an eye that is the head (mono)
+      // Exactly the identity for an eye that is the head
       const fromHead = view.equals(head) ? scratch.fromHead.identity() : scratch.fromHead.multiplyMatrices(view, headWorld);
       (nodes.fromHeads.array[v] as THREE.Matrix4).copy(fromHead);
       fromHead.decompose(scratch.position, scratch.quaternion, scratch.scale);

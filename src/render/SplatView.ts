@@ -11,82 +11,81 @@ import { projectCollection, readSortKeys, type ProjectSettings } from "./SplatPr
 import type { SplatRenderer } from "./SplatRenderer";
 import type { ModifierSpace } from "./splatTransform.tsl";
 
-// A draw order for a collection (SplatView.sort): `ordering` lists the
-// first `visible` of its splats back to front; `version` counts the view's
-// sorts, in the order they started
+/** A draw order of a collection, made by SplatView.sort. */
 export interface SplatOrder {
+  /** The collection it was sorted for. */
   readonly collection: SplatCollection;
+  /** Counts the view's sorts, in the order they started. */
   readonly version: number;
+  /** Splat indices back to front. */
   readonly ordering: Uint32Array<ArrayBuffer>;
+  /** How many of the indices are drawn. */
   readonly visible: number;
-  // Wall ms of the keys (GPU pass and readback) and of the worker sort
+  /** The key pass and readback, in wall milliseconds. */
   readonly keysMs: number;
+  /** The worker sort, in wall milliseconds. */
   readonly sortMs: number;
 }
 
-// When autoSort re-sorts: the camera moved more than `distance` (world
-// units) or, when a sortGuard is set, turned more than `angle` (radians)
-// or changed its lens since the last sort started; any change of the
-// collection or of an object's world transform also re-sorts, and so does
-// view.requestSort()
+/**
+ * How far the camera may move or turn since the last sort before autoSort
+ * re-sorts. A new collection, a moved object or a requested sort re-sorts too.
+ */
 export interface AutoSort {
+  /** The movement, in world units. */
   distance: number;
+  /** The turn, in radians, checked only with a sortGuard set. */
   angle: number;
 }
 
-// What a view sets over its renderer's settings (SplatRenderer.viewFor);
-// a modifier of null draws without the renderer's
+/** The settings SplatRenderer.viewFor sets on a view. */
 export interface SplatViewOptions {
+  /** What the view draws instead of the renderer's collection. */
   collection?: SplatCollection;
   params?: Partial<SplatViewParams>;
   objectParams?: Partial<SplatObjectParams>;
+  /** A modifier over the renderer's, or null for none. */
   modifier?: SplatModifier | null;
+  /** A covariance modifier over the renderer's, or null for none. */
   covModifier?: CovSplatModifier | null;
   modifierSpace?: ModifierSpace;
+  /** The sort key width, in bits. */
   sortBits?: SortKeyBits;
+  /** When the CPU sort re-sorts, or false for only on request. */
   autoSort?: AutoSort | false;
 }
 
-// The settings a view resolves to: its own over its renderer's
 export interface ViewSettings extends ProjectSettings {
   collection: SplatCollection;
   autoSort: AutoSort | false;
 }
 
-// One viewpoint of a SplatRenderer (renderer.viewFor(key), keyed by a
-// camera or any value): settings over the renderer's, unset ones following
-// it, and on the CPU-sort path the order being drawn. In sortMode "gpu"
-// nothing here depends on the camera, so a renderer needs views only to
-// draw some viewpoint differently. In "cpu" (the WebGL2 fallback) the
-// renderer draws `order`, made by sort(camera) (keys on the GPU, read back
-// and sorted on a worker) and shown with apply(order): until a newer order
-// lands it keeps drawing the collection that order was sorted for, so every
-// camera gets a view of its own (the renderer makes one per view key it
-// renders). An order can be applied until one of a later sort lands or is
-// applied; switching the renderer to "gpu" drops them all. autoSort does
-// that loop: one sort in flight, re-sorted when the camera or the
-// collection changed or a sort was requested, each order applied as it
-// lands.
+/**
+ * One viewpoint of a SplatRenderer, whose unset settings follow the renderer's.
+ * With the CPU sort it draws its applied order, from sort and apply or from
+ * autoSort.
+ */
 export class SplatView {
+  /** The renderer this view belongs to. */
   readonly splats: SplatRenderer;
   readonly key: unknown;
-  // Over the renderer's, field by field
   params: Partial<SplatViewParams> = {};
   objectParams: Partial<SplatObjectParams> = {};
-  // Unset: the renderer's
+  /** A modifier over the renderer's, or null for none. */
   modifier?: SplatModifier | null;
+  /** A covariance modifier over the renderer's, or null for none. */
   covModifier?: CovSplatModifier | null;
   modifierSpace?: ModifierSpace;
+  /** The sort key width in bits, over the renderer's. */
   sortBits?: SortKeyBits;
+  /** When the CPU sort re-sorts, over the renderer's, or false for only on request. */
   autoSort?: AutoSort | false;
 
   private _collection?: SplatCollection;
   private _order?: SplatOrder;
-  // The applied order's indices (ArrayData.INDICES)
   private orderArrays?: GpuArrays;
   private sorts = 0;
-  // In cpu mode, collections of sorts in flight and of the newest landed
-  // order not yet applied (`landed`), by version
+  // cpu mode: collections of sorts in flight and of the newest unapplied order, by version
   private pending = new Map<number, SplatCollection>();
   private landed = 0;
   private keyArrays: GpuArrays[] = [];
@@ -103,7 +102,7 @@ export class SplatView {
     this.key = key;
   }
 
-  // The collection this view draws instead of its renderer's
+  /** What this view draws instead of the renderer's collection. */
   get collection(): SplatCollection | undefined {
     return this._collection;
   }
@@ -113,16 +112,12 @@ export class SplatView {
     this.splats.updateLive();
   }
 
-  // The applied order (cpu mode draws its collection)
+  /** The applied order, whose collection is drawn. */
   get order(): SplatOrder | undefined {
     return this._order;
   }
 
-  // Sort again at the next render, for changes autoSort can't see (a
-  // generator's splats moved, a uniform of it changed), also with autoSort
-  // off. With a sort in flight, the next one starts when it finishes, since
-  // its sort keys may predate the change. Calls the renderer's onInvalidate
-  // unless a sort in flight will.
+  /** Sorts again at the next render, for changes autoSort can't see. */
   requestSort() {
     this.wantSort();
     if (!this.autoSorting) {
@@ -130,10 +125,10 @@ export class SplatView {
     }
   }
 
-  // Sort this view's collection (as of this call) from `camera`: its keys
-  // are computed on the GPU now, then read back and sorted on a worker. In
-  // gpu mode only with the renderer's sortWorker, and its orders cannot be
-  // applied.
+  /**
+   * Sorts the view's collection from a camera, on a worker. In gpu mode it needs
+   * the renderer's sortWorker.
+   */
   async sort(camera: THREE.Camera): Promise<SplatOrder> {
     this.checkDisposed();
     if (this.splats.sortMode === "gpu" && !this.splats.sortWorker) {
@@ -184,8 +179,13 @@ export class SplatView {
     }
   }
 
-  // Draw `order` from now on (cpu mode); whether it was applied. Not once
-  // an order of a later sort has landed or been applied, nor in gpu mode.
+  /**
+   * Draws an order from now on, in cpu mode.
+   *
+   * @param order An order from this view's sort.
+   * @return Whether it was applied, false once a later sort's order landed or was
+   *   applied.
+   */
   apply(order: SplatOrder): boolean {
     if (this.disposed || this.splats.sortMode !== "cpu" || !this.pending.has(order.version)) {
       return false;
@@ -204,8 +204,7 @@ export class SplatView {
     return true;
   }
 
-  // Free the view's arrays and take it off its renderer (its orders no
-  // longer hold their objects)
+  /** Frees the view and takes it off its renderer. */
   dispose() {
     if (this.disposed) {
       return;
@@ -253,8 +252,7 @@ export class SplatView {
     this.sortRequested = false;
   }
 
-  // An order of version `version` landed: older landed ones can no longer
-  // be applied, nor this one if a later one landed or was applied
+  // Older landed orders, or this one after a later one, can no longer be applied
   private land(version: number) {
     if (!this.pending.has(version)) {
       return;
@@ -331,7 +329,6 @@ function matrices(collection: SplatCollection) {
   return collection.objects.map(({ object }) => [...SplatCollection.matrixWorldOf(object).elements]);
 }
 
-// A camera's lens: its first eye's projection
 function lensOf(camera: THREE.Camera): THREE.Matrix4 {
   const array = camera as THREE.ArrayCamera;
   return (array.isArrayCamera && array.cameras.length > 0 ? array.cameras[0] : camera).projectionMatrix;

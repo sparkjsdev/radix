@@ -15,10 +15,9 @@ import { SplatParams, type SplatObjectParams, type SplatViewParams } from "./spl
 import { SplatProjection } from "./SplatProjection";
 import { convertForm, setTransforms, transformForm, transforms, type ModifierSpace } from "./splatTransform.tsl";
 
-// "full" writes a method's words and keys, "keys" only keys (the CPU sort)
+// "keys" writes only the keys, for the CPU sort
 export type ProjectPass = "full" | "keys";
 
-// A renderer's settings with its view's over them (SplatRenderer.settingsOf)
 export interface ProjectSettings {
   method: ProjectionMethod;
   sortBits: SortKeyBits;
@@ -31,8 +30,7 @@ export interface ProjectSettings {
 
 type Writer = GpuArrayWriter | WgpuArrayWriter;
 
-// A generator's programs, by modifier, cov modifier and pass key; `all`
-// holds them for dispose()
+// By modifier, cov modifier and pass key
 interface Programs {
   all: Set<Writer>;
   byModifier: WeakMap<object, WeakMap<object, Map<string, Writer>>>;
@@ -41,17 +39,12 @@ interface Programs {
 const NONE = {};
 const cache = new WeakMap<object, Programs>();
 
-// The program cache: generate + transforms + modifier + projection (or
-// key), built once per generator, modifier, cov modifier, method, eye count
-// and backend, shared by every view and renderer. Their inputs are
-// uniforms set per dispatch (the camera, each object's transforms and
-// params) and the slots generator.bind(data) points.
+/** The projection program cache every renderer shares. */
 export class SplatProjector {
-  // Programs built so far (for tests and stats)
+  /** The number of programs built. */
   static programs = 0;
 
-  // Dispose a generator's programs, once no live collection has it (an
-  // object's release can; garbage collection does not free GPU pipelines)
+  /** Frees a generator's programs, once no live collection holds it. */
   static dispose(generator: object) {
     const programs = cache.get(generator);
     if (programs) {
@@ -70,7 +63,6 @@ interface ProgramKey {
   webgpu: boolean;
 }
 
-// The cached program of a generator
 export function programOf(generator: AnySplatGenerator, key: ProgramKey): Writer {
   let programs = cache.get(generator);
   if (!programs) {
@@ -98,11 +90,8 @@ export function programOf(generator: AnySplatGenerator, key: ProgramKey): Writer
   return writer;
 }
 
-// Project every object of `collection` with `settings` into `arrays` (the
-// method's outputs for "full", { sortKeys } for "keys") at its offset, for
-// the camera SplatCamera.set last set; count becomes collection.count.
-// `cullKeys`: keys of splats culled in every eye are invalid (a GPU sort's
-// same-frame order).
+// For the camera SplatCamera.set last set. With cullKeys, splats culled in
+// every eye get the invalid key, for the GPU sort's same-frame order.
 export function projectCollection({ renderer, settings, collection, arrays, pass, cullKeys = false }: {
   renderer: WebGPURenderer;
   settings: ProjectSettings;
@@ -138,18 +127,14 @@ export function projectCollection({ renderer, settings, collection, arrays, pass
   arrays.count = collection.count;
 }
 
-// The first `count` keys of arrays with a sortKeys bundle, as uint32 (a
-// readback)
 export async function readSortKeys(arrays: GpuArrays, count = arrays.count): Promise<Uint32Array<ArrayBuffer>> {
   const data = await arrays.read({ bundles: ["sortKeys"], count });
   const bytes = data.bundles.sortKeys.channels.key.data as Uint8Array<ArrayBuffer>;
   return new Uint32Array(bytes.buffer, bytes.byteOffset, count);
 }
 
-// Generate, transform (a; modifier then b when there is one), project or
-// key. Forms are picked once, here: each step gets the one it takes without
-// converting where the generator allows (splat to cov is cheap, cov to
-// splat an eigen decomposition).
+// Picks each step's form once, converting only where the generator's differs.
+// Splat to cov is cheap, cov to splat an eigen decomposition.
 function build(generator: AnySplatGenerator, { pass, method, eyes, modifier, covModifier, webgpu }: ProgramKey): Writer {
   const projection = SplatProjection.get(method);
   const want: SplatForm | undefined = pass === "full" ? projection.input : undefined;
@@ -159,7 +144,6 @@ function build(generator: AnySplatGenerator, { pass, method, eyes, modifier, cov
   const has = { splat: generator.generateSplat !== undefined, cov: generator.generateCovSplat !== undefined };
   const start: SplatForm = wantFirst && has[wantFirst] ? wantFirst : has.splat ? "splat" : "cov";
 
-  // The form after a transform of `form` wanted as `next` afterwards
   const after = (form: SplatForm, next?: SplatForm): SplatForm => (form === "cov" || next === "cov" ? "cov" : "splat");
   let form = after(start, wantFirst);
   if (modified) {

@@ -22,79 +22,98 @@ import { SplatView, type AutoSort, type SplatViewOptions, type ViewSettings } fr
 
 const { uniform } = TSL;
 
-// Splats per instance of the draw, as the sorter's draw arguments count
 const QUADS = WgpuSplatSorter.QUADS_PER_INSTANCE;
 
-// The quads of QUADS splats, the only buffer the draw has (no vertex
-// attributes), shared by every renderer; indexed, so shared corners are
-// shaded once
+// The draw's only buffer, shared by all renderers, indexed so shared corners shade once
 const QUAD_INDEX = new THREE.BufferAttribute(quadIndices(QUADS), 1);
 QUAD_INDEX.name = "radix_splatQuadIndex";
 
-// Views made by renders past which a renderer warns (an app making cameras
-// anew each frame would make a view each)
+// Renders warn past this many views, since cameras made anew each make one
 const MANY_VIEWS = 32;
 
+/** The options of a SplatRenderer, each setting the member of that name. */
 export interface SplatRendererOptions {
   renderer: WebGPURenderer;
+  /**
+   * What every viewpoint draws unless its view sets its own.
+   *
+   * @default SplatCollection.EMPTY
+   */
   collection?: SplatCollection;
+  /**
+   * The projection method.
+   *
+   * @default "ewa"
+   */
   method?: ProjectionMethod;
+  /**
+   * The sort key width, in bits.
+   *
+   * @default 24
+   */
   sortBits?: SortKeyBits;
   params?: Partial<SplatViewParams>;
   objectParams?: Partial<SplatObjectParams>;
   modifier?: SplatModifier;
   covModifier?: CovSplatModifier;
+  /**
+   * Where the modifiers run.
+   *
+   * @default "view"
+   */
   modifierSpace?: ModifierSpace;
+  /**
+   * Whether splats are sorted on the GPU every render or on a worker per view.
+   *
+   * @default "gpu" on WebGPU, else "cpu"
+   */
   sortMode?: "gpu" | "cpu";
+  /**
+   * When views re-sort on the CPU, or false for only on request.
+   *
+   * @default { distance: 0, angle: 0 }
+   */
   autoSort?: AutoSort | false;
+  /**
+   * Where CPU sorts run.
+   *
+   * @default SplatRenderer.sortPool
+   */
   sortWorker?: WorkerPool | WorkerLease;
+  /**
+   * The key of the view a render from a camera draws.
+   *
+   * @default (camera) => camera
+   */
   viewKey?: (camera: THREE.Camera) => unknown;
+  /** Called when an autoSort order or a requested sort needs a render. */
   onInvalidate?: (view?: SplatView) => void;
 }
 
-// A method's words for some eyes and a key per splat: what a renderer
-// projects its collection into, sorts and draws
 interface Projected {
   projection: SplatProjection;
   eyes: number;
   arrays: GpuArrays<ProjectedSchema>;
 }
 
-// What a renderer leaves behind if it is garbage-collected undisposed
+// Left behind when a renderer is garbage-collected undisposed
 interface RendererToken {
   ref: WeakRef<SplatRenderer>;
 }
 
 let sharedSortPool: WorkerPool | undefined;
 
-// Draws a collection of splats: add it to the scene and render as usual,
-// from any camera. It holds the settings every viewpoint shares (the
-// collection, the method and params every splat drawn together shares,
-// per-object param defaults, a modifier run on every splat in
-// modifierSpace, the sort); views (viewFor(key)) set some of them over it
-// for one viewpoint.
-//
-// Each render, onBeforeRender projects the collection (every object, one
-// dispatch each) for the render's camera (two eyes for an XR ArrayCamera)
-// into this renderer's projected splats, or prepare(camera) does it before
-// the render; then it orders them: sortMode "gpu" (WebGPU's default) with
-// a WgpuSplatSorter in the same frame (drawn indirectly, nothing read
-// back), "cpu" (the WebGL2 fallback) with the applied order of the
-// render's view, drawing the collection it was sorted for (nothing until
-// one is applied). The view drawn: `view` when set, else the one of
-// viewKey(camera) (default the camera itself), made for each key in cpu
-// mode; in gpu mode no view is needed. Two renderers in one render each
-// keep their own projected splats and sorter, since a frame's compute runs
-// before its draws.
-//
-// An object's release runs once no renderer's live collection holds that
-// object: live are its collection, its views' and, in cpu mode, the
-// collections of their applied orders and of sorts in flight or landed and
-// still appliable. Dispose renderers: one garbage-collected undisposed is
-// warned about.
+/**
+ * Draws a collection of splats from any camera. Dispose it when done.
+ *
+ * It holds the settings every viewpoint shares, and its views set some of them
+ * for one viewpoint.
+ *
+ * - sortMode "gpu" sorts every render on WebGPU.
+ * - sortMode "cpu" draws each view's order, sorted on a worker a few frames late.
+ */
 export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, NodeMaterial> {
-  // Every undisposed renderer, and the objects with a release that have
-  // been live in one and not released yet
+  // Undisposed renderers, and objects with a release not yet released
   private static readonly renderers = new Set<WeakRef<SplatRenderer>>();
   private static readonly watched = new Set<AnySplatObject>();
   private static readonly lost = new FinalizationRegistry<RendererToken>((token) => {
@@ -103,42 +122,49 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     SplatRenderer.sweep();
   });
 
-  // Workers of the shared sort pool: read when the pool is made, at the
-  // first CPU sort of any renderer, so set it before then
+  /**
+   * The size of the shared sort pool, read at the first CPU sort.
+   *
+   * @default 4
+   */
   static sortWorkers = 4;
 
-  // The pool every renderer's CPU sorts share (all their views; renderers
-  // with a sortWorker use that instead), so parallel sorts stay bounded and
-  // never queue behind file loads in WorkerPool.default. Made on first use,
-  // its workers as sorts need them; it lives with the page.
+  /** The worker pool for CPU sorts of renderers without a sortWorker. */
   static get sortPool(): WorkerPool {
     return (sharedSortPool ??= new WorkerPool({ size: SplatRenderer.sortWorkers }));
   }
 
   readonly renderer: WebGPURenderer;
   method: ProjectionMethod;
+  /** The sort key width, in bits. */
   sortBits: SortKeyBits;
+  /** View params, changed in place. */
   readonly params: SplatViewParams;
+  /** Object param defaults, changed in place. */
   readonly objectParams: SplatObjectParams;
   modifier?: SplatModifier;
   covModifier?: CovSplatModifier;
   modifierSpace: ModifierSpace;
+  /** When views re-sort on the CPU, or false for only on request. */
   autoSort: AutoSort | false;
-  // Where CPU sorts run: by default SplatRenderer.sortPool, shared by every
-  // renderer; a given pool or lease is the app's
+  /**
+   * Where CPU sorts run.
+   *
+   * @default SplatRenderer.sortPool
+   */
   sortWorker?: WorkerPool | WorkerLease;
-  // The key of the view a render from `camera` draws when `view` is unset:
-  // the camera itself by default. Map cameras an app makes anew (a clone
-  // per frame, say) to keys of its own, so they share views instead of
-  // each making one in cpu mode.
+  /**
+   * The key of the view a render from a camera draws, when view is unset. Map
+   * cameras made anew to stable keys, or the CPU sort makes a view for each.
+   *
+   * @default (camera) => camera
+   */
   viewKey: (camera: THREE.Camera) => unknown;
-  // Something this renderer did (an autoSort order applied) or was asked
-  // to do (requestSort) needs a render to show: of `view`, or of every
-  // viewpoint when undefined. For on-demand rendering.
+  /** Called when an autoSort order or a requested sort needs a render. */
   onInvalidate?: (view?: SplatView) => void;
-  // The view every render draws; unset: the one of viewKey(camera)
+  /** The view every render draws, when set. */
   view?: SplatView;
-  // Runs the "project" and "sort" steps (a GpuProfiler's phase, say)
+  /** Called around the "project" and "sort" steps of each render. */
   phase?: <T>(name: string, run: () => T) => T;
 
   private _collection: SplatCollection;
@@ -155,10 +181,9 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
   private orderReader = new GpuArrayReader(ArrayData.INDICES);
   private orderCount = uniform(0, "uint");
   private encodeLinear = uniform(0);
-  // What the material draws: the projected arrays (by their reader) and the
-  // order source
   private drawState!: { for: Projected; projected: GpuArrayReader; sorter?: WgpuSplatSorter };
 
+  /** Makes a renderer to add to a scene. */
   constructor({
     renderer, collection = SplatCollection.EMPTY, method = "ewa", sortBits = 24, params, objectParams, modifier, covModifier, modifierSpace = "view",
     sortMode, autoSort = { distance: 0, angle: 0 }, sortWorker, viewKey = (camera) => camera, onInvalidate,
@@ -189,13 +214,12 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     SplatRenderer.lost.register(this, this.token, this);
     this.updateLive();
 
-    // Three lists the material before onBeforeRender, so there is one from
-    // the start, drawing real (empty) projected arrays
+    // three lists the material before onBeforeRender, so build it now on real, empty arrays
     this.projected = this.makeProjected(method, 1);
     this.buildMaterial(undefined);
   }
 
-  // What every viewpoint draws unless its view sets its own collection
+  /** What every viewpoint draws unless its view sets its own. */
   get collection(): SplatCollection {
     return this._collection;
   }
@@ -205,8 +229,11 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     this.updateLive();
   }
 
-  // "gpu": the GPU sort every render (WebGPU); "cpu": each view's applied
-  // order of a CPU sort. Switching to gpu drops the orders.
+  /**
+   * Whether splats are sorted on the GPU every render or on a worker per view.
+   *
+   * @default "gpu" on WebGPU, else "cpu"
+   */
   get sortMode(): "gpu" | "cpu" {
     return this._sortMode;
   }
@@ -219,13 +246,15 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     }
   }
 
-  // The views made so far, by key
   get views(): ReadonlyMap<unknown, SplatView> {
     return this._views;
   }
 
-  // The view of `key` (a camera, or any value for a viewpoint of the
-  // app's), made on first use; `options` are set on it
+  /**
+   * Returns the view of a key, made on first use.
+   *
+   * @param key A camera, or any value.
+   */
   viewFor(key: unknown, options: SplatViewOptions = {}): SplatView {
     if (this.disposed) {
       throw new Error("SplatRenderer.viewFor: the renderer is disposed");
@@ -245,27 +274,30 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     return view;
   }
 
-  // Sort every view again at its next render (view.requestSort), and call
-  // onInvalidate for all of them
+  /** Sorts every view again at its next render, and calls onInvalidate. */
   requestSort() {
     this._views.forEach((view) => view.wantSort());
     this.onInvalidate?.();
   }
 
-  // The GPU sort's visible count of the latest render (a readback)
+  /**
+   * Reads back the GPU sort's visible count of the latest render.
+   *
+   * @return The visible count, or 0 without a GPU sort.
+   */
   async readSortedCount(): Promise<number> {
     return this.sorter && !this.disposed ? this.sorter.readCount() : 0;
   }
 
-  // A disposed renderer still in the scene draws nothing (projecting would
-  // make GPU resources again)
+  /** Projects and sorts for the render's camera, called by three. */
   onBeforeRender(_renderer: unknown, _scene: THREE.Scene, camera: THREE.Camera) {
+    // Projecting would make GPU resources again
     if (this.disposed) {
       this.geometry.instanceCount = 0;
       return;
     }
     if (this.renderer.info.render.calls === this.preparedAt + 1) {
-      // Projected already, for this render: the draw's uniforms are its
+      // prepare() projected this render already, so set only the draw's uniforms
       SplatCamera.set(this.renderer, camera);
       SplatParams.setView(this.settingsOf(this.viewOf(camera)).params);
       this.encodeLinear.value = outputIsLinear(this.renderer) ? 1 : 0;
@@ -274,9 +306,11 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     this.update(camera);
   }
 
-  // Project and sort for `camera` now, outside a render (WebGL2 timer
-  // queries do not nest); the next render draws that instead of projecting
-  // again
+  /**
+   * Projects and sorts now, outside a render, for the next render to draw.
+   *
+   * @param camera The camera of the next render.
+   */
   prepare(camera: THREE.Camera) {
     if (this.disposed) {
       this.geometry.instanceCount = 0;
@@ -286,6 +320,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     this.preparedAt = this.renderer.info.render.calls;
   }
 
+  /** Frees the renderer's GPU resources and views, and releases objects only it held. */
   dispose() {
     if (this.disposed) {
       return;
@@ -370,9 +405,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     }
   }
 
-  // Release the watched objects no renderer's live collection holds any
-  // longer, after the bookkeeping, so a release may change renderers and
-  // views
+  // Runs after the bookkeeping, so a release may change renderers and views
   private static sweep() {
     if (SplatRenderer.watched.size === 0) {
       return;
@@ -388,8 +421,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     done.forEach((object) => object.release?.());
   }
 
-  // The view a render from `camera` draws: `view`, else the one of its
-  // view key (made in cpu mode, where each viewpoint needs its own order)
+  // cpu mode makes a view per key, since each viewpoint needs its own order
   private viewOf(camera: THREE.Camera): SplatView | undefined {
     if (this.view) {
       if (this.view.splats !== this) {
@@ -442,15 +474,13 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
       visible = Math.min(order.visible, arrays.count);
     }
 
-    // Point the draw at the projection and the order
     if (this.drawState.for !== this.projected || this.drawState.sorter !== sorter) {
       this.buildMaterial(sorter);
     }
     this.drawState.projected.bind(arrays, "projected");
     this.encodeLinear.value = outputIsLinear(this.renderer) ? 1 : 0;
 
-    // Three skips a draw with no instances even when the indirect
-    // arguments hold the actual count
+    // three skips a draw with no instances, even an indirect one
     this.geometry.setIndirect(sorter ? (sorter.indirect.attribute as IndirectStorageBufferAttribute) : (null as never));
     this.geometry.instanceCount = Math.ceil(visible / QUADS);
   }
@@ -461,8 +491,6 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     return { projection, eyes, arrays };
   }
 
-  // The one material, built (or rebuilt in place) for the projected
-  // arrays and the order source
   private buildMaterial(sorter: WgpuSplatSorter | undefined) {
     const { projection, eyes, arrays } = this.projected;
     const projected = projection.reader(eyes).bind(arrays, "projected");
@@ -480,7 +508,6 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
   }
 }
 
-// `base` with the fields `top` sets on top
 function over<T extends object>(base: T, top: Partial<T>): T {
   const out = { ...base };
   for (const key of Object.keys(top) as (keyof T)[]) {

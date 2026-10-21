@@ -1,24 +1,4 @@
-// The four projection methods (after Spark's sparkProjections). Each one
-// turns a prepared splat into uint32 words, the head-centered words first,
-// then each eye's, and in the draw turns the head words plus one eye's
-// words into a quad corner and a fragment density.
-//
-//   ewa    classic 3DGS / EWA splatting: a 2D Gaussian per eye
-//          eye  [ndc 2x16, depth20 | angle12, rgb, opacity8 | 2x12 log2 scales]
-//   3dgut  a 2D bound from 7 sigma points, then max-response ray evaluation
-//   htgs   the exact outline of the ellipsoid, then the same ray evaluation
-//          head [center dir, center distance, rgb, quat, half2 log scales, half log scale | opacity8 << 16 | center low]
-//          eye  [bound ndc 2x16, angle10 | 2x11 log2 scales]
-//   raygs  a tilted 3D quad facing the eye, with interpolated ray evaluation
-//          head [center dir, center distance, rgb, opacity8 | center low]
-//          eye  [frame quat, float32 c^2, half2 log axis lengths]
-//
-// The center's direction is 20 + 20 bits: the top 16 + 16 in "center dir",
-// the low 4 + 4 in bits 24-31 of the last head word ("center low").
-// An eye's culled marker: a zero opacity byte (ewa) or a zero second word.
-//
-// ewa reads covariances, the others scales and rotations: SplatProjection
-// converts what a source gives (GpuSplats.toCov / fromCov) when it differs.
+// After Spark's sparkProjections
 import type { EyeNodes } from "./splatCamera";
 import type { SplatParamNodes } from "./splatParams";
 import {
@@ -39,6 +19,7 @@ const {
   transpose, uint, uintBitsToFloat, vec2, vec3, vec4,
 } = TSL;
 
+/** How a renderer projects splats: "ewa" splatting, or ray evaluation in the others. */
 export type ProjectionMethod = "ewa" | "3dgut" | "htgs" | "raygs";
 
 // The splat form each method reads
@@ -51,13 +32,12 @@ export interface ProjectionInputs {
 
 export interface ProjectContext<F extends SplatForm> {
   splat: PreparedSplat<F>;
-  // The splat seen from the head (with the first eye's lens)
+  // With the first eye's lens
   head: SplatInView;
   eyes: number;
   params: SplatParamNodes;
 }
 
-// What one eye's draw decodes before placing the quad
 export interface SplatLook {
   visible: TslNode;
   rgb: TslNode;
@@ -68,12 +48,11 @@ export interface ProjectionDef<F extends SplatForm = SplatForm> {
   input: F;
   headWords: number;
   eyeWords: number;
-  // What density() reads: the varyings vertex() fills
+  // What vertex() fills and density() reads
   varyings: readonly (keyof SplatVaryings)[];
-  // Words of one splat, and whether any eye shows it
   project(ctx: ProjectContext<F>): { words: TslNode[]; visible: TslNode };
   look(head: TslNode[], eye: TslNode[]): SplatLook;
-  // Fills the DrawVertex var `out` (splatDraw.ts) for one quad corner in [-1, 1]^2
+  // Fills the DrawVertex var out for a corner in [-1, 1]^2
   vertex(head: TslNode[], eye: TslNode[], view: EyeNodes, corner: TslNode, boundStdDev: TslNode, cutoffStdDev: TslNode, out: TslNode): void;
   density(varyings: SplatVaryings): TslNode;
 }
@@ -83,8 +62,6 @@ const zeroWords = (n: number) => Array.from({ length: n }, () => uint(0).toVar()
 function assignWords(words: TslNode[], values: TslNode[]) {
   values.forEach((value, i) => words[i].assign(value));
 }
-
-// --- ewa ---
 
 const ewa: ProjectionDef<"cov"> = {
   input: "cov",
@@ -167,9 +144,7 @@ const ewa: ProjectionDef<"cov"> = {
   density: (v) => dot(v.uv, v.uv),
 };
 
-// --- 3dgut and htgs: a 2D bound per eye, then max-response ray evaluation ---
-
-// The view-space quaternion and scales of the head, MIP-inflated once
+// MIP-inflated once, in head space
 function headBasis({ splat: s, head, params }: ProjectContext<"splat">) {
   const ok = cullInvisible(s, params).not().toVar();
   const opacity = s.opacity.toVar();
@@ -263,6 +238,7 @@ function htgsBound(eye: SplatInView, quat: TslNode, scales: TslNode, stdDev: Tsl
 
 type BoundOf = typeof gutBound;
 
+// 3dgut and htgs: a 2D bound per eye, then max-response ray evaluation
 function rayProjection(boundOf: BoundOf, shrinkToCutoff: boolean): ProjectionDef<"splat"> {
   return {
     input: "splat",
@@ -318,9 +294,8 @@ function rayProjection(boundOf: BoundOf, shrinkToCutoff: boolean): ProjectionDef
       const quat = quatMul(view.fromHeadQuat, decodeQuatOct32(head[3])).toVar();
       const scales = exp(vec3(decodeHalf2(head[4]), decodeHalf(head[5]))).toVar();
 
-      // The 3dgut bound is centered on the splat, so it shrinks to the
-      // cutoff; the htgs outline's center drifts with the std dev under
-      // perspective, so it keeps the projected bound
+      // The 3dgut bound is centered on the splat, so it shrinks to the cutoff.
+      // The htgs outline's center drifts with the std dev under perspective.
       const shrink = shrinkToCutoff ? cutoffStdDev.div(boundStdDev) : float(1.0);
       rayVertex(decodeBound(eye[0], eye[1]), center, quat, scales, corner, shrink, view.projection, view.isOrtho, view.renderSize, out);
       out.get("uv").assign(corner.mul(boundStdDev));
@@ -330,9 +305,7 @@ function rayProjection(boundOf: BoundOf, shrinkToCutoff: boolean): ProjectionDef
   };
 }
 
-// --- raygs: a tilted 3D quad with interpolated ray evaluation ---
-
-// Every quad corner in front of the camera and on the same outside side
+// Every corner in front of the camera and outside the same edge
 function quadOffScreen(projection: TslNode, mu: TslNode, axis0: TslNode, axis1: TslNode): TslNode {
   const c = projection.mul(vec4(mu, 1.0)).toVar();
   const a0 = projection.mul(vec4(axis0, 0.0)).toVar();
@@ -351,8 +324,7 @@ function quadOffScreen(projection: TslNode, mu: TslNode, axis0: TslNode, axis1: 
   return inFront.and(outside[0].or(outside[1]).or(outside[2]).or(outside[3]));
 }
 
-// The quad facing the eye: its frame (columns n0, n1, normal), axis
-// lengths and c^2; false when the camera is inside the splat or it is off screen
+// ok is false when the camera is inside the splat or the quad is off screen
 function raygsFrame(eye: SplatInView, quat: TslNode, scales: TslNode, stdDev: TslNode) {
   const ok = bool(true).toVar();
   const kappa = stdDev.mul(stdDev).toVar();
@@ -363,7 +335,7 @@ function raygsFrame(eye: SplatInView, quat: TslNode, scales: TslNode, stdDev: Ts
     muHat.assign(normalize(quatRotate(quatConj(quat), vec3(0.0, 0.0, -1.0)).div(scales)));
     c2.assign(1e18);
   }).Else(() => {
-    // Camera inside the splat's support: skip (paper Sec. 3.2)
+    // Skip the splat when the camera is inside its support, paper Sec. 3.2
     ok.assign(c2.greaterThan(kappa.mul(1.0001)));
     muHat.assign(quatRotate(quatConj(quat), eye.center).div(scales).mul(inverseSqrt(c2)));
   });
@@ -374,7 +346,7 @@ function raygsFrame(eye: SplatInView, quat: TslNode, scales: TslNode, stdDev: Ts
   const q0 = quatRotate(quat, scales.mul(t.mul(t.x.mul(invDen)).sub(vec3(1.0, 0.0, 0.0)))).toVar();
   const q1 = quatRotate(quat, scales.mul(t.mul(t.y.mul(invDen)).sub(vec3(0.0, 1.0, 0.0)))).toVar();
 
-  // Major eigenvector of Q^T Q; u0 is it rotated 90 degrees
+  // Major eigenvector of Q^T Q, and u0 rotated 90 degrees from it
   const bxx = dot(q0, q0).toVar();
   const bxy = dot(q0, q1).toVar();
   const byy = dot(q1, q1).toVar();
@@ -396,6 +368,7 @@ function raygsFrame(eye: SplatInView, quat: TslNode, scales: TslNode, stdDev: Ts
   return { ok, quat: basisToQuat(mat3(n0, n1, cross(n0, n1))), lengths, c2 };
 }
 
+// A tilted 3D quad with interpolated ray evaluation
 const raygs: ProjectionDef<"splat"> = {
   input: "splat",
   headWords: 4,
@@ -438,8 +411,8 @@ const raygs: ProjectionDef<"splat"> = {
     opacity: decodeOpacity(head[3].bitAnd(uint(0xff))),
   }),
 
-  // z = (sqrt(kappa) / b) * corner, b = sqrt(1 - kappa / c^2); the quad is
-  // built around the center, so the tighter cutoff applies directly
+  // z = (sqrt(kappa) / b) * corner with b = sqrt(1 - kappa / c^2). The quad is
+  // built around the center, so the tighter cutoff applies directly.
   vertex(head, eye, view, corner, _boundStdDev, cutoffStdDev, out) {
     const center = view.fromHead.mul(vec4(decodeCenter(head[0], head[1], head[3]), 1.0)).xyz.toVar();
     const quat = decodeQuatOct32(eye[0]).toVar();

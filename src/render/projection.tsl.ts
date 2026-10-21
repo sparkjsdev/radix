@@ -1,6 +1,4 @@
-// What the four projection methods (projections.tsl.ts) share: a splat
-// prepared once, its center in one view, culls, 2D bounds, the MIP filter,
-// the codecs of the projected words, and the draw's ray evaluation.
+// What the four projection methods share
 import { SplatCamera } from "./splatCamera";
 import type { SplatParamNodes } from "./splatParams";
 import { GpuSplatMath } from "../gpu/math.tsl";
@@ -21,24 +19,21 @@ export const NDC_RANGE = 2.0;
 const LOG_SCALE_MIN = -4.0;
 const LOG_SCALE_MAX = 12.0;
 
-// --- The splat, before any view ---
-
-// The splat form a projection reads: "splat" (scales and rotation) or
-// "cov" (a covariance)
+// "splat" holds scales and a rotation, "cov" a covariance
 export type SplatForm = "splat" | "cov";
 export type SplatNodeOf<F extends SplatForm> = F extends "cov" ? CovSplatNode : SplatNode;
 
 export interface PreparedSplat<F extends SplatForm = SplatForm> {
   form: F;
-  // A var of the splat, grown by the LoD inflation
+  // A var, grown by the LoD inflation
   splat: SplatNodeOf<F>;
-  // Opacity after the LoD stretch (0..5), and the std dev cutoff it implies
+  // After the LoD stretch, 0 to 5, with the std dev cutoff it implies
   opacity: TslNode;
   stdDev: TslNode;
 }
 
-// LoD opacities above 1 stretch to 1..5; with lodInflate the splat grows
-// instead (Spark's sparkProjectSplat preamble)
+// LoD opacities above 1 stretch to 1 to 5, or with lodInflate grow the splat,
+// after Spark's sparkProjectSplat
 export function prepareSplat<F extends SplatForm>(source: SplatNodeOf<F>, form: F, params: SplatParamNodes): PreparedSplat<F> {
   const splat = (source as TslNode).toVar();
   const opacity = splat.get("opacity").toVar();
@@ -68,13 +63,10 @@ export function cullInvisible({ form, splat, opacity }: PreparedSplat, params: S
   return opacity.lessThanEqual(0.0).or(opacity.lessThan(params.minAlpha)).or(degenerate);
 }
 
-// Opacity as stored: LoD opacities squashed back to 1..2
+// LoD opacities squashed back to 1 to 2
 export const storedOpacity = (opacity: TslNode) => select(opacity.greaterThan(1.0), opacity.add(3.0).mul(0.25), opacity);
 
-// --- One view ---
-
-// A view to project in: head space (where splats arrive) to the view and
-// its rotation (none for the head itself), plus the eye's lens
+// Head to view and its rotation, unset for the head itself, and the eye's lens
 export interface ViewFrame {
   matrix?: TslNode;
   quat?: TslNode;
@@ -92,12 +84,11 @@ export function eyeFrame(v: number | TslNode): ViewFrame {
   };
 }
 
-// The head with the first eye's lens (exactly that eye in mono)
+// The head with the first eye's lens, exactly that eye in mono
 export function headFrame(): ViewFrame {
   return { ...eyeFrame(0), matrix: undefined, quat: undefined };
 }
 
-// A head-space rotation `q` seen from the frame
 export const frameQuat = (frame: ViewFrame, q: TslNode) => (frame.quat ? quatMul(frame.quat, normalize(q)) : normalize(q));
 
 export interface SplatInView {
@@ -105,7 +96,7 @@ export interface SplatInView {
   center: TslNode;
   clip: TslNode;
   ndc: TslNode;
-  // The anti-aliasing blur, widened by depth of field
+  // Widened by depth of field
   blur: TslNode;
 }
 
@@ -114,7 +105,7 @@ export function splatInView(s: PreparedSplat, frame: ViewFrame, params: SplatPar
   const center = (frame.matrix ? frame.matrix.mul(vec4(splatCenter, 1.0)).xyz : splatCenter).toVar();
   const clip = frame.projection.mul(vec4(center, 1.0)).toVar();
 
-  // Depth of field: widen the blur to the circle of confusion (pixel area units)
+  // Depth of field: the circle of confusion, in pixel area units
   const blur = params.blurAmount.toVar();
   If(params.focalDistance.greaterThan(0.0).and(params.apertureTan.greaterThan(0.0)).and(center.z.lessThan(0.0)), () => {
     const depth = center.z.negate().toVar();
@@ -128,20 +119,17 @@ export function splatInView(s: PreparedSplat, frame: ViewFrame, params: SplatPar
   return { frame, center, clip, ndc, blur };
 }
 
-// Center behind the camera or outside the near / far planes
 export function cullDepth({ center, clip, frame }: SplatInView): TslNode {
   return center.z.greaterThanEqual(0.0).or(clip.z.lessThan(frame.ndcZMin.mul(clip.w))).or(clip.z.greaterThanEqual(clip.w));
 }
 
-// Center more than clipXY (at most the fixed NDC range) outside the frustum
 export function cullClipXY({ clip }: SplatInView, params: SplatParamNodes): TslNode {
   const limit = min(params.clipXY, NDC_RANGE).mul(clip.w).toVar();
   return abs(clip.x).greaterThan(limit).or(abs(clip.y).greaterThan(limit));
 }
 
-// Whether a splat may show in the head's view widened by `guard` (NDC
-// beyond the edges, plus the splat's own reach): keys of the others are
-// dropped for the CPU sort, whose order lags the camera
+// Whether a splat may show in the head's view widened by guard, in NDC plus
+// its reach. The CPU sort's order lags the camera, so it drops only the others.
 export function inSortGuard({ form, splat }: PreparedSplat, head: SplatInView, guard: TslNode, params: SplatParamNodes): TslNode {
   const s = splat as TslNode;
   const extent = form === "cov" ? sqrt(max(max(s.get("xxyyzz").x, s.get("xxyyzz").y), s.get("xxyyzz").z)) : max(max(s.get("scales").x, s.get("scales").y), s.get("scales").z);
@@ -164,8 +152,7 @@ export function viewCov(s: PreparedSplat<"cov">, frame: ViewFrame): TslNode {
   return M.mul(cov).mul(transpose(M));
 }
 
-// View-space rotation and scales; flat splats keep a sliver of thickness so
-// rays can evaluate them
+// Flat splats keep a sliver of thickness so rays can evaluate them
 export function viewBasis(s: PreparedSplat<"splat">, frame: ViewFrame): { quat: TslNode; scales: TslNode } {
   const quat = frameQuat(frame, s.splat.get("quaternion")).toVar();
   const scales = s.splat.get("scales").toVar();
@@ -177,9 +164,8 @@ export function viewBasis(s: PreparedSplat<"splat">, frame: ViewFrame): { quat: 
 const detTimesMahalanobis = (l2: TslNode, s2: TslNode) =>
   l2.x.mul(s2.y).mul(s2.z).add(l2.y.mul(s2.x).mul(s2.z)).add(l2.z.mul(s2.x).mul(s2.y));
 
-// MIP anti-aliasing for ray evaluation (vkraygs Sec. 5): inflate the 3D
-// covariance by the pixel footprint, compensating the opacity. Mutates the
-// scales and opacity vars.
+// MIP anti-aliasing for ray evaluation, after vkraygs Sec. 5: inflates the
+// scales by the pixel footprint and compensates the opacity, in place
 export function mipInflate(v: SplatInView, quat: TslNode, scales: TslNode, opacity: TslNode, params: SplatParamNodes) {
   const local = quatRotate(quatConj(quat), v.center).toVar();
   const l2 = local.mul(local).toVar();
@@ -201,8 +187,7 @@ export const mahalanobis2 = (center: TslNode, quat: TslNode, scales: TslNode) =>
   return dot(local, local);
 };
 
-// --- 2D bounds (pixel half extents along an angle, centered at ndc) ---
-
+// Pixel half extents along an angle, centered at ndc
 export interface Bound {
   ndc: TslNode;
   angle: TslNode;
@@ -218,8 +203,7 @@ export const eigenvector2 = Fn(([a, b, d, eig]: [TslNode, TslNode, TslNode, TslN
   return select(len.greaterThan(0.0), v.div(len), vec2(1.0, 0.0));
 });
 
-// Oriented bound of a pixel-space covariance (a b; b d): half extents
-// stdDev * sqrt(eigenvalue), clamped; false if too small to draw
+// Half extents stdDev * sqrt(eigenvalue), clamped. False if too small to draw.
 export function boundFromCov(a: TslNode, b: TslNode, d: TslNode, stdDev: TslNode, params: SplatParamNodes, bound: Bound): TslNode {
   const det = a.mul(d).sub(b.mul(b));
   const half = a.sub(d).mul(0.5).toVar();
@@ -239,14 +223,14 @@ export function boundFromCov(a: TslNode, b: TslNode, d: TslNode, stdDev: TslNode
   return ok;
 }
 
-// When no outline can be computed (camera inside, extent behind it): the screen
+// For a camera inside the splat or an extent behind it
 export function screenBound(frame: ViewFrame, params: SplatParamNodes, bound: Bound) {
   bound.ndc.assign(vec2(0.0));
   bound.angle.assign(0.0);
   bound.scales.assign(vec2(min(params.maxPixelRadius, length(frame.renderSize).mul(0.5))));
 }
 
-// Intersect the bound's pixel box with the screen; false if off screen
+// False if off screen
 export function clipBoundToScreen(renderSize: TslNode, bound: Bound): TslNode {
   const halfSize = renderSize.mul(0.5).toVar();
   const c = cos(bound.angle).mul(bound.scales).toVar();
@@ -272,8 +256,6 @@ export function clipBoundToScreen(renderSize: TslNode, bound: Bound): TslNode {
   return ok;
 }
 
-// --- Word codecs (all uint32) ---
-
 const encodeFixed16 = (value: TslNode) => uint(clamp(floor(value.add(NDC_RANGE).div(2 * NDC_RANGE).mul(65535.0).add(0.5)), 0.0, 65535.0));
 const decodeFixed16 = (code: TslNode) => float(code).div(65535.0).mul(2 * NDC_RANGE).sub(NDC_RANGE);
 
@@ -293,9 +275,8 @@ export const decodeDepth20 = (code: TslNode) => uintBitsToFloat(code.shiftLeft(u
 export const encodeAngle12 = (angle: TslNode) => uint(floor(angle.div(Math.PI).mul(4096.0).add(0.5))).bitAnd(uint(0xfff));
 export const decodeAngle12 = (code: TslNode) => float(code).div(4096.0).mul(Math.PI);
 
-// log2 pixel scale on [LOG_SCALE_MIN, LOG_SCALE_MAX] in `bits`; `outward`
-// rounds up (bounds that must cover the splat), else to nearest. Code 0 is
-// never written, so a zero word can mark a culled bound.
+// outward rounds up, for bounds that must cover the splat. Code 0 is never
+// written, so a zero word can mark a culled bound.
 export function encodeLogScale(scale: TslNode, bits: number, outward = false) {
   const top = 2 ** bits - 2;
   const normalized = clamp(log2(max(scale, 1e-20)), LOG_SCALE_MIN, LOG_SCALE_MAX).sub(LOG_SCALE_MIN).div(LOG_SCALE_MAX - LOG_SCALE_MIN).mul(top);
@@ -306,14 +287,13 @@ export function decodeLogScale(code: TslNode, bits: number) {
   return exp2(float(code.sub(uint(1))).div(2 ** bits - 2).mul(LOG_SCALE_MAX - LOG_SCALE_MIN).add(LOG_SCALE_MIN));
 }
 
-// Visible splats keep a nonzero byte (zero marks a culled view)
+// Visible splats keep a nonzero byte, since zero marks a culled view
 export const encodeOpacity = (opacity: TslNode) => max(uint(floor(clamp(opacity.mul(128.0), 0.0, 255.0).add(0.5))), uint(1));
 export const decodeOpacity = (byte: TslNode) => float(byte).div(128.0);
 
-// The head-centered center: an octahedral direction of 20 + 20 bits, rounded,
-// and the float32 distance. Words: the direction's top 16 + 16 bits, the
-// distance, and its low 4 + 4 bits in bits 24-31, for the method to OR into
-// its last head word (whose top byte is free).
+// An octahedral direction of 20 + 20 bits and the float32 distance. Words: the
+// direction's top 16 + 16 bits, the distance, and its low 4 + 4 bits in bits
+// 24-31, for the method to OR into its last head word.
 export function encodeCenter(center: TslNode): [TslNode, TslNode, TslNode] {
   const distance = length(center).toVar();
 
@@ -330,8 +310,7 @@ export function encodeCenter(center: TslNode): [TslNode, TslNode, TslNode] {
   return [dir, floatBitsToUint(distance), low];
 }
 
-// The center from its first two words and the last head word. Every code
-// is a direction here (GpuEncoding.decodeOct reserves 0 for none).
+// Unlike GpuEncoding.decodeOct, code 0 is a direction here
 export const decodeCenter = Fn(([dir, distance, last]: [TslNode, TslNode, TslNode]) => {
   const qx = dir.bitAnd(uint(0xffff)).shiftLeft(uint(4)).bitOr(last.shiftRight(uint(24)).bitAnd(uint(15)));
   const qy = dir.shiftRight(uint(16)).shiftLeft(uint(4)).bitOr(last.shiftRight(uint(28)));
@@ -346,9 +325,8 @@ export const decodeCenter = Fn(([dir, distance, last]: [TslNode, TslNode, TslNod
   return normalize(vec3(x, y, z)).mul(uintBitsToFloat(distance));
 });
 
-// A 2D bound in 2 words: NDC as 2x16 fixed; a 10-bit angle and 2x11-bit
-// log2 scales, rounded outward (the angle's half step folded into the
-// scales). Zero second word: culled.
+// NDC as 2x16 fixed, then a 10-bit angle and 2x11-bit log2 scales rounded
+// outward, with the angle's half step in the scales. A zero second word is culled.
 const ANGLE_STEPS = 1024;
 export function encodeBound(bound: Bound): [TslNode, TslNode] {
   const angleCode = uint(floor(bound.angle.div(Math.PI).mul(ANGLE_STEPS).add(0.5))).bitAnd(uint(ANGLE_STEPS - 1));
@@ -367,13 +345,9 @@ export function decodeBound(w0: TslNode, w1: TslNode): Bound {
   };
 }
 
-// --- The draw ---
-
-// What a method's density reads, interpolated from its vertex step
 export interface SplatVaryings {
   uv: TslNode;
-  // The ray in the splat's whitened frame: its direction, and its origin
-  // crossed with the direction
+  // The ray in the splat's whitened frame, and its origin crossed with it
   localDir: TslNode;
   localCross: TslNode;
   c2: TslNode;
@@ -392,7 +366,7 @@ export const unproject = Fn(([ndc, viewZ, projection]: [TslNode, TslNode, TslNod
   );
 });
 
-// A quad corner over a 2D bound at the depth of `center` (view space)
+// At the depth of the view-space center
 export function boundCorner(bound: Bound, center: TslNode, corner: TslNode, projection: TslNode, renderSize: TslNode, out: TslNode) {
   const axis1 = vec2(cos(bound.angle), sin(bound.angle)).toVar();
   const axis2 = vec2(axis1.y, axis1.x.negate());
@@ -404,11 +378,9 @@ export function boundCorner(bound: Bound, center: TslNode, corner: TslNode, proj
   return ndc;
 }
 
-// Quad around the 2D bound, evaluating the 3D Gaussian (view-space center,
-// rotation and scales) along each pixel ray in its whitened frame: both are
-// affine in the quad's view-space position, so interpolation is exact.
-// `shrink` scales the corner when the bound is fully on screen (a clipped
-// bound is a box not centered on the ellipse).
+// The whitened ray terms are affine in the quad's position, so interpolating
+// them is exact. shrink applies only on screen, since a clipped bound is a box
+// not centered on the ellipse.
 export function rayVertex(bound: Bound, center: TslNode, quat: TslNode, scales: TslNode, cornerIn: TslNode, shrink: TslNode, projection: TslNode, isOrtho: TslNode, renderSize: TslNode, out: TslNode) {
   const axis1 = vec2(cos(bound.angle), sin(bound.angle)).toVar();
   const axis2 = vec2(axis1.y, axis1.x.negate()).toVar();
@@ -430,17 +402,14 @@ export function rayVertex(bound: Bound, center: TslNode, quat: TslNode, scales: 
   out.get("localCross").assign(cross(localOrigin, localDir));
 }
 
-// Squared Mahalanobis distance of the ray's closest approach (max response):
-// |o x d|^2 / |d|^2. The equal |o|^2 - (o.d)^2 / |d|^2 cancels in float32
-// once |o| (distance / splat size) is in the thousands: a splat 2500 sizes
-// away gets steps of 0.5 in a falloff spanning 0 to 8.
+// |o x d|^2 / |d|^2 at the ray's closest approach. The equal |o|^2 - (o.d)^2 /
+// |d|^2 cancels in float32 for splats thousands of sizes away.
 export function rayDensity(v: SplatVaryings): TslNode {
   const dd = dot(v.localDir, v.localDir).toVar();
   return select(dd.lessThanEqual(0.0), float(1e30), dot(v.localCross, v.localCross).div(max(dd, 1e-30)));
 }
 
-// Fragment alpha from the density and the vertex opacity (Spark's falloff
-// shaping for LoD opacities above 1)
+// Spark's falloff shaping for LoD opacities above 1
 export function fragmentAlpha(z2: TslNode, opacity: TslNode, falloff: TslNode): TslNode {
   const alpha = opacity.toVar();
   const g = exp(z2.mul(-0.5)).toVar();
