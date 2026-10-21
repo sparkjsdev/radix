@@ -1,12 +1,4 @@
-// Checks of src on the current backend: every GPU format through
-// upload and read, ranges partway through rows, copies, capacity growth,
-// GpuArrayReader in a shader, and the codecs with three.js types; then
-// splatTests.ts (readers, TSL codecs, writers, swap, renderer options, workers),
-// shTests.ts (spherical harmonics: decoders, palettes, the projection's view
-// origin, maxShDegree, a reader in a generator of one's own)
-// and wgpuTests.ts (compute, storage buffers and textures; WebGPU only),
-// renderTests.ts, sceneTests.ts (collections, renderers and views, modifiers, the
-// CPU sort's orders, object releases) and controlsTests.ts (CameraControls)
+// Checks of GpuArrays and GpuArrayReader, then those of every other test file
 import * as THREE from "three";
 import { NodeMaterial, type WebGPURenderer } from "three/webgpu";
 import {
@@ -42,7 +34,6 @@ function halfBits(value: number) {
   return ((exponent + 15) << 10) | Math.round((value / 2 ** exponent - 1) * 1024);
 }
 
-// Component c of element i, for every scalar type
 function pattern(scalar: ScalarType, i: number, c: number) {
   const k = i * 3 + c;
   switch (scalar) {
@@ -68,7 +59,6 @@ function filled(format: ArrayFormat, count: number, value: (i: number, c: number
   return data as TypedArray;
 }
 
-// First mismatch of the first expected.length values, or undefined
 function compare(actual: ArrayLike<number>, expected: ArrayLike<number>) {
   for (let i = 0; i < expected.length; i += 1) {
     if (actual[i] !== expected[i]) {
@@ -106,7 +96,7 @@ export async function runTests(renderer: WebGPURenderer, log: (result: TestResul
     log(result);
   };
 
-  // --- Every GPU format, packed and unpacked: upload, read, a patch with partial rows at both ends ---
+  // The patch covers partial rows at both ends
   for (const scalar of SCALARS) {
     for (const [components, packing] of [[1, 1], [2, 1], [4, 1], [1, 2], [1, 4], [2, 2]] as const) {
       const format = ArrayFormats.make(scalar, components);
@@ -133,7 +123,6 @@ export async function runTests(renderer: WebGPURenderer, log: (result: TestResul
     }
   }
 
-  // --- A range from partway through a row of the source to partway through another of the arrays ---
   for (const def of [defineBundle({ v: "uint32x4" }), defineBundle({ v: "uint32" }, { packing: 4 })]) {
     await check(`range upload and read mid-row (packing ${def.packing})`, async () => {
       const data = dataOf(def, COUNT);
@@ -151,7 +140,7 @@ export async function runTests(renderer: WebGPURenderer, log: (result: TestResul
     });
   }
 
-  // --- GPU to GPU copies, then growing (which discards) ---
+  // Growing discards the contents
   await check("copyFrom and ensureCapacity", async () => {
     const def = defineBundle({ v: "float32x2" });
     const data = dataOf(def, COUNT);
@@ -176,7 +165,6 @@ export async function runTests(renderer: WebGPURenderer, log: (result: TestResul
     }
   });
 
-  // --- GpuArrayReader in a fragment shader: each pixel writes its index beside what it loaded ---
   const readerCases: { name: string; def: BundleDef; value: (i: number) => [number, number]; output: (reader: GpuArrayReader, index: TslNode) => TslNode[] }[] = [
     {
       name: "float32x2",
@@ -230,7 +218,6 @@ export async function runTests(renderer: WebGPURenderer, log: (result: TestResul
     });
   }
 
-  // --- The codecs fill three.js objects as well as plain ones ---
   await check("splat access with THREE.Vector3 / Quaternion / Color", async () => {
     const data = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 1 });
     const source: ExtSplat = {
@@ -266,8 +253,6 @@ const SIZE = 64;
 const target = new THREE.RenderTarget(SIZE, SIZE, { type: THREE.FloatType, depthBuffer: false });
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-// Draw a fullscreen quad whose pixel (x, y) is element y * SIZE + x and
-// writes vec4(values[0], values[1], index, 1); returns the pixels
 async function renderIndexed(renderer: WebGPURenderer, values: (index: TslNode) => TslNode[]) {
   const material = new NodeMaterial();
   material.vertexNode = vec4(positionGeometry.xy, 0, 1);

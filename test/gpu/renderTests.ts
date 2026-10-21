@@ -1,8 +1,4 @@
-// Checks of sorting, projection and drawing: WgpuRadixSort, WgpuCompact and
-// WgpuSplatSorter against the CPU sort (WebGPU), the projection methods on
-// every splat layout with 1 and 2 eyes (writer parity, stereo against mono,
-// a CPU EWA reference, culling, keys), sortSplatKeys on a worker, and
-// rendered images from a SplatRenderer (both backends)
+// Checks of the sorts, the projection methods and rendered images
 import * as THREE from "three";
 import { MeshBasicNodeMaterial, type WebGPURenderer } from "three/webgpu";
 import {
@@ -25,8 +21,6 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
   const onWebGPU = (fn: () => Promise<string | undefined>) => async () => (webgpu ? fn() : "skip" as const);
   const tiers = getGpuCaps(renderer).subgroups ? (["portable", "subgroup"] as const) : (["portable"] as const);
   const sortMode = webgpu ? "gpu" as const : "cpu" as const;
-
-  // --- Sorting (WebGPU) ---
 
   await check("WgpuRadixSort equals sortKeys: 16/24/32 bits, every tier, counts 0, 1, block edges, large", onWebGPU(async () => {
     const random = rng(7);
@@ -88,13 +82,10 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
     return undefined;
   }));
 
-  // --- Projection ---
-
   const cam0 = makeCamera(renderer, [-0.03, 0, 0]);
   const cam1 = makeCamera(renderer, [0.03, 0, 0]);
   const scene = randomSplats(3000, 3);
 
-  // Words and keys of `collection` projected by a splat renderer of `method` (options on top)
   const projectWith = async (collection: SplatCollection, method: ProjectionMethod, eyes: THREE.PerspectiveCamera[], {
     head, cullKeys, setup,
   }: { head?: THREE.PerspectiveCamera; cullKeys?: boolean; setup?: (splats: ReturnType<typeof makeSplats>) => void } = {}) => {
@@ -138,7 +129,7 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       for (const eyes of [1, 2]) {
         const splatRenderer = makeSplats(renderer, { method, sortBits: 24 });
         setCamera(renderer, eyes === 1 ? [cam0] : [cam0, cam1]);
-        // The compute pass sets every uniform; the fragment writer reuses them
+        // The fragment writer reuses the uniforms the compute pass sets
         const computed = project(renderer, splatRenderer, collection, { cullKeys: true });
         const outputs = SplatProjection.get(method).outputs(eyes);
         const drawn = new GpuArrays({ renderer, bundles: outputs, capacity: splats.count });
@@ -166,7 +157,7 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
   await check("projection: a TSL generator (either form) projects like the same splats from arrays", async () => {
     const splats = GpuArrays.fromData(renderer, splatData(scene));
     const reader = GpuSplatReader.from(splats);
-    // Generators giving only one form: the pipeline converts to the one it reads
+    // One form each, which the pipeline converts to the one it reads
     const generators: [string, SplatGenerator][] = [
       ["splat", { generateSplat: (i) => reader.loadSplat(i) }],
       ["cov", { generateCovSplat: (i) => reader.loadCovSplat(i) }],
@@ -175,10 +166,9 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       const a = await projectWith(collectionOf(splats), method, [cam0]);
       for (const [form, generator] of generators) {
         const b = await projectWith(new SplatCollection([{ generator, count: splats.count }]), method, [cam0]);
-        // The arrays' path converts the same way for ewa (a covariance) and
-        // reads splats for the others: those give the same bits. Covariances
-        // diagonalized back sort the axes (other words for the same
-        // ellipsoid), so they only keep the keys and nearly every cull.
+        // The arrays' path also gives ewa a covariance and the others a splat, so
+        // those match bit for bit. A covariance diagonalized back sorts its axes,
+        // so it keeps only the keys and nearly every cull.
         const exact = method === "ewa" || form === "splat";
         let differ = 0;
         let keys = 0;
@@ -224,8 +214,7 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       for (const [v, eye] of [[0, cam0], [1, cam1]] as const) {
         const m = await projectWith(collectionOf(splats), method, [eye]);
         const s = await projectWith(collectionOf(splats), method, [cam0, cam1], { head: eye });
-        // The two programs may round a float word (raygs' c^2) some ulps
-        // apart: WebGL2 compilers fuse differently
+        // WebGL2 compilers fuse differently, so a float word (raygs' c^2) may be ulps apart
         for (let i = 0; i < m.count; i += 1) {
           const expected = m.words(i);
           const actual = [...headWords(method, s.words(i)), ...eyeWords(method, s.words(i), v)];
@@ -339,8 +328,7 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
   });
 
   await check("projection: objectParams.sortGuard drops the keys of splats beyond the widened view, behind the head too", async () => {
-    // Ahead; just past the right edge (NDC 1.2 at a 2:1 aspect); far to the
-    // side; behind
+    // Ahead, just past the right edge (NDC 1.2 at a 2:1 aspect), far to the side, behind
     const splats = [splat([0, 0, -4], 0.05, [1, 1, 1], 1), splat([5.5, 0, -4], 0.05, [1, 1, 1], 1), splat([20, 0, -4], 0.05, [1, 1, 1], 1), splat([0, 0, 4], 0.05, [1, 1, 1], 1)];
     const arrays = GpuArrays.fromData(renderer, splatData(splats));
     const valid = async (guard: number) => {
@@ -363,8 +351,6 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       arrays.dispose();
     }
   });
-
-  // --- Sorters ---
 
   await check("WgpuSplatSorter: the order of sortKeys on the read-back keys", onWebGPU(async () => {
     const splats = GpuArrays.fromData(renderer, splatData(scene));
@@ -423,8 +409,6 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- Rendering ---
-
   const draw = (splats: ExtSplat[], method: ProjectionMethod, mode: "gpu" | "cpu" = sortMode, camera?: THREE.Camera, options?: Parameters<typeof drawSplats>[4]) =>
     drawSplats(renderer, splats, { method, sortMode: mode }, camera, options);
 
@@ -447,9 +431,8 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
 
   const pair = [splat([0, 0, -6], 0.4, [0, 0, 1], 1), splat([0, 0, -3], 0.2, [1, 0, 0], 1)];
 
-  // A 4 mm splat 10 m away through a 0.5 degree lens: a few pixels wide, as
-  // a normal lens shows splats 2500 times their size away. The rays'
-  // whitened origin is then 2500 long, which a float32 density must survive.
+  // As a splat 2500 times its size away through a normal lens: a few pixels wide,
+  // with the rays' whitened origin 2500 long, which a float32 density must survive
   await check("render: a small, far splat (zoomed in) has the exact Gaussian falloff for every method", async () => {
     const fov = 0.5;
     const [distance, scale] = [10, 0.004];
@@ -549,8 +532,8 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       const mapped = await frame();
       toneMapping.enabled = false;
 
-      // The plain frame blends in 8 bits, rounding at every splat; the mapped
-      // one in three's half-float target: overlaps drift a few steps apart
+      // The plain frame blends in 8 bits, the mapped one in a half-float target,
+      // so overlaps drift a few steps apart
       let worst = 0;
       for (let i = 0; i < plain.length; i += 1) {
         if (i % 4 !== 3) {

@@ -1,11 +1,3 @@
-// Checks of spherical harmonics on the GPU: GpuShReader's decode of every
-// built-in codec, per splat and through a palette, against Sh on the CPU
-// (degrees 1-4, prefixes included); the projection adding the SH color seen
-// from each object's view origin (transformed objects, degree 4, palettes
-// of both codecs in one collection) against the same splats with that color
-// baked in; objectParams.maxShDegree; a GpuShReader held by a generator of
-// one's own against fromSplats; and the ext / packed decoders bit for bit
-// against their earlier exp2 / select formulas
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -19,13 +11,12 @@ const { exp2, float, floatBitsToUint, int, normalize, select, sin, cos, uint, uv
 
 const COUNT = 1500;
 
-// Coefficients with a few large outliers, deterministic
 function coefficients(count: number, seed: number) {
   const random = rng(seed);
   return Array.from({ length: count }, (_, i) => Float32Array.from({ length: Sh.VALUES }, () => (random() - 0.5) * (i % 97 === 0 ? 6 : 0.5)));
 }
 
-// The unit direction the checks evaluate splat i along (the same on both sides)
+// Splat i's direction, the same on the CPU and the GPU
 const dirOf = (i: number) => new THREE.Vector3(Math.sin(i), Math.cos(i * 1.3), Math.sin(i * 0.7) + 0.2).normalize();
 const dirNode = (index: TslNode) => {
   const i = float(index);
@@ -34,9 +25,7 @@ const dirNode = (index: TslNode) => {
 
 const OUT = defineBundle({ rgb: "float32x4" });
 
-// GPU SH colors of `count` splats through `reader` (bound), read back:
-// through band() (a texel cache per band) or color() (one cache, nested
-// bands; seen from the origin, so along the unit direction itself)
+// color() is given the origin and the direction as the center, so looks along it
 async function gpuColors(renderer: WebGPURenderer, reader: GpuShReader, degree: number, count: number, path: "band" | "color" = "band") {
   GpuSh.maxDegree.value = Sh.MAX_DEGREE;
   const out = new GpuArrays({ renderer, bundles: { out: OUT }, capacity: count });
@@ -58,7 +47,6 @@ async function gpuColors(renderer: WebGPURenderer, reader: GpuShReader, degree: 
   }
 }
 
-// Largest difference between GPU colors and Sh.evaluate of `decode`'s coefficients
 function compareColors(gpu: Float32Array, count: number, degree: number, decode: (i: number, out: Float32Array) => ArrayLike<number>) {
   const coeffs = new Float32Array(Sh.VALUES);
   const cpu = [0, 0, 0];
@@ -72,7 +60,6 @@ function compareColors(gpu: Float32Array, count: number, degree: number, decode:
   return worst;
 }
 
-// Splats in front of the camera with SH, in `codec`
 function shData(splats: ExtSplat[], codec: ShCodecName, values: Float32Array[], degree: ShDegree = 3) {
   const data = splatData(splats);
   Sh.add(data, codec, degree);
@@ -81,8 +68,7 @@ function shData(splats: ExtSplat[], codec: ShCodecName, values: Float32Array[], 
   return data;
 }
 
-// The same splats with their SH color seen from `eye` (world) baked into rgb,
-// for an object placed by `matrix`
+// The SH color seen from eye, in world space, baked into rgb
 function baked(data: ArrayData, matrix: THREE.Matrix4, eye: THREE.Vector3, degree = 3, palette?: { palette: ShPalette; labels: ArrayLike<number> }) {
   const out = splatData(Array.from({ length: data.count }, () => Splats.makeExtSplat()));
   const decode = Splats.decoder(Splats.get(data).bundle);
@@ -108,7 +94,6 @@ function baked(data: ArrayData, matrix: THREE.Matrix4, eye: THREE.Vector3, degre
 const turned = (angle: number, scale: number, x: number) => new THREE.Matrix4().compose(
   new THREE.Vector3(x, 0.1, -0.5), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0.3, 1, 0.2).normalize(), angle), new THREE.Vector3(scale, scale, scale));
 
-// Pixels of objects drawn by one renderer
 async function drawObjects(renderer: WebGPURenderer, objects: AnySplatObject[], camera: THREE.PerspectiveCamera, objectParams = {}) {
   const splats = makeSplats(renderer, { collection: new SplatCollection(objects), objectParams });
   try {
@@ -199,7 +184,7 @@ export async function runShTests(renderer: WebGPURenderer, check: Check) {
     const out = new GpuArrays({ renderer, bundles: outputs, capacity: count });
     const bits = (v: TslNode) => floatBitsToUint(v);
     const differs = (a: TslNode, b: TslNode) => select(bits(a).equal(bits(b)), uint(0), uint(1));
-    // Bytes as words (byte 0 lowest)
+    // Byte 0 lowest
     const wordOf = (b: TslNode[]) => b[0].bitOr(b[1].shiftLeft(uint(8))).bitOr(b[2].shiftLeft(uint(16))).bitOr(b[3].shiftLeft(uint(24)));
     const writer = new GpuArrayWriter({
       outputs,
@@ -355,8 +340,7 @@ export async function runShTests(renderer: WebGPURenderer, check: Check) {
       return "the palette did not come back from the worker";
     }
     const [there, here] = [await loadSplatFile(rad.slice(), { name: "x.rad", worker: true }), await loadSplatFile(rad.slice(), { name: "x.rad", worker: false })];
-    // The same words there and here; the source's values (f32 of ext values,
-    // which ext may write with another exponent)
+    // The same words there and here, and the source's values, as ext may pick another exponent
     const [a, b] = [entries(there.shPalette), entries(here.shPalette)];
     if (!a || !b || a.length !== b.length || a.some((w, i) => w !== b[i])) {
       return `palettes: ${a?.length} words there, ${b?.length} here`;
@@ -367,14 +351,13 @@ export async function runShTests(renderer: WebGPURenderer, check: Check) {
         return `entry ${n} differs from the source`;
       }
     }
-    // (data's arrays came back from the worker as new ones)
+    // data's arrays came back from the worker as new ones
     const sent = data.bundles.shLabel.channels.label.data;
     const [la, lb] = [(there.splats as ArrayData).bundles.shLabel?.channels.label.data, (here.splats as ArrayData).bundles.shLabel?.channels.label.data];
     if (!la || !lb || !la.every((l, i) => l === lb[i] && (i >= COUNT || l === sent[i]))) {
       return "labels differ";
     }
-    // loadSplats: per-splat SH there as here, splat i holding its label's
-    // entry (within ext's steps: the expansion encodes the entry again)
+    // Within ext's steps of the entry, as the expansion encodes it again
     const [ea, eb]: ArrayData[] = [await loadSplats(rad.slice(), { name: "x.rad", worker: true }), await loadSplats(rad.slice(), { name: "x.rad", worker: false })];
     const found = Sh.find(ea.bundles);
     if (ea.bundles.shLabel || found?.codec !== "ext" || found.degree !== 3) {
@@ -398,7 +381,6 @@ export async function runShTests(renderer: WebGPURenderer, check: Check) {
     const arrays = GpuArrays.fromData(renderer, data);
     const base = SplatGenerator.fromSplats();
     const sh = new GpuShReader({ codec: "packed", degree: 3 });
-    // A remapped generator of its own: splat i draws stored splat count - 1 - i
     const own: SplatGenerator<StoredSplats> = {
       generateSplat(i, context = SplatGenerator.context) {
         const stored = arrays.count - 1;

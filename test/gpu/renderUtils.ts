@@ -1,12 +1,9 @@
-// Helpers of renderTests.ts and sceneTests.ts: test splats, cameras, splat
-// renderers, projecting a collection, reading projected words, and rendering
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
   ArrayData, GpuArrays, SplatCollection, SplatRenderer, Splats, getGpuCaps,
   type ExtSplat, type ProjectionMethod, type SplatLayout, type SplatRendererOptions, type SplatView,
 } from "@sparkjsdev/radix";
-// Internals the checks reach into
 import { SplatCamera } from "../../src/render/splatCamera";
 import { SplatProjection } from "../../src/render/SplatProjection";
 import { projectCollection, readSortKeys } from "../../src/render/SplatProjector";
@@ -39,7 +36,7 @@ export function splat(center: [number, number, number], scale: number | [number,
   return s;
 }
 
-// Random splats in a box in front of a camera at the origin looking down -z
+// In front of a camera at the origin looking down -z
 export function randomSplats(count: number, seed: number): ExtSplat[] {
   const random = rng(seed);
   return Array.from({ length: count }, () => {
@@ -68,7 +65,6 @@ export function makeCamera(renderer: WebGPURenderer, position: [number, number, 
   return camera;
 }
 
-// The camera uniforms for these eyes, the head at `head` (default the first eye), W x H
 export function setCamera(renderer: WebGPURenderer, eyes: THREE.PerspectiveCamera[], head = eyes[0]) {
   SplatCamera.setViews({
     head: head.matrixWorldInverse,
@@ -78,24 +74,20 @@ export function setCamera(renderer: WebGPURenderer, eyes: THREE.PerspectiveCamer
   });
 }
 
-// A collection of splat arrays (one object each, with optional matrices)
 export const collectionOf = (...objects: (GpuArrays | [GpuArrays, THREE.Matrix4])[]) =>
   new SplatCollection(objects.map((e) => (e instanceof GpuArrays ? SplatCollection.arrays(e) : SplatCollection.arrays(e[0], { matrixWorld: e[1] }))));
 
 export const webgpuOf = (renderer: WebGPURenderer) => getGpuCaps(renderer).backend === "webgpu";
 
-// A splat renderer for checks: no automatic sorting
 export const makeSplats = (renderer: WebGPURenderer, options: Partial<SplatRendererOptions> = {}) => new SplatRenderer({ renderer, autoSort: false, ...options });
 
-// Project `collection` with the settings of `splats` (or of its `view`) for the
-// camera set last (setCamera) into new projected arrays (words and keys)
+// For the camera set last by setCamera
 export function project(renderer: WebGPURenderer, splats: SplatRenderer, collection: SplatCollection, { cullKeys = false, view }: { cullKeys?: boolean; view?: SplatView } = {}) {
   const arrays = new GpuArrays({ renderer, bundles: SplatProjection.get(splats.method).outputs(SplatCamera.eyes), storage: webgpuOf(renderer) });
   projectCollection({ renderer, settings: splats.settingsOf(view), collection, arrays, pass: "full", cullKeys });
   return arrays;
 }
 
-// Words per splat of projected arrays, and their keys
 export async function readProjection(arrays: GpuArrays, method: ProjectionMethod, eyes: number) {
   const data = await arrays.read();
   const n = SplatProjection.get(method).words(eyes);
@@ -112,14 +104,14 @@ export async function readProjection(arrays: GpuArrays, method: ProjectionMethod
   return { words, keys: new Uint32Array(bytes.buffer, 0, data.count), count: data.count };
 }
 
-// The words of eye v of a method (after the head words)
+// Each eye's words follow the head words
 const HEAD_WORDS: Record<ProjectionMethod, number> = { ewa: 0, "3dgut": 6, htgs: 6, raygs: 4 };
 const EYE_WORDS: Record<ProjectionMethod, number> = { ewa: 4, "3dgut": 2, htgs: 2, raygs: 3 };
 export const eyeWords = (method: ProjectionMethod, words: number[], v: number) => words.slice(HEAD_WORDS[method] + v * EYE_WORDS[method], HEAD_WORDS[method] + (v + 1) * EYE_WORDS[method]);
 export const headWords = (method: ProjectionMethod, words: number[]) => words.slice(0, HEAD_WORDS[method]);
 export const eyeCulled = (method: ProjectionMethod, eye: number[]) => (method === "ewa" ? (eye[3] & 0xff) === 0 : eye[1] === 0);
 
-// CPU decodes of the 2D bound words (the TSL in render/projection.tsl.ts)
+// The bound decodes of render/projection.tsl.ts, on the CPU
 const fixed16 = (code: number) => (code / 65535) * 4 - 2;
 const logScale = (code: number, bits: number) => 2 ** (((code - 1) / (2 ** bits - 2)) * 16 - 4);
 export function decodeBound(method: ProjectionMethod, eye: number[]) {
@@ -129,7 +121,7 @@ export function decodeBound(method: ProjectionMethod, eye: number[]) {
   return { ndc: [fixed16(eye[0] & 0xffff), fixed16(eye[0] >>> 16)], angle: ((eye[1] & 1023) / 1024) * Math.PI, scales: [logScale((eye[1] >>> 10) & 0x7ff, 11), logScale(eye[1] >>> 21, 11)] };
 }
 
-// The distance of a 32-bit key
+// 32-bit keys only
 export const keyDistance = (key: number) => new Float32Array(new Uint32Array([~key >>> 0]).buffer)[0];
 
 export async function renderPixels(renderer: WebGPURenderer, scene: THREE.Scene, camera: THREE.Camera, width = W, height = H) {
@@ -156,9 +148,7 @@ export const meanAbsDiff = (a: ArrayLike<number>, b: ArrayLike<number>) => {
 
 export const pixelAt = (pixels: Uint8Array, x: number, y: number, width = W) => [...pixels.subarray((y * width + x) * 4, (y * width + x) * 4 + 4)];
 
-// Render `splats` from `camera`; in cpu mode a first render (drawing
-// nothing), then a sort of the camera's view applied (or `order` of it)
-// and a second render
+// In cpu mode the first render draws nothing, as the view has no order yet
 export async function drawWith(renderer: WebGPURenderer, splats: SplatRenderer, camera: THREE.Camera, { width = W, height = H, order }: {
   width?: number;
   height?: number;
@@ -179,7 +169,6 @@ export async function drawWith(renderer: WebGPURenderer, splats: SplatRenderer, 
   }
 }
 
-// drawWith of splat arrays made from `splats`, by a renderer of `options`
 export async function drawSplats(renderer: WebGPURenderer, splats: ExtSplat[], options: Partial<SplatRendererOptions>, camera: THREE.Camera = makeCamera(renderer), draw?: Parameters<typeof drawWith>[3]) {
   const arrays = GpuArrays.fromData(renderer, splatData(splats));
   const splatRenderer = makeSplats(renderer, { collection: collectionOf(arrays), ...options });

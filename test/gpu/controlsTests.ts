@@ -1,5 +1,3 @@
-// CameraControls driven by synthetic events: targets, mode switches, keys,
-// drags, the double-press slide and zoom limits
 import * as THREE from "three";
 import { CameraControls } from "@sparkjsdev/radix";
 
@@ -8,8 +6,6 @@ type Check = (name: string, fn: () => Promise<string | undefined | "skip">) => P
 const frame = () => new Promise((resolve) => setTimeout(resolve, 16));
 const near = (a: THREE.Vector3, b: THREE.Vector3, tolerance = 1e-4) => a.distanceTo(b) < tolerance;
 
-// Controls of a fresh camera at (0, 0, 5) facing the origin: the defaults
-// without inertia or inversions
 function make() {
   const canvas = document.createElement("canvas");
   const camera = new THREE.PerspectiveCamera();
@@ -98,7 +94,7 @@ export async function runControlsTests(check: Check) {
         return `slide: step ${step.toArray()}`;
       }
 
-      // Orbit: a drag keeps the distance to the target (after the slide's double press expires)
+      // Past the double press, so the next press is not a second one
       await new Promise((resolve) => setTimeout(resolve, controls.settings.doublePress + 50));
       camera.quaternion.copy(quaternion);
       controls.settings.mode = "orbit";
@@ -122,8 +118,6 @@ export async function runControlsTests(check: Check) {
     try {
       controls.settings = { ...controls.settings, mode: "orbit", inertia: { ...controls.settings.inertia, pointerLook: 0.15 } };
       controls.update();
-      // A drag of 5 moves a frame apart, held `pause` ms, released; the
-      // turn in the 150 ms after the release
       const glide = async (pause: number) => {
         pointer(canvas, "pointerdown", 100, 100);
         for (let i = 1; i <= 5; i += 1) {

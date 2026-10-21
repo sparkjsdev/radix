@@ -1,13 +1,8 @@
-// Checks of src/wgpu (WebGPU only; skipped on WebGL2): storage
-// buffers, compute dispatch sizes and batches, compute writers against
-// fragment writers for every storable format, scatter stores, and
-// GpuArrays made with storage: true
 import type { IndirectStorageBufferAttribute, WebGPURenderer } from "three/webgpu";
 import {
   ArrayData, ArrayFormats, GpuArrayReader, GpuArrays, GpuArrayWriter, TSL, WgpuArrayStore, WgpuArrayWriter, WgpuBuffer, WgpuCompute, WgpuComputeBatch,
   defineBundle, getGpuCaps, type ScalarType, type TslNode, type TypedArray,
 } from "@sparkjsdev/radix";
-// Internal: which formats can be storage textures
 import { gpuFormatInfo } from "../../src/gpu/gpuFormats";
 
 const { If, atomicAdd, uint, uniform, uvec4 } = TSL;
@@ -23,8 +18,7 @@ function halfBits(value: number) {
   return ((exponent + 15) << 10) | Math.round((value / 2 ** exponent - 1) * 1024);
 }
 
-// Value k of a scalar type that a shader load and store keep exactly
-// (snorm8 avoids -128, which loads as -1 and stores as -127)
+// Kept exactly by a shader load and store: snorm8 skips -128 (loads -1, stores -127)
 function storedValue(scalar: ScalarType, k: number) {
   switch (scalar) {
     case "unorm8": return k % 256;
@@ -37,8 +31,7 @@ function storedValue(scalar: ScalarType, k: number) {
   }
 }
 
-// Storable texel formats: 32-bit scalars in every shape, 8 and 16-bit
-// normalized / half floats as 4 components per texel
+// 32-bit scalars in every shape, 8 and 16-bit ones only as 4 components per texel
 const STORABLE: [ScalarType, number, 1 | 2 | 4][] = [
   ...(["uint32", "sint32", "float32"] as const).flatMap((scalar) =>
     ([[1, 1], [2, 1], [4, 1], [1, 2], [1, 4], [2, 2]] as const).map(([c, p]) => [scalar, c, p] as [ScalarType, number, 1 | 2 | 4])),
@@ -64,7 +57,6 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- Storage buffers ---
   await check("WgpuBuffer upload, read, clear, copyFrom, growing with keep", onWebGPU(async () => {
     const buffer = new WgpuBuffer({ renderer, format: "float32x4", count: 1000 });
     const other = new WgpuBuffer({ renderer, format: "float32x4", count: 500 });
@@ -111,7 +103,7 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   }));
 
-  // --- Dispatch sizes: thread counts past 65535 workgroups, 2D, indirect ---
+  // 5M threads take more than 65535 workgroups, the most in one dimension
   await check("WgpuCompute dispatch by thread count, 2D workgroups and indirect", onWebGPU(async () => {
     const limit = uniform(0, "uint");
     const out = new WgpuBuffer({ renderer, format: "uint32", count: 5_000_000 });
@@ -189,7 +181,6 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   }));
 
-  // --- Compute writers against the source and the fragment writer, every storable format ---
   for (const [scalar, components, packing] of STORABLE) {
     const format = ArrayFormats.make(scalar, components);
     const texelFormat = ArrayFormats.make(scalar, components * packing);
@@ -198,8 +189,7 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
         return `${texelFormat} not storable`;
       }
       const def = defineBundle({ v: format }, { packing });
-      // The source holds whole texels: element e's values sit where the
-      // packed bundle keeps them
+      // Whole texels, so element e's values sit where the packed bundle keeps them
       const sourceDef = defineBundle({ v: texelFormat });
       const sourceData = new ArrayData({ bundles: { s: sourceDef }, count: CAPACITY / packing });
       const src = sourceData.bundles.s.channels.v.data;
@@ -285,7 +275,6 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   }));
 
-  // --- Scatter stores from a custom kernel ---
   await check("WgpuArrayStore scatter: reversed order, packed texels, rebinding after swap", onWebGPU(async () => {
     const def = defineBundle({ v: "uint32x4" });
     const packed = defineBundle({ v: "uint32" }, { packing: 4 });
@@ -337,7 +326,7 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
         return `packed element ${wrong} is ${elements[wrong]}`;
       }
 
-      // After the swap, a holds b's (empty) textures; rebound, the kernel writes there
+      // After the swap a holds b's empty textures, which the rebound store writes
       a.swap(b);
       store.bind(a, "b");
       value.value = 42;
@@ -354,7 +343,6 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   }));
 
-  // --- GpuArrays made with storage: true behave like any other ---
   await check("storage arrays: upload, read, copyFrom, swap, readers in fragment and compute", onWebGPU(async () => {
     const def = defineBundle({ v: "float32x4" });
     const data = new ArrayData({ bundles: { b: def }, count: 3000 });

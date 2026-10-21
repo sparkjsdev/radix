@@ -1,22 +1,16 @@
-// Benchmark page of src (/build/test/bench/index.html), driven by
-// scripts/bench.mjs: `await radixBench.run(config)` loads a splat
-// file (kept while the file and layout stay the same), renders a fixed
-// camera path at a fixed size and returns the time of every step as JSON.
-// The path has three parts of frames / 3 each: still, a full turn level, and
-// a full turn tilting up and down (an object: orbiting its target, its
-// elevation +-30 degrees; a scene: looking all around from where the camera
-// stands, pitching +-45 degrees); frames are rendered back to back, each waiting for
-// the GPU. Projection and sorting run before each render (SplatRenderer
-// .prepare, outside its passes, so WebGL2 timer queries do not nest),
-// labeled for GpuProfiler.
-// Afterwards the still view is rendered once more (sorted first in cpu
-// mode) for the driver's screenshot. ?gpu= picks the backend for the page;
-// ?config= (JSON) runs one config on load, for a person to look at;
-// ?limits=adapter asks for the adapter's whole storage sizes.
-// `await radixBench.shBench({ url })` times the projection of one file's
-// splats with and without spherical harmonics (per splat ext / packed,
-// palettes of ext entries and of packed entries at strides 4 and 3,
-// labels in order or random) from a still view.
+// Times a splat file's frames along a fixed camera path, driven by scripts/bench.mjs
+//   ?gpu=            webgpu | webgpu-gl (default: webgpu when available, else webgpu-gl)
+//   ?config=         a BenchConfig as JSON to run on load, its times shown (default: none)
+//   ?limits=adapter  the adapter's whole storage binding and buffer sizes
+//                    (default: the baseline, 256 MiB per storage binding)
+//   radixBench.run(config)  renders the path, resolving to every step's times (defaults in run)
+//   radixBench.sortBench({ counts, bits, valid, rounds })  WgpuSplatSorter alone
+//     (WebGPU; default: 0.5M, 2M, 6M and 10M keys, 16, 24 and 32 bits, 0.9, 20)
+//   radixBench.shBench({ url, frames, rounds, size, paletteSize, method })
+//     the projection with and without SH (default: 60, 3, 1920 x 1080, 65536, ewa)
+//   radixBench.shaders()  the draw's shader code, after a run
+//   radixBench.dispose()  frees the splat renderer and the loaded splats
+//   radixBench.renderer, radixBench.caps  the renderer and its getGpuCaps()
 import * as THREE from "three";
 import { NodeMaterial, type WebGPURenderer } from "three/webgpu";
 import {
@@ -28,40 +22,33 @@ import {
 export interface BenchConfig {
   url: string;
   layout?: SplatLayout;
-  // gpu: the GPU sort every frame (WebGPU); cpu: the camera's view.sort (keys, a
-  // readback and a worker sort) and apply once the camera moved past
-  // `threshold`
+  // gpu sorts every frame (WebGPU), cpu on a worker once the camera moves past threshold
   mode?: "gpu" | "cpu";
   method?: ProjectionMethod;
   bits?: SortKeyBits;
   size?: [number, number];
   ratio?: number;
   frames?: number;
-  // World-space pose of the still view (default: outside the middle 90% of
-  // the splats, `distance` extents from their middle, looking at it)
+  // World space; the default looks at the middle 90% of the splats from the
+  // distance setting times their diagonal
   view?: { position: Vec3Tuple; target: Vec3Tuple };
   distance?: number;
-  // "object": the path orbits the target; "scene": it looks around in place
+  // object orbits the target, scene looks around in place
   kind?: "object" | "scene";
-  // cpu mode: re-sort distance, a fraction of the scene's extent, and with
-  // a sortGuard the view's turn in degrees
+  // cpu mode re-sorts past threshold, a fraction of the extent, or with a sortGuard
+  // past turnThreshold degrees
   threshold?: number;
   turnThreshold?: number;
-  // A half turn about x (captures are stored y-down; default true), then
-  // `up` (the measured up direction after the flip) turned to +y
+  // flip turns y-down captures half a turn about x, then up, measured after it, turns to +y
   flip?: boolean;
   up?: Vec3Tuple;
-  // The view's params and objectParams, by name
   params?: Partial<SplatViewParams & SplatObjectParams>;
-  // Also count the fragments the still view rasterizes (its draw again,
-  // every fragment adding 1 to a float target)
+  // Also count the fragments of the still view
   overdraw?: boolean;
-  // Diagnostics of the draw: "flat" a constant fragment stage (the draw's
-  // vertex work and fill), "empty" a vertex stage that places nothing (the
-  // cost of the instances alone)
+  // flat times the vertex work and fill (a constant fragment stage), empty the
+  // instances alone (a vertex stage that places nothing)
   debugDraw?: "flat" | "empty";
-  // Spherical harmonics: the codec to load them into (default false: skipped,
-  // so files with and without SH compare on base colors)
+  // Default false, so files with and without SH compare on base colors
   sh?: ShTarget;
 }
 
@@ -69,13 +56,12 @@ type Vec3Tuple = [number, number, number];
 
 interface PartResult {
   frames: number;
-  // Per frame: CPU ms of the frame's code, wall ms including the GPU wait,
-  // GPU ms per phase (timestamps; missing without timestamp queries)
+  // Per frame: CPU ms, wall ms with the GPU wait, GPU ms per phase (with timestamp queries)
   cpuMs: number;
   wallMs: number;
   gpu: Record<string, number>;
   gpuFrames: number;
-  // CPU ms per frame of project, sort and draw (the render call)
+  // CPU ms per frame of project, sort and draw
   cpuPhases: Record<string, number>;
   // cpu mode
   sorts?: number;
@@ -88,8 +74,6 @@ interface PartResult {
 const params = new URLSearchParams(location.search);
 const configParam = params.get("config");
 const status = document.getElementById("status")!;
-// ?limits=adapter: the adapter's whole storage binding and buffer sizes
-// (scenes past the 256 MiB baseline)
 const fullLimits = params.get("limits") === "adapter";
 const gpu = params.get("gpu");
 const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", profile: true, ...(fullLimits ? { limits: { maxStorageBufferBindingSize: "adapter", maxBufferSize: "adapter" } } : {}) });
@@ -103,12 +87,10 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.01, 1000);
 let loaded: { key: string; data: ArrayData; splats: GpuArrays; load: Record<string, number> } | undefined;
 let splatRenderer: SplatRenderer | undefined;
-// The splats' transform
 const model = new THREE.Object3D();
 scene.add(model);
 
-// Wait for the GPU to finish what was submitted, then let timers run (the
-// WebGL2 readback polls its fence with them), as between animation frames
+// Timers run after the wait, as between frames: the WebGL2 readback polls its fence with them
 async function gpuDone() {
   if (device) {
     await device.queue.onSubmittedWorkDone();
@@ -149,7 +131,7 @@ async function load(url: string, layout: SplatLayout, sh: ShTarget = false) {
   return loaded;
 }
 
-// The middle 90% of the splat centers (local space), sampled
+// The middle 90% of a sample of the centers, in local space
 function boundsOf(data: ArrayData) {
   const { bundle } = Splats.get(data);
   const step = Math.max(1, Math.floor(data.count / 50000));
@@ -171,13 +153,11 @@ function boundsOf(data: ArrayData) {
   return new THREE.Box3(lo, hi);
 }
 
-// The camera pose at t in [0, 1) of the path; the part (0 still, 1 the
-// level turn, 2 the tilting turn)
+// t in [0, 1); returns the part: 0 still, 1 the level turn, 2 the tilting turn
 function pose(t: number, base: { position: THREE.Vector3; target: THREE.Vector3 }, kind: "object" | "scene") {
   const part = Math.min(2, Math.floor(t * 3));
   const u = t * 3 - part;
   const object = kind === "object";
-  // The camera seen from the target (object) or the target from the camera
   const offset = object ? base.position.clone().sub(base.target) : base.target.clone().sub(base.position);
   const spherical = new THREE.Spherical().setFromVector3(offset);
   if (part > 0) {
@@ -227,7 +207,7 @@ async function run(input: BenchConfig) {
   }
   // cpu mode: the camera's view holds the order
   const view = r.viewFor(camera);
-  // Kernel names (radix_compact*, radix_sort*, radix_splatDrawArgs) label the sort's passes
+  // The sort's passes are labeled by their kernel names
   r.phase = <T>(name: string, run: () => T): T => {
     if (name === "project") {
       return profiler.phase(name, run);
@@ -258,7 +238,6 @@ async function run(input: BenchConfig) {
   camera.far = extent * 20;
   camera.updateProjectionMatrix();
 
-  // cpu mode: the worker sort, started after a frame when the camera moved
   const threshold = config.threshold * extent;
   const sortedAt = new THREE.Vector3(Infinity, 0, 0);
   const sortedDir = new THREE.Vector3();
@@ -282,7 +261,7 @@ async function run(input: BenchConfig) {
     }
   }
 
-  // Projected and sorted before the render, outside its passes
+  // Prepared outside the render's passes, as WebGL2 timer queries do not nest
   function renderFrame() {
     profiler.beginFrame();
     r.prepare(camera);
@@ -374,8 +353,7 @@ async function run(input: BenchConfig) {
   return result;
 }
 
-// Fragments the drawn splats rasterize (before any discard): the same
-// vertex stage, a fragment stage adding 1 per fragment into a float target
+// Before any discard, adding 1 per fragment into a float target
 async function countFragments(r: SplatRenderer) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const target = new THREE.RenderTarget(size.x, size.y, { type: THREE.FloatType, depthBuffer: false });
@@ -412,8 +390,7 @@ async function countFragments(r: SplatRenderer) {
   return { fragments: sum, perPixel: sum / count, perCoveredPixel: sum / Math.max(1, covered), max, covered: covered / count };
 }
 
-// GPU ms per phase: project, compact, radix, args (sorter), draw, the rest
-// by name
+// GPU ms per phase, the sorter's kernels grouped
 function groupPhases(gpu: Record<string, number>) {
   const out: Record<string, number> = {};
   for (const [name, ms] of Object.entries(gpu)) {
@@ -432,10 +409,7 @@ function dispose() {
   loaded = undefined;
 }
 
-// The GPU sort alone (WebGPU): WgpuSplatSorter on `count` random keys, a
-// `valid` fraction of them valid, `rounds` times each waiting for the GPU.
-// GPU ms per kernel group (timestamps) and wall ms per sort (with the
-// buffer copies, which timestamps miss).
+// Wall ms include the buffer copies, which timestamps miss
 async function sortBench({ counts = [500_000, 2_000_000, 6_000_000, 10_000_000], bits = [16, 24, 32] as SortKeyBits[], valid = 0.9, rounds = 20 } = {}) {
   if (!device) {
     throw new Error("sortBench needs the WebGPU backend");
@@ -476,13 +450,8 @@ async function sortBench({ counts = [500_000, 2_000_000, 6_000_000, 10_000_000],
   return rows;
 }
 
-// The projection's cost with spherical harmonics: the same splats (`url`,
-// a file with SH3) drawn with none, per splat (ext, packed) and through a
-// palette of `paletteSize` entries made from the first splats' SH (ext
-// and packed, strides 4 and 3; labels in order, so neighbors share
-// entries, or random, the worst case for caches), from the still view of
-// run(), `frames` frames each, `rounds` times over all variants in turn.
-// Medians of GPU ms per phase (timestamps) and wall ms.
+// From run()'s default still view. Ordered labels share palette entries with
+// their neighbors, random ones are the worst case for caches.
 async function shBench({ url, frames = 60, rounds = 3, size = [1920, 1080] as [number, number], paletteSize = 65536, method = "ewa" as ProjectionMethod }: {
   url: string;
   frames?: number;
@@ -548,7 +517,7 @@ async function shBench({ url, frames = 60, rounds = 3, size = [1920, 1080] as [n
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
 
-  // Rounds over every variant in turn, so drift (clocks, heat) spreads over all
+  // Every variant in turn each round, so drift (clocks, heat) spreads over all
   const results = variants.map(() => ({ project: [] as number[], draw: [] as number[], wall: [] as number[] }));
   for (let round = 0; round < rounds; round += 1) {
     for (const [v, variant] of variants.entries()) {
@@ -571,7 +540,7 @@ async function shBench({ url, frames = 60, rounds = 3, size = [1920, 1080] as [n
         frame();
         await gpuDone();
       }
-      // cpu mode (WebGL2): one sort, so the draw draws
+      // cpu mode draws nothing before a sort
       if (r.sortMode === "cpu") {
         const view = r.viewFor(camera);
         view.apply(await view.sort(camera));
@@ -605,7 +574,6 @@ async function shBench({ url, frames = 60, rounds = 3, size = [1920, 1080] as [n
   return { backend: caps.backend, url, splats: count, degree, timestamps: profiler.supported, rows };
 }
 
-// The draw's shader code (after a run)
 async function shaders() {
   return splatRenderer ? renderer.debug.getShaderAsync(scene, camera, splatRenderer) : undefined;
 }

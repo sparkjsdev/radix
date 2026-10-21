@@ -1,10 +1,4 @@
-// Checks of collections, renderers and views: objects with their own matrices
-// (uniform, non-uniform, mirrored) against pre-transformed splats, the
-// uniform-scale test, the static uniforms shared by programs and draws, the
-// program cache, form selection, modifiers and their spaces, remapped
-// generators, view settings and which view a render draws, the CPU sort's
-// orders and versions, object releases, sort workers, autoSort, requestSort
-// and onInvalidate
+// Checks of collections, renderers, views, modifiers, CPU orders and releases
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -21,7 +15,7 @@ const { float, fract, uint, vec3 } = TSL;
 
 type Projection = Awaited<ReturnType<typeof readProjection>>;
 
-// `s` through matrix `m` on the CPU, in float64 (any matrix: through the covariance)
+// In float64, through the covariance so that any matrix works
 function transformed(s: ExtSplat, m: THREE.Matrix4): ExtSplat {
   const out: ExtSplat = { ...s, center: new THREE.Vector3(s.center.x, s.center.y, s.center.z).applyMatrix4(m) };
   const cov = SplatMath.covFromScaleQuat(s.scales, s.quaternion, { xx: 0, yy: 0, zz: 0, xy: 0, xz: 0, yz: 0 });
@@ -39,9 +33,7 @@ function extents({ ndc, angle, scales }: ReturnType<typeof decodeBound>) {
   return { ndc, half: [Math.hypot(c * scales[0], s * scales[1]), Math.hypot(s * scales[0], c * scales[1])] };
 }
 
-// Where two projections of the same splats differ beyond rounding: culls
-// (1% may flip at the edges), bounds (a pixel, 3% of the scale) and key
-// distances (0.1%); raygs compares culls and keys
+// Differences beyond rounding, where 1% of culls may flip at the edges
 function differ(method: ProjectionMethod, a: Projection, b: Projection): string | undefined {
   let flips = 0;
   for (let i = 0; i < a.count; i += 1) {
@@ -58,8 +50,7 @@ function differ(method: ProjectionMethod, a: Projection, b: Projection): string 
     if (ca || method === "raygs") {
       continue;
     }
-    // Pixel half extents along x and y: the same box for a bound whose
-    // axes swapped (a near-round splat's angle may turn by 90 degrees)
+    // Half extents along x and y, since a near-round splat's axes may swap
     const [xa, xb] = [extents(decodeBound(method, ea)), extents(decodeBound(method, eb))];
     const pixel = 2 / W;
     const far = (k: number) => Math.abs(xa.half[k] - xb.half[k]) > 0.03 * Math.max(xa.half[k], xb.half[k]) + 0.05;
@@ -70,7 +61,7 @@ function differ(method: ProjectionMethod, a: Projection, b: Projection): string 
   return flips > a.count * 0.01 ? `${flips} of ${a.count} culls differ` : undefined;
 }
 
-// Type checks only (never called): object() checks data against the generator's
+// Type checks only, never called
 export function typedEntries(splats: GpuArrays) {
   const stored = SplatGenerator.fromSplats();
   SplatCollection.object({ generator: stored, data: { splats }, count: 1 });
@@ -80,7 +71,6 @@ export function typedEntries(splats: GpuArrays) {
   SplatCollection.object({ generator: stored, data: splats, count: 1 });
 }
 
-// A splat's rgb set by a modifier (either form)
 const tint = <N extends SplatNode | CovSplatNode>(rgb: (s: N) => unknown) => (s: N): N => {
   const out = (s as SplatNode).toVar();
   out.get("rgb").assign(rgb(s) as never);
@@ -94,7 +84,6 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
   const scene = randomSplats(600, 21);
   const arrays = GpuArrays.fromData(renderer, splatData(scene));
 
-  // Words and keys of `collection` from `camera`, by a splat renderer of `options`
   const projectWith = async (collection: SplatCollection, options: Parameters<typeof makeSplats>[1] = {}) => {
     const splats = makeSplats(renderer, options);
     setCamera(renderer, [camera]);
@@ -288,7 +277,6 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
     const splats = makeSplats(renderer, { collection: collectionOf([dot, low], [dot, high]), sortMode, modifierSpace: "world", modifier: tint<SplatNode>((s) => vec3(s.get("center").y)) });
     try {
       const pixels = await drawWith(renderer, splats, camera);
-      // The red (unpremultiplied) of the most opaque pixel of each half
       const brightest = (x0: number) => {
         let best = [0, 0, 0, 0];
         for (let y = 0; y < H; y += 1) {
@@ -340,7 +328,7 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
         return `subset splat ${moved} colored unlike source splat ${pick[moved]}`;
       }
 
-      // Two modifiers in turn: the second sees the first's rgb
+      // The second modifier sees the first's rgb
       const red = tint<SplatNode>(() => vec3(1, 0, 0));
       const plusBlue = tint<SplatNode>((s) => s.get("rgb").add(vec3(0, 0, 1)));
       const both = await projectWith(new SplatCollection([{ generator: SplatGenerator.fromSplats({ modifiers: [red, plusBlue] }), data: { splats: arrays }, count: arrays.count }]));
@@ -354,7 +342,6 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
 
   const colored = (rgb: [number, number, number]) => GpuArrays.fromData(renderer, splatData([splat([0, 0, -4], 0.3, rgb, 1)]));
 
-  // The words and keys of two projections are identical
   const same = (a: Projection, b: Projection) => a.count === b.count && Array.from({ length: a.count }, (_, i) => i).every((i) => a.keys[i] === b.keys[i] && a.words(i).every((w, k) => w === b.words(i)[k]));
 
   await check("views: a view's settings over its renderer's project like a renderer of those settings; unset ones follow the renderer; a null modifier drops its modifier", async () => {
@@ -559,9 +546,7 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
       if (oa.visible === 0 || oa.visible !== ob.visible || oc.visible !== oa.visible || od.visible !== oa.visible) {
         return `visible ${oa.visible} ${ob.visible} ${oc.visible} ${od.visible}`;
       }
-      // Three sorts on the shared pool (two views of a, one of c): as many
-      // workers as overlapped (a free one serves the next view), at most 4;
-      // b's on its own pool
+      // Three sorts on the shared pool start as many workers as overlapped, b's on its own
       if (shared !== SplatRenderer.sortPool || shared.size !== 4 || shared.workerCount < 1 || shared.workerCount > shared.size || pool.workerCount !== 1) {
         return `shared pool ${shared.workerCount}/${shared.size} workers, given pool ${pool.workerCount}`;
       }
@@ -714,8 +699,7 @@ export async function runSceneTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // A render's autoSort step of `view` from `lens`, and its sort to land:
-  // the applied order's version
+  // A render's autoSort step, then the version of the order its sort applies
   const autoStep = async (view: SplatView, lens: THREE.Camera) => {
     const busy = () => (view as unknown as { autoSorting: boolean }).autoSorting;
     view.drawn(lens);

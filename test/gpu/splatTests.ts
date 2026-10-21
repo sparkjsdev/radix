@@ -1,6 +1,4 @@
-// Checks of the library's splat readers, TSL codecs (encoders through the
-// fragment writer and, on WebGPU, the compute one), GpuArrayWriter, swap,
-// createRenderer options and the worker pool, on the current backend
+// Checks of the splat readers and codecs, GpuArrayWriter, swap, createRenderer and workers
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -13,7 +11,6 @@ import { decodeAngle12, decodeCenter, decodeDepth20, encodeAngle12, encodeCenter
 
 const { exp2, float, mix, select, uint, uintBitsToFloat, uvec4, vec4 } = TSL;
 
-// A bundle read back from the GPU, checked to be of the layout
 function asLayout<B extends ArrayBundle>(bundle: ArrayBundle, guard: (bundle: ArrayBundle) => bundle is B): B {
   if (!guard(bundle)) {
     throw new Error("Read back the wrong layout");
@@ -59,15 +56,14 @@ function randomSplat(): ExtSplat {
 
 const N = 3000;
 const degrees = (radians: number) => (radians * 180) / Math.PI;
-// Rotation between two quaternions (q and -q alike) as 4 asin(|a - b| / 2):
-// acos of their dot product turns f32 rounding into hundredths of a degree
+// 4 asin(|a - b| / 2) for q and -q alike, since acos of the dot product magnifies f32 rounding
 function quatAngle(a: Quat, b: Quat) {
   const la = Math.hypot(a.x, a.y, a.z, a.w);
   const lb = Math.hypot(b.x, b.y, b.z, b.w);
   const distance = (sign: number) => Math.hypot(a.x / la - (sign * b.x) / lb, a.y / la - (sign * b.y) / lb, a.z / la - (sign * b.z) / lb, a.w / la - (sign * b.w) / lb);
   return degrees(4 * Math.asin(Math.min(1, Math.min(distance(1), distance(-1)) / 2)));
 }
-// Angle between two directions as 2 asin(|a - b| / 2), for the same reason
+// 2 asin(|a - b| / 2), for the same reason
 function vecAngle(a: Vec3, b: Vec3) {
   const la = Math.hypot(a.x, a.y, a.z);
   const lb = Math.hypot(b.x, b.y, b.z);
@@ -78,10 +74,9 @@ const lnError = (a: number, b: number) => Math.abs(Math.log(a) - Math.log(b));
 const lnHalfSteps = (v: number) => Math.abs(Math.log(v)) * 2 ** -9 + 2 ** -23;
 const near = (a: number, b: number, tolerance: number) => Math.abs(a - b) <= tolerance;
 
-// Four float32x4 channels: one writer pass (64 bytes per texel)
+// The most one writer pass holds: four channels, 64 bytes per texel
 const FLOATS = defineBundle({ a: "float32x4", b: "float32x4", c: "float32x4", d: "float32x4" });
 
-// Run `write` over `count` elements into FLOATS outputs and read them back
 async function writeFloats(renderer: WebGPURenderer, count: number, write: (index: TslNode) => TslNode[]) {
   const out = new GpuArrays({ renderer, bundles: { out: FLOATS }, capacity: count });
   const writer = new GpuArrayWriter({
@@ -107,7 +102,6 @@ async function writeFloats(renderer: WebGPURenderer, count: number, write: (inde
   }
 }
 
-// Splat outputs: center + opacity, scales, quaternion, rgb
 const splatOutputs = (s: TslNode) => [vec4(s.get("center"), s.get("opacity")), vec4(s.get("scales"), 0), s.get("quaternion"), vec4(s.get("rgb"), 0)];
 
 type Floats = Awaited<ReturnType<typeof writeFloats>>;
@@ -117,7 +111,7 @@ function splatOf(f: Floats, i: number): Splat {
   return { center: { x: a[0], y: a[1], z: a[2] }, opacity: a[3], scales: { x: b[0], y: b[1], z: b[2] }, quaternion: { x: c[0], y: c[1], z: c[2], w: c[3] }, rgb: { r: d[0], g: d[1], b: d[2] } };
 }
 
-// GPU decode against CPU decode: f32 math against f64
+// Tolerances of the GPU's f32 math against the CPU's f64
 function compareSplat(gpu: Splat, cpu: Splat, rotationDegrees = 0.01) {
   const centerTolerance = 1e-6 * (1 + Math.abs(cpu.center.x) + Math.abs(cpu.center.y) + Math.abs(cpu.center.z));
   if (!near(gpu.center.x, cpu.center.x, centerTolerance) || !near(gpu.center.z, cpu.center.z, centerTolerance) || !near(gpu.opacity, cpu.opacity, 1e-6)) {
@@ -138,7 +132,6 @@ function compareSplat(gpu: Splat, cpu: Splat, rotationDegrees = 0.01) {
   return undefined;
 }
 
-// Splats of every layout from the same inputs, on the CPU and the GPU
 function layoutData(renderer: WebGPURenderer, inputs: ExtSplat[]) {
   const data = new ArrayData({ bundles: { extSplats: Splats.EXT, covSplats: Splats.COV, packedSplats: Splats.PACKED }, count: inputs.length });
   inputs.forEach((s, i) => {
@@ -149,8 +142,7 @@ function layoutData(renderer: WebGPURenderer, inputs: ExtSplat[]) {
   return { data, gpu: GpuArrays.fromData(renderer, data) };
 }
 
-// Covariance of a splat, to compare diagonalizations (whose axes are
-// ambiguous where scales are close)
+// Diagonalizations compare as covariances, since axes are ambiguous where scales are close
 function covOf(s: Splat) {
   const c = Splats.toCov(s, Splats.makeCovSplat()).cov;
   return [c.xx, c.yy, c.zz, c.xy, c.xz, c.yz];
@@ -163,8 +155,6 @@ function makeWriter<O extends Schema>(kind: WriterKind, options: { outputs: O; w
   return kind === "compute" ? new WgpuArrayWriter(options) : new GpuArrayWriter(options);
 }
 
-// Run either writer kind over the first `count` elements; compute writers
-// need arrays made with storage: true
 function writeAll(arrays: GpuArrays, writer: GpuArrayWriter | WgpuArrayWriter, count: number) {
   if (writer instanceof GpuArrayWriter) {
     arrays.write(writer, { count });
@@ -177,11 +167,9 @@ function writeAll(arrays: GpuArrays, writer: GpuArrayWriter | WgpuArrayWriter, c
 
 export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
   const backend = getGpuCaps(renderer).backend;
-  // Encoders through the fragment writer, and on WebGPU the compute one
   const writerKinds: WriterKind[] = backend === "webgpu" ? ["fragment", "compute"] : ["fragment"];
   const inputs = Array.from({ length: N }, randomSplat);
 
-  // --- Readers: TSL decode against the CPU's ---
   await check("GpuExtSplatReader loadSplat / loadPbr / loadCenter / loadRgb / loadOpacity", async () => {
     const { data, gpu } = layoutData(renderer, inputs);
     try {
@@ -232,7 +220,7 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
         if (actual.some((v, k) => !near(v, expected[k], scale * 1e-5))) {
           return `cov ${i}: ${actual} vs ${expected}`;
         }
-        // Diagonalized in f32: the covariance it stands for, to 1e-4
+        // Diagonalized in f32, so within 1e-4
         const gpuCov = covOf(splatOf(splats, i));
         if (gpuCov.some((v, k) => !near(v, expected[k], scale * 1e-4))) {
           return `diagonalized ${i}: ${gpuCov} vs ${expected}`;
@@ -270,10 +258,8 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- Writers: TSL encode against the CPU's bits ---
   const INPUTS = defineBundle({ a: "float32x4", b: "float32x4", c: "float32x4", d: "float32x4", e: "float32x4", f: "float32x4" });
 
-  // The inputs as stored floats (what the GPU reads), one splat per element
   function inputArrays(values: (i: number) => number[][]) {
     const data = new ArrayData({ bundles: { in: INPUTS }, count: N });
     for (let i = 0; i < N; i += 1) {
@@ -282,9 +268,8 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     return { data, gpu: GpuArrays.fromData(renderer, data) };
   }
 
-  // GPU words against CPU words; a splat whose words differ (an f32 ln or
-  // acos on a rounding boundary) must decode within the CPU's budgets, and
-  // at most `share` of them may differ
+  // Words differ where an f32 ln or acos sits on a rounding boundary, and must
+  // then decode within the CPU's budgets
   function compareWords(gpu: Uint32Array, cpu: Uint32Array, words: number, withinBudget: (i: number) => string | undefined, share = 0.02) {
     let differ = 0;
     for (let i = 0; i < N; i += 1) {
@@ -321,16 +306,14 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
   const splatFrom = (reader: GpuArrayReader<typeof INPUTS>, index: TslNode) =>
     GpuSplats.Splat(reader.load("a", index).xyz, reader.load("b", index).xyz, reader.load("c", index), reader.load("d", index).xyz, reader.load("a", index).w);
 
-  // Decoded GPU words against the input, within the encoder's budgets
   const extBudget = (decoded: ExtSplat, s: ExtSplat) => {
     if (decoded.center.x !== s.center.x || !near(decoded.opacity, s.opacity, 1 / 256 + 1e-6)) {
       return "center or opacity";
     }
-    // Two half-float steps of ln(scale)
     if ((["x", "y", "z"] as const).some((k) => lnError(decoded.scales[k], s.scales[k]) > lnHalfSteps(s.scales[k]))) {
       return "scales";
     }
-    // The rounded octahedral codes: about 0.43 degrees of rotation, 0.057 of normal
+    // The octahedral codes round to about 0.43 degrees of rotation and 0.057 of normal
     if (quatAngle(decoded.quaternion, s.quaternion) > 0.45 || vecAngle(decoded.normal, s.normal) > 0.06) {
       return `rotation ${quatAngle(decoded.quaternion, s.quaternion)}, normal ${vecAngle(decoded.normal, s.normal)}`;
     }
@@ -401,8 +384,7 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
         const offDiagonal = (["xy", "xz", "yz"] as const).some((k) => !near(decoded.cov[k], c[k], scale * (lnHalfSteps(scale) + 1e-3)));
         return diagonal || offDiagonal ? `cov ${JSON.stringify(decoded.cov)} vs ${JSON.stringify(c)}` : undefined;
       };
-      // ln|correlation| near +-1 is tiny, so f32 rounding picks its half code
-      // for about 7% of random splats
+      // ln|correlation| near +-1 is tiny, so f32 rounding often picks another half code
       return compareWords(gpuData.bundles.covSplats.channels.covA.data as Uint32Array, cpu.bundles.covSplats.channels.covA.data, 4, budget)
         ?? compareWords(gpuData.bundles.covSplats.channels.covB.data as Uint32Array, cpu.bundles.covSplats.channels.covB.data, 4, budget, 0.1);
     } finally {
@@ -485,7 +467,6 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- GpuArrayWriter: ranges, packing, batches, limits ---
   const pattern = (i: number) => [(i * 2654435761) >>> 0, i, 7, (i ^ 0x55) >>> 0];
   const patternTsl = (i: TslNode) => uvec4(i.mul(uint(2654435761)), i, uint(7), i.bitXor(uint(0x55)));
 
@@ -517,7 +498,7 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
         arrays.writeBatch([{ writer, at: 0, count: 1000 }, { writer: constant, at: 8000, count: 1996 }]);
         const count: number = arrays.count;
         fill(0, 1000, 0);
-        // The constant texel: element k of every texel is pattern(1234567 + k)
+        // Element k of every constant texel is pattern(1234567 + k)
         for (let e = 8000; e < 9996; e += 1) {
           expected.set(pattern(1234567 + ((e - 8000) % def.packing)).slice(0, components), e * components);
         }
@@ -564,7 +545,6 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- Double buffering ---
   await check("GpuArrays.swap, with the reader bound again", async () => {
     const def = defineBundle({ v: "float32x4" });
     const [a, b] = [1, 2].map((k) => {
@@ -583,8 +563,6 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
       b.dispose();
     }
   });
-
-  // --- Projected word codecs (render/projection.tsl.ts) ---
 
   await check("projection codecs: depth20 within 2^-16 of the depth (clamped to 2^-14..2^18), angle12 within pi / 8192", async () => {
     const out = await writeFloats(renderer, N + 2, (index) => {
@@ -644,7 +622,6 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- createRenderer options ---
   await check("createRenderer with profile, hdr and directCanvas", async () => {
     const other = await createRenderer({ backend, canvas: document.createElement("canvas"), profile: true, hdr: false, directCanvas: false });
     try {
@@ -658,7 +635,6 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
     }
   });
 
-  // --- Workers ---
   await check("loadSplats / writeSplats on every worker choice give the same results", async () => {
     const pool = new WorkerPool({ size: 2 });
     if (pool.workerCount !== 0) {
@@ -733,7 +709,7 @@ export async function runSplatTests(renderer: WebGPURenderer, check: Check) {
           return `${name}: the next load has ${loaded.count} splats`;
         }
       }
-      // Queued behind a lease on the pool's only worker: rejects without it
+      // Queued behind a lease on the pool's only worker
       const lease = await pool.acquire();
       const queued = new AbortController();
       const waiting = outcome(loadSplats(ply.slice(), { name: "a.ply", worker: pool, signal: queued.signal }));

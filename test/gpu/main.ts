@@ -1,6 +1,9 @@
-// Test page for src (/build/test/gpu/index.html, ?gpu=webgpu | webgpu-gl). Runs
-// the checks on load (not with ?run=0); `await radixTest.run()` in the
-// console runs them again.
+// Runs the checks of src on one backend and prints a line per check
+//   ?gpu=     webgpu | webgpu-gl (default: webgpu when available, else webgpu-gl)
+//   ?run=0    no run on load (default: a run on load)
+//   radixTest.run()     runs the checks again, resolving to their results
+//   radixTest.renderer  the renderer the checks use
+//   radix, THREE        the library and three.js
 import * as THREE from "three";
 import * as radix from "@sparkjsdev/radix";
 import { createRenderer, getGpuCaps } from "@sparkjsdev/radix";
