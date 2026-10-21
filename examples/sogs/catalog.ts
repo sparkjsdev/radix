@@ -1,10 +1,10 @@
 // Sample SOG files, all on Google Cloud Storage under SOGS (?sogs= reads
 // the same names elsewhere, such as /splats/sogs for local copies; every
-// host needs CORS headers): mirrors of PlayCanvas's bundled .sog files,
-// Spark's SOGS .zip, an unbundled SOGS meta.json and PlayCanvas's SOG LoD
-// scenes (lod-meta.json), with their original addresses in `source`; and
-// our splat-transform conversions of sutro_2m.ply (see main.ts). Rotations
-// and start views are in the viewer's world (y up).
+// host needs CORS headers): mirrors of PlayCanvas's bundled .sog files
+// and Spark's SOGS .zip, with their original addresses in `source`; the
+// .zip unbundled into a meta.json; and our splat-transform conversions of
+// sutro_2m.ply, one of them a LoD scene (lod-meta.json; see main.ts).
+// Rotations and start views are in the viewer's world (y up).
 import * as THREE from "three";
 
 export interface Sample {
@@ -35,14 +35,6 @@ export const SAMPLES: Record<string, Sample> = {
     label: "Toy cat (v2 .sog)", url: `${SOGS}toy-cat.sog`, credit: "PlayCanvas", source: "https://developer.playcanvas.com/assets/toy-cat.sog", rotation: Z_TURN,
   },
   skull: { label: "Skull (v2 .sog)", url: `${SOGS}skull.sog`, credit: "PlayCanvas engine examples", source: `${PC}/skull.sog` },
-  bicycle: {
-    label: "Bicycle (v2 .sog, 1M)", url: `${SOGS}bicycle.sog`, credit: "Mip-NeRF 360, PlayCanvas engine examples", source: `${PC}/bicycle.sog`, rotation: Z_TURN,
-    view: { position: [1.6, 1.2, 2.2], target: [0, 0.575, 0], fov: 60 },
-  },
-  apartment: {
-    label: "Apartment (v2 .sog, no SH)", url: `${SOGS}apartment.sog`, credit: "Stephane Agullo (sa3d.fr), CC-BY-4.0", source: `${PC}/apartment.sog`, mode: "fly",
-    view: { position: [-3.8, 0.4, 7.2], target: [0, 0.4, 0], fov: 60 },
-  },
   // Orbiting the hall itself (its densest splats), not the whole plot
   hall: {
     label: "Knock Community Hall (v2 .sog)", url: `${SOGS}knock-community-hall.sog`, credit: "scbenoit, CC-BY-4.0", source: `${PC}/knock-community-hall.sog`,
@@ -54,18 +46,6 @@ export const SAMPLES: Record<string, Sample> = {
   },
   sutro: {
     label: "Sutro (SOGS .zip, 2M)", url: `${SOGS}sutro.zip`, credit: "Spark examples", source: "https://sparkjs.dev/assets/splats/sutro.zip", sky: true, view: SUTRO_VIEW,
-  },
-  logo: {
-    label: "PlayCanvas logo (SOGS meta.json)", url: `${SOGS}playcanvas-logo/meta.json`, credit: "PlayCanvas engine examples", source: `${PC}/playcanvas-logo/meta.json`, rotation: Z_TURN,
-  },
-  playbot: { label: "Playbot (LoD)", url: `${SOGS}playbot/lod-meta.json`, credit: "PlayCanvas engine examples", source: `${PC}/playbot/lod-meta.json` },
-  skatepark: {
-    label: "Skatepark (LoD, 16M)", url: `${SOGS}skatepark/lod-meta.json`, credit: "PlayCanvas examples", source: `${PC_DATA}/example_skatepark_03/lod-meta.json`,
-    rotation: [-Math.PI / 2, 0, 0], mode: "fly", sky: true, view: { position: [32, 2, 2], target: [0, 0.6, 0], fov: 75 },
-  },
-  "roman-parish": {
-    label: "Roman parish (LoD, 69M)", url: `${SOGS}roman-parish/lod-meta.json`, credit: "PlayCanvas examples", source: `${PC_DATA}/example_roman_parish_03/lod-meta.json`,
-    rotation: [-Math.PI / 2, 0, 0], mode: "fly", view: { position: [10.3, 2, -10], target: [12, 3, 0], fov: 75 },
   },
   "sutro-2m": { label: "Sutro 2M (v2 .sog, converted)", url: `${SOGS}sutro-2m.sog`, credit: "sutro_2m.ply through splat-transform", sky: true, view: SUTRO_VIEW },
   "sutro-2m-dir": { label: "Sutro 2M (v2 meta.json, converted)", url: `${SOGS}sutro-2m/meta.json`, credit: "sutro_2m.ply through splat-transform", sky: true, view: SUTRO_VIEW },

@@ -41,18 +41,6 @@ export const SCANS: Record<string, Scan> = {
     label: "Grace interior (10M, SH3)", url: `${SPLATS_SH}/grace-interior-10m.rdx`, mode: "fly",
     view: { position: [-14, 8, -3], target: [-4, 8, -3], fov: 60 },
   },
-  // Up: the ground within 3.5 of the origin; the view: side on, the bike by the bench
-  bicycle: {
-    label: "Bicycle (SH3)", url: `${SPLATS_SH}/bicycle.rdx`, mode: "fly", preBlur: true, sky: true,
-    up: [-0.015, 0.97, 0.244], view: { position: [-3.5, 0.9, 0], target: [0, -0.7, 0], fov: 55 },
-  },
-  // Mip-NeRF 360's garden. Up: the ground and the table top (parallel within
-  // 0.3 degrees); the view: GaussianSplats3D's garden demo (cameraUp
-  // [0, -1, -0.54], within a degree of this up), looking down across the table
-  garden: {
-    label: "Garden (5.8M, SH3)", url: `${SPLATS_SH}/garden.rdx`, mode: "fly", preBlur: true, sky: true,
-    up: [-0.01, 0.877, 0.48], view: { position: [-3.15, 0.43, 0.36], target: [1.5, -2.81, -0.36], fov: 50 },
-  },
 };
 
 // Upright: the flip, then the up correction

@@ -252,11 +252,10 @@ for some). `docs/checks.md` lists what each covers.
   The viewers' samples
   are single-file RDX files of ext splats without SH on Google Cloud Storage,
   `https://storage.googleapis.com/forge-dev-public/asundqui/radix/261009/rdx/`
-  (`butterfly-ai`, `ceramic`, `sutro-2m`, `grace-interior-10m`, `bicycle`
+  (`butterfly-ai`, `ceramic`, `sutro-2m`, `grace-interior-10m`
   `.rdx`; `?splats=` reads the same names elsewhere). The splats
-  viewer shows SH3 versions instead (`extSh`: `sutro-2m`, `grace-interior-10m`,
-  `bicycle`, `garden`) in `261015/rdx-sh/` (`?splatsSh=` reads them
-  elsewhere). The fx editor and the MPM water offer
+  viewer shows SH3 versions instead (`extSh`: `sutro-2m`, `grace-interior-10m`)
+  in `261015/rdx-sh/` (`?splatsSh=` reads them elsewhere). The fx editor and the MPM water offer
   the butterfly, the ceramic and the SH3 Sutro.
 - `examples/spz/` (`radixSpz`: `open`, `openSample`, `write(version)`,
   `data()`, `written()`): the SPZ reader / writer. Samples (`catalog.ts`)

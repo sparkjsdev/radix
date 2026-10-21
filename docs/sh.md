@@ -28,7 +28,7 @@ There are two codecs, named by strings (`ShCodecName`). A name means the same co
 | `ext` (default) | 12 / 32 / 60 / 96 B | 1 / 2 / 4 / 6 | one word per coefficient: three 8-bit magnitudes, three signs, and a shared 5-bit exponent (`Encoding.encodeExtRgb`) | 0.035 to 0.13 |
 | `packed` | 10 / 26 / 48 / 76 B | 1 / 2 / 3 / 5 | per band, a scale byte (0: all zero; otherwise the band's largest value is 2^((code - 192) / 16), rounded up), then one signed byte per value (`code / 127 * max`) | 0.08 to 0.31 |
 
-The error is the RMS color error over all view directions, `sqrt(sum of squared coefficient errors / 4 pi)` (the basis is orthonormal). It was measured on the float SH3 scans Garden, Bicycle, Grace interior, and Sutro; Sutro has outliers up to ±4.9. Neither codec uses per-file ranges, so outliers never clip. Ranges do worse on the same data: one signed byte over ±1 (RAD's `s8`) clips Sutro's outliers by up to 382 steps, and one signed byte over each band's largest value errs by 2.7 steps RMS.
+The error is the RMS color error over all view directions, `sqrt(sum of squared coefficient errors / 4 pi)` (the basis is orthonormal). It was measured on the float SH3 scans Grace interior and Sutro; Sutro has outliers up to ±4.9. Neither codec uses per-file ranges, so outliers never clip. Ranges do worse on the same data: one signed byte over ±1 (RAD's `s8`) clips Sutro's outliers by up to 382 steps, and one signed byte over each band's largest value errs by 2.7 steps RMS.
 
 Because neither codec has per-file values, all files of a codec share one program. Other formats' SH encodings are converted on load: SOG's codebook palettes into ext palettes (within one ext step of the codebook values).
 

@@ -43,9 +43,8 @@ const FILES = {
   butterfly: { url: `${samples}butterfly-ai.rdx`, kind: "object" },
   // In the middle of the cave, looking along it
   ceramic: { url: `${samples}ceramic.rdx`, kind: "scene", view: { position: [0, 0.6, -2.4], target: [0, 0.5, -5] } },
-  // At the tower's foot; the bike by the bench, orbited as it was captured
+  // At the tower's foot
   sutro: { url: `${samples}sutro-2m.rdx`, kind: "scene", view: { position: [0, 1.5, -1.2], target: [0, 1.5, 0] } },
-  bicycle: { url: `${samples}bicycle.rdx`, kind: "object", up: [-0.015, 0.97, 0.244], view: { position: [-3.5, 0.9, 0], target: [0, -0.7, 0] } },
   // In the middle of the nave, about 2.5 above the floor, looking along it
   grace: { url: `${samples}grace-interior-10m.rdx`, kind: "scene", view: { position: [-14, 8, -3], target: [-4, 8, -3] } },
 };
@@ -69,7 +68,7 @@ function matrix(name) {
     delete c.tag;
     runs.push({ name: parts.join("-"), backend, query, config: c });
   };
-  const files = ["butterfly", "ceramic", "sutro", "bicycle", "grace"];
+  const files = ["butterfly", "ceramic", "sutro", "grace"];
   if (name === "baseline") {
     for (const file of files) {
       for (const bits of [16, 24, 32]) {
@@ -113,7 +112,7 @@ function matrix(name) {
       }
     }
   } else if (name === "project") {
-    for (const file of ["ceramic", "bicycle", "grace"]) {
+    for (const file of ["ceramic", "grace"]) {
       for (const layout of ["extSplats", "packedSplats", "covSplats"]) {
         for (const method of ["ewa", "3dgut"]) {
           add(file, "webgpu", { mode: "gpu", layout, method, frames: 30 });

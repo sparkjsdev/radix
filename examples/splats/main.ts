@@ -7,7 +7,7 @@
 // options, the Tweakpane panel (gui.ts) the rest. Query parameters:
 //   ?url=      a splat file URL
 //   ?scan=     a sample: butterfly (the default) | ceramic, or with spherical
-//              harmonics: sutro | grace | bicycle | garden
+//              harmonics: sutro | grace
 //   ?sh=       how files load their spherical harmonics: ext (default) |
 //              packed | 0 (skipped); the bar's "SH" sets the highest degree
 //              drawn (objectParams.maxShDegree), up to the file's

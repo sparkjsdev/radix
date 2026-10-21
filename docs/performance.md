@@ -11,7 +11,6 @@ GPU milliseconds per frame on WebGPU (`ewa`, 24-bit keys, turning):
 | butterfly | 0.5M | 0.09 | 0.06 | 0.28 | 2.36 | 2.8 |
 | ceramic (inside) | 2M | 0.33 | 0.16 | 0.27 | 4.29 | 5.0 |
 | sutro | 2M | 0.30 | 0.15 | 0.31 | 1.27 | 2.0 |
-| bicycle | 6.1M | 0.94 | 0.46 | 0.80 | 4.53 | 6.7 |
 | grace (inside) | 10M | 1.55 | 0.78 | 0.96 | 4.86 | 8.2 |
 
 - **The draw** takes 60-85% of the frame. Inside a scene its cost is fill: pixel ratio 2 (4x the pixels) made the ceramic cave's draw 2.6x slower. With many small splats the cost is per splat.

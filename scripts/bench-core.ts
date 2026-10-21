@@ -18,12 +18,11 @@ import {
 } from "../src/core";
 
 // Local copies (splats/ is gitignored), such as the hosted samples:
-// curl -o splats/bicycle.rdx <RADIX_DATA_URL in scripts/data.mjs>rdx/bicycle.rdx
+// curl -o splats/sutro-2m.rdx <RADIX_DATA_URL in scripts/data.mjs>rdx/sutro-2m.rdx
 const CORPUS = [
   "splats/butterfly-ai.rdx",
   "splats/ceramic.rdx",
   "splats/sutro-2m.rdx",
-  "splats/bicycle.rdx",
   "splats/grace-interior-10m.rdx",
 ].filter((file) => existsSync(file));
 // readFileSync's limit

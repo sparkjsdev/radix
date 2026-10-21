@@ -1,7 +1,7 @@
 // Where the examples' hosted files live on Google Cloud Storage: one dated
 // folder (YYMMDD) per upload, each kind of data in its own subfolder:
 //   rdx/     the sample scans (single-file RDX)
-//   rdx-sh/  the splats viewer's SH3 versions of them, with garden (extSh)
+//   rdx-sh/  the splats viewer's SH3 versions of them (extSh)
 //   spz/     the SPZ example's samples, v2 to SPZ 4
 //   sogs/    the SOG viewer's samples
 // Files in a dated folder are never replaced, so these addresses stay valid.
