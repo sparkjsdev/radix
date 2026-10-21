@@ -326,8 +326,10 @@ for some). `docs/checks.md` lists what each covers.
 - Static site: `npm run build:site` (`scripts/build-site.mjs`)
   builds `build/site/` (gitignored), one folder to preview
   (`npm run serve:site`, :8002) and copy to any static host: the bundle and
-  built examples, the docs, the `node_modules/` files the import maps load,
-  and a landing `index.html` (the GitHub repo, getting started, links). Of
+  built examples, the docs, the `node_modules/` files the import maps load
+  (of `three/examples/jsm`, only the files the pages import) with each
+  package's license file, Radix's `LICENSE`, and a landing `index.html`
+  (the GitHub repo, getting started, links). Of
   `docs/` and `examples/` it takes only the files git tracks and what is
   built from them, so a new page needs a `git add` first. The
   sources stay on GitHub: the docs' links to repo files and the Spark list's

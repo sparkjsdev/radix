@@ -7,14 +7,21 @@ import { existsSync, statSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import esbuild from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = path.join(root, "build/site");
 const DOCS = "docs";
 const REPO = "https://github.com/sparkjsdev/radix";
 
-// The folders the examples' import maps load from, with the files those modules import
-const MODULES = ["three/build", "three/examples/jsm", "lil-gui/dist", "tweakpane/dist", "@tweakpane/plugin-essentials/dist", "elkjs/lib"];
+// The node_modules files the examples' import maps load, and each package's license file. npm's
+// tweakpane has none: examples/THIRD_PARTY_NOTICES.txt, published with the pages, holds its license
+// and elkjs' source statement.
+const MODULES = [
+  "three/build", "three/LICENSE", "lil-gui/dist", "lil-gui/LICENSE.md", "tweakpane/dist",
+  "@tweakpane/plugin-essentials/dist", "@tweakpane/plugin-essentials/LICENSE.txt",
+  "elkjs/lib/elk-api.js", "elkjs/lib/elk-worker.min.js", "elkjs/LICENSE.md",
+];
 
 // Repo files the docs link to on GitHub rather than in the site
 const SOURCE = /\.(ts|mjs|js|md)$/;
@@ -81,6 +88,7 @@ if (tracked.size === 0) {
 }
 
 await copy("dist");
+await copy("LICENSE");
 for (const dir of ["build/examples", DOCS]) {
   for (const file of (await listFiles(path.join(root, dir))).map((file) => posix(path.relative(root, file)))) {
     if (published(file, tracked)) {
@@ -88,8 +96,23 @@ for (const dir of ["build/examples", DOCS]) {
     }
   }
 }
-for (const dir of MODULES) {
-  await copy(path.join("node_modules", dir));
+for (const entry of MODULES) {
+  await copy(path.join("node_modules", entry));
+}
+
+// Of three/examples/jsm, the files the pages import and the files those import
+const jsm = new Set();
+for (const file of (await listFiles(path.join(SITE, "build/examples"))).filter((file) => file.endsWith(".js"))) {
+  for (const match of (await readFile(file, "utf8")).matchAll(/["']three\/(?:examples\/jsm|addons)\/([^"']+)["']/g)) {
+    jsm.add(`node_modules/three/examples/jsm/${match[1]}`);
+  }
+}
+const { metafile } = await esbuild.build({
+  entryPoints: [...jsm], absWorkingDir: root, bundle: true, write: false, metafile: true, outdir: "jsm",
+  external: ["three", "three/*"], logLevel: "error",
+});
+for (const file of Object.keys(metafile.inputs)) {
+  await copy(file);
 }
 
 const commit = git("rev-parse", "--short", "HEAD");
