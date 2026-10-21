@@ -56,14 +56,14 @@
     }
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@tweakpane/core": "^2.0.5",
     "@tweakpane/plugin-essentials": "^0.2.1",
     "@types/three": "0.186.0",
     "@webgpu/types": "^0.1.72",
     "elkjs": "^0.12.0",
     "esbuild": "^0.28.2",
-    "eslint": "^9.39.5",
+    "eslint": "^10.13.0",
     "fzstd": "^0.1.1",
     "globals": "^17.11.0",
     "http-server": "^14.1.1",
