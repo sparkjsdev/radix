@@ -60,7 +60,7 @@ export class Zstd {
           ? await pipe(new Uint8Array(bytes), new DecompressionStream("zstd" as CompressionFormat))
           : fzstdDecompress(bytes);
     } catch (error) {
-      throw new Error(`Invalid zstd stream: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Invalid zstd stream: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
     if (out.byteLength !== size) {
       throw new Error(`zstd stream decoded to ${out.byteLength} bytes, not ${size}`);
