@@ -13,7 +13,8 @@ three.js r186's `WebGPURenderer` on WebGPU or its WebGL2 backend. The repo:
   (`test/bench/`).
 - `scripts/`: builds, checks and benchmarks (`package.json` lists them).
 - Built (gitignored): `dist/` (the package: `radix.module.js`,
-  `radix-core.module.js`, `types/`), `build/examples/`, `build/test/`,
+  `radix-core.module.js`, `types/`, and `THIRD_PARTY_NOTICES.txt`, copied
+  from the root), `build/examples/`, `build/test/`,
   `build/site/`, and the docs' reference pages in `docs/ref/`.
 
 From a clean checkout: `npm install` (its `prepare` builds `dist/`),

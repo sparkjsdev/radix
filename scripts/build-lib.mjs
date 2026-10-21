@@ -5,7 +5,7 @@
 //   --lib-only   dist/ alone (npm's prepare)
 import { execFileSync } from "node:child_process";
 import { watch } from "node:fs";
-import { readdir, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
@@ -37,6 +37,12 @@ async function checkPaths() {
   }
 }
 
+// The package holds the notices of the third-party code in its bundles
+async function copyNotices() {
+  await mkdir("dist", { recursive: true });
+  await copyFile("THIRD_PARTY_NOTICES.txt", "dist/THIRD_PARTY_NOTICES.txt");
+}
+
 function buildTypes() {
   execFileSync(process.execPath, [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.lib.json"], { stdio: "inherit" });
 }
@@ -60,6 +66,7 @@ const libOnly = process.argv.includes("--lib-only");
 if (process.argv.includes("--watch")) {
   const context = await esbuild.context(options);
   await context.watch();
+  await copyNotices();
   console.log("Watching dist/radix.module.js...");
   const { watchExamples } = await import("./build-examples.mjs");
   await watchExamples();
@@ -74,6 +81,7 @@ if (process.argv.includes("--watch")) {
 } else {
   await rm("dist", { recursive: true, force: true });
   await esbuild.build(options);
+  await copyNotices();
   await checkCore();
   await checkPaths();
   buildTypes();
