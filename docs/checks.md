@@ -4,7 +4,7 @@ Radix has three sets of checks: core checks in Node (no browser), GPU checks in 
 
 | What | Command | Needs |
 |---|---|---|
-| core checks | `npm run check:core` | Node |
+| core checks | `npm run check:core` | Node 22.15 or newer, whose zstd the checks compare against |
 | GPU checks, both backends | `npm run check:test` (`scripts/check-test.mjs`) | `npm run build:test`, `npm run serve` and Chrome |
 | GPU checks, one backend | open `http://localhost:8000/build/test/gpu/index.html?gpu=webgpu` or `?gpu=webgpu-gl` | `npm run build:test` and `npm run serve` |
 | example pages, both backends | `npm run check:examples` (`scripts/check-examples.mjs`) | `npm run build`, `npm run serve` and Chrome |
@@ -116,6 +116,20 @@ Collections, renderers, and views (`sceneTests.ts`):
 
 - a relative link or `#anchor` in any `.md` page or docs `.html` page does not resolve (anchors follow GitHub's heading ids);
 - an export of a Radix `index.ts` appears on no `.md` page, in inline code or in a code block.
+
+## Builds and servers
+
+| Command | What it does |
+|---|---|
+| `npm run build` | `dist/`, the example pages (`build/examples/`), the test pages (`build/test/`) and `docs/ref/` |
+| `npm run build:watch` | rebuild the library, the example pages and `docs/ref/` as files change |
+| `npm run build:examples` / `npm run build:test` | the example pages alone / the GPU test and benchmark pages alone |
+| `npm run build:single` | each example page but the Spark ports as one HTML file, `build/examples/<name>/<name>.html` (runs `npm run build` first) |
+| `npm run build:site` / `npm run serve:site` | a static site of the examples and docs in `build/site/`, with a landing page that links to them (runs `npm run build` and `npm run build:single` first), served on port 8002 |
+| `npm run serve` | http-server on the repo root, port 8000 |
+| `npm run serve:lan` | `npm run serve` open to a network you trust, for phones (WebGL2 backend only, `.git` readable) |
+| `npm run lint:fix` | ESLint's fixes, then the types |
+| `npm run convert:ply -- <in.ply> <out.rdx>` | convert a PLY past Node's 2 GiB read limit into one RDX file |
 
 ## Benchmarks
 

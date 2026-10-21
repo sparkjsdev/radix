@@ -134,7 +134,7 @@ Anything named `Wgpu*` needs WebGPU. Everything else also runs on WebGL2.
 ### Reference
 
 - [api.md](api.md): all exports, in alphabetical order
-- [checks.md](checks.md): the tests, and how to run them and the benchmarks
+- [checks.md](checks.md): the tests, how to run them and the benchmarks, and the build and serve commands
 
 ## In a browser
 

@@ -23,7 +23,7 @@ From a clean checkout: `npm install` (its `prepare` builds `dist/`),
 (the examples and Spark ports), `http://localhost:8000/docs/index.html` (the
 docs) and `http://localhost:8000/build/test/gpu/index.html` (the GPU checks).
 After `npm run build:site`, `http://localhost:8000/build/site/` is the landing
-page that links to all of them. The README has the rest.
+page that links to all of them. `docs/checks.md` lists the other commands.
 
 Docs live in `docs/`, in two forms:
 
