@@ -1,4 +1,67 @@
-// Yuanming Hu's mpm88 (Taichi) taken to 3D, in the units of nialltl's MPM guide
+/*!
+ * This file is a translation of mpm88.py from Taichi
+ * (https://github.com/taichi-dev/taichi), which carries this notice:
+ *
+ *   MPM-MLS in 88 lines of Taichi code, originally created by @yuanming-hu
+ *
+ * mpm88.py is licensed under the Apache License, Version 2.0. A copy of the
+ * License is in LICENSE-Apache-2.0.txt beside this file and at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This file changes it: it is taken from 2D to 3D, written as TSL compute
+ * kernels in the units of nialltl's MPM guide, with moving walls and a
+ * collider added.
+ */
+/*!
+ * The position clamp follows incremental_mpm (https://github.com/nialltl/incremental_mpm):
+ *
+ * MIT License
+ *
+ * Copyright (c) 2019 niall tl
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/*!
+ * The fixed-point grid sums follow WebGPU-Ocean (https://github.com/matsuoka-601/WebGPU-Ocean):
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 matsuoka-601
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { GpuSplats, TSL, WgpuBuffer, WgpuCompute, WgpuComputeBatch, type SplatGenerator, type TslNode } from "@sparkjsdev/radix";
