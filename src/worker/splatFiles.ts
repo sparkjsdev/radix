@@ -1,11 +1,3 @@
-// Loading and writing splat files, on a worker or this thread. `worker`:
-//   left out  the shared pool where a page can make workers, else this
-//             thread (Node, code already in a worker)
-//   true      the shared pool (an error where workers are unavailable)
-//   false     this thread
-//   a pool    one call on it
-//   a lease   that worker; the caller keeps the lease
-// Both paths run the same core functions, so they give the same results.
 import { ArrayData } from "../core/ArrayData";
 import type { CoordinateSystem } from "../core/axes";
 import { SplatFiles, type SplatFormat, type SplatRequestInit, type SplatWriteOptions } from "../core/files";
@@ -14,13 +6,13 @@ import { ShPalette, type ShTarget } from "../core/sh";
 import type { LoadedSplats, SplatData, SplatLayout, SplatTarget } from "../core/splats";
 import { WorkerLease, WorkerPool } from "./WorkerPool";
 
+/** Where a call runs: true for the shared pool, false for this thread, or a pool or a lease. */
 export type WorkerChoice = boolean | WorkerPool | WorkerLease;
 
-// A URL, a Blob / File or the file's bytes
+/** A URL, a Blob or a file's bytes. */
 export type SplatSource = string | URL | Blob | Uint8Array<ArrayBuffer> | ArrayBuffer;
 
-// Where a call with this `worker` choice runs: a pool or lease, or this
-// thread (undefined)
+// undefined runs on this thread
 export function workerTarget(worker: WorkerChoice | undefined): WorkerPool | WorkerLease | undefined {
   if (worker === false || (worker === undefined && !WorkerPool.available)) {
     return undefined;
@@ -34,33 +26,45 @@ export function workerTarget(worker: WorkerChoice | undefined): WorkerPool | Wor
   return worker;
 }
 
+/** Options of loadSplats and loadSplatFile. */
 export type LoadSplatsOptions<L extends SplatLayout = "extSplats"> = SplatTarget<L> & {
-  // For telling formats apart by extension (default: the URL or file name)
+  /**
+   * The name whose extension tells formats apart.
+   *
+   * @default the URL's or the File's name
+   */
   name?: string;
+  /**
+   * Where the load runs.
+   *
+   * @default the shared pool where workers are available, else this thread
+   */
   worker?: WorkerChoice;
   onProgress?: Progress;
+  /**
+   * The SH codec, or false to skip SH.
+   *
+   * @default "ext", or an RDX file's stored codec
+   */
   sh?: ShTarget;
-  // SPZ: the axes to convert to (default: as stored, meta.coordinateSystem)
+  /**
+   * The axes SPZ files convert to.
+   *
+   * @default the axes as stored
+   */
   coordinateSystem?: CoordinateSystem;
-  // fetch options for a URL source: headers, credentials, mode, cache...
+  /** fetch options for a URL source. */
   request?: SplatRequestInit;
-  // Aborts the download and decode: the promise rejects with signal.reason
+  /** Aborts the download and decode, and rejects the promise. */
   signal?: AbortSignal;
 };
 
-// A splat file as one table: splats in bundles[layout] (default
-// extSplats), plus lodTree when the file has one, and its spherical
-// harmonics in an SH bundle (`sh`: "ext" (default) or "packed"; false skips
-// them; RDX keeps its stored codec unless `sh` is given). RAD's clustered SH
-// is expanded to per-splat SH (loadSplatFile keeps its palette). Bytes
-// given to a worker are transferred: the caller's buffer is detached.
+/** Loads a splat file as one table, with SH per splat. Bytes given to a worker are transferred. */
 export async function loadSplats<L extends SplatLayout = "extSplats">(source: SplatSource, options: LoadSplatsOptions<L> = {}): Promise<SplatData<L>> {
   return (await load(source, options, false)).splats;
 }
 
-// What a splat file holds: { splats, shPalette? }, the splats as
-// loadSplats gives them except RAD's clustered SH, kept as bundle shLabel in
-// the splats and shPalette, an ShPalette in the `sh` codec
+/** Loads a splat file, keeping RAD's clustered SH as a palette. */
 export async function loadSplatFile<L extends SplatLayout = "extSplats">(source: SplatSource, options: LoadSplatsOptions<L> = {}): Promise<LoadedSplats<L>> {
   return load(source, options, true);
 }
@@ -82,7 +86,7 @@ async function load<L extends SplatLayout>(source: SplatSource, {
   }
 
   if (!target) {
-    // Decoders report progress often: an abort stops them at the next report
+    // Decoders report progress often, so aborts stop there
     const progress: Progress | undefined = signal ? (fraction, stage) => {
       signal.throwIfAborted();
       onProgress?.(fraction, stage);
@@ -101,9 +105,13 @@ async function load<L extends SplatLayout>(source: SplatSource, {
   };
 }
 
-// On a worker, data's arrays (and shPalette's) travel there and back: they
-// must not be used until the promise settles, and are whole again after
-// (resolved or not). No signal: an abort would leave them on the worker.
+/**
+ * Writes splats as a file's bytes. On a worker, their arrays are detached until
+ * the promise settles.
+ *
+ * @param [options.worker] Where the write runs, by default the shared pool
+ *   where workers are available, else this thread.
+ */
 export async function writeSplats(data: ArrayData, format: SplatFormat, { worker, onProgress, shPalette, ...options }: SplatWriteOptions & {
   worker?: WorkerChoice;
   onProgress?: Progress;

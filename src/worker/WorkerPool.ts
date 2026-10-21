@@ -1,12 +1,3 @@
-// Up to `size` workers running core/ (worker/coreWorker.ts), each
-// made only when a call needs one: a pool that is never used costs nothing.
-// call() runs on the next free worker (callers queue FIFO); acquire() takes
-// one worker exclusively until release(). ArrayBuffers in args are
-// transferred, so the caller's arrays are detached until the result hands
-// them back. A worker that fails outside a handler (an uncaught error, a
-// message that cannot be read) rejects its pending calls and is replaced.
-// Workers import the one core module in the bundle (WorkerPool.coreUrl),
-// which an app's own workers can import too.
 import { ArrayData } from "../core/ArrayData";
 import type { Progress, ProgressStage } from "../core/progress";
 import coreModule from "./coreModule?module&inline";
@@ -17,16 +8,21 @@ let shimUrl: string | undefined;
 
 const blobUrl = (code: string) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
 
+/** The name of a handler that the pool's workers run. */
 export type WorkerCall = keyof WorkerHandlers;
+/** The argument of handler N. */
 export type WorkerArgs<N extends WorkerCall> = Parameters<WorkerHandlers[N]>[0];
+/** The result of handler N. */
 export type WorkerResult<N extends WorkerCall> = Awaited<ReturnType<WorkerHandlers[N]>>;
 
+/** Options of a call on a worker. */
 export interface CallOptions {
-  // The handler's progress (throttled by the worker)
+  /**
+   * Called with the handler's progress at most every 50 ms, and when the stage
+   * changes or the handler finishes.
+   */
   onProgress?: Progress;
-  // Rejects the call with signal.reason at once and asks the worker to stop
-  // (handlers that take a signal stop at their next progress report); the
-  // worker stays
+  /** Aborting rejects the call at once and stops the handler at its next progress report. */
   signal?: AbortSignal;
 }
 
@@ -40,7 +36,7 @@ let nextId = 1;
 
 class PooledWorker {
   readonly worker = new Worker((shimUrl ??= blobUrl(`import { serveWorker } from ${JSON.stringify(WorkerPool.coreUrl)}; serveWorker();`)), { type: "module" });
-  // Set once the worker failed or was terminated; calls then reject
+  // Set once the worker failed or was terminated
   dead?: Error;
   private pending = new Map<number, Pending>();
 
@@ -102,16 +98,22 @@ class PooledWorker {
   }
 }
 
-// One worker, held until release()
+/** One worker of a pool, held until release. */
 export class WorkerLease {
   private worker?: PooledWorker;
   private pool: WorkerPool;
 
+  /** Leases a worker, made by WorkerPool.acquire. */
   constructor(worker: PooledWorker, pool: WorkerPool) {
     this.worker = worker;
     this.pool = pool;
   }
 
+  /**
+   * Runs a handler on the leased worker. It throws after release.
+   *
+   * @param args The handler's argument. Its arrays are transferred.
+   */
   call<N extends WorkerCall>(name: N, args: WorkerArgs<N>, options?: CallOptions): Promise<WorkerResult<N>> {
     if (!this.worker) {
       throw new Error("WorkerLease already released");
@@ -127,7 +129,17 @@ export class WorkerLease {
   }
 }
 
+/**
+ * A pool of up to size workers, each made when a call first needs it. Arrays in
+ * arguments are transferred, so the caller's are detached until the result
+ * returns them.
+ */
 export class WorkerPool {
+  /**
+   * The most workers the pool makes.
+   *
+   * @default 4
+   */
   readonly size: number;
   private static shared?: WorkerPool;
 
@@ -136,32 +148,43 @@ export class WorkerPool {
   private waiting: { resolve: (worker: PooledWorker) => void; reject: (error: Error) => void }[] = [];
   private disposed = false;
 
+  /**
+   * Makes a pool without workers.
+   *
+   * @param [options.size=4] The most workers.
+   */
   constructor({ size = 4 }: { size?: number } = {}) {
     this.size = size;
   }
 
-  // The shared pool, made on first use (still without workers)
+  /** The shared pool, made on first use. */
   static get default(): WorkerPool {
     return (WorkerPool.shared ??= new WorkerPool());
   }
 
-  // A blob URL of core/ as one ES module (made on first use), for
-  // an app's own module workers to `await import(url)`: the copy the pool's
-  // workers run, so no second file is needed
+  /**
+   * A blob URL of the core module the workers run, made on first use, for an
+   * app's own module workers to import.
+   */
   static get coreUrl(): string {
     return (coreUrl ??= blobUrl(coreModule));
   }
 
-  // Whether this context can make workers (a page; not Node, not a worker)
+  /** Whether this context can make workers, which a page can and Node and workers cannot. */
   static get available(): boolean {
     return typeof Worker !== "undefined" && typeof window !== "undefined";
   }
 
-  // Workers made so far (alive)
+  /** The workers made so far that are alive. */
   get workerCount() {
     return this.workers.length;
   }
 
+  /**
+   * Runs a handler on the next free worker, in the order of the calls.
+   *
+   * @param args The handler's argument. Its arrays are transferred.
+   */
   async call<N extends WorkerCall>(name: N, args: WorkerArgs<N>, options?: CallOptions): Promise<WorkerResult<N>> {
     const lease = await this.acquire({ signal: options?.signal });
     try {
@@ -171,8 +194,11 @@ export class WorkerPool {
     }
   }
 
-  // A worker for the caller alone, once one is free; `signal` stops waiting.
-  // A disposed pool makes no more workers: it rejects.
+  /**
+   * Leases a worker once one is free. A disposed pool rejects.
+   *
+   * @param [options.signal] Stops the wait.
+   */
   async acquire({ signal }: { signal?: AbortSignal } = {}): Promise<WorkerLease> {
     if (this.disposed) {
       throw new Error("WorkerPool disposed");
@@ -182,8 +208,7 @@ export class WorkerPool {
     return new WorkerLease(worker, this);
   }
 
-  // Back from a lease: to the longest waiting caller, else idle. A dead
-  // worker is dropped; a waiter then gets a new one.
+  /** Takes a worker back, called by WorkerLease.release. */
   give(worker: PooledWorker) {
     if (this.disposed) {
       worker.terminate(new Error("WorkerPool disposed"));
@@ -204,8 +229,7 @@ export class WorkerPool {
     }
   }
 
-  // Terminates the workers (their pending calls reject) and rejects the
-  // queued acquire() and call() waiters
+  /** Terminates the workers, and rejects their pending calls and the calls waiting for one. */
   dispose() {
     this.disposed = true;
     this.workers.forEach((worker) => worker.terminate(new Error("WorkerPool disposed")));
@@ -214,7 +238,6 @@ export class WorkerPool {
     this.waiting.splice(0).forEach(({ reject }) => reject(new Error("WorkerPool disposed")));
   }
 
-  // In line for the next worker given back; an abort leaves the line
   private wait(signal?: AbortSignal) {
     return new Promise<PooledWorker>((resolve, reject) => {
       const abort = () => {
@@ -245,7 +268,7 @@ export class WorkerPool {
     return worker;
   }
 
-  // A worker died: forget it (a leased one is replaced when given back)
+  // A leased worker is replaced when it is given back
   private remove(worker: PooledWorker) {
     this.workers = this.workers.filter((w) => w !== worker);
     this.idle = this.idle.filter((w) => w !== worker);

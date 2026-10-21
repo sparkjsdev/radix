@@ -1,10 +1,3 @@
-// The worker's RPC handlers over core/, served by serveWorker() (the
-// pool's workers import it with core from coreModule.ts). Messages are
-// { id, name, args } in and { id, result } or { id, error } out, plus
-// { id, progress: [fraction, stage] } while a handler reports progress (at
-// most every 50 ms). { id, cancel: true } aborts that call's signal: its
-// fetch stops, and its decode at its next progress report. ArrayBuffers in
-// args and results are transferred.
 import { ArrayData, type TransferableArrayData } from "../core/ArrayData";
 import type { CoordinateSystem } from "../core/axes";
 import { SplatFiles, type SplatFormat, type SplatRequestInit, type SplatWriteOptions } from "../core/files";
@@ -20,9 +13,6 @@ interface Context {
 }
 
 const handlers = {
-  // A splat file from a URL (fetched with `request`) or its bytes
-  // (SplatFiles), and its palette, or without `palette` its SH expanded per
-  // splat
   async loadSplats({ url, bytes, name, layout, encoding, sh, coordinateSystem, palette = true, request }: SplatTarget & {
     url?: string;
     bytes?: Uint8Array<ArrayBuffer>;
@@ -40,8 +30,6 @@ const handlers = {
     return { splats: splats.toTransferable(), shPalette: shPalette?.data.toTransferable() };
   },
 
-  // The file's bytes, and the data's (and palette's) arrays back even when
-  // encoding fails
   async writeSplats({ data, shPalette, format, options }: {
     data: TransferableArrayData;
     shPalette?: TransferableArrayData;
@@ -59,7 +47,6 @@ const handlers = {
     }
   },
 
-  // Splat keys sorted back to front (SortKeys.sort), the keys sent back
   sortKeys({ keys, count, bits, ordering }: { keys: Uint32Array<ArrayBuffer>; count: number; bits: SortKeyBits; ordering?: Uint32Array<ArrayBuffer> }) {
     return { ...SortKeys.sort({ keys, count, bits, ordering }), keys };
   },
@@ -67,8 +54,6 @@ const handlers = {
 
 export type WorkerHandlers = typeof handlers;
 
-// A handler's progress as posted: never lower than before, at most every
-// 50 ms unless the stage changes or it is done
 function throttled(id: number): Progress {
   let last = 0;
   let lastStage: ProgressStage | undefined;
@@ -84,10 +69,8 @@ function throttled(id: number): Progress {
   };
 }
 
-// Serve the handlers in this worker: the pool's workers call it; a worker of
-// the app's that imports the core module (WorkerPool.coreUrl) does not
+// Pool workers call this, an app's own worker does not
 export function serveWorker() {
-  // The calls under way, to cancel by id
   const calls = new Map<number, AbortController>();
 
   self.onmessage = async (event: MessageEvent<{ id: number; name: keyof WorkerHandlers; args: unknown; cancel?: boolean }>) => {
