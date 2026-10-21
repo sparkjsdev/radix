@@ -1,13 +1,11 @@
-// Scenes of Radix: several splat objects with their own transforms, TSL
-// generators, per-camera views, modifiers, subsets and an offline still,
-// one scene at a time (scenes.ts; each one is a usage example). A static
-// page on the library bundle. Query parameters:
-//   ?scene=    multi (default) | views | modifiers | subset | offline
-//   ?sort=cpu  the WebGL2 fallback's CPU sort, also on WebGPU (the bar
-//              switches it live)
-//   ?gpu=      webgpu | webgpu-gl (the bar's backend buttons reload with it)
-//   ?url=      the splat file (default the butterfly); ?flip=0 keeps it as stored
-// `radixScenes` in the console holds the page.
+// Short uses of collections, renderers, views and modifiers, one scene at a
+// time, each a recipe in docs/recipes.md
+//   ?scene=      multi (default) | views | modifiers | subset | offline
+//   ?sort=cpu    the worker sort on WebGPU too (default gpu on WebGPU)
+//   ?gpu=        webgpu | webgpu-gl (default WebGPU when available)
+//   ?url=        a splat file (default the butterfly)
+//   ?flip=0      the file as stored (default a half turn about x)
+//   radixScenes  the renderer, scene, camera, controls, data, splats and demo
 import * as THREE from "three";
 import {
   CameraControls, GpuArrays, SplatProjector, SplatRenderer, Splats, TSL, createRenderer, getGpuCaps, loadSplats, type ArrayData, type SplatRendererOptions,
@@ -33,7 +31,6 @@ camera.position.set(0, 0.6, 3.2);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3());
 
-// Every splat renderer of the scene, in the page's sort mode
 let sortMode: "gpu" | "cpu" = webgpu && params.get("sort") !== "cpu" ? "gpu" : "cpu";
 const splatRenderers: SplatRenderer[] = [];
 const splatRenderer = (options: Omit<SplatRendererOptions, "renderer">) => {
@@ -41,10 +38,6 @@ const splatRenderer = (options: Omit<SplatRendererOptions, "renderer">) => {
   splatRenderers.push(made);
   return made;
 };
-
-// --- The bar: the scene links, the sort (switched live: every splat
-// renderer's sortMode, and the URL follows), the backend (a reload), then
-// the scene's own buttons ---
 
 const lit: (() => void)[] = [];
 const refresh = () => lit.forEach((light) => light());
@@ -62,7 +55,6 @@ const button = (label: string, onClick: () => void, active?: () => boolean, { di
 };
 const gap = () => bar.append(Object.assign(document.createElement("span"), { className: "gap" }));
 
-// This page's URL with some parameters changed (undefined removes one)
 const href = (changes: Record<string, string | undefined>) => {
   const next = new URLSearchParams(params);
   for (const [key, value] of Object.entries(changes)) {
@@ -96,10 +88,7 @@ for (const [backend, label] of [["webgpu", "WebGPU"], ["webgpu-gl", "WebGL2"]] a
 }
 gap();
 
-// --- The file, centered at the origin about a unit in radius, upright ---
-
-// The 2nd to 98th percentile of sampled centers per axis, so floaters do
-// not count
+// The 2nd to 98th percentile of sampled centers per axis, so floaters do not count
 function fitMatrix(loaded: ArrayData, flip: boolean) {
   const { bundle } = Splats.get(loaded);
   const samples = Math.min(loaded.count, 65536);
@@ -128,8 +117,6 @@ status.textContent = `Loading ${url}...`;
 const data = await loadSplats(url, { worker: true, onProgress: (fraction, stage) => (status.textContent = `${url}: ${stage} ${Math.round(fraction * 100)}%`) });
 const splats = GpuArrays.fromData(renderer, data);
 const fit = fitMatrix(data, params.get("flip") !== "0");
-
-// --- The scene and the frame loop ---
 
 const time = TSL.uniform(0);
 const demo = SCENES[name]({ renderer, scene, camera, controls, data, splats, fit, webgpu, time, button, splatRenderer });

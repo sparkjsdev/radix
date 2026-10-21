@@ -1,10 +1,7 @@
-// The SPZ example's samples (CC0, from github.com/raymondyfei/SharedTestModels),
-// hosted on Google Cloud Storage (?spz= reads the same names elsewhere). All
-// stored y-up (RUB).
+// CC0 samples from github.com/raymondyfei/SharedTestModels, all stored y-up (RUB)
 export interface Sample {
   label: string;
   file: string;
-  // What the file shows of the format
   note: string;
 }
 

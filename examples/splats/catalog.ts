@@ -1,8 +1,3 @@
-// Sample splats: single-file RDX of ext splats, hosted on Google Cloud
-// Storage: the butterfly and the ceramic without spherical harmonics (in
-// rdx/; ?splats= reads the same names elsewhere), the scans with SH3 (extSh,
-// in rdx-sh/; ?splatsSh= reads them elsewhere). Every sample is stored
-// y-down, so it is flipped upright.
 import * as THREE from "three";
 
 export interface Scan {
@@ -10,12 +5,10 @@ export interface Scan {
   url: string;
   // Camera mode it starts in (default orbit)
   mode?: "orbit" | "fly";
-  // Trained with the 3DGS screen-space dilation: pre-blur (keeps thin
-  // structures) instead of blur
+  // Trained with the 3DGS screen-space dilation: pre-blur instead of blur
   preBlur?: boolean;
-  // Outdoors: a sky behind the splats
   sky?: boolean;
-  // Measured up direction after the flip (ground normal), turned to +y
+  // The ground normal after the flip, turned to +y
   up?: [number, number, number];
   // Where the camera starts, in the scan's upright frame (else framed from outside)
   view?: { position: [number, number, number]; target: [number, number, number]; fov: number };
@@ -31,26 +24,24 @@ export const SCANS: Record<string, Scan> = {
     label: "Ceramic", url: `${SPLATS}/ceramic.rdx`, mode: "fly",
     view: { position: [-0.23, 1.83, -4.12], target: [0, 0, 0], fov: 50 },
   },
-  // Spark's SOGS example view: at the tower's foot, looking at it
+  // Spark's SOGS example view, at the tower's foot
   sutro: {
     label: "Sutro (2M, SH3)", url: `${SPLATS_SH}/sutro-2m.rdx`, sky: true,
     view: { position: [0, 1.5, -1.2], target: [0, 1.5, 0], fov: 60 },
   },
-  // In the middle of the nave, about 2.5 above the floor, looking along it
+  // In the middle of the nave, looking along it
   grace: {
     label: "Grace interior (10M, SH3)", url: `${SPLATS_SH}/grace-interior-10m.rdx`, mode: "fly",
     view: { position: [-14, 8, -3], target: [-4, 8, -3], fov: 60 },
   },
 };
 
-// Upright: the flip, then the up correction
+// Samples are stored y-down: the flip, then the up correction
 export function scanRotation({ up }: Scan) {
   const flip = new THREE.Quaternion(1, 0, 0, 0);
   return up ? new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...up).normalize(), new THREE.Vector3(0, 1, 0)).multiply(flip) : flip;
 }
 
-// Outdoor scans: a sky gradient around the view (zenith blue to a pale
-// horizon, hazy below), as an equirectangular background
 let sky: THREE.CanvasTexture | undefined;
 export function skyTexture() {
   if (!sky) {

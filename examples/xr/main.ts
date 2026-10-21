@@ -1,31 +1,22 @@
-// Radix's WebXR example: one splat file in an immersive-vr session. WebGPU
-// XR (the XRGPUBinding) sorts on the GPU every frame; the WebGL2 backend's XR
-// sorts on a worker once the head has moved or turned, through one view for
-// every camera the page renders (desktop, stereo preview, XR). Without a
-// session the desktop camera orbits the splats; in one, the controller sticks
-// move the rig (CameraControls).
-//
-// Served statically (build/examples/xr/). radixXr.configure() switches any
-// option in place, rebuilding the renderer when the backend changes, so an
-// emulator-paired tab never reloads. Query parameters (configure()'s keys):
-//   ?url=       splat file (default the butterfly)
-//   ?layout=    extSplats | covSplats | packedSplats (GPU storage)
-//   ?sh=        spherical harmonics: ext (default) | packed | 0 (skipped on
-//               load); maxShDegree= the highest SH degree drawn (default 4)
-//   ?method=    ewa | 3dgut | htgs | raygs
-//   ?bits=      sort key width: 16 | 24 | 32 (default 24)
-//   ?sort=      gpu | cpu (default gpu on WebGPU)
-//   ?gpu=       webgpu | webgpu-gl (default webgpu with the XR binding)
-//   ?xrScale=   eye-buffer scale (default 1), read when a session starts
-//   ?multiview= 1: both eyes in one draw (OVR_multiview2, WebGL2)
-//   ?stereo=    1: desktop preview of both eyes
-//   ?profile=   1: GPU time per phase (timestamp queries)
-//   ?threshold= worker re-sort distance in meters (default 0.02); it also
-//               re-sorts after a 5 degree turn
-//   ?guard=     worker sort: objectParams.sortGuard (default 0: keeps all)
-// radixXr.measure({ seconds, turn }) turns the head (window.iwerDevice in a
-// session, else the camera) through `turn` degrees and returns the frame
-// rate, GPU time per phase and sort stats.
+// One splat file in an immersive-vr session, sorted on the GPU with WebGPU XR or
+// on a worker with WebGL2 XR
+//   ?url=           a splat file (default the butterfly)
+//   ?layout=        extSplats (default) | covSplats | packedSplats
+//   ?sh=            ext (default) | packed | 0 (skipped): how the file loads its SH
+//   ?maxShDegree=   the highest SH degree drawn (default 4)
+//   ?method=        ewa (default) | 3dgut | htgs | raygs
+//   ?bits=          16 | 24 (default) | 32: the sort key width
+//   ?sort=          gpu (default, WebGPU only) | cpu
+//   ?gpu=           webgpu | webgpu-gl (default webgpu with the XR binding)
+//   ?xrScale=       eye-buffer scale, read when a session starts (default 1)
+//   ?multiview=1    both eyes in one draw (OVR_multiview2, WebGL2)
+//   ?stereo=1       a desktop preview of both eyes
+//   ?profile=1      GPU time per phase
+//   ?threshold=     the worker sort's re-sort distance in meters (default 0.02)
+//   ?guard=         the worker sort's objectParams.sortGuard (default 0: keeps all)
+//   radixXr.configure(changes)  sets options in place, so an emulator-paired tab never reloads
+//   radixXr.measure({ seconds = 6, turn = 360 })  turns the head through the given degrees and times it
+//   radixXr.config, stats, build  the options, the stats and the renderer's objects
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -51,7 +42,7 @@ const config = {
   profile: params.get("profile") === "1",
   threshold: Number(params.get("threshold") ?? 0.02),
   guard: Number(params.get("guard") ?? 0),
-  // Where the splats sit (meters, local-floor space) and their size
+  // Where the splats sit, in meters in local-floor space
   position: [0, 1.4, -1.5] as [number, number, number],
   scale: 1,
   // A half turn about x: captures are stored y-down
@@ -122,7 +113,6 @@ async function makeBuild() {
   return { renderer, backend, gpuSort: false, profiler, scene, rig, controls, model, splatRenderer, view, splats, key: rendererKey() };
 }
 
-// Load (when the file or layout changed), upload and place the splats
 async function setSplats(b: Build) {
   const key = `${config.url}|${config.layout}|${config.sh}`;
   if (!data || dataKey !== key) {
@@ -228,8 +218,7 @@ enterButton.addEventListener("click", async () => {
   }
 });
 
-// Worker sort: re-sort once the head moved past the threshold or turned 5
-// degrees (the guard band follows the direction), or the collection changed
+// Turns re-sort too, since the guard band follows the view direction
 const sortedAt = new THREE.Vector3(Infinity, 0, 0);
 const sortedDir = new THREE.Vector3();
 const head = new THREE.Vector3();
@@ -296,7 +285,6 @@ function recordEyes(renderer: WebGPURenderer, view: THREE.Camera) {
   projected.size = viewport ? [viewport.z, viewport.w] : [buffer.x, buffer.y];
 }
 
-// Frame loop
 let frameNumber = 0;
 let frameErrors = 0;
 let cpuTotal = 0;
@@ -325,7 +313,6 @@ function drawFrame(b: Build) {
     b.controls.update();
   }
 
-  // The XR ArrayCamera, the stereo preview or the camera
   let view: THREE.Camera = camera;
   if (presenting) {
     renderer.xr.updateCamera(camera);
@@ -350,8 +337,6 @@ function drawFrame(b: Build) {
   cpuTotal += performance.now() - start;
 }
 
-// measure(): turn the head through `turn` degrees in `seconds` (the iwer
-// device's in a session, else the camera's), timed
 let turnHead: ((now: number, presenting: boolean) => void) | undefined;
 
 async function measure({ seconds = 6, turn = 360 }: { seconds?: number; turn?: number } = {}) {
@@ -392,7 +377,7 @@ async function measure({ seconds = 6, turn = 360 }: { seconds?: number; turn?: n
   };
 }
 
-// Once a second, whether frames come or not: the status line
+// The status line, every second even when no frames come
 let last = { time: performance.now(), frame: 0, cpu: 0 };
 setInterval(() => {
   const now = { time: performance.now(), frame: frameNumber, cpu: cpuTotal };
@@ -424,8 +409,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// three creates the WebGPU XR projection layer with only its color format:
-// pass the framebuffer scale through (XRGPUProjectionLayerInit.scaleFactor)
+// three creates the WebGPU XR projection layer without the framebuffer scale
 function patchGpuProjectionLayer(renderer: WebGPURenderer) {
   type Binding = { createProjectionLayer(init?: { colorFormat?: string; scaleFactor?: number }): unknown };
   const xr = renderer.xr;
@@ -442,9 +426,8 @@ function patchGpuProjectionLayer(renderer: WebGPURenderer) {
   };
 }
 
-// An emulated XRWebGLLayer (IWER) has a null framebuffer (the emulator binds
-// its own behind it), and three's WebGL state keys draw buffers by framebuffer
-// in a WeakMap, which takes no null: key null by an object instead
+// An emulated XRWebGLLayer has a null framebuffer, and three keys draw buffers
+// by framebuffer in a WeakMap, which takes no null
 function patchNullXrFramebuffer(renderer: WebGPURenderer) {
   type State = { currentDrawbuffers: WeakMap<object, number[]> };
   const state = (renderer.backend as unknown as { state?: State }).state;

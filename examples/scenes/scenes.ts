@@ -1,22 +1,3 @@
-// The scenes of /build/examples/scenes/index.html, each a short use of collections, renderers,
-// views and modifiers (docs/rendering.md, views.md and
-// generators.md describe the parts; recipes.md has these as recipes):
-//   multi      several objects with their own transforms (one scaled by a
-//              gizmo, non-uniformly too) and a TSL generator, in one sort
-//   views      one SplatRenderer drawn from two cameras side by side; the
-//              right camera's view sets its own collection and a modifier (and,
-//              on the CPU path, each camera's view holds its own order)
-//   modifiers  view-space depth and normals, world height, a wave in a
-//              gizmo's frame, switched live; RGB and depth thumbnails
-//              rendered every frame through views of the app's own keys
-//              without recompiling
-//   subset     a fromSplats generator remapped by an index list recomputed
-//              from the camera (the nearest splats), or by a TSL function;
-//              each object's release returns its index list to a pool once
-//              nothing draws it (the splats stay)
-//   offline    a still at a fixed size from its own renderer, sorted exactly
-//              for its camera, read back and shown over the page until
-//              clicked away
 import * as THREE from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import type { WebGPURenderer } from "three/webgpu";
@@ -32,18 +13,16 @@ export interface SceneContext {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: CameraControls;
-  // The loaded file, and the matrix that centers it at the origin, about a
-  // unit in radius, upright
+  // The loaded file, and the matrix that centers it at the origin, about a unit in radius
   data: ArrayData;
   splats: GpuArrays;
   fit: THREE.Matrix4;
   webgpu: boolean;
-  // Seconds since the page started (main.ts sets it every frame)
+  // Seconds since the page started
   time: ReturnType<typeof uniform>;
-  // A splat renderer in the page's sort mode (the sort button switches
-  // them all)
+  // A splat renderer in the page's sort mode, which the sort buttons switch
   splatRenderer(options: Omit<SplatRendererOptions, "renderer">): SplatRenderer;
-  // A button in the bar; `active` lights it while it returns true
+  // A button in the bar, lit while active returns true
   button(label: string, onClick: () => void, active?: () => boolean): void;
 }
 
@@ -52,13 +31,10 @@ export interface Demo {
   frame?(time: number): void;
   // Instead of rendering the scene from the camera
   render?(): void;
-  // A line for the status
   status?(): string;
 }
 
-// An Object3D at `position` whose child holds the file fitted to it: the
-// splat object's world transform is the child's matrixWorld, the Object3D
-// takes a gizmo
+// The Object3D takes a gizmo, and the splat object's matrixWorld is its fitted child's
 function place(ctx: SceneContext, position: [number, number, number]) {
   const object = new THREE.Object3D();
   object.position.set(...position);
@@ -70,8 +46,6 @@ function place(ctx: SceneContext, position: [number, number, number]) {
   return { object, matrixWorld: fitted.matrixWorld };
 }
 
-// A TSL generator as a splat object: 4000 small splats on a turning,
-// rippling ring of radius 1, colored around it, placed by `matrixWorld`
 function ring(ctx: SceneContext, matrixWorld: AnySplatObject["matrixWorld"] = new THREE.Matrix4().makeScale(1.4, 1.4, 1.4)): AnySplatObject {
   const count = 4000;
   const time = ctx.time;
@@ -88,7 +62,6 @@ function ring(ctx: SceneContext, matrixWorld: AnySplatObject["matrixWorld"] = ne
   return { generator, count, matrixWorld };
 }
 
-// A gizmo that holds the camera controls while it drags
 function gizmoOf(ctx: SceneContext) {
   const gizmo = new TransformControls(ctx.camera, ctx.renderer.domElement);
   gizmo.addEventListener("dragging-changed", (event) => (ctx.controls.enabled = !event.value));
@@ -96,7 +69,7 @@ function gizmoOf(ctx: SceneContext) {
   return gizmo;
 }
 
-// A modifier setting the splat's rgb (made once: a program per modifier)
+// A modifier setting rgb, made once since each modifier is its own program
 const tint = (rgb: (s: SplatNode) => unknown) => (s: SplatNode): SplatNode => {
   const out = s.toVar();
   out.get("rgb").assign(rgb(s) as never);
@@ -106,15 +79,14 @@ const tint = (rgb: (s: SplatNode) => unknown) => (s: SplatNode): SplatNode => {
 function multi(ctx: SceneContext): Demo {
   const left = place(ctx, [-0.8, 0, 0]);
   const right = place(ctx, [0.8, 0, 0]);
-  // The ring's matrixWorld is a function, read every render: a bob and a tilt
+  // The ring's matrixWorld is a function, read every render
   const ringMatrix = new THREE.Matrix4();
   const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.15);
   const bob = new THREE.Vector3();
   const scale = new THREE.Vector3(1.6, 1.6, 1.6);
   const ringAt = () => ringMatrix.compose(bob.set(0, Math.sin(ctx.time.value as number) * 0.15, 0), tilt, scale);
 
-  // One collection: two objects of the same arrays (one program) and a
-  // generator, each placed by its own matrixWorld
+  // Two objects of the same arrays share one program
   const splatRenderer = ctx.splatRenderer({
     collection: new SplatCollection([
       SplatCollection.arrays(ctx.splats, { matrixWorld: left.matrixWorld }),
@@ -124,7 +96,7 @@ function multi(ctx: SceneContext): Demo {
   });
   ctx.scene.add(splatRenderer);
 
-  // A gizmo on the right object: scaling one axis takes the covariance path
+  // Scaling one axis takes the covariance path
   const gizmo = gizmoOf(ctx);
   gizmo.attach(right.object);
   gizmo.setMode("scale");
@@ -146,10 +118,7 @@ function views(ctx: SceneContext): Demo {
   const rightObject = SplatCollection.arrays(ctx.splats, { matrixWorld: place(ctx, [0.6, 0, 0.3]).matrixWorld });
   const ringObject = ring(ctx, new THREE.Matrix4().makeScale(1.5, 1.5, 1.5));
 
-  // One renderer, rendered from two cameras: each render draws the view of
-  // its camera, or the renderer's own settings when it has none. The
-  // orbiting camera's view sets its own collection (the same splat objects,
-  // without the left one) and a modifier; the method is the renderer's.
+  // A render draws its camera's view, or the renderer's settings when it has none
   const splatRenderer = ctx.splatRenderer({ collection: new SplatCollection([leftObject, rightObject, ringObject]) });
   ctx.scene.add(splatRenderer);
   const other = new THREE.PerspectiveCamera(60, 1, 0.01, 1000);
@@ -178,8 +147,7 @@ function views(ctx: SceneContext): Demo {
       other.updateMatrixWorld();
     },
     render() {
-      // One clear, then both halves: a background would clear the whole
-      // canvas in each render on WebGPU, scissor or not
+      // On WebGPU a background clears the whole canvas in each render, scissor or not
       const renderer = ctx.renderer;
       const background = ctx.scene.background;
       renderer.getSize(size);
@@ -207,13 +175,13 @@ function modifiers(ctx: SceneContext): Demo {
   });
   ctx.scene.add(splatRenderer);
 
-  // The frame the wave runs in, moved by a gizmo
+  // The wave's frame
   const frame = new THREE.Object3D();
   frame.position.set(0, -0.2, 0);
   ctx.scene.add(frame);
   const gizmo = gizmoOf(ctx);
 
-  // Made once each: switching among them compiles nothing after the first use
+  // Made once each, so switching compiles nothing after the first use
   const depth = tint((s) => vec3(float(1).sub(clamp(s.get("center").z.negate().sub(depthRange.x).div(depthRange.y.sub(depthRange.x)), 0, 1))));
   const choices: [string, SplatRenderer["modifier"], SplatRenderer["modifierSpace"]][] = [
     ["rgb", undefined, "view"],
@@ -243,9 +211,8 @@ function modifiers(ctx: SceneContext): Demo {
     }
   }, () => chosen === i));
 
-  // Two thumbnails, rendered every frame from the same camera through views
-  // of the app's own keys: plain (no modifier, whatever the renderer's) and
-  // depth. `splatRenderer.view` picks the view for the renders that follow.
+  // Views of the app's own keys, drawn by setting splatRenderer.view. A null
+  // modifier drops the renderer's.
   const thumbs = [
     splatRenderer.viewFor("thumb rgb", { modifier: null }),
     splatRenderer.viewFor("thumb depth", { modifier: depth, modifierSpace: "view" }),
@@ -281,7 +248,7 @@ function modifiers(ctx: SceneContext): Demo {
       gizmo.getHelper().visible = waving();
       renderer.render(ctx.scene, ctx.camera);
 
-      // 16:9 thumbnails a fifth of the width, stacked at the bottom right
+      // 16:9 thumbnails a fifth of the width
       const [w, h] = [0.2, 0.2 * ctx.camera.aspect * (9 / 16)];
       quads.forEach((quad, i) => {
         quad.scale.set(w, h, 1);
@@ -300,7 +267,6 @@ function subset(ctx: SceneContext): Demo {
   const { data, splats, renderer } = ctx;
   const n = Math.max(1, Math.floor(splats.count * 0.3));
 
-  // The centers, for the CPU's choice of the nearest
   const centers = new Float32Array(data.count * 3);
   const { bundle } = Splats.get(data);
   const c = { x: 0, y: 0, z: 0 };
@@ -309,16 +275,14 @@ function subset(ctx: SceneContext): Demo {
     centers.set([c.x, c.y, c.z], i * 3);
   }
 
-  // One generator for every index list: splat i is the arrays' splat list[i]
-  // (data: { splats, indices }); and a procedural one: every 4th splat
+  // One generator for every index list: splat i is splats[indices[i]]
   const listed = SplatGenerator.fromSplats({ remap: "indices" });
   const everyFourth = SplatGenerator.fromSplats({ remap: (i) => i.mul(uint(4)) });
 
   const splatRenderer = ctx.splatRenderer({});
   ctx.scene.add(splatRenderer);
 
-  // Index lists come from a pool, and each splat object's release puts its
-  // index list back once nothing draws or sorts that object; the splats stay
+  // An object's release runs once nothing draws or sorts it, and returns its index list
   const pool: GpuArrays[] = [];
   let made = 0;
   const inverse = new THREE.Matrix4();
@@ -356,7 +320,6 @@ function subset(ctx: SceneContext): Demo {
     splatRenderer.collection = new SplatCollection([{ generator: everyFourth, data: { splats }, count: Math.floor(splats.count / 4), matrixWorld: object.matrixWorld }]);
   }, () => procedural);
 
-  // Re-chosen at most 4 times a second, after the camera moved 5 cm
   let chosenTime = -Infinity;
   return {
     frame(seconds) {
@@ -377,8 +340,7 @@ function offline(ctx: SceneContext): Demo {
   const preview = document.getElementById("preview") as HTMLImageElement;
   preview.onclick = () => (preview.hidden = true);
 
-  // The still: its own renderer of the same collection in its own scene, with an
-  // exact CPU order for its camera (on either backend), at a fixed size
+  // Its own renderer, with an exact CPU order for its camera on either backend
   async function still(width = 1920, height = 1080) {
     const renderer = ctx.renderer;
     const camera = ctx.camera.clone();

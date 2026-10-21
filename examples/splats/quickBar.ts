@@ -1,8 +1,3 @@
-// The bar at the top left: open a file or a URL, a sample, then the settings
-// changed most (method, sort, key bits, SH degree, camera mode, pixel ratio) as
-// segmented buttons, and fps with the splat count (its "?" lists the camera
-// controls). The frame loop calls refresh(), so it follows changes made
-// elsewhere (the panel, the F key, a preset).
 import type { CameraControls, CameraControlsMode, ProjectionMethod, SortKeyBits, SplatRenderer } from "@sparkjsdev/radix";
 import { SCANS, type Scan } from "./catalog.js";
 import type { ViewerState } from "./main.js";
@@ -12,9 +7,8 @@ export function makeQuickBar(bar: HTMLElement, { state, webgpu, splats, controls
   webgpu: boolean;
   splats: SplatRenderer;
   controls: CameraControls;
-  // The sample shown, if the file is one
   sample(): Scan | undefined;
-  // The file's spherical-harmonics degree (0 without)
+  // The file's SH degree, 0 without
   shDegree(): number;
   actions: { pickFile(): void; openUrl(url: string): void; openSample(name: string): void };
 }) {
@@ -29,8 +23,6 @@ export function makeQuickBar(bar: HTMLElement, { state, webgpu, splats, controls
     return element;
   };
 
-  // Buttons for a few choices; the one matching get() is lit, those
-  // enabled() refuses are greyed out
   const segmented = <T>(label: string, choices: [T, string][], get: () => T, set: (value: T) => void,
     { disabled = false, enabled = () => true, title = "" }: { disabled?: boolean; enabled?: (value: T) => boolean; title?: string } = {}) => {
     const element = group(label);
@@ -80,7 +72,7 @@ export function makeQuickBar(bar: HTMLElement, { state, webgpu, splats, controls
   segmented<"gpu" | "cpu">("sort", [["gpu", "gpu"], ["cpu", "cpu"]], () => splats.sortMode, (v) => (splats.sortMode = v),
     { disabled: !webgpu, title: webgpu ? "gpu: WgpuSplatSorter; cpu: the WebGL2 fallback's worker sort" : "The GPU sort needs WebGPU" });
   segmented<SortKeyBits>("bits", [[16, "16"], [24, "24"], [32, "32"]], () => splats.sortBits, (v) => (splats.sortBits = v));
-  // Lit: the degree drawn (the highest allowed, up to the file's)
+  // Lit: the degree drawn, the highest allowed up to the file's
   segmented("SH", [[0, "0"], [1, "1"], [2, "2"], [3, "3"], [4, "4"]], () => Math.min(splats.objectParams.maxShDegree, shDegree()), (v) => (splats.objectParams.maxShDegree = v),
     { enabled: (v) => v <= shDegree(), title: "Highest spherical-harmonics degree drawn, up to the file's (?sh=0 skips them on load)" });
   segmented<CameraControlsMode>("camera", [["orbit", "orbit"], ["fly", "fly"]], () => controls.mode, (v) => (controls.mode = v), { title: "F switches" });

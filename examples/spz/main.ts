@@ -1,18 +1,11 @@
-// Radix's SPZ example: reads Niantic SPZ files in every version Radix
-// knows (v1 to v3 and version 4 in the gzip container, and SPZ 4's NGSP /
-// zstd container) and writes the loaded splats back as SPZ v2, v3 or 4,
-// downloaded by the browser; "open it" reads the written file back. Samples
-// in catalog.ts; open, drop or paste a URL of any other splat file (a PLY
-// written as SPZ converts it). The panel shows what the reader found:
-// container, version, splats, SH degree, upstream records (safe orbit,
-// coordinate system, skipped types) and the time to fetch and decode. A file
-// whose coordinate-system record names other axes is turned to RUB (y up)
-// with Axes.convert. Query parameters:
-//   ?sample=   a catalog name (default seashell-v4); ?url= a file instead
+// Reads Niantic SPZ files, gzip versions 1 to 4 or SPZ 4, shows what the reader
+// found and writes the splats back as v2, v3 or SPZ 4
+//   ?sample=   a name in catalog.ts (default seashell-v4)
+//   ?url=      a splat file instead of a sample
 //   ?spz=      the samples' folder (default the hosted one)
-//   ?gpu=      webgpu | webgpu-gl
-//   ?flip=1    files turned over (SPZ files without a record are often y-down)
-// `radixSpz` in the console holds the page.
+//   ?gpu=      webgpu | webgpu-gl (default WebGPU when available)
+//   ?flip=1    a half turn about x, for y-down files (default as stored)
+//   radixSpz   the page's objects and actions
 import * as THREE from "three";
 import {
   Axes, CameraControls, GpuArrays, Sh, SplatCollection, SplatRenderer, Splats, createRenderer, getGpuCaps, loadSplats, writeSplats,
@@ -47,15 +40,13 @@ const splats = new SplatRenderer({
 });
 scene.add(splats);
 
-// --- The file shown and the last one written ---
-
 interface Shown {
   name: string;
   sample?: Sample;
   fileBytes: number;
   fetchMs: number;
   decodeMs: number;
-  // Its spherical-harmonics degree (0 without)
+  // SH degree, 0 without
   shDegree: number;
   // The axes stored in the file, when it was turned to RUB
   turnedFrom?: CoordinateSystem;
@@ -78,8 +69,6 @@ function showError(message: string) {
   setTimeout(() => item.remove(), 12000);
 }
 
-// --- Reading ---
-
 let loadRequest = 0;
 async function open(name: string, source: string | Blob, sample?: Sample) {
   const request = ++loadRequest;
@@ -98,7 +87,7 @@ async function open(name: string, source: string | Blob, sample?: Sample) {
     }
     const fetched = performance.now();
     const fileBytes = bytes.byteLength;
-    // On a worker: the bytes are transferred there
+    // The bytes are transferred to the worker
     const loaded = await loadSplats(bytes, {
       name, worker: true, onProgress: (f, stage) => {
         if (request === loadRequest) {
@@ -138,8 +127,6 @@ const openSample = async (key: string) => {
   }
 };
 
-// --- Writing ---
-
 async function write(version: 2 | 3 | 4) {
   if (!data || !shown || busy) {
     return;
@@ -148,7 +135,7 @@ async function write(version: 2 | 3 | 4) {
   busy = `Writing ${name}...`;
   try {
     const start = performance.now();
-    // On a worker: data's arrays travel there and back
+    // data's arrays travel to the worker and back
     const bytes = await writeSplats(data, "spz", {
       version, sh: writeOptions.sh, worker: true, onProgress: (f, stage) => (busy = `Writing ${name}: ${stage} ${Math.round(f * 100)}%`),
     });
@@ -164,9 +151,7 @@ async function write(version: 2 | 3 | 4) {
   }
 }
 
-// --- The camera: in front of the bulk of the splats (2nd to 98th
-// percentile of sampled centers, so floaters do not count) ---
-
+// The 2nd to 98th percentile of sampled centers per axis, so floaters do not count
 function frame() {
   if (!data || data.count === 0) {
     return;
@@ -198,8 +183,6 @@ function frame() {
   controls.lookAt(middle);
 }
 
-// --- The bar: open, samples, SH degree drawn, camera, flip, stats ---
-
 const bar = document.getElementById("bar")!;
 const refreshers: (() => void)[] = [];
 const group = (label = "") => {
@@ -211,7 +194,6 @@ const group = (label = "") => {
   return element;
 };
 const button = (textContent: string, onclick: () => void, title = "") => Object.assign(document.createElement("button"), { textContent, onclick, title });
-// The button matching get() is lit, those enabled() refuses are greyed out
 const segmented = <T>(label: string, choices: [T, string][], get: () => T, set: (value: T) => void, title = "", enabled: (value: T) => boolean = () => true) => {
   const element = group(label);
   element.title = title;
@@ -248,7 +230,7 @@ refreshers.push(() => {
     select.selectedIndex = index;
   }
 });
-// Lit: the degree drawn (the highest allowed, up to the file's)
+// Lit: the degree drawn, the highest allowed up to the file's
 const fileSh = () => shown?.shDegree ?? 0;
 segmented("SH", [[0, "0"], [1, "1"], [2, "2"], [3, "3"], [4, "4"]], () => Math.min(splats.objectParams.maxShDegree, fileSh()), (v) => (splats.objectParams.maxShDegree = v),
   "Highest spherical-harmonics degree drawn, up to the file's", (v) => v <= fileSh());
@@ -259,8 +241,6 @@ group().append(
 );
 const stats = Object.assign(document.createElement("span"), { className: "bar-stats" });
 group().append(stats);
-
-// --- The panel: what the reader found, and the writer ---
 
 function renderPanel() {
   panel.replaceChildren();
@@ -334,8 +314,6 @@ function renderPanel() {
   }
 }
 
-// --- Files from the picker or dropped ---
-
 picker.addEventListener("change", () => {
   const file = picker.files?.[0];
   if (file) {
@@ -363,8 +341,6 @@ addEventListener("drop", (event) => {
     void open(file.name, file);
   }
 });
-
-// --- Frame loop ---
 
 let frames = 0;
 let lastReport = performance.now();

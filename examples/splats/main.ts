@@ -1,27 +1,21 @@
-// Radix's splat viewer: one .ply / .spz / .rad / .rdx file at a time,
-// opened, dropped, pasted as a URL or picked from the samples (catalog.ts),
-// drawn as the one object of a SplatRenderer's collection and placed by
-// `model` (the gizmo's object). Sorted on the GPU with WebGPU, or by the
-// WebGL2 fallback's worker sort when the camera or the model moves. A static
-// page on the library bundle. The quick bar (quickBar.ts) holds the likely
-// options, the Tweakpane panel (gui.ts) the rest. Query parameters:
-//   ?url=      a splat file URL
-//   ?scan=     a sample: butterfly (the default) | ceramic, or with spherical
-//              harmonics: sutro | grace
-//   ?sh=       how files load their spherical harmonics: ext (default) |
-//              packed | 0 (skipped); the bar's "SH" sets the highest degree
-//              drawn (objectParams.maxShDegree), up to the file's
-//   ?method=   ewa | 3dgut | htgs | raygs
-//   ?bits=     sort key width: 16 | 24 (default) | 32
-//   ?sort=cpu  the WebGL2 fallback's worker sort, also on WebGPU
-//   ?gpu=      webgpu | webgpu-gl
-//   ?layout=packed  16-byte packed splats instead of 32-byte ext splats
-//   ?flip=0    files as stored (scans are usually y-down, so flipped by default)
-//   ?hdr=0 | 1 (default: HDR when the display has it), ?dpr=0 (pixel
-//   ratio 1), ?stereo=1 (two eyes side by side)
-//   ?profile=1 GPU timestamps per phase from the start (default off, as
-//              they cost frame time; the Monitors' "GPU timing" switches them)
-// `radixSplats` in the console holds the viewer.
+// A splat viewer for one .ply, .spz, .rad or .rdx file at a time, opened,
+// dropped, given as a URL or picked from the samples in catalog.ts
+//   ?scan=          butterfly (default) | ceramic | sutro | grace
+//   ?url=           a splat file, unless ?scan= names a sample
+//   ?splats=        the folder of the samples without SH (default the hosted one)
+//   ?splatsSh=      the folder of the samples with SH (default the hosted one)
+//   ?sh=            ext (default) | packed | 0 (skipped): how files load their SH
+//   ?method=        ewa (default) | 3dgut | htgs | raygs
+//   ?bits=          16 | 24 (default) | 32: the sort key width
+//   ?sort=cpu       the worker sort on WebGPU too (default gpu on WebGPU)
+//   ?gpu=           webgpu | webgpu-gl (default WebGPU when available)
+//   ?layout=packed  16-byte packed splats (default 32-byte ext splats)
+//   ?flip=0         files as stored (default a half turn about x: scans are usually y-down)
+//   ?hdr=           0 | 1 on WebGPU (default HDR when the display has it)
+//   ?dpr=0          pixel ratio 1 (default the device's)
+//   ?stereo=1       two eyes side by side (default off)
+//   ?profile=1      GPU timestamps from the start (default off, as they cost frame time)
+//   radixSplats     the viewer's objects and actions
 import * as THREE from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import {
@@ -49,8 +43,7 @@ if (profiler) {
 }
 document.body.prepend(renderer.domElement);
 
-// What the bar and the panel set beyond the splat renderer's own settings;
-// the frame loop applies it
+// What the bar and the panel set beyond the splat renderer's own settings
 export const state = {
   layout: (params.get("layout") === "packed" ? "packedSplats" : "extSplats") as "extSplats" | "packedSplats",
   stereo: params.get("stereo") === "1",
@@ -75,12 +68,10 @@ camera.position.set(0, 0, 3);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3());
 
-// --- The splats: one file's GpuArrays, the one object of the renderer's collection ---
-
 let data: ArrayData | undefined;
 // The palette of data's shLabel (RAD's clustered SH)
 let shPalette: ShPalette | undefined;
-// data's spherical-harmonics degree (0 without)
+// data's SH degree, 0 without
 let shDegree = 0;
 let arrays: GpuArrays | undefined;
 let current: { name: string; source: SplatSource; scan?: Scan } | undefined;
@@ -89,9 +80,6 @@ let current: { name: string; source: SplatSource; scan?: Scan } | undefined;
 const model = new THREE.Object3D();
 scene.add(model);
 
-// The CPU sort re-sorts after the camera moves 5 cm or turns 5 degrees, and
-// drops splats more than half a view outside the edges (the GPU sort culls
-// to the view itself)
 const splats = new SplatRenderer({
   renderer,
   method: (params.get("method") ?? "ewa") as ProjectionMethod,
@@ -106,8 +94,6 @@ if (profiler) {
 splats.renderOrder = -1;
 scene.add(splats);
 
-// --- Status and errors ---
-
 // A file's name without its folder or extension
 const baseName = (name: string) => name.replace(/[?#].*$/, "").split("/").pop()!.replace(/\.\w+$/, "") || name;
 
@@ -121,7 +107,6 @@ function startTask(label: string) {
   };
 }
 
-// A dismissible message at the bottom, gone after 12 s
 function showError(message: string) {
   const item = Object.assign(document.createElement("div"), { className: "toast-item", textContent: message });
   const close = Object.assign(document.createElement("button"), { textContent: "×", title: "Dismiss", onclick: () => item.remove() });
@@ -130,8 +115,6 @@ function showError(message: string) {
   setTimeout(() => item.remove(), 12000);
 }
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
-// --- Loading: one file at a time, replacing the last ---
 
 const flipFiles = params.get("flip") !== "0";
 let loadRequest = 0;
@@ -149,7 +132,7 @@ async function open(name: string, source: SplatSource, scan?: Scan) {
     shDegree = Sh.find(data.bundles)?.degree ?? shPalette?.degree ?? 0;
     const fileArrays = (arrays = GpuArrays.fromData(renderer, loaded.splats));
     const paletteArrays = shPalette && GpuShPalette.upload(renderer, shPalette);
-    // The arrays go once nothing draws or sorts this file's object
+    // Runs once nothing draws or sorts this file's object
     const release = () => {
       fileArrays.dispose();
       paletteArrays?.dispose();
@@ -188,7 +171,6 @@ picker.addEventListener("change", () => {
   picker.value = "";
 });
 
-// The drop overlay shows while files are dragged over the page
 const dragsFiles = (event: DragEvent) => event.dataTransfer?.types.includes("Files") === true;
 addEventListener("dragover", (event) => {
   if (dragsFiles(event)) {
@@ -210,9 +192,6 @@ addEventListener("drop", (event) => {
   }
 });
 
-// --- Placing the file and the camera ---
-
-// Samples upright with their blur and sky; files flipped unless ?flip=0
 function place(scan?: Scan) {
   model.position.set(0, 0, 0);
   model.scale.setScalar(1);
@@ -225,7 +204,6 @@ function place(scan?: Scan) {
   }
 }
 
-// The sample's start view, else framed
 function resetView() {
   const view = current?.scan?.view;
   if (!view) {
@@ -240,9 +218,8 @@ function resetView() {
   controls.lookAt(new THREE.Vector3(...view.target));
 }
 
-// Look at the splats from in front, far enough to see the bulk of them: the
-// 2nd to 98th percentile of sampled centers per axis, so floaters do not
-// count. Not while exporting: writeSplats lends data's arrays to a worker.
+// Frames the 2nd to 98th percentile of sampled centers per axis, so floaters
+// do not count. Not while exporting: writeSplats lends data's arrays to a worker.
 let exporting = false;
 function frame() {
   if (!data || exporting || data.count === 0) {
@@ -281,7 +258,7 @@ function flip() {
   gui.refresh();
 }
 
-// The loaded splats, as loaded (not transformed)
+// The splats as loaded, without the model's transform
 async function exportFile() {
   if (!data || !current || exporting) {
     return;
@@ -301,8 +278,6 @@ async function exportFile() {
     task.done();
   }
 }
-
-// --- Panel, quick bar, gizmo ---
 
 const gui = makeGui({
   state, webgpu, hdr: caps.hdr, renderer, profiler, splats, model, controls,
@@ -338,8 +313,7 @@ addEventListener("keydown", (event) => {
   }
 });
 
-// --- Stereo: two eyes 64 mm apart side by side ---
-
+// Two eyes 64 mm apart, side by side
 const eyes = [0, 1].map(() => Object.assign(new THREE.PerspectiveCamera(), { viewport: new THREE.Vector4() }));
 const stereoCamera = new THREE.ArrayCamera(eyes);
 stereoCamera.add(...eyes);
@@ -361,8 +335,6 @@ function updateStereoCamera() {
   return stereoCamera;
 }
 
-// --- Frame loop ---
-
 let frames = 0;
 let lastReport = performance.now();
 
@@ -377,7 +349,6 @@ function report(shown: THREE.Camera) {
   if (splats.sortMode === "gpu") {
     void splats.readSortedCount().then(show);
   } else {
-    // The CPU order of the shown camera's view
     const order = splats.views.get(shown)?.order;
     show(order?.collection === splats.collection ? order.visible : 0);
   }
@@ -426,7 +397,6 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// The initial file: ?scan=, else ?url=, else the butterfly
 const scan = params.get("scan") ?? "";
 const url = params.get("url") ?? undefined;
 if (url && !SCANS[scan]) {

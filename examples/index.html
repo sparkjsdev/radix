@@ -141,8 +141,7 @@
   <script type="module">
     import { EXAMPLES, pagesOf } from "./spark/js/examples.js";
 
-    // [title, what it shows, [label, path, query, note?]..., { webgpu }?]; each link also gets a WebGL2
-    // one, unless the page needs WebGPU
+    // [title, what it shows, [[label, path, query, note?], ...], { webgpu }?]
     const PAGES = [
       ["Splat viewer", "One splat file at a time: open, drop or paste a URL of a .ply, .spz, .rad or .rdx file, or pick a sample. A quick bar for the projection method, sort and camera, and a panel for render params, depth of field, a transform gizmo, HDR display, stereo, presets and export to RDX, PLY or SPZ.",
         [["butterfly", "splats/index.html", ""], ["ceramic cave", "splats/index.html", "scan=ceramic"], ["Sutro", "splats/index.html", "scan=sutro"], ["Grace interior", "splats/index.html", "scan=grace"]]],
@@ -184,7 +183,7 @@
         `<div class="links"><a href="${url(path, query)}">${label}</a>${gl(path, query)}${note ? `<span class="muted">${note}</span>` : ""}</div>`).join("");
       row.innerHTML = `<div><b>${title}</b></div><div>${text}${items}</div>`;
       list.append(row);
-      // The single-file build beside the page (npm run build:single), when there is one
+      // The single-file build (npm run build:single), when there is one
       const folder = links[0][1].split("/")[0];
       const single = `./${folder}/${folder}.html`;
       fetch(single, { method: "HEAD" }).then((response) => {
@@ -194,7 +193,6 @@
       }, () => {});
     }
 
-    // Every ported page of the Spark examples, one per line
     const ported = EXAMPLES.filter((example) => example.status === "ported" || example.status === "partial");
     document.getElementById("sparkCount").textContent = `${ported.length} of the ${EXAMPLES.length} SparkJS 2.3.1 examples`;
     const spark = document.getElementById("spark");

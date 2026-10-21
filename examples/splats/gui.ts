@@ -1,8 +1,3 @@
-// Tweakpane v4 panel of the viewer. Bindings write straight into the viewer
-// state, the splat renderer and its params or the model's transform, which
-// main.ts and the renderer apply every frame; changes that need work (a
-// reload, a flip, framing) go through actions. Every folder but Monitors
-// starts collapsed; the look (theme variables, width) lives in index.html.
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import { Pane, type BindingParams, type FolderApi } from "tweakpane";
 import type * as THREE from "three";
@@ -12,10 +7,9 @@ import { addControlsFolder } from "./controlsPane.js";
 import type { ViewerState } from "./main.js";
 
 const fixed = (digits: number) => (v: number) => v.toFixed(digits);
-// GPU "-": no timestamps (GPU timing off)
+// "-" for the GPU while GPU timing is off
 const ms = (gpu: number | undefined, cpu: number) => `${gpu === undefined ? "-" : gpu.toFixed(2)} · ${cpu.toFixed(2)}`;
 
-// A row of toggle buttons for a small set of choices
 let groups = 0;
 function segmented<T extends string | number>(label: string, values: T[], titles?: string[]): BindingParams {
   groups += 1;
@@ -28,8 +22,6 @@ function segmented<T extends string | number>(label: string, values: T[], titles
   };
 }
 
-// Nested plain objects (a preset) into the state, key by key: only keys
-// the target has
 function assignDeep(target: object, source: object = {}) {
   const into = target as Record<string, unknown>;
   for (const [key, value] of Object.entries(source)) {
@@ -67,14 +59,12 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
   const slider = <T extends object>(c: FolderApi, target: T, key: keyof T & string, label: string, min: number, max: number, digits = 2) =>
     c.addBinding(target, key, { label, min, max, step: 10 ** -digits, format: fixed(digits) });
 
-  // --- Monitors ---
   const monitors = pane.addFolder({ title: `Monitors  ·  ${webgpu ? "WebGPU" : "WebGL2"}` });
   const fpsGraph = monitors.addBlade({ view: "fpsgraph", label: "fps", rows: 2, min: 0, max: 144 }) as unknown as { begin(): void; end(): void };
   const frame = { file: "none", ms: ms(undefined, 0), drawn: "0" };
   monitors.addBinding(frame, "file", { readonly: true });
   monitors.addBinding(frame, "ms", { readonly: true, label: "GPU · CPU ms" });
-  // GPU timestamps cost frame time (their queries resolve every report), so
-  // they start off (?profile=1 starts them on); CPU phases are timed either way
+  // GPU timestamps cost frame time, so they start off unless ?profile=1
   if (profiler) {
     const timing = { get on() { return profiler.active; }, set on(value: boolean) { profiler.active = value; } };
     monitors.addBinding(timing, "on", { label: profiler.supported ? "GPU timing" : "GPU timing (n/a)", disabled: !profiler.supported });
@@ -83,7 +73,7 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
   const phaseFolder = monitors.addFolder({ title: "Phases  (GPU · CPU ms)", expanded: false });
   const phases: Record<string, string> = {};
 
-  // --- Renderer (method, sort and key bits are in the quick bar) ---
+  // Method, sort and key bits are in the quick bar
   const p = splats.params;
   const o = splats.objectParams;
   const render = folder("Renderer");
@@ -98,7 +88,6 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
     slider(cpuSort, turn, "degrees", "or after (deg)", 0, 45, 1);
   }
 
-  // What all splats share (the draw reads it), then what each object projects with
   const quality = folder("Quality");
   slider(quality, p, "minAlpha", "min alpha", 0, 0.1, 3);
   slider(quality, p, "maxStdDev", "max std dev", 1, 4);
@@ -114,7 +103,6 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
   slider(lens, o, "focalDistance", "focal dist", 0, 10);
   slider(lens, o, "apertureTan", "aperture tan", 0, 0.05, 3);
 
-  // --- Transform of the splats, and the gizmo ---
   const transform = folder("Transform");
   transform.addBinding(state, "gizmo", segmented("gizmo (1 2 3)", ["off", "translate", "rotate", "scale"], ["off", "move", "rotate", "scale"]));
   transform.addBinding(model, "position", { format: fixed(3) });
@@ -124,7 +112,6 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
   transform.addButton({ title: "Frame" }).on("click", () => actions.frame());
   transform.addButton({ title: "Start view" }).on("click", () => actions.resetView());
 
-  // --- Display: HDR canvas, headroom tone mapping, background ---
   const display = folder("Display");
   const output = { extended: hdr };
   display.addBinding(output, "extended", { label: hdr ? "HDR canvas" : "HDR (?hdr=1)", disabled: !hdr }).on("change", (event) => Hdr.setOutput(renderer, event.value));
@@ -139,12 +126,10 @@ export function makeGui({ state, webgpu, hdr, renderer, profiler, splats, model,
 
   addControlsFolder(pane, controls);
 
-  // --- Export: the loaded splats, as loaded (not transformed) ---
   const exporter = folder("Export");
   exporter.addBinding(state, "exportFormat", segmented("format", ["rdx", "ply", "compressed-ply", "spz"], ["rdx", "ply", "c.ply", "spz"]));
   exporter.addButton({ title: "Download" }).on("click", () => actions.exportFile());
 
-  // --- Presets: the viewer state, method, sort, key bits and params as JSON ---
   const presets = folder("Presets");
   const preset = { json: "" };
   presets.addButton({ title: "Export to JSON (copies)" }).on("click", () => {
