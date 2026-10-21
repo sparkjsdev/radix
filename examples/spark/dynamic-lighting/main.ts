@@ -1,7 +1,5 @@
 // Spark's dynamic-lighting: a fireplace lit by flickering colored light
-// volumes. Spark's SplatEdit layers (ADD_RGBA embers and fire light, and a
-// darkening ambient layer) are js/sdf.js's SdfEdits in one world-space
-// modifier; the flicker changes uniforms only.
+// volumes, Spark's SplatEdit layers as SdfEdits of js/sdf.ts
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -20,8 +18,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
 camera.position.set(0, 0.3, -2.5);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -36,13 +32,11 @@ fireplace.rotation.x = Math.PI;
 fireplace.position.set(0, -1, -10);
 scene.add(fireplace);
 
-// The edits are the renderer's modifier, applied in world space
 const file = await loadSplatFile(renderer, asset("fireplace.spz"), { onProgress: page.progress("fireplace") });
 const splats = new SplatRenderer({ renderer, modifier: sdfModifier(layers), modifierSpace: "world" });
 splats.collection = new SplatCollection([fileObject(file, { matrixWorld: fireplace.matrixWorld })]);
 scene.add(splats);
 
-// A light sphere in `layer`, with a wireframe helper for "Debug Light SDFs"
 const helpers: THREE.Mesh[] = [];
 function light(layer: SdfEdit, position: THREE.Vector3, color: THREE.Color, radius: number, opacity: number) {
   const sphere = new SdfSphere({ color, radius, opacity });

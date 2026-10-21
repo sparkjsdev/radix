@@ -1,7 +1,4 @@
-// Spark's splat-transitions Explosion effect: the current scan bursts into
-// bouncing, shrinking splats on the table while the next one grows out of
-// the origin. Spark switches each mesh between a death and a birth
-// modifier; here one generator reads each object's role, set in bind.
+// Spark's Explosion transition, with each object's role set in bind where Spark swaps modifiers
 import type GUI from "lil-gui";
 import * as THREE from "three";
 import { TSL, type TslNode } from "@sparkjsdev/radix";
@@ -26,8 +23,7 @@ const TRANSITION_SECONDS = 3;
 const hash = (p: TslNode): TslNode => fract(sin(dot(p, vec3(127.1, 311.7, 74.7))).mul(43758.5453));
 const h = (p: TslNode, k: number) => hash(p.add(vec3(k)));
 
-// Where a splat thrown up from `original` is `time` seconds later: sliding
-// with friction, falling, and bouncing to rest on the floor (y = 0)
+// Where a splat thrown up from its original center is after the given seconds, the floor at y = 0
 function explode(original: TslNode, time: TslNode, strength: TslNode): TslNode {
   const t = max(0, time.add(h(original, 42).mul(0.2).sub(0.1))).toVar();
   const velocity = vec3(

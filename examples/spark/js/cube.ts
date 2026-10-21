@@ -1,7 +1,4 @@
-// Splats rendered into a cube map (Spark's renderEnvMap / renderCubeMap): a
-// CubeCamera renders the scene once per face, and each render projects and
-// sorts for that face. On the CPU sort (WebGL2) each face camera has its own
-// view: it is sorted and applied first, so one update draws every face.
+// Splats rendered into a cube map, after Spark's renderEnvMap / renderCubeMap
 import * as THREE from "three";
 import { CubeRenderTarget, type WebGPURenderer } from "three/webgpu";
 import type { SplatRenderer } from "@sparkjsdev/radix";
@@ -39,7 +36,6 @@ export async function renderCubeMap({ renderer, scene, splatRenderer, worldCente
   return target;
 }
 
-// The six faces' pixels (RGBA8) of a cube target, read back
 export async function readCubeTargets(renderer: WebGPURenderer, target: CubeRenderTarget) {
   const { width, height } = target;
   const faces = [];

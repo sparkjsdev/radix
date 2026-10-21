@@ -1,6 +1,6 @@
 // Spark's depth-of-field: the valley scan with a focal plane and aperture.
-// Spark's apertureAngle is the full cone angle; Radix's apertureTan is the
-// tangent of half of it, so apertureTan = 0.5 * apertureSize / focalDistance.
+// Radix's apertureTan is the tangent of half Spark's apertureAngle, so it is
+// 0.5 * apertureSize / focalDistance.
 import GUI from "lil-gui";
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
@@ -13,15 +13,12 @@ const page = examplePage("depth-of-field");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const splats = new SplatRenderer({ renderer });
 scene.add(splats);
 
-// The renderer's object params: every object's unless it sets its own
 const settings = { focalDistance: 5, apertureSize: 0.1 };
 function updateAperture() {
   splats.objectParams.focalDistance = settings.focalDistance;

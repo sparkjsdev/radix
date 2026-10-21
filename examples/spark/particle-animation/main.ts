@@ -1,8 +1,5 @@
-// Spark's particle-animation: a cloud layer of CPU-made splats drifting
-// with the wind inside a sky sphere. Every frame moves each splat on the
-// CPU, encodes them again and uploads the table (GpuArrays.upload), like
-// Spark's forEachSplat / setSplat / needsUpdate. A setting change makes a
-// new cloud; the old one's arrays are freed in its object's release.
+// Spark's particle-animation: a cloud layer of CPU-made splats drifting with
+// the wind inside a sky sphere
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { CameraControls, GpuArrays } from "@sparkjsdev/radix";
@@ -36,7 +33,7 @@ function noise(x: number, y: number, z: number, t: number) {
   return value;
 }
 
-// A splat's pseudo-random number in (-1, 1) of its seed, per key
+// A pseudo-random number in (-1, 1) of a seed, per key
 const hash = (seed: number, key: number) => (Math.sin(seed * key) * 43758.5453) % 1;
 const wrap = (value: number, min: number, max: number) => ((((value - min) % (max - min)) + (max - min)) % (max - min)) + min;
 
@@ -46,8 +43,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x08a2d3);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
@@ -58,11 +53,10 @@ const sky = new THREE.Mesh(
 sky.scale.set(-1, 1, 1);
 scene.add(sky);
 
-// The clouds move every frame: on the CPU sort (WebGL2) it sorts again
-// every render
+// The clouds move every frame, so the CPU sort sorts every render
 const splats = new SplatSet({ renderer, scene, animate: true });
 
-// A cloud: its builder's values (14 floats per splat), table and arrays
+// A cloud's builder (14 floats per splat), table and arrays
 function makeClouds() {
   const count = Math.floor(params.particleCount * params.cloudDensity);
   const builder = new SplatBuilder(count);

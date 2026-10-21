@@ -1,12 +1,7 @@
-// WebXR for the ports, after /build/examples/xr/index.html (../../xr/main.ts):
-// WebGPU XR where the browser has the WebXR / WebGPU binding (GPU sort every
-// frame), else the WebGL2 backend's XR (CPU sort through one view for the
-// head). An "Enter VR" button, and the emulator's offered
-// session. three swaps in the XR camera while presenting.
+// WebXR for the ports, as in examples/xr/main.ts
 import type { WebGPURenderer } from "three/webgpu";
 import { getGpuCaps, type CameraControls, type GpuBackend, type SplatRenderer } from "@sparkjsdev/radix";
 
-// The backend for an XR page: ?gpu= when given
 export function xrBackend(): GpuBackend {
   const param = new URLSearchParams(location.search).get("gpu");
   if (param === "webgpu" || param === "webgpu-gl") {
@@ -34,10 +29,6 @@ function patchNullXrFramebuffer(renderer: WebGPURenderer) {
   };
 }
 
-// Sets up sessions for `splatRenderers`; optionalFeatures are added to the
-// backend's required ones. The controls' XR sticks move the rig: the
-// controlled object's parent unless controls.rig is set. Returns
-// { button, session() }.
 export function setupXr(renderer: WebGPURenderer, splatRenderers: SplatRenderer[], controls: CameraControls, { optionalFeatures = [], framebufferScale = 1, onSession, onEnd }: {
   optionalFeatures?: string[];
   framebufferScale?: number;

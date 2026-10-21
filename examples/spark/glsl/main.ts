@@ -1,7 +1,5 @@
-// Spark's glsl: a butterfly with a world-space color wave and an
-// object-space radial warp, Spark's injected GLSL rewritten in TSL. The
-// warp is an object modifier (part of the object's generator); the wave is
-// the renderer's modifier in world space.
+// Spark's glsl: a butterfly with a world-space color wave and an object-space
+// radial warp, Spark's injected GLSL rewritten in TSL
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer, TSL, type SplatNode } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -15,8 +13,6 @@ const page = examplePage("glsl");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 

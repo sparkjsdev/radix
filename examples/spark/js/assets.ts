@@ -1,6 +1,4 @@
-// The assets of the Spark examples (Spark's examples/assets.json). Every
-// host sends access-control-allow-origin: *, so pages load them directly.
-// ?assets=<base> loads them from a local copy instead: <base>/<name>.
+// After Spark's examples/assets.json; ?assets=<base> loads <base>/<name> from a local copy
 import * as THREE from "three";
 
 const SPARK = "https://sparkjs.dev/assets";
@@ -53,7 +51,6 @@ const ASSETS: Record<string, string> = {
 
 const localBase = new URLSearchParams(location.search).get("assets");
 
-// The URL of one of the examples' assets
 export function asset(name: string) {
   if (!ASSETS[name]) {
     throw new Error(`Unknown asset ${name}`);
@@ -63,9 +60,7 @@ export function asset(name: string) {
 
 type GlbMaterial = THREE.Material & { color?: THREE.Color; map?: THREE.Texture | null };
 
-// A GLB asset's scene. `unlit` swaps its materials for unlit ones (Spark's
-// loadDelitGLB); "env" also turns them inside out with a linear texture, for
-// environment spheres.
+// unlit follows Spark's loadDelitGLB; "env" also renders back faces, for environment spheres
 export async function loadGlb(name: string, { unlit }: { unlit?: boolean | "env" } = {}) {
   const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
   const { scene } = await new GLTFLoader().loadAsync(asset(name));

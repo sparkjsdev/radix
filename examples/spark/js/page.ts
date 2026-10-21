@@ -1,8 +1,4 @@
-// The page around a Spark port: error capture, a status line, a legend, the
-// footer (backend, links) and window.example, which tells the smoke check
-// (scripts/check-examples.mjs) when the page has drawn its content
-// ({ ready: true }) or failed ({ error }). windowRenderer makes the
-// renderer every port starts with.
+// The page around a Spark port; scripts/check-examples.mjs reads window.example
 import type * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { createRenderer, getGpuCaps } from "@sparkjsdev/radix";
@@ -32,18 +28,15 @@ function fail(error: unknown) {
   console.error(error);
 }
 
-// Errors anywhere, the animation loop's included
 addEventListener("error", (event) => fail(event.error ?? event.message));
 addEventListener("unhandledrejection", (event) => fail(event.reason));
 
-// `name` is the Spark example's folder (footer links); `note` a footer
-// line saying what the port leaves out
+// name is the Spark example's folder; note says what the port leaves out
 export function examplePage(name: string, { note }: { note?: string } = {}) {
   return {
     status,
     fail,
 
-    // A line of instructions at the top of the page
     legend(html: string) {
       const element = document.createElement("div");
       element.className = "example-legend";
@@ -52,13 +45,10 @@ export function examplePage(name: string, { note }: { note?: string } = {}) {
       return element;
     },
 
-    // An onProgress for loading that shows `label` and the stage
     progress(label: string) {
       return (fraction: number, stage: string) => status(`${label}: ${stage} ${Math.round(fraction * 100)}%`);
     },
 
-    // The page shows what it loaded: the footer, and a few frames later the
-    // smoke check's signal (later calls only clear the status)
     ready(renderer: WebGPURenderer) {
       status("");
       if (document.getElementById("example-footer")) {
@@ -72,7 +62,6 @@ export function examplePage(name: string, { note }: { note?: string } = {}) {
   };
 }
 
-// The backend, a link to the other one, the Spark original and the index
 function footer(name: string, webgpu: boolean, note?: string) {
   const params = new URLSearchParams(location.search);
   params.set("gpu", webgpu ? "webgpu-gl" : "webgpu");
@@ -91,10 +80,8 @@ function footer(name: string, webgpu: boolean, note?: string) {
 
 type RendererOptions = NonNullable<Parameters<typeof createRenderer>[0]>;
 
-// createRenderer (WebGPU, or the WebGL2 backend with ?gpu=webgpu-gl), sized
-// to the window and added to the page; it follows window resizes, and so
-// does the camera's aspect. pixelRatio: only where the Spark example sets
-// one (else three's 1).
+// ?gpu=webgpu or webgpu-gl picks the backend, default auto. Pass pixelRatio
+// only where the Spark example sets one.
 export async function windowRenderer(camera: THREE.PerspectiveCamera, { pixelRatio, ...options }: RendererOptions & { pixelRatio?: number } = {}) {
   const gpu = new URLSearchParams(location.search).get("gpu");
   const renderer = (await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto", ...options })) as WebGPURenderer;

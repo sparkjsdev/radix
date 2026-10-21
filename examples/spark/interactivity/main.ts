@@ -1,9 +1,5 @@
 // Spark's interactivity ("Tipatat's Splat Restaurant"): food scans fading in
-// and out over a GLB table lit by a shadow-casting spotlight. The splats are
-// depth-tested against the table and floor (they write no depth), and a
-// hidden cylinder casts the food's shadow. The fades set each model's opacity
-// (js/objects.js). The lit meshes need three's sRGB output pass
-// (directCanvas: false).
+// and out over a table lit by a spotlight
 import * as THREE from "three";
 import { CameraControls } from "@sparkjsdev/radix";
 import { asset, loadGlb } from "../js/assets.js";
@@ -36,8 +32,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 0.9, -1.2);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
+// The lit meshes need three's sRGB output pass
 const renderer = await windowRenderer(camera, { directCanvas: false });
 renderer.shadowMap.enabled = true;
 

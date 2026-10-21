@@ -1,8 +1,6 @@
-// Spark's debug-color: one butterfly colored by its world normals (turned
-// toward the camera), one by its view depth (Spark's modifiers
-// setWorldNormalColor and setDepthColor). Spark sets a world modifier per
-// mesh; a Radix renderer has one modifier, so each butterfly gets its own
-// renderer (they do not overlap, so two sorts blend correctly).
+// Spark's debug-color: one butterfly colored by its world normals, one by its
+// depth. A Radix renderer has one modifier where Spark sets one per mesh, so
+// each butterfly has a renderer of its own, which blends as they don't overlap.
 import * as THREE from "three";
 import { GpuSplats, SplatCollection, SplatRenderer, TSL, type SplatNode } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -16,8 +14,6 @@ const page = examplePage("debug-color");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 
 // World normals, flipped to face the camera (world space)
@@ -37,7 +33,7 @@ const depthColor = (s: SplatNode) => {
   const out = s.toVar();
   const z = clamp(s.get("center").z.negate(), near, far);
   const depth = log2(z.add(1)).sub(Math.log2(near + 1)).div(Math.log2(far + 1) - Math.log2(near + 1));
-  // reverse: near is white
+  // Near is white
   out.get("rgb").assign(vec3(float(1).sub(depth)));
   return out;
 };
@@ -58,7 +54,6 @@ const [file, file2] = await Promise.all([
   loadSplatFile(renderer, asset("butterfly-ai.spz"), { onProgress: page.progress("butterfly-ai") }),
 ]);
 
-// One renderer per modifier, one butterfly each
 const normals = new SplatRenderer({ renderer, modifier: normalColor, modifierSpace: "world" });
 normals.collection = new SplatCollection([fileObject(file, { matrixWorld: butterfly.matrixWorld })]);
 scene.add(normals);

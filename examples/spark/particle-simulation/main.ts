@@ -1,7 +1,5 @@
-// Spark's particle-simulation: snow falling on a snowy street. The snow is
-// Spark's snowBox rewritten as a TSL generator (js/snow.js), up to a
-// million particles made in the projection's shader and sorted with the
-// street scan in one sort.
+// Spark's particle-simulation: snow falling on a street, its snowBox rewritten
+// as a TSL generator in js/snow.ts
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
@@ -15,8 +13,6 @@ const page = examplePage("particle-simulation");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -37,7 +33,7 @@ const snow = snowBox({
   maxScale: 0.01,
 });
 
-// The scan and the snow generator's object (in world space) in one sort
+// The scan and the snow in one sort
 const file = await loadSplatFile(renderer, asset("snow-street.spz"), { onProgress: page.progress("street") });
 const splats = new SplatRenderer({ renderer });
 splats.collection = new SplatCollection([fileObject(file, { matrixWorld: street.matrixWorld }), snow.snow.splatObject]);

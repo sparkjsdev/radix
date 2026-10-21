@@ -1,6 +1,4 @@
-// Spark's mobile-joystick: the valley with CameraControls (pointer, touch,
-// keys), plus an on-screen joystick on touch devices that moves the camera
-// along the view
+// Spark's mobile-joystick: the valley with an on-screen joystick on touch devices
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -18,8 +16,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 1.6, 0);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: Math.min(devicePixelRatio, 2) });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -33,8 +29,7 @@ const splats = new SplatRenderer({ renderer });
 splats.collection = new SplatCollection([fileObject(file, { matrixWorld: valley.matrixWorld })]);
 scene.add(splats);
 
-// Touch devices (not headsets): the stick's offset from its center, each axis
-// in -1..1 (y positive backward)
+// Touch devices but not headsets; the stick in -1..1 per axis, y positive backward
 const touch = navigator.maxTouchPoints > 0 && !/OculusBrowser|Quest/i.test(navigator.userAgent);
 const stick = new THREE.Vector2();
 if (touch) {
@@ -85,7 +80,6 @@ renderer.setAnimationLoop((time) => {
   lastTime = time;
   controls.update();
 
-  // The stick moves what the controls move, along its view
   const moved = controls.object;
   moved.position.add(new THREE.Vector3(stick.x, 0, stick.y).multiplyScalar(MOVE_SPEED * delta).applyQuaternion(moved.quaternion));
   renderer.render(scene, camera);

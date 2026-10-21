@@ -1,6 +1,4 @@
-// Spark's hello-world/carousel.html: three scans fading into one another
-// every 5 seconds, orbited by the camera controls. The fades set each
-// model's opacity (js/objects.js); only the shown scan is visible.
+// Spark's hello-world/carousel.html: three scans fading into one another every 5 seconds
 import * as THREE from "three";
 import { CameraControls } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -13,15 +11,12 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({
   canvas: renderer.domElement, object: camera, settings: { mode: "orbit", minDistance: 2, maxDistance: 3 },
 });
 controls.lookAt(new THREE.Vector3(0, 0, -3));
 
-// One renderer drawing the visible models; their SH seen from the camera
 const splats = new SplatSet({ renderer, scene });
 
 const SCANS = [

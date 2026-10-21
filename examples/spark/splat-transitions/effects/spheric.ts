@@ -1,5 +1,4 @@
-// Spark's splat-transitions Spherical effect: each scan in turn gathers its
-// splats onto a sphere, churns, and lets the next scan unfold from it
+// Spark's Spherical transition: each scan gathers onto a sphere and the next unfolds from it
 import type GUI from "lil-gui";
 import { TSL, type TslNode } from "@sparkjsdev/radix";
 import { loadGlb } from "../../js/assets.js";

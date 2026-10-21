@@ -1,13 +1,8 @@
-// Every Spark 2.3.1 example (sparkjsdev/spark examples/ at tag v2.3.1) and
-// what became of it here. The index page lists these; the smoke check
-// (scripts/check-examples.mjs) loads every page of a ported or
-// partial entry. status: "ported" | "partial" | "blocked" | "removed".
-//   pages   the port's pages (default [`${name}/index.html`]); listed: on sparkjs.dev
-//   uses    what in Radix (or the shared js/) it exercises
-//   gaps    what Radix lacks for it (partial and blocked entries)
-//   xr      needs an XR session to show everything (checked on desktop only)
-//   smoke   query string the smoke check loads the pages with
-//   smokeWait  ms the smoke check waits before its screenshot (default 1500)
+// Spark v2.3.1's examples and their ports, read by index.html and scripts/check-examples.mjs
+//   listed     shown on sparkjs.dev
+//   xr         needs an XR session to show everything
+//   smoke      the query string the smoke check loads its pages with
+//   smokeWait  ms the smoke check waits before its screenshot, default 1500
 export interface Example {
   name: string;
   title: string;
@@ -66,7 +61,6 @@ export const EXAMPLES: Example[] = [
   { name: "newportal", title: "Multi-Portal", status: "blocked", gaps: "needs SparkPortals (linked portal passes) and paged loading" },
 ];
 
-// The pages of an entry that has a port
 export function pagesOf(example: Example) {
   return example.pages ?? [`${example.name}/index.html`];
 }

@@ -1,8 +1,6 @@
-// Spark's splat-reveal-effects: five reveal animations (Magic, Spread,
-// Unroll, Twister, Rain), Spark's GLSL rewritten in TSL as one object-space
-// modifier per effect, made once and switched on the renderer. Spark plays
-// Twister and Rain on Sutro, a SOGS zip Radix cannot read: here they play
-// on the valley scan.
+// Spark's splat-reveal-effects: five reveal animations, Spark's GLSL rewritten
+// in TSL. Spark plays Twister and Rain on Sutro, a SOGS zip Radix can't read, so
+// here they play on the valley scan.
 import GUI from "lil-gui";
 import * as THREE from "three";
 import { GpuSplatMath, TSL, type SplatModifier, type SplatNode, type TslNode } from "@sparkjsdev/radix";
@@ -17,8 +15,6 @@ const page = examplePage("splat-reveal-effects");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 
 // Seconds since the effect started
@@ -50,12 +46,10 @@ const rot = (v: TslNode, a: TslNode): TslNode => {
 
 const spin = (quaternion: TslNode, angle: TslNode): TslNode => GpuSplatMath.quatMul(vec4(0, sin(angle.mul(0.5)), 0, cos(angle.mul(0.5))), quaternion);
 
-// The splat as Spark's GLSL names it (l: distance from the y axis), and the
-// fields an effect sets
+// The splat as Spark's GLSL names it, l its distance from the y axis
 type RevealInputs = Record<"t" | "pos" | "scales" | "rgba" | "quaternion" | "l", TslNode>;
 type RevealFields = Partial<Record<"center" | "scales" | "quaternion" | "rgba", TslNode>>;
 
-// One modifier per effect: apply(inputs) returns the fields to set
 function effect(apply: (inputs: RevealInputs) => RevealFields): SplatModifier {
   return (splat: SplatNode) => {
     const out = splat.toVar();
@@ -136,7 +130,6 @@ const splats = new SplatSet({ renderer, scene, modifierSpace: "object", animate:
 const params: { effect: EffectName } = { effect: "Magic" };
 const scans = new Map<string, Promise<SplatModel>>();
 
-// The effect's scan, placed, with the effect from its start
 async function show(effect: EffectName) {
   splats.remove(...splats.models);
   const { file, position, scale } = SCANS[effect];
@@ -165,7 +158,6 @@ gui.add({ resetTime: () => (animateT.value = 0) }, "resetTime").name("Reset Time
 await show(params.effect);
 page.ready(renderer);
 
-// The camera circles the scan, except in the weather effects
 let cameraAngle = 0;
 let last = 0;
 renderer.setAnimationLoop((time) => {

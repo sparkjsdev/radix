@@ -1,8 +1,5 @@
-// Spark's multiple-viewpoints: a turning butterfly seen from the main camera
-// and from two more cameras, each rendered into a texture shown on a screen
-// near the main camera. One SplatRenderer draws all three (on the CPU sort,
-// each camera gets its own view and order). The sliders move the two cameras
-// sideways without turning them; only their arrows turn.
+// Spark's multiple-viewpoints: a butterfly seen from the main camera and from
+// two more, shown on screens near the main camera
 import * as THREE from "three";
 import { asset, loadGlb } from "../js/assets.js";
 import { SplatSet } from "../js/objects.js";
@@ -15,8 +12,6 @@ const background = new THREE.Color();
 scene.background = background;
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 
 const splats = new SplatSet({ renderer, scene });
@@ -27,10 +22,8 @@ butterfly.position.set(0, 0, -3);
 const arrow = (await loadGlb("arrow.glb")).children[0] as THREE.Mesh;
 const MATCAPS = "https://raw.githubusercontent.com/nidorx/matcaps/master/128/";
 
-// A camera at `origin` with its arrow and slider, drawn on a screen at
-// `screenAt` (in units of the near distance) over `color`. Its screen is in
-// the scene it renders, so it renders into two targets in turn (Spark's
-// doubleBuffer).
+// screenAt is in units of the near distance. The screen is in the scene it
+// renders, so it renders into two targets in turn, as Spark's doubleBuffer does.
 function viewpoint(origin: THREE.Vector3, screenAt: [number, number], slider: string, matcap: string, color: number) {
   const width = 320;
   const height = 240;

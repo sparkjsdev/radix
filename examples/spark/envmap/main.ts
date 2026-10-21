@@ -1,7 +1,4 @@
-// Spark's envmap: a chrome rubber duck reflecting two copies of the
-// fireplace scan. The reflection is a cube map of the splats rendered from
-// the duck's position (js/cube.js: one projection and sort per face), with
-// the duck hidden. The duck is lit only by it.
+// Spark's envmap: a chrome rubber duck reflecting a cube map rendered from the splats
 import * as THREE from "three";
 import { CameraControls } from "@sparkjsdev/radix";
 import { asset, loadGlb } from "../js/assets.js";
@@ -18,8 +15,6 @@ scene.background = new THREE.Color(0x1b2037);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 0.5, 0);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { directCanvas: false });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -37,8 +32,7 @@ const duck = await loadGlb("rubberduck.glb");
 duck.position.set(0, 0.45, -0.4);
 scene.add(duck);
 
-// The CPU sort (WebGL2) sorts each face before the first render, so the
-// set's collection is made here
+// The CPU sort sorts each face before the first render, so the collection is made here
 scene.updateMatrixWorld(true);
 splats.update();
 const envMap = (await renderCubeMap({ renderer, scene, splatRenderer: splats.renderer, worldCenter: duck.position, hideObjects: [duck] })).texture;

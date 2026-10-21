@@ -1,8 +1,4 @@
-// Ray picking against splats on the CPU, from the loaded ArrayData (Radix
-// has no splat raycast; Spark's SplatMesh.raycast does this). Each splat
-// near the ray adds its Gaussian's opacity where the ray passes closest to
-// it; the hit is where the accumulated opacity first reaches `coverage`, so
-// many faint splats (grass, hair) stop the ray like one opaque one.
+// Ray picking against splats on the CPU, as Radix has no splat raycast
 import { Splats, type ArrayData, type ExtSplat } from "@sparkjsdev/radix";
 
 const SIGMAS = 3;
@@ -46,8 +42,8 @@ export class SplatPicker {
     this.splat = s;
   }
 
-  // The hit of the ray origin + t dir (object space; dir need not be unit)
-  // as { t, index }, or undefined
+  // Where the opacity met along origin + t dir first reaches coverage, so
+  // many faint splats stop the ray like one opaque one; dir need not be unit
   intersect(origin: Vec3Like, dir: Vec3Like, near = 0, far = Infinity): { t: number; index: number } | undefined {
     const { centers, radii, splat: s } = this;
     const dd = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
@@ -93,9 +89,8 @@ export class SplatPicker {
     return { t: best.t, index: best.index };
   }
 
-  // Where the ray passes closest to splat i, in its Gaussian's metric, and
-  // the opacity it meets there: { t, alpha, index }, or undefined. The
-  // center is the picker's (edited centers move the splat)
+  // The ray's closest approach to splat i in its Gaussian's metric, from the
+  // picker's center, so edited centers move the splat
   closest(i: number, s: ExtSplat, origin: Vec3Like, dir: Vec3Like): Approach | undefined {
     this.decode(i, s);
     const { centers } = this;

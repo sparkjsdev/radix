@@ -1,8 +1,6 @@
-// Spark's splat-flow: three scans take turns, each flowing out of the
-// previous one's center of mass, over a GLB environment, with the camera
-// flying from one to the next. Spark gives each mesh its own world modifier
-// with its object index baked in; here one generator (js/worldEffect.js)
-// sets each object's index and world matrices in its bind.
+// Spark's splat-flow: three scans take turns, each flowing out of the previous
+// one's center of mass. Where Spark gives each mesh its own world modifier, one
+// generator in js/worldEffect.ts binds each object's index and matrices.
 import { GUI } from "lil-gui";
 import * as THREE from "three";
 import { Splats, TSL, type TslNode } from "@sparkjsdev/radix";
@@ -27,8 +25,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { directCanvas: false, pixelRatio: devicePixelRatio });
 
 const time = uniform(0);
@@ -97,7 +93,6 @@ gui.add(params, "fixedMinScale").onChange((value: boolean) => (fixedMinScale.val
 gui.add(waves, "value", 0, 1, 0.01).name("waves");
 page.ready(renderer);
 
-// From one scan to the next, circling it
 function updateCamera() {
   const w = (time.value + PAUSE_SECONDS) % TOTAL;
   const cur = Math.floor(w / CYCLE);

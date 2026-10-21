@@ -1,23 +1,10 @@
-// Spark's SplatEdit / SplatEditSdf (sphere shapes) as a world-space TSL
-// modifier (Radix has no SDF edits). Each SdfEdit is a layer with a blend
-// mode and up to maxSdfs sphere slots (uniforms: moving, recoloring, showing
-// or hiding a sphere compiles nothing); its spheres are its SdfSphere
-// children, placed in the world. The field math follows Spark's
-// evaluateSdfArray / modulateSdfArray / applyRgbaDisplaceEdit.
-//
-//   const edit = new SdfEdit({ rgbaBlendMode: "add_rgba", sdfSmooth: 0.1, softEdge: 0.8 });
-//   edit.add(new SdfSphere({ radius: 1, color, opacity: 0 }));
-//   scene.add(edit);
-//   splatRenderer.modifier = sdfModifier([edit]);
-//   splatRenderer.modifierSpace = "world";
-//   // every frame: edit.update()
+// Spark's SplatEdit / SplatEditSdf, spheres only, as a world-space TSL modifier
 import * as THREE from "three";
 import { TSL, type SplatModifier, type SplatNode, type TslNode } from "@sparkjsdev/radix";
 
 const { clamp, exp, float, length, log, max, mix, select, uniform, vec3, vec4 } = TSL;
 
-// Spark's SplatEditRgbaBlendMode; DARKEN is not one of Spark's modes (its
-// examples' DARKEN falls back to the MULTIPLY default)
+// Spark's SplatEditRgbaBlendMode; its examples' DARKEN is no mode and falls back to MULTIPLY
 export const SdfBlend = { MULTIPLY: "multiply", SET_RGB: "set_rgb", ADD_RGBA: "add_rgba", DARKEN: "multiply" } as const;
 export type SdfBlendMode = (typeof SdfBlend)[keyof typeof SdfBlend];
 
@@ -44,7 +31,6 @@ export class SdfSphere extends THREE.Object3D {
 const position = new THREE.Vector3();
 const scale = new THREE.Vector3();
 
-// Whether an object and its ancestors are visible
 function visible(object: THREE.Object3D) {
   for (let node: THREE.Object3D | null = object; node; node = node.parent) {
     if (!node.visible) {
@@ -96,7 +82,6 @@ export class SdfEdit extends THREE.Object3D {
     this.uniforms.softEdge.value = value;
   }
 
-  // Copies the spheres' world positions, sizes and colors into the slots
   update() {
     this.updateMatrixWorld();
     const spheres = this.children.filter((child): child is SdfSphere => (child as SdfSphere).isSdfSphere && visible(child));
@@ -115,7 +100,7 @@ export class SdfEdit extends THREE.Object3D {
     });
   }
 
-  // Applies the edit to `out` (a splat var, world space) in place
+  // Spark's evaluateSdfArray, modulateSdfArray and applyRgbaDisplaceEdit, on the splat in place
   apply(out: SplatNode) {
     const pos = out.get("center").toVar();
     const rgba = vec4(out.get("rgb"), out.get("opacity")).toVar();
@@ -163,7 +148,7 @@ export class SdfEdit extends THREE.Object3D {
   }
 }
 
-// A world-space SplatModifier applying `edits` in order
+// A world-space modifier applying edits in order
 export function sdfModifier(edits: SdfEdit[]): SplatModifier {
   return (splat) => {
     const out = splat.toVar();

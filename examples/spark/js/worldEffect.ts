@@ -1,20 +1,11 @@
-// Spark's per-mesh world modifiers (each mesh with its own uniforms, such as
-// its index in a sequence) on Radix, whose renderer has one modifier for
-// every object: one generator wraps fromSplats, and its bind (run before
-// each object's dispatch) sets the object's index and world matrices, so
-// `effect(splat, objectIndex)` sees world-space centers and scales and
-// returns the changed splat. Rotations stay in object space (the effects
-// here only move and scale splats). Objects' spherical harmonics are added
-// first, in object space, seen from the generator context's view origin: a
-// GpuShReader held by the generator, reading whatever SH each file has.
+// Spark's per-mesh world modifiers as one generator that binds each object's index and matrices
 import * as THREE from "three";
 import { GpuShReader, SplatGenerator, TSL, type GpuArrays, type SplatLayout, type SplatNode, type TslNode } from "@sparkjsdev/radix";
 import { SplatModel } from "./objects.js";
 
 const { uniform, vec4 } = TSL;
 
-// An object's data: { splats, index, model, ... } (the effect's own values
-// ride along)
+// Extra fields hold the effect's own values
 export interface EffectPayload {
   splats: GpuArrays;
   index: number;
@@ -32,7 +23,8 @@ export function worldEffectGenerator(
   const objectIndex = uniform(0, "int");
   const toWorld = uniform(new THREE.Matrix4());
   const toObject = uniform(new THREE.Matrix4());
-  // The matrix's mean scale (scales of non-uniformly scaled objects are approximate)
+  // The matrix's mean scale, approximate for non-uniform scales; rotations stay
+  // in object space, as the effects here only move and scale splats
   const scale = uniform(1);
   return {
     generateSplat(index, context = SplatGenerator.context) {
@@ -58,8 +50,7 @@ export function worldEffectGenerator(
   };
 }
 
-// A SplatModel drawing `arrays` through such a generator, as object `index`
-// (extra joins its payload: the effect's own values)
+// extra holds the effect's own values for the payload
 export function effectModel(generator: SplatGenerator<EffectPayload>, arrays: GpuArrays, index: number, extra: Record<string, unknown> = {}) {
   const payload = { splats: arrays, index, ...extra } as EffectPayload;
   const model = new SplatModel({ generator, count: arrays.count, payload });

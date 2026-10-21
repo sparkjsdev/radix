@@ -1,10 +1,4 @@
-// Spark's interactive-holes: each click on the bedroom blows the splats
-// within a radius up and drops them bouncing to the floor, while they
-// shrink. Up to 128 clicks live in uniform arrays read by a world-space
-// modifier's shader loop over the stored (original) centers; each click also
-// moves the centers in its radius to the floor in the raycast's CPU copy
-// only, so later clicks reach through the holes. As in Spark, the GPU keeps
-// the original centers: the shader picks the splats a click hit from them.
+// Spark's interactive-holes: a click blows the splats near it up and drops them to the floor
 import * as THREE from "three";
 import { GUI } from "lil-gui";
 import { CameraControls, TSL, type SplatNode, type TslNode } from "@sparkjsdev/radix";
@@ -21,8 +15,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 50);
 camera.position.set(0, -0.3, -3);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: Math.min(devicePixelRatio, 2) });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 controls.lookAt(new THREE.Vector3(0, -0.3, 1));
@@ -45,7 +37,7 @@ const uTimes = uniformArray(impulseTimes, "vec4");
 
 const hash = (p: TslNode, k: number) => fract(sin(dot(p.add(vec3(k)), vec3(127.1, 311.7, 74.7))).mul(43758.5453));
 
-// Where a splat blown from `original` is `time` seconds later
+// Where a splat blown from its original center is after the given seconds
 function simulatePhysics(original: TslNode, time: TslNode) {
   const t = max(0, time.add(hash(original, 42).mul(0.2).sub(0.1))).toVar();
   const velocity = vec3(
@@ -72,7 +64,7 @@ function simulatePhysics(original: TslNode, time: TslNode) {
   );
 }
 
-// The latest click whose sphere holds a splat moves and shrinks it
+// The earliest click whose sphere holds a splat moves and shrinks it
 const holes = (s: SplatNode) => {
   const out = s.toVar();
   const original = s.get("center").toVar();
@@ -96,8 +88,8 @@ const bedroom = await splats.load(asset("painted-bedroom.spz"), { onProgress: pa
 bedroom.rotation.x = Math.PI;
 page.ready(renderer);
 
-// The picker's centers in a sphere (in the model's space: Spark's mesh-local
-// floor) moved to the floor; the click's raycast has made the picker
+// The picker's centers in the sphere go to y = 0 in model space, Spark's floor,
+// so later clicks reach through the hole
 function bakeToFloor(worldCenter: THREE.Vector3, radius: number) {
   const local = bedroom.worldToLocal(worldCenter.clone());
   const { centers } = pickerOf(bedroom.data);

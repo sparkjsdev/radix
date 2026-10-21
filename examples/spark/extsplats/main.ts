@@ -1,7 +1,5 @@
-// Spark's extsplats: the same igloo stored 1000 units from its origin, in
-// packedSplats (half-float centers, about 1/1000 relative precision: the
-// lower copy jitters into blocks) and extSplats (float32 centers: the upper
-// copy stays sharp), both brought back in front of the camera
+// Spark's extsplats: an igloo stored 1000 units from its origin, blocky in
+// packedSplats with half-float centers and sharp in extSplats with float32 ones
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -13,12 +11,10 @@ const page = examplePage("extsplats");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
-// The group undoes the files' offset; each holder places one copy in it
+// The group undoes the files' offset
 const group = new THREE.Group();
 group.position.set(0, 0, 1000);
 scene.add(group);

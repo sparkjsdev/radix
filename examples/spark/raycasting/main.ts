@@ -1,7 +1,5 @@
-// Spark's raycasting: five swinging robot heads (one upload, five objects);
-// a click tints the one hit for a moment. THREE.Raycaster calls each
-// SplatModel's raycast(), a CPU ellipsoid test over the loaded splats
-// (js/raycast.js), and the tint is the model's recolor (js/objects.js).
+// Spark's raycasting: five swinging robot heads, a click tinting the one hit
+// for a moment. Radix has no splat raycast, so js/raycast.ts tests on the CPU.
 import * as THREE from "three";
 import { asset } from "../js/assets.js";
 import { SplatSet } from "../js/objects.js";
@@ -16,8 +14,6 @@ const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 10
 camera.position.set(0, -0.25, -1.5);
 camera.lookAt(0, -0.15, 0);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 
 const splats = new SplatSet({ renderer, scene });

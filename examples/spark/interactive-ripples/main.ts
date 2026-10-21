@@ -1,7 +1,5 @@
 // Spark's interactive-ripples: a click on the valley starts a shockwave that
-// pushes splats outward and lights the crests (an object-space modifier on
-// time and the hit point; the hit comes from a CPU raycast against the
-// splats, js/objects.js)
+// pushes splats outward and lights the crests
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer, TSL, type SplatNode } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -19,8 +17,6 @@ scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 2000);
 camera.position.set(0, 0, 3);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: devicePixelRatio });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 controls.lookAt(new THREE.Vector3(0, 0, 0));

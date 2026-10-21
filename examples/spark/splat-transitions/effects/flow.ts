@@ -1,6 +1,4 @@
-// Spark's splat-transitions Flow effect (the splat-flow example inside the
-// transitions page): three scans take turns flowing out of the previous
-// one's center of mass, with the camera flying from one to the next
+// Spark's Flow transition, the splat-flow example inside the transitions page
 import type GUI from "lil-gui";
 import * as THREE from "three";
 import { Splats, TSL, type TslNode } from "@sparkjsdev/radix";
@@ -51,8 +49,7 @@ export async function init({ camera, group, scans, loadScan }: EffectContext): P
     return s;
   }, (data) => (nextIndex.value = (data.index + 1) % files.length));
 
-  // Each scan's place, and the center of its bounds there, as Spark
-  // computes it (only y flipped)
+  // Each scan's place and the center of its bounds there, as Spark computes it (only y flipped)
   const positions = [new THREE.Vector3(-5, -2.2, -3), new THREE.Vector3(5, -2.5, 0), new THREE.Vector3(0, 1.5, 2)];
   for (const [i, model] of models.entries()) {
     model.position.copy(positions[i]);
@@ -69,7 +66,6 @@ export async function init({ camera, group, scans, loadScan }: EffectContext): P
 
   group.add(await loadGlb("dali-env.glb", { unlit: "env" }));
 
-  // From one scan to the next, circling it
   function updateCamera() {
     const w = (time.value + PAUSE_SECONDS) % total;
     const cur = Math.floor(w / CYCLE);

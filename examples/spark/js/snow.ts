@@ -1,8 +1,4 @@
-// Spark's generators.snowBox (src/generators/snow.ts) as a TSL
-// SplatGenerator: numSplats particles drifting through a box, wrapping
-// around it, each wandering on its own phase. The returned uniforms have
-// Spark's names (.value to change them); call update(seconds, delta) every
-// frame. snow is a SplatModel to add to the scene and a SplatSet.
+// Spark's snowBox (src/generators/snow.ts) as a TSL generator, its uniforms named as Spark's
 import * as THREE from "three";
 import { GpuSplats, TSL, type TslNode } from "@sparkjsdev/radix";
 import { SplatModel } from "./objects.js";
@@ -110,7 +106,7 @@ export function snowBox({
 
   const snow = new SplatModel({ generator, count: numSplats });
 
-  // Each frame: the time in seconds and the frame's delta
+  // Every frame, with the time and the frame's delta in seconds
   function update(seconds: number, delta: number) {
     time.value = seconds;
     offset.value.addScaledVector(u.fallDirection.value, u.fallVelocity.value * delta);

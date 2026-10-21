@@ -1,5 +1,4 @@
-// Spark's splat-transitions Morph effect: three food scans in turn scatter
-// into a disk of splats (placed by splat index) and reassemble as the next
+// Spark's Morph transition: scans in turn scatter into a disk and reassemble as the next
 import type GUI from "lil-gui";
 import { TSL, type TslNode } from "@sparkjsdev/radix";
 import type { Effect, EffectContext } from "../main.js";

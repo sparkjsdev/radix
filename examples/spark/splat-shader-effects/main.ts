@@ -1,7 +1,5 @@
-// Spark's splat-shader-effects: a turning cat with five effects (fractal
-// colors, breathing, waves, disintegration, flares), Spark's GLSL rewritten
-// in TSL. Each effect is its own modifier, made once: switching sets the
-// renderer's modifier (object space) and compiles each only the first time.
+// Spark's splat-shader-effects: a turning cat with five effects, Spark's GLSL
+// rewritten in TSL
 import GUI from "lil-gui";
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer, TSL, type SplatModifier, type SplatNode, type TslNode } from "@sparkjsdev/radix";
@@ -16,8 +14,6 @@ const page = examplePage("splat-shader-effects");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -100,7 +96,6 @@ const flare = (pos: TslNode): TslNode => {
   return vec4(mix(pos, p, tt), tt);
 };
 
-// One modifier per effect: apply(center, scales, rgba) returns the fields to set
 function effect(apply: (pos: TslNode, scales: TslNode, rgba: TslNode) => Partial<Record<"center" | "scales" | "rgba", TslNode>>): SplatModifier {
   return (s: SplatNode) => {
     const out = s.toVar();

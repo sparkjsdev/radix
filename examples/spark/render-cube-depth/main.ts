@@ -1,10 +1,7 @@
-// Spark's render-cube-depth: the fireplace and a duck rendered into a cube
-// map and read back (logged). With "Depth" on, splats are flat discs
-// (falloff 0, maxStdDev 2) colored by their depth from the main camera,
-// packed into RGB by a world-space modifier, the duck by the same packing in
-// its own material, and the read-back faces are unpacked into distances.
-// Spark renders the cube with a second SparkRenderer; here the cube faces
-// draw through the page's renderer, whose settings the toggle changes.
+// Spark's render-cube-depth: the fireplace and a duck rendered into a cube map
+// and read back, with "Depth" on as their depth packed into RGB. The cube
+// renders through the page's renderer, whose settings the toggle changes, where
+// Spark uses a second SparkRenderer.
 import * as THREE from "three";
 import { MeshBasicNodeMaterial, type CubeRenderTarget } from "three/webgpu";
 import { CameraControls, TSL, type SplatModifier, type TslNode } from "@sparkjsdev/radix";
@@ -22,8 +19,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 0.5, 0);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { directCanvas: false });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -47,7 +42,7 @@ const packDepthToRGB = Fn(([v]: TslNode[]) => {
   return select(v.lessThanEqual(0), vec3(0), select(v.greaterThanEqual(1), vec3(1), vec3(r, g, b)));
 });
 
-// The main camera's world to clip transform, set every frame
+// The main camera's world to clip transform
 const worldToClip = uniform(new THREE.Matrix4());
 const depth01 = (world: TslNode) => {
   const clip = worldToClip.mul(vec4(world, 1)).toVar();

@@ -1,10 +1,5 @@
-// Spark's splat-painter: paint, erase and restore the splats of a scan with
-// a brush (a cylinder along the pointer's ray), then export to SPZ. The
-// renderer's world modifier previews the brush; a drag bakes it into the
-// stored splats with a GpuArrayWriter (a fragment pass on both backends)
-// that reads the current splats and writes a scratch copy, swapped in. The
-// original splats stay on the GPU for the restore brush. Export reads the
-// painted splats back, drops erased ones and writes SPZ.
+// Spark's splat-painter: paint, erase and restore a scan's splats with a brush
+// along the pointer's ray, then save them as SPZ
 import * as THREE from "three";
 import { GUI, type Controller } from "lil-gui";
 import {
@@ -22,8 +17,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xaaffff);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
@@ -43,8 +36,7 @@ function showMode() {
 }
 showMode();
 
-// The brush applied to a splat at a world-space center; original: a reader
-// of the unpainted splats (the restore brush)
+// original reads the unpainted splats, for the restore brush
 function brush(splat: SplatNode, worldCenter: TslNode, original: GpuSplatReader) {
   const along = dot(brushDirection, worldCenter.sub(brushOrigin)).toVar();
   const distance = length(brushOrigin.add(brushDirection.mul(along)).sub(worldCenter));
@@ -76,8 +68,6 @@ const bakeWriter = new GpuArrayWriter({
   },
 });
 
-// The painted splats, the unpainted ones and the bake's scratch copy, freed
-// together once nothing draws the model
 async function loadScan(source: string | File, name: string) {
   const data = await loadSplats(source, { name, onProgress: page.progress(name) });
   const arrays: GpuArrays = GpuArrays.fromData(renderer, data, { bundles: ["extSplats"] });
@@ -147,7 +137,6 @@ function openFile() {
   input.click();
 }
 
-// The brush follows the pointer's ray
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let dragging = false;
@@ -175,7 +164,7 @@ gui.addColor(brushColor, "value").name("Brush color");
 gui.add({ openFile }, "openFile").name("Load splats");
 gui.add({ saveSpz }, "saveSpz").name("Save splats (SPZ)");
 
-// Brush size keys: the controller, its step and range
+// Per key: the controller, its step, min and max
 const STEPS: Record<string, [Controller, number, number, number]> = {
   "=": [radius, 0.01, 0.01, 0.25], "+": [radius, 0.01, 0.01, 0.25], "-": [radius, -0.01, 0.01, 0.25], _: [radius, -0.01, 0.01, 0.25],
   "]": [depth, 0.5, 0.1, 100], "[": [depth, -0.5, 0.1, 100],

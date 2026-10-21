@@ -1,7 +1,4 @@
-// Splats made on the CPU, after Spark's splatConstructors.ts: a builder
-// with Spark's pushSplat, and text, image and grid splats. Each
-// returns a SplatData table (Splats.make + Splats.encoder) to upload with
-// GpuArrays.fromData.
+// Splats made on the CPU, after Spark's splatConstructors.ts
 import * as THREE from "three";
 import { Splats, type SplatBundle, type SplatTarget } from "@sparkjsdev/radix";
 
@@ -28,8 +25,7 @@ export class SplatBuilder {
     this.count = 0;
   }
 
-  // Spark's PackedSplats.pushSplat argument order; color is a THREE.Color
-  // (or { r, g, b })
+  // Spark's PackedSplats.pushSplat argument order
   pushSplat(center: Xyz, scales: Xyz, quaternion: Xyz & { w: number }, opacity: number, color: Rgb) {
     if ((this.count + 1) * FLOATS > this.values.length) {
       const grown = new Float32Array(this.values.length * 2);
@@ -40,7 +36,6 @@ export class SplatBuilder {
     this.count += 1;
   }
 
-  // The splats as a SplatData table
   build({ layout = "extSplats", encoding }: SplatTarget = {}) {
     const data = Splats.make(this.count, { layout, encoding });
     writeSplats(Splats.get(data).bundle, this.values, 0, this.count);
@@ -48,7 +43,7 @@ export class SplatBuilder {
   }
 }
 
-// Writes splats [first, first + count) of builder-ordered values into bundle
+// values in SplatBuilder's layout
 export function writeSplats(bundle: SplatBundle, values: Float32Array, first: number, count: number) {
   const encode = Splats.encoder(bundle);
   const s = Splats.makeExtSplat();
@@ -63,8 +58,7 @@ export function writeSplats(bundle: SplatBundle, values: Float32Array, first: nu
   }
 }
 
-// Text drawn with a 2D canvas, one splat per covered pixel, centered at the
-// origin in the xy plane. Returns { data, color } (color: Spark's recolor).
+// One splat per pixel of text on a canvas; the returned color is for Spark's recolor
 export function textSplats({
   text, font = "Arial", fontSize = 32, color = new THREE.Color(1, 1, 1), rgb = new THREE.Color(1, 1, 1),
   dotRadius = 0.8, textAlign = "start", lineHeight = 1, objectScale = 1,
@@ -126,9 +120,7 @@ export function textSplats({
   return { data: builder.build(), color };
 }
 
-// An image's pixels as splats (alpha > 0), centered in the xy plane;
-// forEachSplat(width, height, index, center, scales, quaternion, opacity,
-// color) may change them and returns the opacity, or null to skip
+// forEachSplat may change a splat and returns its opacity, or null to skip it
 export type ForEachSplat = (
   width: number, height: number, index: number, center: THREE.Vector3, scales: THREE.Vector3, quaternion: THREE.Quaternion, opacity: number, color: THREE.Color,
 ) => number | null | undefined;
@@ -177,8 +169,7 @@ export async function imageSplats({ url, dotRadius = 0.8, subXY = 1, forEachSpla
   return builder.build();
 }
 
-// A grid of points over `extents`, each a colored splat over a dark
-// "shadow" splat behind it (Spark's constructGrid)
+// Spark's constructGrid: each point a colored splat with a larger black one around it
 export function constructGrid({ builder = new SplatBuilder(), extents, stepSize = 1, pointRadius = 0.01, pointShadowScale = 2, opacity = 1, color }: {
   builder?: SplatBuilder;
   extents: THREE.Box3;

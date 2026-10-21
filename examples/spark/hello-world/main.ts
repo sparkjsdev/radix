@@ -10,19 +10,16 @@ const page = examplePage("hello-world");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
-// Most captures are stored upside down: half a turn about x, 3 m ahead
+// Most captures are stored upside down
 const butterfly = new THREE.Object3D();
 butterfly.rotation.x = Math.PI;
 butterfly.position.set(0, 0, -3);
 scene.add(butterfly);
 
-// One file in one collection, placed by the object's matrixWorld (read every
-// render), its spherical harmonics seen from the camera
+// The collection reads the object's matrixWorld every render
 const file = await loadSplatFile(renderer, asset("butterfly.spz"), { onProgress: page.progress("butterfly") });
 const splats = new SplatRenderer({ renderer });
 splats.collection = new SplatCollection([fileObject(file, { matrixWorld: butterfly.matrixWorld })]);

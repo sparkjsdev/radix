@@ -1,9 +1,6 @@
-// Spark's splat-portal: two separate worlds, each with a circular portal
-// showing the other; walk through to switch worlds. Each world is its own
-// scene with its own SplatRenderer; each frame renders the other world from
-// the linked camera into a render target, which the portal's TSL material
-// samples. Spark's world B is Sutro, a SOGS zip Radix cannot read: here it
-// is the fireplace scan.
+// Spark's splat-portal: two worlds, each with a portal to the other to walk
+// through. Spark's second world is Sutro, a SOGS zip Radix can't read, so here
+// it is the fireplace scan.
 import * as THREE from "three";
 import { MeshBasicNodeMaterial } from "three/webgpu";
 import { CameraControls, SplatCollection, SplatRenderer, TSL } from "@sparkjsdev/radix";
@@ -19,14 +16,10 @@ page.legend("WASD + mouse to move, go through the portal to switch worlds");
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 2000);
 camera.position.set(0, 1, 3);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { antialias: true, pixelRatio: devicePixelRatio });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 controls.lookAt(new THREE.Vector3(0, 1, 0));
 
-// A world: a scene with its own splat renderer drawing one scan, placed by
-// the Object3D `holder`
 async function world(name: string, holder: THREE.Object3D) {
   const file = await loadSplatFile(renderer, asset(name), { onProgress: page.progress(name) });
   const scene = new THREE.Scene();
@@ -50,9 +43,8 @@ const RADIUS = 0.6;
 const time = uniform(0);
 const size = (): [number, number] => [Math.max(1, Math.floor(innerWidth * renderer.getPixelRatio())), Math.max(1, Math.floor(innerHeight * renderer.getPixelRatio()))];
 
-// A portal in `world` showing its target: the other world seen by its
-// camera. `toOther` maps this world's points through the portal into the
-// other's; `clip` is the camera's world to clip transform.
+// toOther maps this world's points through the portal into the other's;
+// clip is the linked camera's world to clip transform
 function portal(world: THREE.Scene, position: THREE.Vector3, turn: number) {
   const target = new THREE.RenderTarget(...size(), { depthBuffer: true });
   const toOther = uniform(new THREE.Matrix4());
@@ -94,7 +86,7 @@ for (const [from, to] of pairs) {
   from.toOther.copy(from.mesh.matrixWorld).invert().premultiply(rotY180).premultiply(to.mesh.matrixWorld);
 }
 
-// The main camera carried through `from`, kept within 3 of the other portal
+// The main camera carried through one portal, kept within 3 of the other
 function linkCamera(from: Portal, to: Portal) {
   const linked = from.camera;
   linked.matrixWorld.copy(camera.matrixWorld).premultiply(from.toOther);
@@ -111,8 +103,7 @@ let lastSide = -1;
 let cooldown = 0;
 page.ready(renderer);
 
-// Crossing this world's portal (from one side to the other, or into its
-// middle) moves the camera into the other world
+// Changing sides near this world's portal, or reaching its middle, moves the camera across
 function crossPortal(delta: number) {
   cooldown -= delta;
   if (cooldown > 0) {
@@ -140,7 +131,6 @@ renderer.setAnimationLoop((now) => {
   time.value = now / 1000;
   camera.updateMatrixWorld(true);
 
-  // The other worlds into the targets, portals hidden
   portalA.mesh.visible = portalB.mesh.visible = false;
   for (const [from, to] of pairs) {
     linkCamera(from, to);

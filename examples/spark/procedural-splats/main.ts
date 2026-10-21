@@ -1,8 +1,6 @@
-// Spark's procedural-splats: splats made on the CPU (js/construct.js, on
-// Splats.make and Splats.encoder): a 500k-splat Sierpinski pyramid from the
-// chaos game, 100k stars, text drawn with a 2D canvas, and an image's
-// pixels. Spark's textSplats color is a recolor tint, here baked into the
-// text's splats; the help line fades by an object modifier.
+// Spark's procedural-splats: a Sierpinski pyramid, stars, text and an image's
+// pixels as splats made on the CPU. The text's color is baked into its splats
+// where Spark tints them with recolor.
 import * as THREE from "three";
 import { CameraControls, GpuArrays, SplatCollection, SplatGenerator, SplatRenderer, TSL, type ArrayData, type SplatNode } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -16,12 +14,9 @@ const page = examplePage("procedural-splats");
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
-// `count` round splats of one size, each placed and colored by `place`
 function points(count: number, size: number, place: (center: THREE.Vector3, color: THREE.Color) => void) {
   const builder = new SplatBuilder(count);
   const center = new THREE.Vector3();
@@ -35,7 +30,6 @@ function points(count: number, size: number, place: (center: THREE.Vector3, colo
   return builder.build();
 }
 
-// An Object3D placing each table: its matrixWorld is the splat object's
 function holder() {
   const object = new THREE.Object3D();
   scene.add(object);
@@ -75,7 +69,6 @@ const image = holder();
 image.scale.setScalar(0.7 / 400);
 image.position.set(-0.5, -1, -2);
 
-// The help line's opacity, multiplied in by its own generator
 const helpOpacity = uniform(1);
 const fade = (s: SplatNode) => {
   const out = s.toVar();

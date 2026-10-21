@@ -1,12 +1,9 @@
-// Spark's editor, the parts Radix supports: open, drop or paste the URLs of
-// several splat files (?url=, repeated; ?x= ?y= ?z= ?qx= ?qy= ?qz= ?qw= for
-// the camera), each with its opacity, position, scale and rotation; a
-// coordinate-system frame, auto-rotate, fly or orbit, a grid, bounding boxes,
-// normal coloring and a clip box (one world modifier), the render params,
-// the splat layout and packed ranges (on reload), frame stats and Radix's
-// four projection methods. Files with a LoD tree draw their leaves.
-// Left out (Radix lacks them): LoD building and traversal, spherical
-// harmonics, .splat / .ksplat / .zip / .sog files.
+// Spark's editor: open, drop or paste splat files and set their pose, scale,
+// opacity and the render settings. Radix builds and traverses no LoD, so files
+// with a LoD tree draw their leaves, and reads no .splat, .ksplat, .zip or .sog.
+//   ?url=                a splat file URL, repeated for several
+//   ?x= ?y= ?z=          the camera position, default 0, 0, 1
+//   ?qx= ?qy= ?qz= ?qw=  the camera rotation, default 0, 0, 0, 1
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { CameraControls, GpuSplats, Splats, TSL, loadSplatFile, type SplatModifier } from "@sparkjsdev/radix";
@@ -23,12 +20,10 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 1000);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { pixelRatio: devicePixelRatio });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
-// Files go in `frame` (the coordinate system's axes), turned by `spin`
+// Files go in frame (the coordinate system's axes), turned by spin
 const FRAMES: Record<string, [number, number, number, number]> = {
   OpenGL: [0, 0, 0, 1], OpenCV: [1, 0, 0, 0], "Z-up": [-Math.SQRT1_2, 0, 0, Math.SQRT1_2],
 };
@@ -37,7 +32,6 @@ const frame = new THREE.Group();
 spin.add(frame);
 scene.add(spin);
 
-// The world modifier: normal coloring and the clip box
 const cameraPosition = uniform(new THREE.Vector3());
 const normalColor = uniform(0);
 const clip = { enable: uniform(0), min: uniform(new THREE.Vector3(-5, -5, -5)), max: uniform(new THREE.Vector3(5, 5, 5)) };
@@ -54,7 +48,6 @@ const editorModifier: SplatModifier = (s) => {
   return out;
 };
 
-// One renderer for every model: the files, the grid and the instructions
 const splats = new SplatSet({ renderer, scene, modifier: editorModifier, modifierSpace: "world" });
 
 const grid = splats.of(constructGrid({ extents: new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(), new THREE.Vector3(20, 20, 20)) }).build());
@@ -78,10 +71,8 @@ const settings = {
     camera.updateProjectionMatrix();
   },
 };
-// Ranges of the packed layout's quantized colors and scales
 const encoding = { ...Splats.DEFAULT_PACKED_ENCODING };
 
-// A Box3Helper around a model's splat centers, in its own space
 function boundingBox(model: StoredModel) {
   const box = new THREE.Box3();
   const { bundle } = Splats.get(model.data);
@@ -93,8 +84,6 @@ function boundingBox(model: StoredModel) {
   helper.visible = settings.boundingBoxes;
   return helper;
 }
-
-// --- Loading ---
 
 const gui = new GUI({ title: "Settings" });
 const files = gui.addFolder("Files");
@@ -117,10 +106,8 @@ async function loadFiles(sources: (string | File)[], replace = settings.replace)
     const name = typeof source === "string" ? source.split("/").pop()!.split("?")[0] : source.name;
     try {
       const { splats: data, shPalette } = await loadSplatFile(source, { name, layout: settings.layout, encoding, onProgress: page.progress(name) });
-      // Drawn through its LoD tree's leaves, if it has one
       const file = fileOf(renderer, data, shPalette);
       const model = splats.of(file, { release: () => releaseFile(file) });
-      // Each file after the first is offset along a diagonal
       const offset = settings.loadOffset * index;
       model.position.set(offset, 0.5 * offset, 0.1 * offset);
       model.add(boundingBox(model));
@@ -142,7 +129,6 @@ function fileFolder(name: string, model: StoredModel) {
   return folder;
 }
 
-// Position and rotation sliders of an object (they follow other changes)
 function poseControls(folder: GUI, object: THREE.Object3D) {
   for (const axis of ["x", "y", "z"] as const) {
     folder.add(object.position, axis, -10, 10, 0.01).name(`position ${axis}`).listen();
@@ -152,7 +138,6 @@ function poseControls(folder: GUI, object: THREE.Object3D) {
   }
 }
 
-// The splat file URLs in some text
 const urlsIn = (text: string) => text.split(/[\s,;]+/).filter((part) => /^https?:\/\//.test(part) && /\.(ply|spz|rad|rdx)/i.test(part));
 
 const fileInput = Object.assign(document.createElement("input"), { type: "file", accept: ".ply,.spz,.rad,.rdx", multiple: true });
@@ -173,8 +158,6 @@ canvas.addEventListener("drop", (event) => {
     loadFiles(urls.length ? urls : dropped);
   }
 });
-
-// --- GUI ---
 
 files.add(settings, "open").name("Open files");
 files.add(settings, "url").name("Paste URL(s)").onFinishChange((value: string) => {
@@ -234,8 +217,6 @@ for (const axis of ["x", "y", "z"]) {
   clipFolder.add(clip.max.value, axis, -50, 50, 0.01).name(`max ${axis}`);
 }
 
-// --- Start ---
-
 const query = new URLSearchParams(location.search);
 const number = (key: string, fallback: number) => (query.has(key) ? parseFloat(query.get(key)!) : fallback);
 camera.position.set(number("x", 0), number("y", 0), number("z", 1));
@@ -250,7 +231,6 @@ if (urls.length) {
   page.ready(renderer);
 }
 
-// Frames per second over half-second windows
 let frames = 0;
 let since = performance.now();
 let last = 0;

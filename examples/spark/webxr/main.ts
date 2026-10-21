@@ -1,10 +1,6 @@
-// Spark's webxr: the valley in VR with tracked hands drawn as splats, each
-// fingertip carrying a colored, wobbling sphere that lights the splats it
-// touches. The hands are a TSL generator reading the joints from a uniform
-// array (Spark's makeJointSplats), drawn by their own SplatRenderer so the
-// edits skip them (Spark's editable = false); the fingertip spheres are an
-// SdfEdit (js/sdf.js) in the valley renderer's world modifier. On the
-// desktop it shows the valley; hands need a headset or an emulator.
+// Spark's webxr: the valley in VR with hands drawn as splats, each fingertip
+// lighting the splats it touches. The hands have a renderer of their own so the
+// edits skip them, where Spark sets editable = false.
 import * as THREE from "three";
 import { CameraControls, GpuSplats, SplatCollection, SplatRenderer, TSL, type SplatGenerator } from "@sparkjsdev/radix";
 import { asset } from "../js/assets.js";
@@ -24,16 +20,13 @@ const localFrame = new THREE.Group();
 localFrame.add(camera);
 scene.add(localFrame);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
 const edit = new SdfEdit({ rgbaBlendMode: SdfBlend.ADD_RGBA, sdfSmooth: 0.02, softEdge: 0.02, maxSdfs: 10 });
 localFrame.add(edit);
 
-// The valley with the edits, the hands in a renderer of their own; both
-// move by uniforms the CPU sort cannot see
+// The edits and the hands move splats by uniforms the CPU sort cannot see
 const splats = new SplatRenderer({ renderer, params: { maxStdDev: Math.sqrt(5) }, modifier: sdfModifier([edit]), modifierSpace: "world" });
 const handSplats = new SplatRenderer({ renderer, params: { maxStdDev: Math.sqrt(5) } });
 scene.add(splats, handSplats);
@@ -62,7 +55,7 @@ const hands = new THREE.Object3D();
 localFrame.add(hands);
 handSplats.collection = new SplatCollection([{ generator: handGenerator, count: JOINTS * 2, matrixWorld: hands.matrixWorld }]);
 
-// A sphere per fingertip, its color by finger as in Spark's example
+// A sphere per fingertip, colored by finger as in Spark's example
 const TIPS = ["thumb-tip", "index-finger-tip", "middle-finger-tip", "ring-finger-tip", "pinky-finger-tip"];
 const tips = new Map<string, { sdf: SdfSphere; finger: number }>();
 for (const hand of ["left", "right"]) {

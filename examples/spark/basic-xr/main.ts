@@ -1,8 +1,6 @@
-// Spark's basic-xr: a cozy cottage on the desktop or in WebXR, rendering
-// paused after 30 seconds without movement. The file holds a LoD tree;
-// Radix picks no LoD nodes, so this draws its leaves (every original
-// splat) through an index list where Spark draws a budget of LoD nodes.
-// The controls move the camera, and in XR its parent, the local frame.
+// Spark's basic-xr: a cozy cottage on the desktop or in WebXR, rendering paused
+// after 30 seconds without movement. Radix selects no LoD nodes, so this draws
+// every leaf of the file's LoD tree where Spark draws a budget of nodes.
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { CameraControls, SplatCollection, SplatRenderer } from "@sparkjsdev/radix";
@@ -21,8 +19,6 @@ const localFrame = new THREE.Group();
 localFrame.add(camera);
 scene.add(localFrame);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() });
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera });
 
@@ -34,7 +30,6 @@ const world = new THREE.Object3D();
 world.position.set(0, -1, 0);
 scene.add(world);
 
-// A LoD file: its leaves through an index list (file.indices)
 const file = await loadSplatFile(renderer, asset("cozy-cottage-lod.spz"), { layout: "packedSplats", onProgress: page.progress("cozy cottage") });
 splats.collection = new SplatCollection([fileObject(file, { matrixWorld: world.matrixWorld })]);
 

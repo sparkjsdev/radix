@@ -1,7 +1,7 @@
-// Spark's viewer: drop, choose or paste the URL of a splat file (?url= too)
-// and fly around it; the button saves it as SPZ (writeSplats). Radix
-// reads PLY, SPZ, RAD and RDX; Spark also reads .splat, .ksplat and SOGS
-// .zip files, and keeps spherical harmonics, which Radix skips.
+// Spark's viewer: drop, choose or paste a splat file, fly around it and save it
+// as SPZ. Spark also reads .splat, .ksplat and SOGS .zip files, Radix only PLY,
+// SPZ, RAD and RDX.
+//   ?url=  a splat file URL to open, none by default
 import * as THREE from "three";
 import { CameraControls, SplatCollection, SplatRenderer, loadSplatFile, writeSplats, type ArrayData, type ShPalette } from "@sparkjsdev/radix";
 import { examplePage, windowRenderer } from "../js/page.js";
@@ -13,8 +13,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 1000);
 camera.position.set(0, 0, 1);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "fly" } });
 
@@ -35,8 +33,7 @@ const urlInput = element<HTMLInputElement>("url");
 
 let shown: { data: ArrayData; shPalette?: ShPalette; name: string } | undefined;
 
-// A new collection of the one file (LoD files: their leaves); the last
-// one's arrays are freed once nothing draws it
+// The previous file's arrays are freed once nothing draws it
 async function load(source: string | File) {
   const name = typeof source === "string" ? source.split("/").pop()!.split("?")[0] : source.name;
   start.hidden = true;

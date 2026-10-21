@@ -1,13 +1,4 @@
-// Splat objects with SplatMesh-like handles, on Radix's collections, for
-// the larger ports (the simple ones use SplatCollection directly):
-//   SplatModel  an Object3D placing a loaded file (or a generator) in the
-//               scene: its matrixWorld is the splat object's; opacity
-//               and recolor (a tint) per object, set in the generator's bind
-//               (Radix has no per-object opacity or tint param); raycast()
-//               so THREE.Raycaster can hit it (raycast.ts)
-//   SplatSet    one SplatRenderer drawing a set of models in one sort; before
-//               each render its collection follows the models shown (a
-//               collection is immutable)
+// Splat objects with SplatMesh-like handles on Radix's collections, for the larger ports
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -19,14 +10,12 @@ import { SplatPicker } from "./raycast.js";
 
 const { uniform } = TSL;
 
-// The data a fade generator binds per object
 interface FadeData extends StoredSplats {
   opacity: number;
   tint: THREE.Vector3;
 }
 
-// `base` (a stored-splat generator, its SH included), then the object's
-// `opacity` and `tint` multiplied in
+// Multiplies in the object's opacity and tint, which Radix has no object param for
 function fadeGenerator(base: SplatGenerator<StoredSplats>): SplatGenerator<FadeData> {
   const opacity = uniform(1);
   const tint = uniform(new THREE.Vector3(1, 1, 1));
@@ -45,8 +34,7 @@ function fadeGenerator(base: SplatGenerator<StoredSplats>): SplatGenerator<FadeD
   };
 }
 
-// Fade generators without modifiers, one per shared base generator (arrays
-// of the same kind)
+// One per base generator, which forArrays shares between arrays of one kind
 const shared = new WeakMap<object, SplatGenerator<FadeData>>();
 function sharedFade(base: SplatGenerator<StoredSplats>) {
   if (!shared.has(base)) {
@@ -55,11 +43,10 @@ function sharedFade(base: SplatGenerator<StoredSplats>) {
   return shared.get(base)!;
 }
 
-// One picker per loaded table, shared by the models drawing it
 const pickers = new WeakMap<ArrayData, SplatPicker>();
 
-// The picker of a table (its centers can be edited in place); forgetPicker
-// after editing the table wholesale
+// A picker's centers may be edited in place; after forgetPicker the next call
+// reads the table again
 export function pickerOf(data: ArrayData) {
   if (!pickers.has(data)) {
     pickers.set(data, new SplatPicker(data));
@@ -76,8 +63,6 @@ const linear = new THREE.Matrix3();
 const origin = new THREE.Vector3();
 const dir = new THREE.Vector3();
 
-// The nearest splat of a table placed by `matrixWorld` along the raycaster's ray
-// (a CPU test, raycast.ts): { distance, point, index }, or undefined
 export function raycastSplats(raycaster: THREE.Raycaster, data: ArrayData, matrixWorld: THREE.Matrix4) {
   inverse.copy(matrixWorld).invert();
   origin.copy(raycaster.ray.origin).applyMatrix4(inverse);
@@ -88,16 +73,14 @@ export function raycastSplats(raycaster: THREE.Raycaster, data: ArrayData, matri
 }
 
 export interface SplatModelOptions {
-  // Stored splats (a LoadedFile's fields): the GPU arrays (their SH drawn
-  // seen from each view), their CPU table (enables raycast()), an index list
-  // drawing a subset, the palette of their shLabel
+  // A LoadedFile's fields; data enables raycast()
   arrays?: GpuArrays;
   data?: ArrayData;
   indices?: GpuArrays;
   shPalette?: GpuArrays;
   modifiers?: SplatModifier[];
   opacity?: number;
-  // Or a generator of its own: `count` splats, `payload` its objects' data
+  // Or a generator of its own: a count of splats and a payload of its objects' data
   generator?: AnySplatGenerator;
   count?: number;
   payload?: unknown;
@@ -105,7 +88,6 @@ export interface SplatModelOptions {
   release?: () => void;
 }
 
-// A model drawing a loaded table (SplatSet.load / of)
 export type StoredModel = SplatModel & { data: ArrayData; arrays: GpuArrays };
 
 
@@ -144,7 +126,7 @@ export class SplatModel extends THREE.Object3D {
     }
   }
 
-  // A color multiplying every splat's (Spark's SplatMesh.recolor)
+  // Spark's SplatMesh.recolor
   get recolor(): THREE.Color {
     return this.tint;
   }
@@ -154,12 +136,10 @@ export class SplatModel extends THREE.Object3D {
     this.fade?.tint.set(color.r, color.g, color.b);
   }
 
-  // Object params of this object (blurAmount, focalDistance, ...)
   get params(): Partial<SplatObjectParams> {
     return (this.splatObject.params ??= {});
   }
 
-  // THREE.Raycaster support: the nearest splat along the ray
   raycast(raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
     const hit = this.data && raycastSplats(raycaster, this.data, this.matrixWorld);
     if (hit) {
@@ -168,7 +148,7 @@ export class SplatModel extends THREE.Object3D {
   }
 }
 
-// Whether a model is visible and in a scene (its matrixWorld kept current)
+// Visible and in a scene, which keeps its matrixWorld current
 function shown(object: THREE.Object3D) {
   for (let node: THREE.Object3D | null = object; node; node = node.parent) {
     if (!node.visible) {
@@ -184,12 +164,10 @@ function shown(object: THREE.Object3D) {
 export type SplatSetOptions = Partial<Omit<SplatRendererOptions, "renderer">> & {
   renderer: WebGPURenderer;
   scene: THREE.Scene;
-  // The splats move with uniforms (time, effects): the CPU sort (WebGL2)
-  // sorts again every render
+  // The splats move by uniforms, so the CPU sort sorts every render
   animate?: boolean;
 };
 
-// One SplatRenderer (added to the scene) drawing a set of models
 export class SplatSet {
   renderer: SplatRenderer;
   models: SplatModel[] = [];
@@ -206,7 +184,7 @@ export class SplatSet {
     splatRenderer.raycast = () => {};
     scene.add(splatRenderer);
 
-    // Before it projects: the collection of the models shown now
+    // Before it projects, the collection follows the models shown
     const project = splatRenderer.onBeforeRender.bind(splatRenderer);
     splatRenderer.onBeforeRender = (...args: Parameters<SplatRenderer["onBeforeRender"]>) => {
       this.update();
@@ -217,13 +195,11 @@ export class SplatSet {
     };
   }
 
-  // A model of a splat file, added to the set
   async load(url: string, { layout, encoding, onProgress, sh, ...options }: LoadOptions & Omit<SplatModelOptions, keyof LoadedFile> = {}) {
     return this.of(await loadSplatFile(this.gpu, url, { layout, encoding, onProgress, sh }), options);
   }
 
-  // A model of a loaded file (or a table, uploaded here), added to the set;
-  // models of one file share its upload
+  // Models of one loaded file share its upload
   of(file: LoadedFile | ArrayData, options: Omit<SplatModelOptions, keyof LoadedFile> = {}): StoredModel {
     const loaded = file instanceof ArrayData ? fileOf(this.gpu, file) : file;
     const model = new SplatModel({ ...loaded, ...options }) as StoredModel;
@@ -231,7 +207,6 @@ export class SplatSet {
     return model;
   }
 
-  // Models without a parent go into the scene
   add(...models: SplatModel[]) {
     for (const model of models) {
       if (!model.parent) {
@@ -247,7 +222,7 @@ export class SplatSet {
     this.models = this.models.filter((model) => !models.includes(model));
   }
 
-  // A new collection when the shown models changed
+  // Collections are immutable, so a new one when the shown models change
   update() {
     const visible = this.models.filter(shown);
     const key = visible.map((model) => model.id).join(",");

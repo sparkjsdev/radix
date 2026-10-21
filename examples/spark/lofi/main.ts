@@ -1,14 +1,8 @@
-// Spark's lofi ("Lofi Worlds"): a hundred 500k-splat worlds that advance with
-// the music ([ ] switch them), each morphing into the next, with rustling
-// leaves, snow or rain, and in WebXR hands that push the splats around or
-// (wrists tapped together) cast two spotlights.
-//   - the last 10 worlds used stay loaded; an evicted world's arrays are freed
-//     once no live collection draws it (its objects' release counts them)
-//   - the morph: a generator reading splat i of both worlds, blended by a uniform
-//   - one world-space modifier for the rustle, the ten fingertip forces and
-//     the two spotlights, on the worlds and the snow
-// Spark's sort360 / sort32: Radix's keys are distances from the head;
-// sortBits 32 here.
+// Spark's lofi ("Lofi Worlds"): a hundred worlds that advance with the music,
+// each morphing into the next, with rustling leaves, snow or rain, and in WebXR
+// hands that push the splats around or cast two spotlights. Radix sorts by
+// distance from the head as Spark's sort360 does, and sortBits 32 is its sort32.
+//   ?weather=  snow | rain for every world, default each world's own
 import * as THREE from "three";
 import GUI from "lil-gui";
 import {
@@ -44,8 +38,6 @@ const localFrame = new THREE.Group();
 localFrame.add(camera);
 scene.add(localFrame);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera, { xr: true, backend: xrBackend() });
 
 // The controls move the local frame (it carries the camera), in XR too; the
@@ -57,8 +49,6 @@ scene.add(idleBee);
 const worldFrame = new THREE.Object3D();
 worldFrame.quaternion.set(1, 0, 0, 0);
 idleBee.add(worldFrame);
-
-// --- Worlds: the last 10 used, least recently used first ---
 
 interface World {
   name: string;
@@ -72,7 +62,7 @@ const worlds = new Map<string, World>();
 
 const maybeFree = (world: World) => world.evicted && world.refs === 0 && world.arrays?.dispose();
 
-// The world `name`, loading it if needed
+// The named world, loaded if needed; the map keeps the last 10 used, oldest first
 function getWorld(name: string) {
   let world = worlds.get(name);
   worlds.delete(name);
@@ -99,15 +89,13 @@ function getWorld(name: string) {
   return world;
 }
 
-// --- Splat effects ---
-
 const transitionT = uniform(0);
 const idleBeeTranslate = uniform(0);
 const rustleBlend = uniform(0);
 const globalT = uniform(0);
 const tips = Array.from({ length: 10 }, () => new THREE.Vector4());
 const uTips = uniformArray(tips, "vec4");
-// Per spotlight: origin and fov (0: off); direction
+// Per spotlight: origin and fov in degrees (0: off); direction
 const spotlights = Array.from({ length: 2 }, () => new THREE.Vector4());
 const spotlightDirs = Array.from({ length: 2 }, () => new THREE.Vector3());
 const uSpotlights = uniformArray(spotlights, "vec4");
@@ -184,19 +172,16 @@ function worldModifier(s: SplatNode) {
   return out;
 }
 
-// The worlds' generators and the modifier move by uniforms the CPU sort
-// cannot see: it sorts again every frame (the loop)
+// The generators and the modifier move splats by uniforms the CPU sort cannot
+// see, so the loop requests a sort every frame
 const splatRenderer = new SplatRenderer({ renderer, params: { maxStdDev: Math.sqrt(4) }, sortBits: 32, modifier: worldModifier, modifierSpace: "world" });
 scene.add(splatRenderer);
-
-// --- Snow and rain ---
 
 const snow = snowBox({ density: 40, box: new THREE.Box3(new THREE.Vector3(-4, -1, -4), new THREE.Vector3(4, 5, 4)) });
 snow.opacity.value = 0;
 idleBee.add(snow.snow);
 
-// As Spark: a world's own weather, else with bad weather on none, snow or
-// rain at random, picked when a world comes in (?weather=snow | rain forces one)
+// As in Spark: a world's own weather, else with bad weather on none, snow or rain at random
 const badWeather = { enable: false };
 const forcedWeather = new URLSearchParams(location.search).get("weather");
 
@@ -217,8 +202,6 @@ function pickWeather(name: string) {
   snow.maxScale.value = preset.maxScale;
   snow.anisoScale.value.copy(preset.anisoScale).normalize();
 }
-
-// --- What is drawn: one world (or the morph of two), and the snow when it shows ---
 
 let shown: World | undefined;
 let worldSplats: AnySplatObject | undefined;
@@ -242,8 +225,6 @@ function show(current: World, next?: World) {
   };
   updateCollection();
 }
-
-// --- Audio, play button, settings ---
 
 let audioIndex = 0;
 const audio = new Audio(AUDIOS[audioIndex]);
@@ -301,8 +282,6 @@ gui.add(badWeather, "enable").name("Bad weather").onChange(() => {
   }
 });
 
-// --- World switching: the target moves on with the music or a key ---
-
 let targetWorld = 0;
 let direction = 1;
 let transition: { to: World; start: number } | undefined;
@@ -354,8 +333,6 @@ function updateWorlds(time: number) {
   }
 }
 
-// --- Idle drift: after a while without input the view eases home and drifts ---
-
 let idleBeeTime = 0;
 let idleBeeBlend = 0;
 
@@ -375,8 +352,6 @@ function updateIdleBee(delta: number) {
   idleBee.quaternion.setFromEuler(new THREE.Euler(0, 0.1 * Math.sin(t * 0.37) * blend, 0, "YXZ"));
 }
 
-// --- Hands (WebXR): fingertip forces, or spotlights from the palms ---
-
 const TIPS = ["thumb-tip", "index-finger-tip", "middle-finger-tip", "ring-finger-tip", "pinky-finger-tip"];
 const jointMeshes = new Map<string, THREE.Mesh>();
 let spotlightMode = false;
@@ -384,7 +359,7 @@ let wristsTouching = false;
 const point = new THREE.Vector3();
 const palmQuaternion = new THREE.Quaternion();
 
-// A colored ellipsoid per joint, posed in the local frame (the reference space)
+// Joint meshes go in the local frame, the reference space of their poses
 function jointMesh(key: string) {
   let mesh = jointMeshes.get(key);
   if (!mesh) {
@@ -404,7 +379,7 @@ function updateHands(xrFrame?: XRFrame) {
     return;
   }
 
-  // The tracked joints of each hand (scale.x is a joint's radius)
+  // Each hand's tracked joints, scale.x their radius
   const hands: Record<string, Record<string, THREE.Mesh>> = {};
   for (const source of xrFrame.session.inputSources) {
     if (!source.hand) {
@@ -461,8 +436,6 @@ function updateHands(xrFrame?: XRFrame) {
     }
   });
 }
-
-// --- Frame loop ---
 
 const lastCameraPos = new THREE.Vector3();
 let lastTime: number | undefined;

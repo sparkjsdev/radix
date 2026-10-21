@@ -1,7 +1,5 @@
-// Spark's interactive-deform: drag a point of the penguin to pull the splats
-// around it, release for an elastic bounce (a world-space modifier on the
-// drag uniforms; the grabbed point comes from THREE.Raycaster against the
-// splats, js/raycast.js). Drags elsewhere orbit the camera.
+// Spark's interactive-deform: drag the penguin to pull its splats, release for
+// an elastic bounce
 import * as THREE from "three";
 import { GUI } from "lil-gui";
 import { CameraControls, TSL, type SplatNode } from "@sparkjsdev/radix";
@@ -18,8 +16,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 3, 5.5);
 
-// createRenderer, sized to the window and added to the page; it follows
-// window resizes, the camera's aspect too (js/page.ts)
 const renderer = await windowRenderer(camera);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3(0, 1.5, 0));
@@ -39,8 +35,6 @@ gui.add(radius, "value", 0.25, 1, 0.1).name("Drag radius");
 gui.add(bounceAmount, "value", 0, 1, 0.1).name("Bounce strength");
 gui.add(bounceSpeed, "value", 0, 1, 0.01).name("Bounce speed");
 
-// The drag's displacement (zero when not dragging) plus the decaying bounce
-// of the last one, both fading out with the distance from the grabbed point
 const deform = (s: SplatNode) => {
   const out = s.toVar();
   const original = s.get("center");
@@ -56,8 +50,8 @@ const penguin = await splats.load(asset("penguin.spz"), { onProgress: page.progr
 penguin.quaternion.set(1, 0, 0, 0);
 page.ready(renderer);
 
-// Spark's drag scale (the view height at the grabbed point over the window
-// height, per NDC unit); undefined when not dragging
+// Spark's drag scale: the view height at the grabbed point over the window
+// height, undefined when not dragging
 let dragScale: number | undefined;
 const dragStart = new THREE.Vector2();
 const pointer = new THREE.Vector2();
