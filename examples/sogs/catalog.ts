@@ -31,10 +31,6 @@ const Z_TURN: [number, number, number] = [0, 0, Math.PI];
 const SUTRO_VIEW = { position: [0, 1.5, -1.2], target: [0, 1.5, 0], fov: 60 } satisfies Sample["view"];
 
 export const SAMPLES: Record<string, Sample> = {
-  "toy-cat": {
-    label: "Toy cat (v2 .sog)", url: `${SOGS}toy-cat.sog`, credit: "PlayCanvas", source: "https://developer.playcanvas.com/assets/toy-cat.sog", rotation: Z_TURN,
-  },
-  skull: { label: "Skull (v2 .sog)", url: `${SOGS}skull.sog`, credit: "PlayCanvas engine examples", source: `${PC}/skull.sog` },
   // Orbiting the hall itself (its densest splats), not the whole plot
   hall: {
     label: "Knock Community Hall (v2 .sog)", url: `${SOGS}knock-community-hall.sog`, credit: "scbenoit, CC-BY-4.0", source: `${PC}/knock-community-hall.sog`,

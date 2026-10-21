@@ -11,7 +11,7 @@
 // lodStream.ts). Sorted on the GPU with WebGPU, or by the WebGL2 fallback's
 // worker sort, which shows each new LoD selection once a sort of it lands.
 // Query parameters:
-//   ?sample=   a sample in catalog.ts (default toy-cat); ?url= any URL
+//   ?sample=   a sample in catalog.ts (default hall); ?url= any URL
 //   ?sh=       SH degree drawn, 0 to 3 (default 3: the file's)
 //   ?decode=   cpu (default) | gpu, for single files (LoD files: gpu)
 //   ?method=   ewa | 3dgut | htgs | raygs
@@ -655,13 +655,13 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// The initial file: ?sample=, else ?url=, else the toy cat
+// The initial file: ?sample=, else ?url=, else the community hall
 const sampleName = params.get("sample") ?? "";
 const url = params.get("url");
 if (url && !SAMPLES[sampleName]) {
   openUrl(url);
 } else {
-  openSample(SAMPLES[sampleName] ? sampleName : "toy-cat");
+  openSample(SAMPLES[sampleName] ? sampleName : "hall");
 }
 
 Object.assign(window, {
