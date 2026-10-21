@@ -1,12 +1,4 @@
-// Drawing SOG splats with their spherical harmonics: each splat's label
-// (bundle shLabel, beside the splats) picks an entry of the file's palette
-// (an ext ShPalette's table), through Radix's built-in SH
-// (SplatGenerator.fromSplats with a palette; the color is seen from each
-// view's origin in the object's space). One generator per (layout, codec,
-// degree, remap) serves every object of that kind; an object's degree is
-// objectParams.maxShDegree, so changing it compiles nothing. bind() points it
-// at an object's arrays, ranges, palette and tint before the object's
-// dispatch.
+// Splat objects of SOG files, each splat's label picking its SH from the file's palette
 import * as THREE from "three";
 import {
   GpuArrayReader, Sh, SplatGenerator, TSL, defineBundle,
@@ -15,16 +7,14 @@ import {
 
 const { If, Loop, uint, uniform } = TSL;
 
-// An object drawing ranges of a file's splats: one row per range, x the
-// object's first index in it (rows in increasing x, the first 0), y the
+// One row per range: x the object's first index in it, increasing from 0, y the
 // range's first stored splat
 export const RANGES_BUNDLE = defineBundle({ range: "uint32x2" });
-// Ranges a table may hold: 2^RANGE_STEPS
+// Binary search steps, so a table holds at most 2^RANGE_STEPS ranges
 const RANGE_STEPS = 12;
 export const MAX_RANGES = 1 << RANGE_STEPS;
 
-// The stored splat of object index `index`: a binary search for the last
-// range starting at or before it (a reader of RANGES_BUNDLE)
+// The stored splat of an object index, in the last range starting at or before it
 export function rangeLookup(ranges: GpuArrayReader, index: TslNode): TslNode {
   const base = uint(0).toVar();
   const n = ranges.count.toVar();
@@ -41,13 +31,12 @@ export function rangeLookup(ranges: GpuArrayReader, index: TslNode): TslNode {
   return range.y.add(index.sub(range.x));
 }
 
-// What a SOG generator binds per object
 export interface SogData {
   // Splats, with bundle shLabel when the file has SH
   splats: GpuArrays;
-  // Remap "ranges": the ranges of stored splats this object draws
+  // A RANGES_BUNDLE table of the stored splats this object draws
   ranges?: GpuArrays;
-  // The SH palette (an ShPalette's table on the GPU)
+  // An ShPalette's table on the GPU
   palette?: GpuArrays;
   // Color multiplier, read at every bind (default white)
   tint?: THREE.Color;
@@ -80,8 +69,7 @@ function makeGenerator(layout: SplatLayout, sh: { codec: ShCodecName; degree: Sh
 
 const generators = new Map<string, SplatGenerator<SogData>>();
 
-// The shared generator of objects of `layout`, with a palette of `sh`
-// (none: base colors), whole or through a table of ranges
+// Shared by every object of the same layout, palette (none: base colors) and remap
 export function sogGenerator({ layout = "extSplats", sh, remap = false }: { layout?: SplatLayout; sh?: { codec: ShCodecName; degree: ShDegree }; remap?: boolean } = {}) {
   const key = `${layout}|${sh ? `${sh.codec}|${sh.degree}` : ""}|${remap}`;
   if (!generators.has(key)) {
@@ -90,7 +78,6 @@ export function sogGenerator({ layout = "extSplats", sh, remap = false }: { layo
   return generators.get(key)!;
 }
 
-// A SOG file on the GPU
 export interface SogArrays {
   arrays: GpuArrays;
   // An ShPalette's table on the GPU (bundle shPalette)
@@ -99,15 +86,12 @@ export interface SogArrays {
   layout: SplatLayout;
 }
 
-// The codec and degree of a file's palette
 export function paletteOf(file: SogArrays): { codec: ShCodecName; degree: ShDegree } | undefined {
   const meta = file.palette?.bundle("shPalette").meta;
   return meta && { codec: Sh.codec(meta.codec as string).name, degree: meta.degree as ShDegree };
 }
 
-// A splat object drawing `file` (all of it, or the `count` splats of a
-// RANGES_BUNDLE table `ranges`) through SH degree min(degree, the file's),
-// placed by `matrixWorld`
+// Draws through SH degree min(degree, the file's), set as a param so changing it compiles nothing
 export function sogObject(file: SogArrays, { degree = 3, matrixWorld, ranges, count, tint, release }: {
   degree?: number;
   matrixWorld?: THREE.Matrix4;

@@ -1,8 +1,3 @@
-// The bar at the top left: open files or a URL, a sample, then the settings
-// changed most (method, sort, key bits, SH degree, camera mode, pixel
-// ratio) as segmented buttons, and fps with the splat count (its "?" lists
-// the camera controls). The frame loop calls refresh(), so it follows
-// changes made elsewhere (the panel, the F key, a preset).
 import type { CameraControls, CameraControlsMode, ProjectionMethod, SortKeyBits, SplatRenderer } from "@sparkjsdev/radix";
 import { SAMPLES, type Sample } from "./catalog.js";
 import type { ViewerState } from "./main.js";
@@ -12,7 +7,6 @@ export function makeQuickBar(bar: HTMLElement, { state, webgpu, splats, controls
   webgpu: boolean;
   splats: SplatRenderer;
   controls: CameraControls;
-  // The sample shown, if the file is one
   sample(): Sample | undefined;
   actions: { pickFiles(): void; openUrl(url: string): void; openSample(name: string): void; setSh(degree: number): void };
 }) {
@@ -27,7 +21,6 @@ export function makeQuickBar(bar: HTMLElement, { state, webgpu, splats, controls
     return element;
   };
 
-  // Buttons for a few choices; the one matching get() is lit
   const segmented = <T>(label: string, choices: [T, string][], get: () => T, set: (value: T) => void, { disabled = false, title = "" } = {}) => {
     const element = group(label);
     element.title = title;

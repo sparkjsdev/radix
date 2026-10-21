@@ -274,7 +274,25 @@ for some). `docs/checks.md` lists what each covers.
   `rdx-sh/`, `spz/`, `sogs/`). Files in a
   dated folder are never replaced, so the pages' addresses (the catalogs)
   stay valid. `npm run check:examples` loads them with the Spark
-  ports.
+  ports. `sogs/` holds mirrors of third-party files (`examples/sogs/catalog.ts`
+  lists their sources) and Sutro converted with PlayCanvas's splat-transform
+  (`npx @playcanvas/splat-transform`, 3.10 for the decimation):
+
+  ```sh
+  splat-transform splats/sutro_2m.ply sutro-2m.sog
+  unzip sutro-2m.sog -d sutro-2m   # the same, unbundled
+  unzip sutro.zip -d sutro-v1      # Spark's SOGS v1
+  splat-transform splats/sutro_2m.ply --decimate-adaptive 50% sutro-50.ply
+  # and 25%, 10% and 5%: merged levels, where -F would drop splats and leave holes
+  splat-transform --lod-chunk-count 128 --lod-chunk-extent 8 \
+    splats/sutro_2m.ply -l 0 sutro-50.ply -l 1 sutro-25.ply -l 2 \
+    sutro-10.ply -l 3 sutro-5.ply -l 4 sutro-lod/lod-meta.json --filter-nan
+  ```
+
+  The SOG viewer's `radixSogs.validate({ reference })` compares with
+  splat-transform's decompression of the hosted `sutro-2m.sog`
+  (`splat-transform sutro-2m.sog sutro-2m.ref.ply`, saved in `splats/sogs/`
+  and passed as `/splats/sogs/sutro-2m.ref.ply`).
 - `examples/spark/`: static ports of the SparkJS 2.3.1 examples, a test of
   what Radix can do unchanged (TypeScript built as above, on the
   `dist/radix.module.js` bundle; the index

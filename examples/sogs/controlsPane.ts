@@ -1,12 +1,9 @@
-// Tweakpane folder for Radix's CameraControls: every setting, plus a button
-// to reset them.
 import type { FolderApi } from "tweakpane";
 import type { CameraControls, CameraControlsSettings } from "@sparkjsdev/radix";
 
 export function addControlsFolder(parent: Pick<FolderApi, "addFolder">, controls: CameraControls) {
   const folder = parent.addFolder({ title: "Controls", expanded: false });
-  // Bindings edit a copy; set() applies each change (not the changes
-  // refresh() makes while following the controls)
+  // Bindings edit a copy, and set() applies the user's changes, not refresh()'s
   const state = structuredClone(controls.settings);
   let syncing = false;
   const apply = (settings: Partial<CameraControlsSettings>) => {

@@ -1,21 +1,4 @@
-// PlayCanvas SOG (v2: codebooks) and SOGS (v1: per-channel ranges): the
-// meta.json, where its files come from (SogSource: a meta.json URL with
-// its WebPs beside it, a .sog / .zip archive, or dropped files), and the CPU
-// decoder into a table of splats of a standard layout plus a per-splat
-// palette label (bundle shLabel), with the palette of SH coefficients (an
-// ext ShPalette of the centroids' codebook values) in a table of its own.
-// Decoding follows
-// PlayCanvas's reference loader and Spark's (spark-lib sogs.rs):
-//   means   16-bit (means_l low byte, means_u high byte) between mins and
-//           maxs, then sign(v) (exp |v| - 1)
-//   quats   the three smallest components as (b / 255 - 0.5) sqrt 2; alpha
-//           252 + the index of the largest (x y z w), rebuilt positive
-//   scales  log scales: v1 between mins and maxs, v2 codebook[b]
-//   sh0     color 0.5 + SH_C0 f_dc (v1 ranges, v2 codebook); alpha a logit
-//           between v1's ranges, or v2's linear b / 255
-//   shN     labels R | G << 8; centroid n at x = (n % 64) * coefficients,
-//           y = n / 64, one RGB texel per coefficient (v1 between the two
-//           ranges, v2 codebook[b])
+// Decoding follows PlayCanvas's reference loader and Spark's spark-lib sogs.rs
 import { ArrayData, Sh, ShPalette, SplatMath, Splats, type ShDegree, type SplatLayout } from "@sparkjsdev/radix";
 import { decodePixels, type Pixels } from "./webp.js";
 import { ZipArchive } from "./zip.js";
@@ -27,8 +10,6 @@ export const SH_COEFFICIENTS = Sh.COEFFICIENTS;
 
 export const LABEL_BUNDLE = Sh.LABEL;
 
-// --- meta.json ---
-
 export interface SogMeta {
   version: 1 | 2;
   count: number;
@@ -37,8 +18,7 @@ export interface SogMeta {
   quats: { files: string[] };
   sh0: { mins?: number[]; maxs?: number[]; codebook?: number[]; files: string[] };
   shN?: { mins?: number; maxs?: number; codebook?: number[]; files: string[] };
-  // From the meta when it says (v2 bands, v1 shN.shape), else from the
-  // centroid image when decoding
+  // From v2's bands or v1's shN.shape, else from the centroid image when decoding
   degree?: number;
   paletteSize?: number;
 }
@@ -102,8 +82,6 @@ export function parseSogMeta(json: unknown): SogMeta {
   return meta;
 }
 
-// --- Where the files come from ---
-
 export type Progress = (fraction: number, stage: string) => void;
 
 // One SOG's meta and its files by the names meta.json gives
@@ -113,12 +91,10 @@ export interface SogSource {
   getFile(name: string): Promise<Uint8Array<ArrayBuffer>>;
 }
 
-// What a URL or dropped files hold: one SOG, or a LoD scene's lod-meta.json
 export type SogInput =
   | { kind: "sog"; source: SogSource }
   | { kind: "lod"; json: unknown; url: string };
 
-// The bytes at `url`, reporting the download
 export async function fetchBytes(url: string, onProgress?: Progress, stage = "downloading"): Promise<Uint8Array<ArrayBuffer>> {
   const response = await fetch(url);
   if (!response.ok || !response.body) {
@@ -138,8 +114,7 @@ export async function fetchBytes(url: string, onProgress?: Progress, stage = "do
 
 const baseName = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
-// meta.json may sit in a folder inside the archive: the files it names are
-// in that folder
+// meta.json may sit in a folder of the archive, beside the files it names
 async function archiveSource(bytes: Uint8Array<ArrayBuffer>, name: string): Promise<SogSource> {
   const zip = new ZipArchive(bytes);
   const metaName = [...zip.entries.keys()].filter((entry) => baseName(entry) === "meta.json").sort((a, b) => a.length - b.length)[0];
@@ -155,7 +130,6 @@ async function archiveSource(bytes: Uint8Array<ArrayBuffer>, name: string): Prom
   };
 }
 
-// A SOG whose files sit beside meta.json at `url`
 export function urlSource(url: string, json: unknown, onProgress?: Progress): SogSource {
   return {
     name: url,
@@ -164,8 +138,7 @@ export function urlSource(url: string, json: unknown, onProgress?: Progress): So
   };
 }
 
-// A URL (meta.json, lod-meta.json, .sog or .zip), archive bytes, a File
-// (an archive), or the files of a dropped folder (meta.json and its WebPs)
+// A URL of a meta.json, lod-meta.json, .sog or .zip, an archive, or a dropped folder's files
 export async function openSogInput(input: string | Uint8Array<ArrayBuffer> | File | File[], { name, onProgress }: { name?: string; onProgress?: Progress } = {}): Promise<SogInput> {
   if (Array.isArray(input)) {
     const byName = new Map(input.map((file) => [baseName(file.webkitRelativePath || file.name), file]));
@@ -216,8 +189,6 @@ export async function openSogInput(input: string | Uint8Array<ArrayBuffer> | Fil
   return { kind: "sog", source: urlSource(url, json, onProgress) };
 }
 
-// --- Decoding on the CPU ---
-
 export interface SogImages {
   meansL: Pixels;
   meansU: Pixels;
@@ -238,7 +209,6 @@ export async function loadImages(source: SogSource): Promise<SogImages> {
   return { meansL, meansU, quats, scales, sh0, centroids, labels };
 }
 
-// 256-entry tables of what a byte decodes to
 const table = (f: (b: number) => number) => Float32Array.from({ length: 256 }, (_, b) => f(b));
 const lerp = (min: number, max: number, b: number) => min + ((max - min) * b) / 255;
 
@@ -262,7 +232,6 @@ export function shTable(meta: SogMeta): Float32Array {
   return table((b) => (shN.codebook ? shN.codebook[b] : lerp(shN.mins!, shN.maxs!, b)));
 }
 
-// The degree and the palette's size, from the meta or the centroid image
 export function paletteShape(meta: SogMeta, centroids: { width: number; height: number }) {
   const degree = meta.degree ?? (SH_COEFFICIENTS as readonly number[]).indexOf(centroids.width / 64);
   if (degree < 1) {
@@ -271,8 +240,6 @@ export function paletteShape(meta: SogMeta, centroids: { width: number; height: 
   return { degree: degree as ShDegree, size: Math.min(meta.paletteSize ?? 64 * centroids.height, 64 * centroids.height) };
 }
 
-// The SH palette from the centroid image: ext entries of the centroid
-// bytes' codebook values (value k * 3 + c is coefficient k's channel c)
 export function decodePalette(meta: SogMeta, centroids: Pixels): { palette: ShPalette; degree: ShDegree } {
   const { degree, size } = paletteShape(meta, centroids);
   const coefficients = SH_COEFFICIENTS[degree];

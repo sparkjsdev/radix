@@ -1,55 +1,27 @@
-// Radix's SOG viewer: PlayCanvas SOG (v2) and SOGS (v1) files, bundled
-// (.sog, or Spark's SOGS .zip) or not (a meta.json URL, its .webp files
-// fetched beside it, or a dropped folder), and SOG LoD scenes
-// (lod-meta.json). A file is decoded into the standard extSplats encoding
-// (on the CPU into an ArrayData, sog.ts, or on the GPU, gpuDecode.ts) plus
-// a per-splat palette label, its spherical harmonics kept as an ext
-// palette, decoded while drawing by Radix's built-in SH (sh.ts). A LoD
-// scene streams its files (decoded on the GPU) and shows a level per leaf
-// of its tree through one object per resident file in the renderer's
-// collection (lod.ts,
-// lodStream.ts). Sorted on the GPU with WebGPU, or by the WebGL2 fallback's
-// worker sort, which shows each new LoD selection once a sort of it lands.
+// Shows PlayCanvas SOG (v2) and SOGS (v1) files, bundled or not, and SOG LoD scenes
 // Query parameters:
-//   ?sample=   a sample in catalog.ts (default hall); ?url= any URL
-//   ?sh=       SH degree drawn, 0 to 3 (default 3: the file's)
-//   ?decode=   cpu (default) | gpu, for single files (LoD files: gpu)
-//   ?method=   ewa | 3dgut | htgs | raygs
+//   ?sample=   a sample in catalog.ts (default hall)
+//   ?url=      a .sog, .zip, meta.json or lod-meta.json, when ?sample= names no sample
+//   ?sogs=     the samples' folder, served with CORS headers (default the GCS folder in catalog.ts)
+//   ?decode=   cpu (default) | gpu, for single files (LoD scenes: gpu)
+//   ?layout=packed  16-byte packed splats instead of 32-byte ext (CPU decode)
+//   ?sh=       SH degree drawn, up to the file's: 0 to 3 (default 3)
+//   ?method=   ewa (default) | 3dgut | htgs | raygs
 //   ?bits=     sort key width: 16 | 24 (default) | 32
 //   ?sort=cpu  the WebGL2 fallback's worker sort, also on WebGPU
-//   ?gpu=      webgpu | webgpu-gl
-//   ?layout=packed  16-byte packed splats (CPU decode)
-//   ?budget=   LoD scenes: splats selected (default 4M with the GPU sort,
-//              2M with the CPU sort; 0: none)
-//   ?budgetMode= limit (default: the LoD distances decide, the budget only
-//              caps) | target (detail rises to fill the budget)
-//   ?underfill= levels coarser than the selected one a leaf may show while
-//              that one loads (default 5; 0: the selected one only)
-//   ?flip=0    files as stored (default: samples' rotation, others a half
-//              turn about x, as files are usually y-down)
-//   ?hdr=0 | 1, ?dpr=0 (pixel ratio 1), ?stereo=1
-//   ?profile=1 GPU timestamps per phase from the start (default off, as
-//              they cost frame time; the Monitors' "GPU timing" switches them)
-//   ?sogs=     where the samples are (default the GCS folder in catalog.ts;
-//              /splats/sogs for a local copy, which npm run serve serves)
-// The samples' folder holds mirrors of the third-party files (catalog.ts
-// lists their sources) and our conversions, made with PlayCanvas's
-// splat-transform (npx @playcanvas/splat-transform; 3.10 for --decimate):
-//   splat-transform splats/sutro_2m.ply sutro-2m.sog
-//   unzip sutro-2m.sog -d sutro-2m                      (the same, unbundled)
-//   unzip sutro.zip -d sutro-v1                         (Spark's SOGS v1)
-//   splat-transform splats/sutro_2m.ply --decimate-adaptive 50% sutro-50.ply
-//     (and 25%, 10%, 5%: merged levels; -F would drop splats and leave holes)
-//   splat-transform --lod-chunk-count 128 --lod-chunk-extent 8 \
-//     splats/sutro_2m.ply -l 0 sutro-50.ply -l 1 sutro-25.ply -l 2 \
-//     sutro-10.ply -l 3 sutro-5.ply -l 4 sutro-lod/lod-meta.json --filter-nan
-// It is uploaded with gcloud storage rsync -r --cache-control="public,
-// max-age=3600" (the CORS-open bucket in catalog.ts). validate()'s
-// reference for sutro-2m.sog is splat-transform's decompression of the
-// hosted file, splat-transform sutro-2m.sog sutro-2m.ref.ply, saved in
-// splats/sogs/ (radixSogs.validate({ reference: "/splats/sogs/sutro-2m.ref.ply" })).
-// `radixSogs` in the console holds the viewer: validate({ reference }),
-// measure({ frames, from, to, target }).
+//   ?gpu=      webgpu | webgpu-gl (default webgpu where available)
+//   ?budget=   LoD splats selected, 0 for no budget (default 4M, or 2M with the CPU sort)
+//   ?budgetMode= limit (default: the budget caps) | target (detail fills the budget)
+//   ?underfill= coarser levels a LoD leaf may show while its selected one loads (default 5)
+//   ?flip=0    files other than samples as stored (default a half turn about x)
+//   ?hdr=      0 | 1 (default HDR when the display has it)
+//   ?dpr=0     pixel ratio 1 (default the device's)
+//   ?stereo=1  two eyes side by side
+//   ?profile=1 GPU timestamps from the start (default off; the panel switches them)
+// radixSogs in the console holds the viewer, with:
+//   validate({ reference, samples = 4096 })  decoding, SH and LoD checks; reference
+//              is the shown file as a PLY from splat-transform
+//   measure({ frames = 240, from, to, target })  frame times, on a camera path when given
 import * as THREE from "three";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import {
@@ -85,8 +57,7 @@ if (profiler) {
 document.body.prepend(renderer.domElement);
 const cpuSort = !webgpu || params.get("sort") === "cpu";
 
-// What the bar and the panel set beyond the splat renderer's own settings;
-// the frame loop and the LoD stream apply it
+// What the bar and the panel set beyond the splat renderer's settings
 export const state = {
   layout: (params.get("layout") === "packed" ? "packedSplats" : "extSplats") as "extSplats" | "packedSplats",
   decode: (params.get("decode") === "gpu" ? "gpu" : "cpu") as "cpu" | "gpu",
@@ -116,7 +87,7 @@ camera.position.set(0, 0, 3);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3());
 
-// The file's (or LoD scene's) transform (the gizmo moves it)
+// The shown file's transform, which the gizmo moves
 const model = new THREE.Object3D();
 scene.add(model);
 
@@ -133,8 +104,6 @@ if (profiler) {
 // Before the gizmo, which it would otherwise cover
 splats.renderOrder = -1;
 scene.add(splats);
-
-// --- Status and errors ---
 
 const baseName = (name: string) => name.replace(/[?#].*$/, "").split("/").filter(Boolean).slice(-2).join("/") || name;
 
@@ -157,8 +126,6 @@ function showError(message: string) {
 }
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-// --- What is shown: one SOG file, or a LoD scene's stream ---
-
 type OpenInput = string | File | File[];
 
 interface Shown {
@@ -168,7 +135,7 @@ interface Shown {
   format: string;
   // Splats of the file, or of the scene's finest level
   count: number;
-  // Until drawn (LoD: until the first selection is)
+  // Until drawn, for a LoD scene until its first selection is
   loadMs?: number;
   started: number;
   // In the file's own frame
@@ -293,7 +260,6 @@ picker.addEventListener("change", () => {
   picker.value = "";
 });
 
-// Every file of the dropped items, folders read through
 async function droppedFiles(transfer: DataTransfer): Promise<File[]> {
   const entries = [...transfer.items].map((item) => item.webkitGetAsEntry()).filter((entry): entry is FileSystemEntry => entry !== null);
   if (!entries.some((entry) => entry.isDirectory)) {
@@ -338,8 +304,6 @@ addEventListener("drop", (event) => {
   }
 });
 
-// --- Placing the file and the camera ---
-
 const flipFiles = params.get("flip") !== "0";
 
 function place(sample?: Sample) {
@@ -364,9 +328,7 @@ function resetView() {
   controls.lookAt(new THREE.Vector3(...view.target));
 }
 
-// Look at the splats from in front, far enough to see the bulk of them:
-// with CPU data the 2nd to 98th percentile of sampled centers per axis
-// (floaters do not count), else the bounds
+// With CPU data, frames the 2nd to 98th percentile of sampled centers, so floaters don't count
 function frame() {
   if (!shown) {
     return;
@@ -414,8 +376,6 @@ function setSh(degree: number) {
   gui.refresh();
 }
 
-// --- Panel, quick bar, gizmo ---
-
 const gui = makeGui({
   state, webgpu, hdr: caps.hdr, renderer, profiler, splats, model, controls,
   actions: {
@@ -453,8 +413,7 @@ addEventListener("keydown", (event) => {
   }
 });
 
-// --- Stereo: two eyes 64 mm apart side by side ---
-
+// Two eyes 64 mm apart, side by side
 const eyes = [0, 1].map(() => Object.assign(new THREE.PerspectiveCamera(), { viewport: new THREE.Vector4() }));
 const stereoCamera = new THREE.ArrayCamera(eyes);
 stereoCamera.add(...eyes);
@@ -476,15 +435,13 @@ function updateStereoCamera() {
   return stereoCamera;
 }
 
-// --- Measuring: frame times while the camera flies a line ---
-
 interface Sampling {
   frames: number;
   frameMs: number[];
   loopMs: number[];
   switches: number;
-  // Per frame: the collection switched, LoD files landed by then, and the
-  // range tables made: count, splats listed, ms
+  // Per frame: whether the collection switched, LoD files loaded by then, and
+  // the range tables made as count, splats listed and ms
   switched: boolean[];
   landed: number[];
   lists: number[][];
@@ -505,8 +462,8 @@ const stats = (values: number[]) => {
   };
 };
 
-// Frame times over `frames` frames, the camera flying from `from` to `to`
-// (world) looking at `target` (else along the line) when given
+// Given a start and an end, the camera flies between them in world space,
+// looking at the target when given, else along the line
 async function measure({ frames = 240, from, to, target }: { frames?: number; from?: number[]; to?: number[]; target?: number[] } = {}) {
   const path = from && to ? { from: new THREE.Vector3().fromArray(from), to: new THREE.Vector3().fromArray(to), target: target && new THREE.Vector3().fromArray(target) } : undefined;
   const lod = shown?.stream?.stats;
@@ -517,8 +474,6 @@ async function measure({ frames = 240, from, to, target }: { frames?: number; fr
   });
   const after = shown?.stream?.stats;
   const median = stats(sample.frameMs).p50;
-  // Frames over twice the median: their CPU ms, whether the collection
-  // switched and how many files landed since the frame before
   const slow = sample.frameMs.flatMap((ms, i) => (ms > 2 * median ? [{
     frame: i, ms: +ms.toFixed(1), loopMs: +sample.loopMs[i].toFixed(1), switched: sample.switched[i], landed: sample.landed[i] - (sample.landed[i - 1] ?? sample.landed[i]),
     lists: sample.lists[i], gpuDoneMs: sample.doneMs[i] === undefined ? undefined : +sample.doneMs[i].toFixed(1),
@@ -537,11 +492,8 @@ async function measure({ frames = 240, from, to, target }: { frames?: number; fr
   };
 }
 
-// --- Frame loop ---
-
-// With the CPU sort, a new LoD collection waits until the last one is
-// drawn (a sort of it landed), so selections never pile up behind the sort.
-// An empty collection is never sorted: it counts as drawn.
+// With the CPU sort, a new LoD collection waits until the last one is drawn, so
+// selections never pile up behind the sort. An empty collection is never sorted.
 function lastShown(view: THREE.Camera) {
   const order = splats.views.get(view)?.order;
   return splats.sortMode === "gpu" || splats.collection.count === 0 || !splats.views.get(view) || order?.collection === splats.collection;
@@ -655,7 +607,6 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// The initial file: ?sample=, else ?url=, else the community hall
 const sampleName = params.get("sample") ?? "";
 const url = params.get("url");
 if (url && !SAMPLES[sampleName]) {

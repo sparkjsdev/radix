@@ -1,16 +1,4 @@
-// SOG LoD scenes (PlayCanvas's lod-meta.json, written by splat-transform):
-// a tree of bounds whose leaves each name, per level (0 finest), a range
-// { file, offset, count } of one of the scene's SOG files (unbundled
-// meta.json folders, named <level>_<unit>, many leaves per file), plus an
-// optional environment SOG drawn whole. parseLod flattens the leaves into
-// typed arrays; selectLevels picks a level per leaf from the camera, after
-// PlayCanvas's GSplatOctreeInstance and GSplatBudgetBalancer (engine
-// 2.23): the distance to the leaf's box (longer behind the camera, scaled
-// by the field of view) against thresholds s * baseDistance * multiplier^i,
-// clamped to a range, with one scale s for the whole scene fitted to the
-// splat budget: in "target" mode the largest s that fits (detail rises to
-// fill the budget), in "limit" mode the same but at most 1 (the distances
-// are the most detail allowed).
+// Level selection after PlayCanvas's GSplatOctreeInstance and GSplatBudgetBalancer (engine 2.23)
 
 interface RawNode {
   bound: { min: number[]; max: number[] };
@@ -61,24 +49,21 @@ export interface LodSettings {
   // distances alone)
   splatBudget: number;
   budgetMode: BudgetMode;
-  // Levels coarser than the selected one a leaf may show while the
-  // selected one loads (the finest resident in that window; 0: the
-  // selected one only, else what it showed before)
+  // Levels coarser than the selected one a leaf may show while that one loads,
+  // the finest resident one first
   underfillLimit: number;
   // Most splats of loaded files kept on the GPU
   residentBudget: number;
-  // Re-select after the camera moves this far (object units) or turns this
-  // many degrees (turning only matters through behindPenalty)
+  // Re-select after the camera moves this far in object units, or turns this
+  // many degrees, which only matters through behindPenalty
   updateDistance: number;
   updateAngle: number;
   freeze: boolean;
   colorLevels: boolean;
 }
 
-// After PlayCanvas's streaming examples, but the budget caps rather than
-// fills: a filled budget is often more than the GPU (or the CPU sort's
-// sort and upload) keeps at frame rate while flying, where the distances'
-// own selection is often well under it
+// After PlayCanvas's streaming examples, but the budget only caps, since a filled
+// budget is often more than the GPU keeps at frame rate while flying
 export function defaultLodSettings(cpuSort: boolean): LodSettings {
   return {
     baseDistance: 5, multiplier: 3, rangeMin: 0, rangeMax: 7, behindPenalty: 2,
@@ -87,9 +72,8 @@ export function defaultLodSettings(cpuSort: boolean): LodSettings {
   };
 }
 
-// The distance scale of a perspective camera's field of view against
-// PlayCanvas's reference 45 degrees (vertical), by the narrower of the two
-// half angles: wider views see leaves smaller, so farther
+// Against PlayCanvas's reference 45 degree vertical field of view, by the
+// narrower half angle, since wider views see leaves smaller
 export function fovScale(fov: number, aspect: number): number {
   const tanHalfV = Math.tan((fov * Math.PI) / 360);
   const tanHalfH = tanHalfV * (aspect > 0 && Number.isFinite(aspect) ? aspect : 1);
@@ -159,7 +143,7 @@ export function parseLod(json: unknown, url: string): SogLodTree {
   };
 }
 
-// The level of `leaf` nearest `level` that it has, coarser first; -1 if none
+// The level the leaf has nearest the one asked for, coarser first; -1 if none
 export function availableLevel(tree: SogLodTree, leaf: number, level: number): number {
   const base = leaf * tree.levels;
   for (let l = level; l < tree.levels; l += 1) {
@@ -181,10 +165,8 @@ export interface Vec3Like {
   z: number;
 }
 
-// Every leaf's levels over a level range: band b (0 finest) is level
-// rangeMin + b, snapped to a level the leaf has (availableLevel), with its
-// splats; a leaf missing a level repeats a neighbor, so that band step
-// changes nothing
+// Band b is level rangeMin + b snapped to one the leaf has, so a leaf missing a
+// level repeats a neighbor and that band step changes nothing
 export interface LevelChains {
   rangeMin: number;
   span: number;
@@ -228,11 +210,9 @@ export interface Vec3Like {
   z: number;
 }
 
-// The budget fit's axis: ln s over [-48, 48] in BINS bins (any scene's
-// switch points fall inside; ones outside share an end bin), the bin that
-// runs out of budget split again into BINS sub-bins. s = 1 falls on the
-// edge of bin BINS / 2, so limit mode keeps the configured distances
-// exactly.
+// The budget fit's axis: ln s over [-48, 48] in BINS bins, the bin that runs
+// out of budget split again into BINS sub-bins. s = 1 is the edge of bin
+// BINS / 2, so limit mode keeps the configured distances exactly.
 const BINS = 1024;
 const LOG_MIN = -48;
 const BIN_SCALE = BINS / 96;
@@ -242,18 +222,15 @@ let logDistances = new Float64Array(0);
 
 const binOf = (x: number) => Math.min(BINS - 1, Math.max(0, Math.floor(x)));
 
-// The level of every leaf into `out` for a camera at `eye` looking along
-// unit `forward` (both in the tree's space) with field-of-view scale
-// `fov` (fovScale), and its distance (longer behind the camera, scaled by
-// the field of view) into `d`; returns the splats selected.
+// Writes each leaf's level and distance into the two arrays, with the eye
+// and a unit forward in the tree's space, and returns the splats selected.
 //
-// A leaf at distance d is at band 1 + floor(log_m(d / (s * base))),
-// clamped to the range: finer than band L + 1 exactly when
-// ln s > ln(d / base) - L ln m (with L counted from rangeMin). All those
-// switch points lie on one ln s axis, so a histogram of the splats each
-// one adds, summed from the coarsest end, finds the largest s within the
-// budget. Stopping at the first sub-bin that does not fit (not skipping
-// it) keeps a leaf's level from depending on leaves farther along the
+// A leaf at distance d is at band 1 + floor(log_m(d / (s * base))), clamped to
+// the range: finer than band L + 1 exactly when ln s > ln(d / base) - L ln m,
+// with L counted from rangeMin. All those switch points lie on one ln s axis,
+// so a histogram of the splats each one adds, summed from the coarsest end,
+// finds the largest s within the budget. Stopping at the first sub-bin that
+// does not fit keeps a leaf's level from depending on leaves farther along the
 // axis, so small camera moves do not flip levels on and off.
 export function selectLevels(tree: SogLodTree, eye: Vec3Like, forward: Vec3Like, s: LodSettings, out: Int8Array, d: Float32Array, fov = 1): number {
   const { leaves, bounds } = tree;
@@ -276,7 +253,7 @@ export function selectLevels(tree: SogLodTree, eye: Vec3Like, forward: Vec3Like,
     const dy = Math.max(bounds[b + 1], Math.min(eye.y, bounds[b + 4])) - eye.y;
     const dz = Math.max(bounds[b + 2], Math.min(eye.z, bounds[b + 5])) - eye.z;
     let distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    // Toward the box's nearest point: 0 side-on, 1 straight behind
+    // Cosine toward the box's nearest point: 0 side-on, -1 straight behind
     if (penalty > 0 && distance > 0.01) {
       const facing = (dx * forward.x + dy * forward.y + dz * forward.z) / distance;
       if (facing < 0) {
@@ -285,8 +262,7 @@ export function selectLevels(tree: SogLodTree, eye: Vec3Like, forward: Vec3Like,
     }
     distance *= fov;
     d[leaf] = distance;
-    // In bins: the leaf's switch point leaving band b for b - 1 is at
-    // position - (rangeMin + b - 1) * step
+    // ln(distance / base) on the bin axis
     logDistances[leaf] = (Math.log(Math.max(distance, 1e-6)) - logBase - LOG_MIN) * BIN_SCALE;
   }
   const switchAt = (leaf: number, b: number) => logDistances[leaf] - (rangeMin + b - 1) * step;

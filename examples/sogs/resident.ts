@@ -1,6 +1,4 @@
-// GPU arrays shared by splat objects: freed once the owner drops them and
-// every object holding them has been released (Radix releases an object
-// when no live collection, including a CPU sort's in-flight orders, holds it)
+// Frees GPU arrays once the owner drops them and every object holding them is released
 export class Resident {
   private holds = 0;
   private dropped = false;

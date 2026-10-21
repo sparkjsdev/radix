@@ -1,15 +1,3 @@
-// SOG decoding on the GPU, for files streamed while drawing (LoD chunks):
-// each WebP becomes an ImageBitmap (decoded off the main thread) and a
-// texture, and one GpuArrayWriter pass (a fragment pass, both backends)
-// reads splat i's texel (i % width, i / width) of every image and stores
-// it as an ext splat (GpuSplats.storeExt) with its palette label, as
-// sog.ts decodes on the CPU. Per-byte values (scales, colors, alpha,
-// quaternion components) come from a 256-row table built from the meta,
-// so v1 ranges and v2 codebooks take one shader. One more writer pass turns
-// the centroid image into an ext palette (ShPalette layout), each byte looked
-// up in the same table. prepareSogGpu does the asynchronous half
-// (downloads, image decodes), uploadSogGpu the synchronous one (textures,
-// the passes), so a stream can land one file per frame.
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -22,8 +10,8 @@ import { decodeBitmap, type Pixels } from "./webp.js";
 
 const { abs, exp, int, ivec2, max, mix, normalize, select, sign, sqrt, texture, uint, uniform, uvec4, vec3, vec4 } = TSL;
 
-// Per byte b: scale (x, y, z: exp of the log scale; w: alpha), color (x, y, z:
-// rgb; w: a quaternion component, (b / 255 - 0.5) sqrt 2), sh (an SH value)
+// Per byte, so v1 ranges and v2 codebooks take one shader: scale xyz and alpha,
+// color rgb and a quaternion component, and an SH value
 const TABLES = defineBundle({ scale: "float32x4", color: "float32x4", sh: "float32" });
 
 const IMAGES = ["meansL", "meansU", "quats", "scales", "sh0", "labels"] as const;
@@ -108,7 +96,6 @@ const decoderFor = (labels: boolean) => {
   return decoders.get(labels)!;
 };
 
-// The per-byte table of a file's meta, on the GPU
 function tablesOf(renderer: WebGPURenderer, source: SogSource) {
   const [sx, sy, sz] = scaleTables(source.meta);
   const [cr, cg, cb] = colorTables(source.meta);
@@ -125,19 +112,14 @@ function tablesOf(renderer: WebGPURenderer, source: SogSource) {
   return GpuArrays.fromData(renderer, data);
 }
 
-// --- The SH palette ---
-
 interface PaletteWriter {
   writer: GpuArrayWriter;
   centroids: TslNode;
   tables: GpuArrayReader<typeof TABLES>;
 }
 
-// An ext palette's entries: element t is texel j = t % stride of entry
-// n = t / stride, words 4 j .. 4 j + 3 of the entry, word k being
-// coefficient k (zero past the degree's), the centroid texel at
-// x = (n % 64) * coefficients + k, y = n / 64, its bytes looked up in the
-// sh table
+// Element t is texel t % stride of entry t / stride, the entry's word k being
+// coefficient k, zero past the degree's
 function makePaletteWriter(degree: ShDegree, stride: number): PaletteWriter {
   const centroids = texture(placeholder);
   const tables = new GpuArrayReader(TABLES);
@@ -170,8 +152,6 @@ function paletteWriterFor(degree: ShDegree, stride: number) {
   return paletteWriters.get(key)!;
 }
 
-// The ext palette from the centroid image, on the GPU (`tables`: the
-// file's per-byte tables)
 function decodePaletteGpu(renderer: WebGPURenderer, meta: SogMeta, image: ImageBitmap, tables: GpuArrays): { palette: GpuArrays; degree: number } {
   const { degree, size } = paletteShape(meta, image);
   const palette = GpuShPalette.create(renderer, { codec: "ext", degree, size });
@@ -187,12 +167,10 @@ function decodePaletteGpu(renderer: WebGPURenderer, meta: SogMeta, image: ImageB
   return { palette, degree };
 }
 
-// A SOG's images as ImageBitmaps (decoded off the main thread), ready for
-// uploadSogGpu
+// Decoded off the main thread and uploaded apart, so a stream can upload one file per frame
 export interface PreparedSog {
   source: SogSource;
   images: [ImageName, ImageBitmap | Pixels][];
-  // The SH centroid image
   centroids?: ImageBitmap;
 }
 
@@ -210,14 +188,12 @@ export async function prepareSogGpu(source: SogSource): Promise<PreparedSog> {
   return { source, images: entries.map(([name], i) => [name, bitmaps[i]]), centroids };
 }
 
-// Frees a prepared SOG that will not be uploaded
 export function closePrepared({ images, centroids }: PreparedSog) {
   images.forEach(([, image]) => (image instanceof ImageBitmap ? image.close() : undefined));
   centroids?.close();
 }
 
-// The textures and the writer passes (main thread, synchronous); the
-// bitmaps are closed
+// Closes the prepared bitmaps
 export function uploadSogGpu(renderer: WebGPURenderer, prepared: PreparedSog): SogArrays {
   const { source, images, centroids } = prepared;
   const { meta } = source;
@@ -248,8 +224,6 @@ export function uploadSogGpu(renderer: WebGPURenderer, prepared: PreparedSog): S
   return { arrays, palette: palette.palette, degree: palette.degree, layout: "extSplats" };
 }
 
-// One SOG decoded into GpuArrays of ext splats (with shLabel when it has
-// SH) and its palette
 export async function decodeSogGpu(renderer: WebGPURenderer, source: SogSource, { onProgress }: { onProgress?: Progress } = {}): Promise<SogArrays> {
   const prepared = await prepareSogGpu(source);
   onProgress?.(1, "decoding");

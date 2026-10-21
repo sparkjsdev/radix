@@ -1,10 +1,3 @@
-// Sample SOG files, all on Google Cloud Storage under SOGS (?sogs= reads
-// the same names elsewhere, such as /splats/sogs for local copies; every
-// host needs CORS headers): mirrors of PlayCanvas's bundled .sog files
-// and Spark's SOGS .zip, with their original addresses in `source`; the
-// .zip unbundled into a meta.json; and our splat-transform conversions of
-// sutro_2m.ply, one of them a LoD scene (lod-meta.json; see main.ts).
-// Rotations and start views are in the viewer's world (y up).
 import * as THREE from "three";
 
 export interface Sample {
@@ -53,8 +46,6 @@ export function sampleRotation(sample?: Sample) {
   return sample?.rotation ? new THREE.Quaternion().setFromEuler(new THREE.Euler(...sample.rotation)) : new THREE.Quaternion(1, 0, 0, 0);
 }
 
-// Outdoor scenes: a sky gradient around the view (zenith blue to a pale
-// horizon, hazy below), as an equirectangular background
 let sky: THREE.CanvasTexture | undefined;
 export function skyTexture() {
   if (!sky) {

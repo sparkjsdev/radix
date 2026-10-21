@@ -1,8 +1,3 @@
-// A minimal ZIP reader for bundled SOG files (.sog, or Spark's SOGS .zip):
-// the end-of-central-directory record, the central directory and each
-// entry's local header; entries stored or deflated (inflated by the
-// browser's DecompressionStream). Zip64 archives are rejected.
-
 export interface ZipEntry {
   name: string;
   method: number;
@@ -62,7 +57,6 @@ export class ZipArchive {
     return bytes.byteLength >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 3 && bytes[3] === 4;
   }
 
-  // The bytes of entry `name`
   async read(name: string): Promise<Uint8Array<ArrayBuffer>> {
     const entry = this.entries.get(name);
     if (!entry) {

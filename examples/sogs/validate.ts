@@ -1,18 +1,3 @@
-// Checks of the viewer's decoding and drawing (radixSogs.validate()):
-//   reference  the CPU decode against a reference PLY of the same file
-//              (splat-transform's decompression), both through the ext
-//              encoding: center, scale, rotation, color, opacity, and each
-//              splat's palette SH against its f_rest
-//   sh         the TSL palette SH (GpuShReader in a GpuArrayWriter pass)
-//              against the CPU evaluation (Sh.evaluate) of the same
-//              palette, for sampled splats and directions
-//   gpuDecode  decodeSogGpu against decodeSog, word for word and by value
-//              (the ext palettes too, within a step of ext)
-//   lod        a LoD scene: level totals against the file's counts, every
-//              object's range table against its leaves' ranges, the TSL
-//              range lookup against the CPU's, the selection's behavior
-//              for synthetic cameras (distances, budget modes, stability,
-//              field of view) and the shown levels' underfill window
 import type { WebGPURenderer } from "three/webgpu";
 import {
   ArrayData, Encoding, GpuArrayReader, GpuArrayWriter, GpuArrays, GpuSh, GpuShReader, Sh, ShPalette, Splats, TSL, defineBundle,
@@ -47,8 +32,6 @@ const summary = (values: number[]) => {
   return { max: +(sorted[sorted.length - 1] ?? 0).toPrecision(3), p99: +at(0.99).toPrecision(3), p50: +at(0.5).toPrecision(3) };
 };
 
-// --- A binary little-endian PLY's vertex floats (splat-transform's output) ---
-
 async function readPlyFloats(url: string) {
   const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
   const head = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 65536)));
@@ -78,7 +61,7 @@ async function readPlyFloats(url: string) {
   return { count, stride: names.length, floats, column };
 }
 
-// The palette's coefficients (coefficient-major RGB) of entry `n`
+// The palette's coefficients (coefficient-major RGB) of entry n
 function paletteValues(palette: ArrayData, n: number, out: Float32Array) {
   return new ShPalette(palette).get(n, out);
 }
@@ -154,15 +137,12 @@ async function checkReference(o: ValidateOptions, url: string): Promise<Check> {
   }
 
   const detail = Object.fromEntries(Object.entries(errors).filter(([, list]) => list.length > 0).map(([name, list]) => [name, summary(list)])) as Record<string, ReturnType<typeof summary>>;
-  // The ext encoding is the same on both sides: what is left is f32
-  // against f64 math (centers relative to the extent); the palette's SH is
-  // the file's codebook values in ext's steps
+  // Both sides go through the ext encoding, so what is left is f32 against f64
+  // math, and the SH is the codebook's values in ext's steps
   const budgets: Record<string, number> = { center: extent * 1e-5, scale: 1e-3, angle: 2e-3, rgb: 2e-3, opacity: 1e-2, sh: 1e-2 };
   const ok = Object.entries(detail).every(([name, s]) => s.p99 <= budgets[name] && s.max <= budgets[name] * 8);
   return { name: "reference", ok, detail: { splats: data.count, compared: errors.center.length, coefficients, extent: +extent.toPrecision(4), budgets, ...detail } };
 }
-
-// --- The TSL SH against the CPU's ---
 
 const SAMPLE_BUNDLE = defineBundle({ splat: "uint32", dir: "float32x4" });
 const OUT_BUNDLE = defineBundle({ rgb: "float32x4" });
@@ -217,8 +197,6 @@ async function checkSh(o: ValidateOptions): Promise<Check> {
   return { name: "sh", ok: s.max <= 1e-4 + magnitude * 1e-5, detail: { samples: n, codec, degree, largestTerm: +magnitude.toPrecision(3), ...s } };
 }
 
-// --- The GPU decoder against the CPU's ---
-
 async function checkGpuDecode(o: ValidateOptions): Promise<Check> {
   const { source, data } = o.shown!;
   if (!source || !data || Splats.get(data).layout !== "extSplats") {
@@ -231,11 +209,8 @@ async function checkGpuDecode(o: ValidateOptions): Promise<Check> {
   gpu.arrays.dispose();
   gpu.palette?.dispose();
 
-  // Palette words: both ext of the same codebook values; the GPU's float32
-  // product can land a magnitude within its precision of a half step on the
-  // other side (or f32 log2 pick the next exponent), so a word that differs
-  // must decode within a step (2^e / 255 <= 2 max / 255 of its largest
-  // channel)
+  // f32 math on the GPU can put a palette value in the next ext step, so a word
+  // that differs must decode within a step (2^e / 255 <= 2 max / 255)
   const palette = { words: 0, differ: 0, outside: 0 };
   if (gpuPalette && cpuPalette) {
     const [a, b] = [cpuPalette.bundles.shPalette.channels.shEntries.data as Uint32Array, gpuPalette.bundles.shPalette.channels.shEntries.data as Uint32Array];
@@ -296,17 +271,14 @@ async function checkGpuDecode(o: ValidateOptions): Promise<Check> {
   }
 
   const detail = Object.fromEntries(Object.entries(errors).map(([name, list]) => [name, summary(list)])) as Record<string, ReturnType<typeof summary>>;
-  // f32 exp and rounding on the GPU may leave a code one step off: a half
-  // step of ln scale, a step of QuatOct32's 10 + 10 bit axis, an 8-bit
-  // opacity step
+  // f32 exp and rounding on the GPU may leave a code one step off: a half step
+  // of ln scale, a step of QuatOct32's 10 + 10 bit axis, an 8-bit opacity step
   const budgets: Record<string, number> = { center: extent * 1e-5, scale: 0.02, angle: 1e-2, rgb: 4e-3, opacity: 1e-2 };
-  // (a few quaternions sit on an octahedral fold, where one step is longer)
+  // Twice for the max, as a few quaternions sit on an octahedral fold where a step is longer
   const ok = labelsDiffer === 0 && Object.entries(detail).every(([name, s]) => s.p99 <= budgets[name] && s.max <= budgets[name] * 2)
     && (gpuPalette !== undefined) === (data.bundles.shLabel !== undefined) && paletteOk;
   return { name: "gpuDecode", ok, detail: { splats: count, wordsEqual: +(equal / (count * 8)).toFixed(5), labelsDiffer, palette, budgets, ...detail } };
 }
-
-// --- A LoD scene's bookkeeping and selection ---
 
 async function checkLod(o: ValidateOptions): Promise<Check> {
   const stream = o.shown!.stream!;
@@ -317,9 +289,6 @@ async function checkLod(o: ValidateOptions): Promise<Check> {
     problems.push(`level totals ${tree.levelTotals} differ from the file's counts ${tree.counts}`);
   }
 
-  // Every shown object's range table: its leaves' ranges at its level,
-  // inside the file; and the TSL lookup of every index of the first few
-  // objects against the table's expansion on the CPU
   const { objects, shown } = stream.inspect();
   let listed = 0;
   let looked = 0;
@@ -364,10 +333,6 @@ async function checkLod(o: ValidateOptions): Promise<Check> {
     }
   }
 
-  // Synthetic cameras, by the distances alone (limit mode, no budget):
-  // inside a leaf's box it gets its finest level; far away every leaf its
-  // coarsest; a leaf behind gets a level at least as coarse as in front at
-  // the same distance
   const settings: LodSettings = { ...stream.settings, splatBudget: 0, budgetMode: "limit", rangeMin: 0, rangeMax: tree.levels - 1 };
   const levels = new Int8Array(tree.leaves);
   const distance = new Float32Array(tree.leaves);
@@ -411,12 +376,6 @@ async function checkLod(o: ValidateOptions): Promise<Check> {
   };
 }
 
-// The budget fit from the scene's center: target mode fills a budget
-// halfway between the coarsest and finest scene to within 1% (or one
-// leaf's step); limit mode at that budget is never finer than the
-// distances alone and stays within it; a move of a thousandth of the
-// scene changes few leaves; a wider field of view is never finer (by the
-// distances alone)
 function checkSelection(stream: SogLodStream, center: Vec3Like, problems: string[]) {
   const { tree } = stream;
   const settings: LodSettings = { ...stream.settings, rangeMin: 0, rangeMax: tree.levels - 1 };
@@ -462,8 +421,6 @@ function checkSelection(stream: SogLodStream, center: Vec3Like, problems: string
   return { budget, target, limit, step, moved: flipped };
 }
 
-// The live stream: a leaf with a resident level within underfillLimit of
-// its selected one shows the finest such level
 function checkUnderfill(stream: SogLodStream, problems: string[]) {
   const { tree, settings } = stream;
   const { shown, desired, resident } = stream.inspect();
@@ -490,7 +447,6 @@ function checkUnderfill(stream: SogLodStream, problems: string[]) {
 
 const LOOKUP_BUNDLE = defineBundle({ stored: "uint32" });
 
-// rangeLookup of every index below `count` of a range table, on the GPU
 async function lookupOnGpu(renderer: WebGPURenderer, ranges: GpuArrays, count: number) {
   const reader = new GpuArrayReader(RANGES_BUNDLE).bind(ranges, "ranges");
   const writer = new GpuArrayWriter({

@@ -1,20 +1,3 @@
-// Streaming a SOG LoD scene into one SplatRenderer's collection. Files load
-// on demand and are decoded on the GPU (gpuDecode.ts). Each leaf shows the
-// finest resident level from its selected one to underfillLimit levels
-// coarser, else the level it showed before, else the nearest resident one
-// (coarser first), so a switch never leaves a hole. Loads go by tier, then
-// coarsest level first, then nearest (after PlayCanvas's
-// GSplatOctreeInstance): every leaf's coarsest level (so the whole scene
-// shows at once), leaves showing nothing, the level a leaf should show
-// (the selected one, or with underfill the coarsest in its window), then
-// one level finer toward the selected one: the view fills coarse first and
-// refines a level at a time. The collection has one object per resident file that leaves
-// show, drawing a small table of those leaves' ranges (sh.ts rangeLookup:
-// a binary search per splat, so a new selection uploads a few KB, where
-// per-splat index lists would upload MBs), rebuilt only when they change;
-// plus the environment, whole. One file lands per update. Files past the
-// resident budget that nothing shows or wants are evicted, least recently
-// used first, and freed once no live collection holds them (Resident).
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { ArrayData, GpuArrays, SplatCollection, type AnySplatObject } from "@sparkjsdev/radix";
@@ -78,7 +61,7 @@ export class SogLodStream {
   readonly settings: LodSettings;
   readonly stats: LodStats;
   collection = SplatCollection.EMPTY;
-  // While set, update() does nothing (checks read a steady state)
+  // While set, update() does nothing, so checks read a steady state
   paused = false;
   private readonly renderer: WebGPURenderer;
   private readonly camera: THREE.Camera;
@@ -149,9 +132,7 @@ export class SogLodStream {
     }
   }
 
-  // Re-select if the camera moved, settings changed or a file landed, load
-  // what is wanted and rebuild the objects that changed; whether the
-  // collection is new
+  // Returns whether the collection is new
   update(now = performance.now()): boolean {
     if (this.disposed || this.paused) {
       return false;
@@ -182,9 +163,7 @@ export class SogLodStream {
     return true;
   }
 
-  // What each file's object draws (checks): the file, its level, the
-  // leaves whose ranges it draws, its range table and splats, the leaves'
-  // levels, and which levels are resident
+  // For the checks in validate.ts
   inspect() {
     const objects = this.files.flatMap((file, f) => {
       const data = file.object?.data as { ranges?: GpuArrays } | undefined;
@@ -203,9 +182,8 @@ export class SogLodStream {
     this.pool.forEach((list) => list.dispose());
   }
 
-  // The level a leaf should show (it requests it): its selected level, or
-  // with underfill the finest resident one in its window, else the
-  // coarsest it has there
+  // The selected level, or with underfill the finest resident one in its
+  // window, else the coarsest it has there
   private target(leaf: number): number {
     const want = this.desired[leaf];
     const underfill = Math.max(0, Math.floor(this.settings.underfillLimit));
@@ -226,8 +204,8 @@ export class SogLodStream {
     return want;
   }
 
-  // Start loads by tier, then coarsest level first, then nearest leaf (the
-  // environment first of all); the files wanted
+  // Starts loads by tier, then coarsest level, then nearest leaf, after
+  // PlayCanvas's GSplatOctreeInstance, and returns the files wanted
   private request(now: number): Set<number> {
     const { tree, distance } = this;
     // Per file: [tier, level, distance], the most urgent of its leaves
@@ -280,8 +258,7 @@ export class SogLodStream {
     return new Set(priority.keys());
   }
 
-  // Download a file and decode its images off the main thread; update()
-  // then uploads it (one file per update, so landings spread over frames)
+  // update() uploads one downloaded file per call, so uploads spread over frames
   private async load(file: LodFile) {
     file.state = "loading";
     this.loads += 1;
@@ -340,7 +317,8 @@ export class SogLodStream {
     return f >= 0 && this.files[f].state === "resident";
   }
 
-  // The shown level of every leaf, then one object per file shown
+  // A leaf shows its target level if resident, else the one it showed, else
+  // the nearest resident one, so a switch never leaves a hole
   private show(now: number) {
     const { tree, desired, shown, stats } = this;
     const ranges = new Map<number, number[]>();
@@ -390,7 +368,6 @@ export class SogLodStream {
     this.collection = objects.length > 0 ? new SplatCollection(objects) : SplatCollection.EMPTY;
   }
 
-  // The file's object for `key`, made anew when the key changed
   private objectOf(file: LodFile, key: string, leaves: number[] | undefined): AnySplatObject {
     if (file.key === key && file.object) {
       return file.object;
@@ -423,8 +400,8 @@ export class SogLodStream {
     return file.object;
   }
 
-  // The ranges of `leaves` at `level` (all in one file) as a RANGES_BUNDLE
-  // table: sorted by offset, touching ranges merged; meta.count the splats
+  // The leaves' ranges, touching ones merged: a new selection uploads a small
+  // table, not per-splat index lists
   private rangesOf(leaves: number[], level: number): ArrayData {
     const { tree } = this;
     const spans = leaves.map((leaf) => leaf * tree.levels + level).sort((a, b) => tree.offset[a] - tree.offset[b]);

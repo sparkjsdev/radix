@@ -1,8 +1,4 @@
-// SOG images: WebP bytes into ImageBitmaps (decoded off the main thread),
-// and their exact RGBA bytes. A 2D canvas would premultiply alpha (SOG keeps
-// data there: the quaternion mode, 252 to 255), so the bytes are read back
-// through WebGL2, which uploads an ImageBitmap made without premultiplying
-// or color conversion as it is.
+// Pixels are read through WebGL2, as a 2D canvas would premultiply the alpha SOG uses for data
 
 export interface Pixels {
   rgba: Uint8Array<ArrayBuffer>;
