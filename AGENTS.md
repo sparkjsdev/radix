@@ -343,7 +343,9 @@ for some). `docs/checks.md` lists what each covers.
   `main.ts` through the page's import map, and `new URL("./x.js" | "./x.css",
   import.meta.url)`, `import.meta.resolve(...)`, `<link rel="stylesheet">` and
   `<script src>` are inlined as blob URLs (ELK's worker as
-  `window.ELK_WORKER_URL`, read by `fxedit/layout.ts`). The files need http(s):
+  `window.ELK_WORKER_URL`, read by `fxedit/layout.ts`). esbuild keeps the
+  license comments, and each page ends with both `THIRD_PARTY_NOTICES.txt`
+  files, the root's and `examples/`'s, as a comment. The files need http(s):
   Chrome starts no module workers from a page opened from disk.
   `npm run check:examples -- --single` checks them.
 

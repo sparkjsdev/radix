@@ -1,0 +1,78 @@
+Third-party notices for the Radix example pages
+
+The example pages bundle or load the third-party code below, whose files carry
+no license text where the pages use them. The library's notices are in
+THIRD_PARTY_NOTICES.txt at the repository root.
+
+================================================================================
+Tweakpane 4.0.5
+https://github.com/cocopon/tweakpane
+
+The splat viewer, the SOG viewer and the effect editor, with @tweakpane/core,
+which Tweakpane's bundles hold. The npm package has no license file, so this is
+LICENSE.txt from the repository at 4.0.5.
+
+MIT License
+
+Copyright (c) 2016 cocopon <cocopon@me.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+Tweakpane essentials plugin 0.2.1
+https://github.com/tweakpane/plugin-essentials
+
+The splat viewer and the SOG viewer.
+
+MIT License
+
+Copyright (c) 2021 cocopon <cocopon@me.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+elkjs 0.12.0
+https://github.com/kieler/elkjs
+
+The effect editor lays out its graphs with elk-api.js and elk-worker.min.js,
+which are built from source.
+
+Copyright (c) 2017 Kiel University and others, under the Eclipse Public License
+2.0 (https://www.eclipse.org/legal/epl-2.0/), with the GNU General Public
+License v3.0 or later as a Secondary License.
+
+The source code of elkjs is available under the Eclipse Public License 2.0 at
+https://github.com/kieler/elkjs/tree/0.12.0, and that of the Eclipse Layout
+Kernel it is built from at https://github.com/eclipse-elk/elk/tree/v0.12.0.

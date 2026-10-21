@@ -15,6 +15,9 @@ const SOURCE = path.join(root, "examples");
 const BUILT = path.join(root, "build/examples");
 const SKIP = new Set(["spark"]);
 
+// Each page ends with the package's and the examples' third-party notices
+const NOTICES = ["THIRD_PARTY_NOTICES.txt", "examples/THIRD_PARTY_NOTICES.txt"].map((file) => readFileSync(path.join(root, file), "utf8")).join("\n");
+
 // Scripts that start a worker from a file beside them, and the global holding its address instead
 const COMPANIONS = { "elk-api.js": { global: "ELK_WORKER_URL", file: "elk-worker.min.js" } };
 
@@ -58,7 +61,7 @@ async function buildPage(name) {
   const bundle = (entry) => {
     if (!bundles.has(entry)) {
       bundles.set(entry, esbuild.build({
-        entryPoints: [entry], bundle: true, format: "esm", minify: true, write: false, target: "es2022", legalComments: "none",
+        entryPoints: [entry], bundle: true, format: "esm", minify: true, write: false, target: "es2022", legalComments: "eof",
         plugins: [resolve, inline], logLevel: "error",
       }).then((result) => result.outputFiles[0].text));
     }
@@ -103,6 +106,7 @@ async function buildPage(name) {
   if (/type="importmap"|<script[^>]*\ssrc=|<link rel="stylesheet"/.test(html)) {
     throw new Error(`${name}/index.html: an import map, script or stylesheet address is left`);
   }
+  html = `${html.trimEnd()}\n<!--\n${NOTICES}-->\n`;
   const out = path.join(BUILT, name, `${name}.html`);
   mkdirSync(path.dirname(out), { recursive: true });
   writeFileSync(out, html);
