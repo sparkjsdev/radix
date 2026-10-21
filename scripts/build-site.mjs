@@ -211,7 +211,7 @@ npm run serve:site   # http://localhost:8002/</code></pre>
 
 <h2>On this site</h2>
 <div class="next-cards">
-  <a href="build/examples/index.html"><b>Examples</b><span>The example pages (splat viewer, scenes, WebXR, games, fractals) and the ports of the SparkJS examples.</span></a>
+  <a href="build/examples/index.html"><b>Examples</b><span>The example pages (splat viewer, scenes, WebXR, games) and the ports of the SparkJS examples.</span></a>
   <a href="build/examples/spark/index.html"><b>Spark ports</b><span>Every SparkJS 2.3.1 example: ported, partial or blocked, and why.</span></a>
   <a href="${DOCS}/index.html"><b>Documentation</b><span>How Radix works, the API reference, recipes, and the comparison with SparkJS.</span></a>
 </div>

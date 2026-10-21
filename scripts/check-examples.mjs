@@ -52,9 +52,6 @@ const radixPages = [
   ...["multi", "views", "modifiers", "subset", "offline"].map((scene) => ({ name: "scenes", path: "scenes/index.html", query: `scene=${scene}`, ready: "window.radixScenes" })),
   { name: "xr", path: "xr/index.html", query: "", ready: "window.radixXr?.build" },
   { name: "mpm", path: "mpm/index.html", query: "", ready: "window.radixMpm?.ready", backends: ["webgpu"] },
-  ...["golden-hour-bulb", "ember-flame", "halvorsen-bloom", "sakura"].map((preset) => ({
-    name: "fractals", path: "fractals/index.html", query: `preset=${preset}&splats=500000`, ready: "window.radixFractals?.ready",
-  })),
   { name: "fxedit", path: "fxedit/index.html", query: "", ready: "window.radixFxedit?.ready" },
 ].filter((page) => !only || only.includes(page.name));
 const pages = args.includes("--single")
