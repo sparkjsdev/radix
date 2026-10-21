@@ -123,7 +123,7 @@ renderer.setAnimationLoop(() =&gt; renderer.render(scene, camera));</pre>
     <div class="stat" style="--c: var(--gpu)"><b>0 readbacks</b><span>on WebGPU: compaction, the radix sort, and the indirect draw run on the GPU in the same frame</span></div>
     <div class="stat" style="--c: var(--core)"><b>32 bytes</b><span>per splat with HDR color and PBR fields, or 16 bytes packed, with the same bits on the CPU, in files, and on the GPU</span></div>
     <div class="stat" style="--c: var(--wgpu)"><b>4 methods</b><span>ewa, 3dgut, htgs, and raygs: classic splatting or ray evaluation, set per renderer</span></div>
-    <div class="stat" style="--c: var(--worker)"><b>9.2 ms</b><span>per frame for a 10M-splat interior scan on WebGPU (Apple M3 Max, 1920x1080); SparkJS takes 16.5 ms</span></div>
+    <div class="stat" style="--c: var(--worker)"><b>9.2 ms</b><span>per frame for a 10M-splat interior scan on WebGPU (Apple M3 Max, 1920x1080); SparkJS on WebGL2 takes 16.5 ms</span></div>
     <div class="stat" style="--c: var(--yellow)"><b>2 backends</b><span>WebGPU and WebGL2, with the same TSL source and the same app code</span></div>
   </div>
   <p class="deeper">See also: <a href="why.html">The comparison</a> <a href="bench.html">Benchmarks</a> <a href="ref/performance.html">Performance</a></p>
