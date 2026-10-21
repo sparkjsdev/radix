@@ -1,10 +1,9 @@
-// What flows where: depths for the flow preview, the nodes an output depends
-// on, and probe graphs, which show one port's value as the splats' color.
+// The flow preview's depths and probe graphs, which show a port's value as color
 import {
   boundaryNode, GROUP_OUTPUT, groupOf, splitPort, withGroups, type Graph, type GraphLevel, type NodeLookup,
 } from "./fx/index.js";
 
-// Nodes feeding `ids`, themselves included
+// Nodes feeding ids, themselves included
 export function upstreamOf(level: GraphLevel, ids: string[]) {
   const into = new Map<string, string[]>();
   for (const link of level.links) {
@@ -23,8 +22,7 @@ export function upstreamOf(level: GraphLevel, ids: string[]) {
   return seen;
 }
 
-// Longest chain of links from a source to each node (0 for nodes nothing
-// feeds); a cycle stops counting where it closes
+// Longest chain of links into each node, 0 for sources. A cycle stops where it closes.
 export function depths(level: GraphLevel) {
   const into = new Map<string, string[]>();
   for (const link of level.links) {
@@ -60,9 +58,8 @@ export function flowRoots(level: GraphLevel, registry: NodeLookup) {
   return Object.keys(level.nodes).filter((id) => level.nodes[id].type === GROUP_OUTPUT || registry.get(level.nodes[id].type)?.output);
 }
 
-// A port inside a group (reached through `path`, instance ids from the top)
-// wired out through every group on the way as a new output, so a probe can
-// read it at the top. The copy of the graph and the port there.
+// A copy of the graph with a port inside a group (path: instance ids from the
+// top) wired out through every group as a new output, so a probe can read it
 export function exposePort(graph: Graph, registry: NodeLookup, path: string[], port: string): { graph: Graph; port: string } | undefined {
   if (path.length === 0) {
     return { graph, port };
@@ -98,13 +95,11 @@ export function exposePort(graph: Graph, registry: NodeLookup, path: string[], p
   return { graph: copy, port: current };
 }
 
-// Probe viewer: floats through a blue-purple-orange ramp (period 2, so
-// -1 and 1 match), vectors from [-1, 1] to [0, 1], bools green (true) or
-// red, colors as they are
+// The float probe's ramp, of period 2 so -1 and 1 match
 const RAMP = { a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [0.5, 0.5, 0.5], d: [0.5, 0.25, 0] };
 
-// `graph` with `port` ("node.output" at the top) driving the output's rgb
-// instead; offset, scale and keep stay (a probed bool shows every splat)
+// graph with port ("node.output" at the top) as the output's rgb. A probed bool
+// also shows every splat.
 export function probeGraph(graph: Graph, registry: NodeLookup, port: string): Graph | undefined {
   const lookup = withGroups(registry, graph.groups);
   const [node, output] = splitPort(port);

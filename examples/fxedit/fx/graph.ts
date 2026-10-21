@@ -1,26 +1,4 @@
-// Graphs of fx nodes as plain JSON, and what can be known about them without
-// a GPU: validation, evaluation order, the params, the structure key. No
-// three.js here (types only), so an editor or a worker can use it.
-//
-//   { version: 1, name?, description?,
-//     nodes: { id: { type, inputs?: { name: value }, options?: { name: value }, position?, note? } },
-//     links: [{ from: "node.output", to: "node.input" }],
-//     params?: { "Label": "node.input" },
-//     groups?: { name: { label?, description?, inputs: { port: InputDef }, outputs: { port: type },
-//                        nodes, links } } }
-//
-// Node ids are letters, digits, _ and -. Every input that is not linked is a
-// param (writable without rebuilding), except optional inputs without a value,
-// which are absent. `params` names the knobs a UI should show.
-//
-// Groups are nodes made of nodes. A node of type "group.<name>" is an
-// instance of groups[name]: its ports are the group's inputs and outputs.
-// Inside, one "group.input" node gives the instance's inputs as outputs and
-// one "group.output" node takes its outputs. Groups may use other groups (not
-// themselves). Instances share their group; per-instance values are the
-// instance's inputs. flattenGraph() expands every instance into plain nodes
-// named "instance/inner", keeping the instance's id for a pass-through of
-// its inputs, so the params of the top level keep their names.
+// Graph validation, order, params and key, without three.js so an editor or a worker can use it
 import { PORT_COMPONENTS, type InputDef, type NodeDef, type NodeSource, type PortType, type Value } from "./types.js";
 
 export interface GraphNode {
@@ -37,7 +15,7 @@ export interface GraphLink {
   to: string;
 }
 
-// Nodes and links: the top of a graph or the inside of a group
+// The top of a graph or the inside of a group
 export interface GraphLevel {
   nodes: Record<string, GraphNode>;
   links: GraphLink[];
@@ -112,14 +90,11 @@ export function zeroValue(type: PortType): Value {
   return type === "bool" ? false : type === "float" ? 0 : new Array<number>(PORT_COMPONENTS[type]).fill(0);
 }
 
-// --- Groups ---
-
 // The group an instance type names ("group.ripple" -> "ripple")
 export function groupOf(type: string): string | undefined {
   return type.startsWith(GROUP_PREFIX) && type !== GROUP_INPUT && type !== GROUP_OUTPUT ? type.slice(GROUP_PREFIX.length).split(":")[0] : undefined;
 }
 
-// Whether a group uses a flag (time, click, camera) somewhere inside
 function groupUses(registry: NodeLookup, groups: Record<string, GraphGroup>, name: string, flag: "time" | "click" | "camera", seen = new Set<string>()): boolean {
   if (seen.has(name) || !groups[name]) {
     return false;
@@ -133,9 +108,8 @@ function groupUses(registry: NodeLookup, groups: Record<string, GraphGroup>, nam
 
 const passThrough = (inputs: Record<string, unknown>) => ({ ...inputs }) as Record<string, never>;
 
-// `registry` plus the node types groups make: instances ("group.<name>"),
-// and inside group `scope` its boundary nodes. flattenGraph() adds the
-// pass-throughs "group.<name>:in" and ":out".
+// registry plus group instances, the boundary nodes inside scope, and the
+// ":in" and ":out" pass-throughs of flattenGraph()
 export function withGroups<T extends NodeLookup>(registry: T, groups: Record<string, GraphGroup> | undefined, scope?: string): NodeLookup & { base: T } {
   const cache = new Map<string, NodeDef | undefined>();
   const make = (type: string): NodeDef | undefined => {
@@ -206,12 +180,12 @@ export function withGroups<T extends NodeLookup>(registry: T, groups: Record<str
   };
 }
 
-// The id of a group's boundary node of `type` (group.input or group.output)
+// The id of a group's boundary node of type (group.input or group.output)
 export function boundaryNode(group: GraphGroup, type: string): string | undefined {
   return Object.keys(group.nodes).find((id) => group.nodes[id].type === type);
 }
 
-// Group `name` uses these groups, directly or deeper (itself only in a cycle)
+// The groups that group name uses at any depth, itself only in a cycle
 export function groupsInside(groups: Record<string, GraphGroup>, name: string, found = new Set<string>()): Set<string> {
   for (const node of Object.values(groups[name]?.nodes ?? {})) {
     const inner = groupOf(node.type);
@@ -223,7 +197,7 @@ export function groupsInside(groups: Record<string, GraphGroup>, name: string, f
   return found;
 }
 
-// Every instance of group `name` as its flat id ("a/b"), through nested groups
+// Every instance of group name as its flat id ("a/b"), through nested groups
 export function instancePaths(graph: Graph, name: string): string[] {
   const paths: string[] = [];
   const visit = (level: GraphLevel, prefix: string, depth: number) => {
@@ -245,10 +219,9 @@ export function instancePaths(graph: Graph, name: string): string[] {
   return paths;
 }
 
-// The graph with every group instance expanded (the graph must be valid).
-// Instance m of group G becomes node m (type "group.G:in", m's inputs passed
-// through), G's inner nodes as "m/inner" and G's output node as
-// "m/<its id>" (type "group.G:out"); links into and out of m follow.
+// The valid graph with every group instance expanded. Instance m of group G
+// becomes node m ("group.G:in", passing m's inputs through) and G's nodes
+// "m/<id>", its output node typed "group.G:out".
 export function flattenGraph(graph: Graph): Graph {
   const groups = graph.groups ?? {};
   if (!Object.values(graph.nodes).some((node) => groupOf(node.type) !== undefined)) {
@@ -291,9 +264,7 @@ export function flattenGraph(graph: Graph): Graph {
   return { ...graph, nodes, links };
 }
 
-// "node.port" at the level reached through `path` (instance ids from the
-// top) as a port of the flat graph: prefixed, and an instance's output read
-// from its group's output node
+// A port at the level path reaches (instance ids from the top) as a port of the flat graph
 export function flatPort(graph: Graph, path: string[], port: string): string {
   let level: GraphLevel = graph;
   for (const id of path) {
@@ -309,10 +280,7 @@ export function flatPort(graph: Graph, path: string[], port: string): string {
   return prefix + port;
 }
 
-// --- Validation ---
-
-// Every problem with the graph, as messages (empty: valid). Messages about
-// a group's inside start with "Group <name>: ".
+// Empty for a valid graph. Messages about a group's inside start with "Group <name>: ".
 export function validate(graph: Graph, registry: NodeLookup): string[] {
   const errors: string[] = [];
   if (graph.version !== 1) {
@@ -350,8 +318,7 @@ export function validate(graph: Graph, registry: NodeLookup): string[] {
   return errors;
 }
 
-// One level: the top (one output node, params) or a group's inside (no
-// output node; its boundary nodes resolve through `lookup`)
+// The top, or a group's inside whose boundary nodes resolve through lookup
 function validateLevel(level: GraphLevel, lookup: NodeLookup, top: boolean): string[] {
   const errors: string[] = [];
   const defs = new Map<string, NodeDef>();
@@ -467,8 +434,6 @@ function findCycle(level: GraphLevel): string[] | undefined {
   return undefined;
 }
 
-// --- The built program (valid graphs; groups are flattened first) ---
-
 // Link feeding each linked input: "node.input" -> "node.output"
 export function linkSources(level: GraphLevel): Map<string, string> {
   return new Map(level.links.map((link) => [link.to, link.from]));
@@ -526,10 +491,8 @@ export function graphParams(graph: Graph, registry: NodeLookup): GraphParam[] {
   return params;
 }
 
-// Structure of a valid graph as a short string: reachable nodes, their types
-// and options, links and which inputs are absent (of the flat graph). Values
-// are left out, so every instance of a graph shares one program; node ids
-// are in, because the params are named after them.
+// A valid graph's structure as a hash. Values are left out so graphs that differ
+// only in values share a program, and node ids are in since params use them.
 export function graphKey(graph: Graph, registry: NodeLookup): string {
   const flat = flattenGraph(graph);
   const lookup = withGroups(registry, graph.groups);

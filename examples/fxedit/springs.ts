@@ -1,11 +1,8 @@
-// Springs for everything that moves in the editor, and the one animation
-// loop, which sleeps once everything has settled.
-
 export class Spring {
   value: number;
   target: number;
   velocity = 0;
-  // Settled when this close to the target and this slow (units of value)
+  // Settling distance, in the value's units
   readonly epsilon: number;
 
   constructor(value: number, epsilon = 0.05) {
@@ -14,8 +11,7 @@ export class Spring {
     this.epsilon = epsilon;
   }
 
-  // Semi-implicit Euler in fixed substeps, stable for stiff springs; true
-  // while still moving
+  // True while moving. Semi-implicit Euler in fixed substeps keeps stiff springs stable.
   step(dt: number, stiffness: number, damping: number): boolean {
     if (this.value === this.target && this.velocity === 0) {
       return false;
@@ -40,8 +36,7 @@ export class Spring {
   }
 }
 
-// Calls every ticker each animation frame while any of them reports it is
-// still moving; wake() after changing a target
+// Ticks every ticker each frame while any is moving; wake() after changing a target
 export class Animator {
   private tickers: ((dt: number) => boolean)[] = [];
   private frame = 0;

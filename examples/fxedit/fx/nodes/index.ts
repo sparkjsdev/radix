@@ -1,4 +1,3 @@
-// The built-in node set
 import { NodeRegistry } from "../registry.js";
 import { colorNodes } from "./color.js";
 import { fieldNodes } from "./fields.js";

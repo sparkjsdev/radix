@@ -1,11 +1,7 @@
 // Node definitions: a TSL building block plus the metadata an editor needs
-// (typed ports with defaults and UI ranges, options, attribution). A graph
-// (graph.ts) wires nodes by id; buildGraphModifier (graphModifier.ts)
-// builds it into a Radix SplatModifier.
 import type { SplatNode, TslNode } from "@sparkjsdev/radix";
 
-// Port types. color is a vec3 shown with a color picker; a bool param is a
-// float uniform (above 0.5: true).
+// color is a vec3 shown with a color picker, and a bool param a float uniform, true above 0.5
 export type PortType = "float" | "vec2" | "vec3" | "vec4" | "color" | "bool";
 
 export type Value = number | number[] | boolean;
@@ -13,8 +9,7 @@ export type Value = number | number[] | boolean;
 export interface InputDef {
   type: PortType;
   default: Value;
-  // Optional inputs are absent (build sees undefined) unless linked or given
-  // a value in the graph; others become a param when unlinked
+  // Absent (build sees undefined) unless linked or given a value. Other unlinked inputs are params.
   optional?: boolean;
   // UI hints only
   min?: number;
@@ -31,8 +26,7 @@ export interface OptionDef {
   max?: number;
 }
 
-// effect: whole effects ported as one node (macro nodes); group: instances
-// of a graph's groups and their boundary nodes (graph.ts)
+// effect: a whole effect as one node, group: group instances and boundary nodes
 export type NodeCategory = "input" | "field" | "math" | "color" | "effect" | "group" | "splat";
 
 export interface NodeSource {
@@ -42,19 +36,18 @@ export interface NodeSource {
 }
 
 export interface BuildContext {
-  // Copy of the splat as it entered the graph (read it through input nodes)
+  // The splat as it entered the graph
   source: SplatNode;
   // The splat var the output node writes
   splat: SplatNode;
   // The stored splat's index (uint)
   index: TslNode;
-  // Seconds (FxInputs.time), for nodes with `time: true`
+  // Seconds, for nodes whose time flag is set
   time: TslNode;
-  // The last click (FxInputs.click) for nodes with `click: true`: its point
-  // in the modifier's space and seconds since it
+  // The last click's point in the modifier's space and seconds since it, for
+  // nodes whose click flag is set
   click: { point: TslNode; age: TslNode };
-  // The viewing camera (FxInputs.camera) for nodes with `camera: true`;
-  // pixelSize: world size of one pixel at unit depth
+  // The camera for nodes whose camera flag is set, pixelSize a pixel's world size at unit depth
   camera: { position: TslNode; forward: TslNode; pixelSize: TslNode };
   option(name: string): string | number;
 }
@@ -63,7 +56,7 @@ export interface NodeDef {
   // Stable, namespaced: "field.noise"
   id: string;
   label: string;
-  // One line for editors (palette, tooltips)
+  // One line for the palette and tooltips
   description?: string;
   category: NodeCategory;
   inputs: Record<string, InputDef>;
@@ -75,7 +68,7 @@ export interface NodeDef {
   click?: boolean;
   // Reads ctx.camera (view-dependent: exact for one view per frame)
   camera?: boolean;
-  // The graph's one output node (writes the splat; may return `keep`)
+  // The graph's one output node, which writes the splat
   output?: boolean;
   source?: NodeSource;
   build(inputs: Record<string, TslNode>, ctx: BuildContext): Record<string, TslNode>;

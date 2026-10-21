@@ -1,13 +1,4 @@
-// A modifier run inside a generator (SplatGenerator.fromSplats({ modifiers })),
-// in a frame of the page's: fromSplats modifiers see the file's own
-// coordinates, so the splat goes into the frame, through the modifier and
-// back. The frame is a similarity (rotation, uniform scale, translation)
-// held in uniforms, so moving it compiles nothing.
-//
-// The WebGL2 path: a renderer modifier in a space makes the transform ahead
-// of it keep a non-uniform branch with an eigendecomposition in the
-// projection, about 6x slower there at millions of splats; inside the
-// generator, the object's transform goes straight to covariances.
+// A modifier run in a fromSplats generator in a page frame, faster on WebGL2 than the renderer's
 import * as THREE from "three";
 import { GpuSplatMath, GpuSplats, TSL, type SplatModifier } from "@sparkjsdev/radix";
 

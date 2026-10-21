@@ -1,6 +1,3 @@
-// Wire shapes: an exact bezier, or a rope (Verlet chain with gravity) that
-// sags and swings when its nodes move.
-
 export function bezierPath(x1: number, y1: number, x2: number, y2: number) {
   // Backward wires (to a wrapped row) get short handles instead of wide loops
   const dy = Math.abs(y2 - y1);
@@ -10,8 +7,7 @@ export function bezierPath(x1: number, y1: number, x2: number, y2: number) {
 
 type P = [number, number];
 
-// A right-angle route drawn with rounded corners (the corner is the curve's
-// control point, so it bends toward the inside)
+// A right-angle route with rounded corners, each corner its curve's control point
 export function orthoPath(points: P[], radius = 12) {
   const f = (v: number) => v.toFixed(1);
   let d = `M${f(points[0][0])} ${f(points[0][1])}`;
@@ -42,8 +38,8 @@ export interface Obstacle {
   h: number;
 }
 
-// Drop repeated points and middle points of straight runs (a run that
-// doubles back keeps its turn, so a port's stub never merges into it)
+// Drops repeated points and the middles of straight runs. A run that doubles
+// back keeps its turn, so a port's stub never merges into it.
 function simplify(points: P[]) {
   const out: P[] = [];
   for (const p of points) {
@@ -74,8 +70,7 @@ function reversals(route: P[]) {
   return count;
 }
 
-// Whether a route leaves output a to the right and enters input b from the
-// left, level, before its first and after its last turn
+// Whether a route leaves a rightward and enters b from the left, level, without doubling back
 export function routeOk(route: P[], a: P, b: P, stub = 6) {
   const n = route.length;
   if (n < 2) {
@@ -89,11 +84,8 @@ export function routeOk(route: P[], a: P, b: P, stub = 6) {
   return Math.abs(first[1] - a[1]) < 1 && first[0] >= a[0] + stub && Math.abs(last[1] - b[1]) < 1 && last[0] <= b[0] - stub && reversals(route) === 0;
 }
 
-// A right-angle route from output a (leaving right) to input b (entering
-// from the left) around the nodes: a few candidates (through a gap between
-// columns, or out, along a clear row channel and back), scored by nodes
-// crossed, then bends, then length. Cheap enough to run per wire as nodes
-// come to rest.
+// A right-angle route from a to b around the nodes: the best of a few
+// candidates by nodes crossed, then bends, then length
 export function orthoRoute(a: P, b: P, obstacles: Obstacle[], ends: [string, string], stub = 16): P[] {
   const out = a[0] + stub;
   const into = b[0] - stub;
@@ -116,8 +108,7 @@ export function orthoRoute(a: P, b: P, obstacles: Obstacle[], ends: [string, str
   }
   ys.forEach((y) => candidates.push([a, [out, a[1]], [out, y], [into, y], [into, b[1]], b]));
 
-  // Axis-aligned segment against the nodes (the first and last segments,
-  // which head away from their ports, may touch their own node)
+  // Nodes crossed. The first and last segments may touch their own node.
   const hits = (route: P[]) => {
     let count = 0;
     for (let i = 0; i < route.length - 1; i += 1) {
@@ -154,8 +145,7 @@ export function orthoRoute(a: P, b: P, obstacles: Obstacle[], ends: [string, str
   return best;
 }
 
-// A stored route with its ends moved onto the ports' current positions,
-// keeping the first and last segments level
+// A stored route with its ends moved to the ports, its first and last segments kept level
 export function fitRoute(route: P[], a: P, b: P): P[] {
   const points = route.map((p) => [p[0], p[1]] as P);
   if (points.length > 2 && Math.abs(points[1][1] - points[0][1]) < 1) {
@@ -193,8 +183,8 @@ export class Rope {
     }
   }
 
-  // Ends at the ports, the second and second-last points just outside them
-  // so the rope leaves and enters sideways; true while it still moves
+  // The second and second-last points sit just outside the ports so the rope
+  // leaves and enters sideways. True while it moves.
   step(dt: number, x1: number, y1: number, x2: number, y2: number) {
     const p = this.points;
     const n = SEGMENTS;

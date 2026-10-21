@@ -1,5 +1,4 @@
-// Color operations. Splat colors are sRGB-encoded values; above 1 is allowed
-// (the ext encoding keeps HDR) and reads as glow.
+// Splat colors are sRGB values, and above 1, which the ext encoding keeps, reads as glow
 import { TSL } from "@sparkjsdev/radix";
 import type { NodeDef } from "../types.js";
 import { IQ_PALETTE, cosinePalette } from "./iq.js";
@@ -80,7 +79,6 @@ export const colorNodes: NodeDef[] = [
       intensity: { type: "float", default: 1, min: 0, max: 8 },
       amount: { type: "float", default: 1, min: 0, max: 1 },
     },
-    // mix(rgb, color * intensity, amount)
     outputs: { value: "color" },
     build: ({ rgb, color, intensity, amount }) => ({ value: mix(rgb, color.mul(intensity), amount) }),
   },

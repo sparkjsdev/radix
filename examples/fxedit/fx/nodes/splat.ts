@@ -1,10 +1,4 @@
-// The output node: writes the splat. Every input is optional; an absent input
-// leaves that part of the splat as it was. Writes are plain statements on the
-// splat var (a Fn whose result is unused is never built), in this order:
-// center (set), offset (add), scale (multiply), size / sizeMix (blend toward
-// a sphere), blur (add a size in quadrature, keeping total weight), rgb
-// (set), alpha (set), opacity (multiply), keep (false: opacity 0, which the
-// projection culls before the sort).
+// The output node, writing plain statements since TSL never builds a Fn whose result is unused
 import { TSL, type TslNode } from "@sparkjsdev/radix";
 import type { NodeDef, PortType } from "../types.js";
 
@@ -43,7 +37,7 @@ export const splatNodes: NodeDef[] = [
         splat.get("scales").mulAssign(max(scale, 0.0));
       }
       if (sizeMix) {
-        // Blend toward a sphere of radius `size` in quadrature
+        // Blend toward a sphere of radius size in quadrature
         const m = sizeMix.clamp(0, 1).toVar();
         const keepOwn = float(1).sub(m).pow(2).toVar();
         const target = (size ?? float(0.01)).max(1e-6).mul(m).pow(2).toVar();
@@ -52,7 +46,7 @@ export const splatNodes: NodeDef[] = [
       }
       let fade: TslNode | undefined;
       if (blur) {
-        // Convolve with an isotropic gaussian of std-dev `blur`: variances
+        // Convolve with an isotropic gaussian of std-dev blur: variances
         // add, and opacity keeps the footprint's total weight (the ratio of
         // determinants over the two largest axes, as a 2D projection sees)
         const b2 = max(blur, 0.0).pow(2).toVar();

@@ -1,27 +1,17 @@
-// Node editor for fx graphs on Radix: a live splat render beside a graph
-// editor (GraphView over a GraphDoc). The graph is a SplatModifier built
-// once per structure (fx/graphModifier.ts): unlinked inputs are uniforms
-// written live, a structure edit picks another modifier. Scans (catalog.ts)
-// are normalized by their object's matrix (upright, centered, objects 1.6
-// units, scenes 8) under `model`, which the spin turns, so example values
-// fit every scan in both spaces: world runs the graph in world space,
-// object in the normalized scan's frame. On WebGPU the graph is the
-// renderer's modifier ("world", or the live model.matrixWorld as the
-// modifier space); on WebGL2 it runs inside the scan's generator, wrapped
-// in the same frames (framed.ts), since a renderer modifier costs about 6x
-// there. Sorted on the GPU with WebGPU, or by the worker sort (WebGL2, or
-// the bar's cpu switch), re-sorted while a graph animates. Query parameters:
-//   ?graph=    an example (default dissolve): tint | heightGradient | pulse |
-//              wave | reveal | groups | dissolve | sway | radialWarp | ... | blank
+// A node editor for splat effect graphs, with the effect live on a scan beside it
+//   ?graph=    an example, a key of EXAMPLES (default dissolve)
 //   ?scan=     butterfly (default) | ceramic | sutro
-//   ?splats=   the samples' base URL (?splatsSh= Sutro's)
-//   ?theme=    neon | toybox | glass
-//   ?space=    world (default) | object
-//   ?gpu=      webgpu | webgpu-gl
-//   ?sort=cpu  the worker sort, also on WebGPU
+//   ?splats=   the samples' base URL (default the hosted samples)
+//   ?splatsSh= Sutro's base URL (default the hosted SH3 samples)
+//   ?theme=    neon | toybox | glass (default the saved theme, else glass)
+//   ?space=    world (default) | object: the graph's space (also ?place=)
 //   ?apply=    renderer (WebGPU's default) | generator (WebGL2's): where the graph runs
-//   ?instant=1 (no motion), ?sound=1, ?dpr=1 | 2
-// `radixFxedit` in the console: selfTest(), doc, view, ready.
+//   ?gpu=      webgpu | webgpu-gl (default auto)
+//   ?sort=cpu  the worker sort, also on WebGPU (also ?sort=worker)
+//   ?instant=1 no motion
+//   ?sound=1   sound on (default the saved choice, else off)
+//   ?dpr=      1 | 2: pixel ratio 1 or the display's, up to 2 (default saved per kind of scan)
+// radixFxedit in the console: the page's objects and setters, selfTest() and ready
 import * as THREE from "three";
 import { Pane, type FolderApi } from "tweakpane";
 import {
@@ -108,8 +98,7 @@ const EXAMPLES: Record<string, Example> = {
   blank: { label: "Blank canvas", graph: asGraph(blank), group: "Build" },
 };
 
-// Normalized extents (middle 94% of the centers): objects about a unit
-// (the examples are tuned for SIZE), scenes several units across
+// Largest extent of the middle 94% of centers once normalized; examples are tuned for SIZE
 const SCENE_SIZE = 8;
 const SIZE = 1.6;
 type Placement = "world" | "object";
@@ -133,8 +122,6 @@ const state = {
   turntable: false,
 };
 
-// --- Layout of the page ---
-
 const renderPane = $("render-pane");
 const editorPane = $("editor-pane");
 const status = $("status");
@@ -154,7 +141,6 @@ function applyTheme(name: ThemeName) {
   }
 }
 
-// One button per theme, drawn in that theme's own colors
 for (const t of Object.values(THEMES)) {
   const button = document.createElement("button");
   button.type = "button";
@@ -173,16 +159,13 @@ function applySplit() {
 applyTheme(theme.name);
 applySplit();
 
-// --- Renderer, camera, controls ---
-
 const gpu = params.get("gpu");
 const renderer = await createRenderer({ backend: gpu === "webgpu" || gpu === "webgpu-gl" ? gpu : "auto" });
 const caps = getGpuCaps(renderer);
 const webgpu = caps.backend === "webgpu";
 const applyIn = params.get("apply") === "generator" || (!webgpu && params.get("apply") !== "renderer") ? "generator" : "renderer";
 renderPane.prepend(renderer.domElement);
-// Saved per kind of scan (scenes default to hi-dpi); ?dpr=1 | 2 overrides
-// both for this page until toggled
+// Saved per kind of scan; ?dpr= overrides both until the button is toggled
 let dprOverride = params.has("dpr") ? Number(params.get("dpr")) > 1 : undefined;
 const hiDpi = () => dprOverride ?? (SCANS[state.scan]?.scene ? settings.hiDpiScenes : settings.hiDpi);
 
@@ -195,15 +178,12 @@ applyPixelRatio();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.02, 100);
 camera.position.set(0, 0.25, 3);
-// Orbit (default) or fly (drag looks, WASD moves, a right drag orbits the
-// splat under the pointer); the render bar switches, no mode key (F fits
-// the graph)
+// No mode key: the bar switches modes, and F fits the graph
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit", modeKey: "" } });
 controls.settings.modeKey = "";
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 
-// The spin turns `model`; `normalized`, its child, holds the scan's
-// normalization and is the scan object's transform
+// The spin turns model, and its child normalized is the scan object's transform
 const model = new THREE.Object3D();
 const normalized = new THREE.Object3D();
 model.add(normalized);
@@ -217,8 +197,7 @@ const splats = new SplatRenderer({
 });
 scene.add(splats);
 
-// With the editor over the render (overlay themes) the view is shifted so
-// the scan centers in the part left uncovered
+// Overlay themes shift the view so the scan centers in the part the editor leaves uncovered
 let framed = false;
 let visibleShare = 1;
 function updateViewport() {
@@ -241,8 +220,7 @@ function updateViewport() {
   }
 }
 
-// The scan's own view, else back far enough to see the whole scan (a
-// scene: most of it) in the part of the render the editor leaves uncovered
+// The scan's own view, else far enough back to show it (most of a scene) in the uncovered part
 function frameCamera() {
   const scan = SCANS[state.scan];
   camera.fov = scan?.view?.fov ?? 45;
@@ -260,8 +238,7 @@ function frameCamera() {
 new ResizeObserver(updateViewport).observe(renderPane);
 new ResizeObserver(updateViewport).observe(editorPane);
 
-// Keys and drags go to the pane under the pointer, except that a drag begun
-// on the render (or the locked pointer) keeps steering over the editor
+// Controls are off over the editor unless a drag began on the render or the pointer is locked
 let overEditor = false;
 let steering = false;
 const syncControls = () => {
@@ -294,11 +271,8 @@ function setCameraMode(mode: "orbit" | "fly") {
 document.querySelectorAll<HTMLElement>("#camera-mode button").forEach((button) => button.addEventListener("click", () => setCameraMode(button.dataset.mode as "orbit" | "fly")));
 setCameraMode(controls.mode);
 
-// --- Scans ---
-
-// Rotation upright, then the scale and translation that fit the middle 94%
-// of the visible splats' centers; the sampled centers in that frame, for
-// picking clicks
+// The upright rotation, the scale and translation that fit the middle 94% of
+// the visible centers, and the sampled centers in that frame for picking
 function normalization(data: ArrayData, scan: Scan) {
   const quaternion = scanRotation(scan);
   const { bundle } = Splats.get(data);
@@ -316,7 +290,7 @@ function normalization(data: ArrayData, scan: Scan) {
     axes[1].push(p.y);
     axes[2].push(p.z);
   }
-  // Sorted copies: the axes stay in splat order for the pick points below
+  // Sorted copies, since the pick points below need splat order
   const ranges = axes.map((values) => {
     const sorted = Float64Array.from(values).sort();
     return [sorted[Math.floor(sorted.length * 0.03)] ?? 0, sorted[Math.floor(sorted.length * 0.97)] ?? 1];
@@ -341,7 +315,7 @@ interface LoadedScan {
   points: Float32Array;
 }
 
-// Each scan's GPU arrays stay loaded once fetched, so switching back is instant
+// Loaded scans stay on the GPU, so switching back is instant
 const scans = new Map<string, Promise<LoadedScan>>();
 let loaded: LoadedScan | undefined;
 
@@ -404,9 +378,8 @@ async function setScan(name: string) {
   renderPane.classList.add("pop");
 }
 
-// The sampled splat center nearest the camera within a small radius of the
-// ray under (x, y), else (unless `strict`) the one nearest the ray:
-// normalized and world
+// The sampled center nearest the camera within a small radius of the ray, else
+// (unless strict) the one nearest the ray, as local and world points
 function pick(clientX: number, clientY: number, strict = false) {
   const points = loaded?.points;
   if (!points || points.length === 0) {
@@ -446,13 +419,11 @@ function pick(clientX: number, clientY: number, strict = false) {
   return { local, world: local.clone().applyMatrix4(model.matrixWorld) };
 }
 
-// A right drag in fly mode orbits the splat under the pointer (canvas CSS pixels)
+// Fly mode's right drag orbits the splat under (x, y), in canvas CSS pixels
 controls.pick = (x, y) => {
   const rect = renderer.domElement.getBoundingClientRect();
   return Promise.resolve(pick(rect.left + x, rect.top + y, true)?.world);
 };
-
-// --- Graph document, view and modifiers ---
 
 const START = performance.now();
 const clock = () => (performance.now() - START) / 1000;
@@ -463,16 +434,14 @@ const view = new GraphView($("graph"), doc, { animator, sound, theme, settings }
 let modifier: GraphModifier | undefined;
 let probeModifier: GraphModifier | undefined;
 let valid = true;
-// The installed modifier, the last one a render drew without throwing, and
-// the structures that threw
+// The installed modifier, the last one drawn without throwing, and the structures that threw
 let applied: GraphModifier | undefined;
 let working: GraphModifier | undefined;
 const failed = new Map<string, string>();
 // The worker sort cannot see uniforms: sort again at the next render
 let changed = true;
 
-// The generator path: a fromSplats generator per graph modifier, and the
-// loaded scan's collection of each (by generator; none: the plain one)
+// The generator path's generators, and the scan's collections by modifier (undefined: plain)
 const generators = new WeakMap<GraphModifier, ReturnType<typeof SplatGenerator.fromSplats>>();
 const collections = new Map<unknown, SplatCollection>();
 
@@ -488,9 +457,7 @@ function collectionOf(target: GraphModifier | undefined) {
   return SplatCollection.object({ generator, data: { splats: loaded!.arrays }, count: loaded!.arrays.count, matrixWorld: normalized.matrixWorld });
 }
 
-// The active modifier (the probe's while probing) in the placement's space,
-// as the renderer's modifier or inside the scan's generator; a modifier is
-// a program key, so switching compiles only a new structure
+// A modifier is a program key, so switching compiles only a new structure
 function install() {
   const active = probeModifier ?? modifier;
   applied = active && !failed.has(active.key) ? active : working;
@@ -531,8 +498,6 @@ function showErrors(errors: string[]) {
   }
 }
 
-// The doc's structure changed: the modifier of its structure (cached, so
-// only values may have changed), its uniforms set to the doc's values
 function rebuild(reason?: string) {
   const errors = doc.errors();
   view.setErrors(errors);
@@ -559,8 +524,7 @@ function rebuild(reason?: string) {
   }
 }
 
-// The last click on the scan, for input.click (a point in the modifier's
-// space, so it follows the placement)
+// The last click on the scan in both spaces, so input.click follows the placement
 let lastClick: { local: THREE.Vector3; world: THREE.Vector3; time: number } | undefined;
 
 function applyClick() {
@@ -595,7 +559,7 @@ renderer.domElement.addEventListener("pointerup", (event) => {
   sound.play("drop");
 });
 
-// input.camera: the viewing camera in the modifier's space, every frame
+// The camera for input.camera, in the modifier's space
 const toModel = new THREE.Matrix4();
 const drawingBuffer = new THREE.Vector2();
 function feedCamera() {
@@ -609,7 +573,7 @@ function feedCamera() {
     position.value.applyMatrix4(toModel);
     forward.value.transformDirection(toModel);
   }
-  // One drawing-buffer pixel at unit depth (the depth of field measures blur in those)
+  // One drawing-buffer pixel at unit depth, the unit of the depth of field's blur
   pixelSize.value = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) / Math.max(1, renderer.getDrawingBufferSize(drawingBuffer).y);
 }
 
@@ -703,8 +667,6 @@ function setSortMode(mode: "gpu" | "cpu") {
   });
 }
 
-// --- Toolbar ---
-
 const exampleSelect = $("example") as HTMLSelectElement;
 for (const group of ["Learn", "Effects", "From Spark", "World Labs", "Build"]) {
   const optgroup = document.createElement("optgroup");
@@ -715,9 +677,8 @@ for (const group of ["Learn", "Effects", "From Spark", "World Labs", "Build"]) {
   exampleSelect.append(optgroup);
 }
 exampleSelect.addEventListener("change", () => loadExample(exampleSelect.value));
-// Choosing the current example again reloads it (fresh values, a new layout
-// for the pane's size): a select only reports changes, so it has no value
-// while open and gets the old one back if nothing was chosen
+// Choosing the current example again reloads it: a select reports only
+// changes, so it holds no value while open
 exampleSelect.addEventListener("focus", () => {
   exampleSelect.dataset.previous = exampleSelect.value;
   exampleSelect.selectedIndex = -1;
@@ -732,7 +693,6 @@ for (const id of ["example", "scan"]) {
   $(id).addEventListener("change", () => $(id).blur());
 }
 
-// Live theme switch, crossfaded where the browser has view transitions
 function switchTheme(name: ThemeName) {
   if (name === theme.name) {
     return;
@@ -814,8 +774,7 @@ soundButton.addEventListener("click", () => {
 showSound();
 $("lesson-toggle").addEventListener("click", () => $("lesson").classList.toggle("collapsed"));
 
-// Controls overlay: the keys button or "?" anywhere; Esc, "?" or a click
-// outside the card closes it (capture phase, ahead of the editor's keys)
+// The controls overlay, whose keys are handled in the capture phase, ahead of the editor's
 const keys = $("keys");
 function showKeys(show: boolean) {
   keys.hidden = !show;
@@ -840,7 +799,6 @@ document.addEventListener("keydown", (event) => {
   }
 }, true);
 
-// Divider: drag to resize the panes
 const divider = $("divider");
 divider.addEventListener("pointerdown", (event) => {
   divider.setPointerCapture(event.pointerId);
@@ -855,8 +813,6 @@ divider.addEventListener("pointerdown", (event) => {
   divider.addEventListener("pointermove", move);
   divider.addEventListener("pointerup", up, { once: true });
 });
-
-// --- Settings pane ---
 
 const pane = new Pane({ container: $("pane"), title: "settings", expanded: false });
 const motionState = { instant: settings.instant };
@@ -898,8 +854,6 @@ soundFolder.addBinding(settings, "volume", { min: 0, max: 1 }).on("change", () =
 });
 addControlsFolder(pane, controls);
 
-// --- Start ---
-
 setPlacement(state.placement);
 setSortMode(splats.sortMode);
 loadExample(state.example);
@@ -930,9 +884,8 @@ function render() {
   feedCamera();
   updateFrame();
 
-  // The worker sort re-sorts on camera and matrix moves itself; uniform
-  // changes need a request (one during a sort runs after it, so this keeps
-  // pace with the worker)
+  // The worker sort follows camera and matrix moves but not uniforms. A request
+  // during a sort runs after it, so this keeps pace with the worker.
   const active = probeModifier ?? modifier;
   if (splats.sortMode === "cpu" && (changed || active?.usesTime)) {
     splats.requestSort();
@@ -973,16 +926,13 @@ function render() {
 }
 renderer.setAnimationLoop(render);
 
-// --- Checks ---
-
 interface CheckResult {
   name: string;
   ok: boolean;
   detail?: string;
 }
 
-// Resolves after `count` renders from now, each of the current modifier
-// with the scan loaded
+// Resolves after count renders of the current modifier with the scan loaded
 function renders(count = 2) {
   const start = renderCount;
   return new Promise<void>((resolve) => {
@@ -994,9 +944,8 @@ function renders(count = 2) {
   });
 }
 
-// After renders(), with the worker sort an order of the current modifier
-// (and collection), sorted now, applied and drawn, so both of its programs
-// are built
+// renders(), then with the worker sort a fresh order applied and drawn, so both
+// of the modifier's programs are built
 async function settled() {
   await renders();
   if (splats.sortMode === "cpu") {
@@ -1006,10 +955,6 @@ async function settled() {
   }
 }
 
-// The GPU value checks, then every example: it renders without a build
-// error, layout keeps the structure key, JSON round-trips, it runs on one
-// splat with finite results, a value edit compiles nothing and reaches its
-// uniform, every probe graph validates, groups work and fold back
 async function selfTest() {
   const results: CheckResult[] = [];
   const report = (name: string, detail?: string) => {
@@ -1078,8 +1023,6 @@ async function selfTest() {
   return { backend: caps.backend, sortMode: splats.sortMode, passed: results.length - failures, total: results.length, failures: results.filter((r) => !r.ok) };
 }
 
-// Inside group card `id`: probes of its nodes validate, a value edit reaches
-// the modifier without a rebuild, and back out
 async function checkGroup(name: string, id: string, report: (name: string, detail?: string) => void) {
   doc.enter(id);
   const level = doc.level;
@@ -1118,14 +1061,13 @@ const handle = {
   renderer, scene, camera, controls, splats, model, doc, view, settings, sound, examples: EXAMPLES,
   modifier: () => probeModifier ?? modifier,
   applyIn, loadExample, setScan, setPlacement, setSortMode, selfTest,
-  // Camera at a point looking at another, in the scan's upright frame before scaling
+  // Points in the scan's upright frame before scaling
   placedView: (position: [number, number, number], target: [number, number, number]) => {
     camera.position.copy(placedPoint(position));
     controls.lookAt(placedPoint(target));
   },
   setTheme: switchTheme,
-  // True once the scan is loaded and drawn with the first graph (with the
-  // worker sort: in its first order)
+  // Once the scan is drawn with the first graph, with the worker sort in its first order
   ready: false,
 };
 Object.assign(window, { radixFxedit: handle });

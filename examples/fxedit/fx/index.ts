@@ -1,6 +1,4 @@
-// Splat effects as graphs of TSL nodes, after src/render/fx retargeted to
-// Radix: node definitions with editor metadata, a JSON graph format, and
-// buildGraphModifier, which builds a graph into a Radix SplatModifier.
+// Splat effects as graphs of TSL nodes, built into a SplatModifier
 export * from "./types.js";
 export * from "./registry.js";
 export * from "./graph.js";

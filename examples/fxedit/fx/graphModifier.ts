@@ -1,9 +1,3 @@
-// A graph built into a Radix SplatModifier. Modifiers are program cache
-// keys, so each graph structure (graphKey) is built once and kept: every
-// unlinked input reads its own uniform, and FxInputs holds the uniforms of
-// time, the click and the camera, so changing values, time, the click or
-// the camera writes uniforms and compiles nothing. A new structure (links,
-// options, absent inputs) is a new modifier, compiled at its first render.
 import * as THREE from "three";
 import { GpuSplats, TSL, type SplatModifier, type TslNode } from "@sparkjsdev/radix";
 import {
@@ -15,9 +9,8 @@ import type { BuildContext, PortType, Value } from "./types.js";
 
 const { float, uniform, vec2, vec3, vec4 } = TSL;
 
-// Written by the page: seconds, the last click (a point in the modifier's
-// space and its time) and the viewing camera in the modifier's space
-// (pixelSize: world size of one drawing-buffer pixel at unit depth)
+// Written by the page: seconds, and the click and the camera in the modifier's
+// space (pixelSize: one drawing-buffer pixel's world size at unit depth)
 export const FxInputs = {
   time: uniform(0),
   click: { point: uniform(new THREE.Vector3()), time: uniform(-1e4) },
@@ -35,13 +28,13 @@ export interface GraphModifier {
   readonly usesCamera: boolean;
   // The last built graph's knobs: label -> "node.input"
   labels: Record<string, string>;
-  // Every param with its type and current value
   readonly params: Map<string, GraphParam>;
 }
 
 const cache = new Map<string, GraphModifier>();
 
-// The modifier of `graph`'s structure, its uniforms set to the graph's values
+// The modifier of graph's structure, built once since modifiers are program keys,
+// with its uniforms set to graph's values
 export function buildGraphModifier(graph: Graph, registry: NodeLookup = fxNodes): GraphModifier {
   const errors = validate(graph, registry);
   if (errors.length > 0) {

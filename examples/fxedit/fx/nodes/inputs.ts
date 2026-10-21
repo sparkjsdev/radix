@@ -1,5 +1,4 @@
-// Inputs: the splat as it entered the graph, per-splat randomness, time and
-// constants. Splat reads come from ctx.source, a copy taken before any write.
+// Splat reads come from ctx.source, a copy taken before any write
 import { GpuSplats, TSL } from "@sparkjsdev/radix";
 import type { NodeDef } from "../types.js";
 
@@ -48,7 +47,7 @@ export const inputNodes: NodeDef[] = [
     description: "The splat's number, and a stable random value in [0, 1) per splat",
     category: "input",
     inputs: {},
-    // random: a hash of the index in [0, 1), stable per splat
+    // random: a hash of the index
     outputs: { index: "float", random: "float" },
     build: (_, ctx) => ({ index: float(ctx.index), random: hash(ctx.index) }),
   },
@@ -78,7 +77,7 @@ export const inputNodes: NodeDef[] = [
     description: "Where the camera is and which way it looks (in the modifier's space)",
     category: "input",
     inputs: {},
-    // pixelSize: world size of one screen pixel at unit depth
+    // pixelSize: one drawing-buffer pixel's world size at unit depth
     outputs: { position: "vec3", forward: "vec3", pixelSize: "float" },
     camera: true,
     build: (_, ctx) => ({ position: ctx.camera.position, forward: ctx.camera.forward, pixelSize: ctx.camera.pixelSize }),

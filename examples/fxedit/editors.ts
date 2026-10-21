@@ -1,7 +1,4 @@
-// Inline editors for a node's unlinked inputs and options: number scrubbers
-// (drag sideways, Shift for fine steps, click to type), toggles, color
-// swatches, vector rows, choice menus. Every editor reports input() while
-// it changes and commit() when the gesture ends.
+// Inline editors for node inputs and options: input() while a value changes, commit() when done
 import type { PortType, Value } from "./fx/index.js";
 
 export interface EditHandlers<T> {
@@ -110,7 +107,6 @@ export function scrubber(value: number, range: Range, handlers: EditHandlers<num
     }
   });
 
-  // Replace the number with a text field until Enter, Escape or blur
   const type = () => {
     el.classList.add("typing");
     const field = document.createElement("input");
@@ -202,7 +198,6 @@ export function choice(value: string, choices: string[], handlers: EditHandlers<
   return el;
 }
 
-// The editor for an input of `type`
 export function valueEditor(type: PortType, value: Value, range: Range, handlers: EditHandlers<Value>): HTMLElement {
   if (type === "bool") {
     return toggle(Boolean(value), handlers as EditHandlers<boolean>);

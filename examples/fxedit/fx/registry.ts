@@ -1,5 +1,3 @@
-// Node definitions by id. `fxNodes` (nodes/index.ts) holds the built-in set;
-// make your own registry to add or replace nodes.
 import type { NodeCategory, NodeDef } from "./types.js";
 
 export class NodeRegistry {

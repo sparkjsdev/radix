@@ -1,7 +1,4 @@
-// GPU checks of fx graphs on the current backend: one known splat through a
-// graph's modifier in a fragment
-// pass (GpuArrayWriter, so both backends), stored as an ext splat and read
-// back, plus graphs with known results.
+// GPU checks: one known splat through a graph in a fragment pass, so on both backends
 import type { WebGPURenderer } from "three/webgpu";
 import { GpuArrays, GpuArrayWriter, GpuSplats, Splats, TSL, type Splat } from "@sparkjsdev/radix";
 import { buildGraphModifier, type Graph } from "./fx/index.js";
@@ -11,8 +8,7 @@ const { float, uint, vec3, vec4 } = TSL;
 const SOURCE = { center: [0.1, 0.2, 0.3], scales: [0.02, 0.03, 0.04], rgb: [0.5, 0.25, 0.75], opacity: 0.8 };
 const SENTINEL = 0xdeadbeef;
 
-// SOURCE through `graph`; undefined if the pass did not run (the arrays
-// still hold the sentinel)
+// SOURCE through graph, or undefined if the pass did not run
 export async function runGraph(renderer: WebGPURenderer, graph: Graph): Promise<Splat | undefined> {
   const { modifier } = buildGraphModifier(graph);
   const init = Splats.make(1);
@@ -43,7 +39,7 @@ export async function runGraph(renderer: WebGPURenderer, graph: Graph): Promise<
 export const finite = (s: Splat) => [s.center.x, s.center.y, s.center.z, s.scales.x, s.scales.y, s.scales.z, s.rgb.r, s.rgb.g, s.rgb.b, s.opacity].every(Number.isFinite);
 const near = (a: number, b: number, tolerance: number) => Math.abs(a - b) <= tolerance;
 
-// Graphs with known results: [name, graph, check]
+// Graphs with known results
 export const VALUE_CHECKS: [string, Graph, (s: Splat) => string | undefined][] = [
   ["pass-through (no writes)", {
     version: 1, nodes: { out: { type: "splat.write" } }, links: [],

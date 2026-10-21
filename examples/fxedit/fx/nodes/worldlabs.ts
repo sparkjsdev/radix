@@ -1,12 +1,4 @@
-// Depth, camera, click and wave effects. Some are usually computed per quad
-// vertex or per pixel; here they run once per splat at its center, which
-// matches for the small splats of a scene.
-//
-// The effects' space is y-down with the camera starting at the origin
-// looking along +z. Nodes whose math depends on absolute position take an
-// `origin` (where that origin sits in this space, e.g. the start camera)
-// and use p_wl = (p.x - o.x, o.y - p.y, o.z - p.z); offsets are turned back
-// the same way.
+// Effects per splat center, in a y-down space with the start camera at origin looking along +z
 import { TSL, type TslNode } from "@sparkjsdev/radix";
 import type { NodeDef, PortType } from "../types.js";
 
@@ -36,8 +28,7 @@ const PALETTES = Object.fromEntries(Object.entries(PALETTE_DATA).map(([name, dat
 }));
 const PALETTE_CHOICES = Object.keys(PALETTES).flatMap((name) => [name, `${name}_reverse`]);
 
-// Linear between the 32 entries, as a sum of hat weights (no dynamic array
-// indexing)
+// Linear between the 32 entries as a sum of hat weights, without dynamic array indexing
 function samplePalette(name: string, t: TslNode) {
   const reverse = name.endsWith("_reverse");
   const colors = PALETTES[reverse ? name.slice(0, -"_reverse".length) : name] ?? PALETTES.torch;
@@ -78,7 +69,6 @@ export const worldLabsNodes: NodeDef[] = [
     options: { palette: { default: "torch_reverse", choices: PALETTE_CHOICES } },
     outputs: { value: "color", t: "float" },
     build: ({ position: p, cameraPosition, cameraForward, near, far, reverse }, ctx) => {
-      // The view depth along the camera's forward axis
       const depth = max(dot(p.sub(cameraPosition), normalize(cameraForward)), 0.0);
       const t = log2(depth.add(1)).sub(log2(near.add(1))).div(log2(far.add(1)).sub(log2(near.add(1)))).toVar();
       const u = select(reverse, float(1).sub(t), t).toVar();
@@ -101,7 +91,6 @@ export const worldLabsNodes: NodeDef[] = [
     // blur: world std-dev to add (splat.write blur); pixels: its radius on screen
     outputs: { blur: "float", pixels: "float" },
     build: ({ position: p, cameraPosition, cameraForward, pixelSize, focus, diameter }) => {
-      // Blur radius = 0.5 * diameter * |depth - focus| / depth pixels, at most 512
       const depth = dot(p.sub(cameraPosition), normalize(cameraForward)).toVar();
       const pixels = select(depth.greaterThan(0), min(diameter.mul(0.5).mul(abs(depth.sub(focus)).div(depth)), 512.0), float(512)).toVar();
       return { blur: pixels.mul(max(depth, 0.0)).mul(pixelSize), pixels };
@@ -123,8 +112,9 @@ export const worldLabsNodes: NodeDef[] = [
     },
     outputs: { value: "vec3", keep: "bool" },
     build: ({ position: p, cameraPosition, cameraForward, subject, dolly, minZ, subjectZ }) => {
-      // Camera at z = dolly with fov 2 atan((subjectZ - minZ) / (subjectZ - dolly) tan 45deg): relative to
-      // the camera at minZ, a move in of (dolly - minZ) and focal (zf - move) / zf, zf the subject distance
+      // Camera at z = dolly with fov 2 atan((subjectZ - minZ) / (subjectZ - dolly)
+      // tan 45deg): relative to the camera at minZ, a move in of (dolly - minZ) and
+      // focal (zf - move) / zf, zf the subject distance
       const forward = normalize(cameraForward).toVar();
       const zf = max(dot(subject.sub(cameraPosition), forward), 1e-3).toVar();
       const move = dolly.sub(minZ).div(max(subjectZ.sub(minZ), 1e-3)).mul(zf).toVar();
@@ -174,7 +164,6 @@ export const worldLabsNodes: NodeDef[] = [
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, center: v3([0, 0, 0]), age: f(10, 0, 10), duration: f(1, 0.1, 10) },
     outputs: { rgb: "color", intensity: "float" },
     build: ({ position: p, rgb, center, age, duration }) => {
-      // A ring wave running out from the center, and a gaussian pulse around it
       const s = age.div(duration).toVar();
       const waveCycle = 2.0;
       const wavePeriod = 0.15;
@@ -184,7 +173,6 @@ export const worldLabsNodes: NodeDef[] = [
       const amplitude = float(1).div(max(toCenter.div(5.0), 1.0));
       const within = mod(timeInEffect, waveCycle).toVar();
       const wave = select(within.lessThan(wavePeriod), max(amplitude.mul(sin(within.mul(2 * PI / wavePeriod))), 0.0), float(0));
-      // The pulse lasts 4 wave periods, its radius at most 2.5 periods
       const maxTime = 4 * wavePeriod;
       const maxRadius = 2.5 * wavePeriod;
       const minRadius = maxRadius / 4;
@@ -231,7 +219,6 @@ export const worldLabsNodes: NodeDef[] = [
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, opacity: f(1, 0, 1), time: f(0), origin },
     outputs: { rgb: "color", alpha: "float", offset: "vec3" },
     build: ({ position: p, rgb, opacity, time, origin: o }) => {
-      // Recolored by the wave, and moved by 0.02 * wave color * (1 - wave alpha)
       const wave = colorWave(rgb, opacity, toWorldLabs(p, o), time);
       const rgbOut = wave.rgb.toVar();
       const alpha = wave.alpha.toVar();
@@ -246,7 +233,6 @@ export const worldLabsNodes: NodeDef[] = [
     inputs: { position, rgb: { type: "color", default: [1, 1, 1] }, opacity: f(1, 0, 1), time: f(0), origin },
     outputs: { offset: "vec3" },
     build: ({ position: p, rgb, opacity, time, origin: o }) => {
-      // Moved by 0.02 * wave color * wave alpha
       const displace = colorWave(rgb, opacity, toWorldLabs(p, o), time);
       return { offset: fromWorldLabs(displace.rgb.mul(displace.alpha).mul(0.02)) };
     },
@@ -259,7 +245,6 @@ export const worldLabsNodes: NodeDef[] = [
     inputs: { position, time: f(0), origin, direction: v3([-1, 0, 5], -10, 10), amplitude: f(0.3, 0, 2) },
     outputs: { offset: "vec3" },
     build: ({ position: p, time, origin: o, direction, amplitude }) => {
-      // The direction is normalized
       const q = toWorldLabs(p, o);
       const a = amplitude.mul(sin(dot(q, normalize(direction)).sub(time)));
       return { offset: fromWorldLabs(vec3(0, a, 0)) };

@@ -1,5 +1,4 @@
-// Fields: a number per splat from its position (noise, distances, gradients),
-// the usual source of masks.
+// Fields: a number per splat from its position, the usual source of masks
 import { TSL, type TslNode } from "@sparkjsdev/radix";
 import type { NodeDef } from "../types.js";
 import { IQ_DISTANCE, sdBox, sdPlane, sdSphere } from "./iq.js";
@@ -30,7 +29,7 @@ export const fieldNodes: NodeDef[] = [
       diminish: { type: "float", default: 0.5, min: 0, max: 1 },
     },
     options: { octaves: { default: 3, min: 1, max: 8 } },
-    // value: fractal Perlin noise, about [-1, 1]; unit: 0.5 + 0.5 value
+    // value about [-1, 1], unit 0.5 + 0.5 value
     outputs: { value: "float", unit: "float" },
     source: THREE_MATERIALX,
     build: ({ position, scale, offset, lacunarity, diminish }, ctx) => {
@@ -147,7 +146,6 @@ export const fieldNodes: NodeDef[] = [
     },
     // sphere uses radius, box halfSize, plane normal (through center)
     options: { shape: { default: "sphere", choices: ["sphere", "box", "plane"] } },
-    // Signed distance: negative inside
     outputs: { value: "float" },
     source: IQ_DISTANCE,
     build: ({ position, center, radius, halfSize, normal }, ctx) => {

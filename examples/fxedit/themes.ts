@@ -1,5 +1,3 @@
-// The three looks of the editor: the same behavior with a different skin
-// (fxedit.css under body[data-theme]) and different motion and effects.
 export type ThemeName = "neon" | "toybox" | "glass";
 
 export interface MotionPreset {
@@ -8,9 +6,9 @@ export interface MotionPreset {
   damping: number;
   // Degrees of tilt per px/s of horizontal speed while a node moves
   tilt: number;
-  // Squash on drop (scale velocity kick)
+  // Scale velocity kick on drop
   squash: number;
-  // Delay per world px of x when nodes fly to a new layout (ms)
+  // Layout delay in ms per world px of x
   stagger: number;
 }
 
@@ -18,7 +16,7 @@ export interface Theme {
   name: ThemeName;
   label: string;
   motion: MotionPreset;
-  // Rope wires sag and swing (Verlet); bezier wires are drawn exactly
+  // Rope wires sag and swing
   wire: "bezier" | "rope";
   burst: "sparks" | "confetti" | "ripple";
   // Render full-bleed behind a translucent editor instead of side by side

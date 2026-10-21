@@ -1,12 +1,9 @@
-// Node search: type to filter, arrows and Enter or a click to add. Opened by
-// Tab, a double-click on empty canvas, or a wire dropped on nothing (then it
-// lists only nodes that can take the wire).
+// Node search for adding a node
 import type { NodeCategory, NodeDef } from "./fx/index.js";
 
 const CATEGORIES: NodeCategory[] = ["group", "input", "field", "math", "color", "effect", "splat"];
 
-// Subsequence match: higher for consecutive letters and word starts, -1 if
-// the letters are not all there in order
+// Subsequence score favoring consecutive letters and word starts, -1 for no match
 export function fuzzyScore(query: string, text: string) {
   if (!query) {
     return 0;
@@ -40,7 +37,7 @@ export class Palette {
   private pick?: (def: NodeDef) => void;
   onClose?: () => void;
 
-  // `defs`: what can be added right now (the level decides which groups)
+  // defs: what can be added right now (the level decides which groups)
   constructor(parent: HTMLElement, defs: () => NodeDef[]) {
     this.defs = defs;
     this.el = document.createElement("div");
@@ -121,7 +118,6 @@ export class Palette {
     const defs = this.defs().filter((def) => !this.filter || this.filter(def));
     this.list.replaceChildren();
     if (query) {
-      // Label matches rank above id matches, descriptions last
       const score = (def: NodeDef) => Math.max(...[
         [fuzzyScore(query, def.label), 2],
         [fuzzyScore(query, def.id), 0],

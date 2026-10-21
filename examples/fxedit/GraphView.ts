@@ -1,7 +1,3 @@
-// The graph editor's view: nodes as DOM cards on a pannable, zoomable world
-// layer, wires in one SVG, a spring behind every move, and the interactions
-// (drag nodes, drag wires between ports, palette, marquee, keys). It edits a
-// GraphDoc and never touches three.js; main.ts turns the doc into modifiers.
 import { canLink, GROUP_INPUT, GROUP_OUTPUT, groupOf, splitPort, type NodeDef, type PortType, type Value } from "./fx/index.js";
 import { choice, scrubber, valueEditor } from "./editors.js";
 import { NEW_PORT, type Change, type GraphDoc } from "./GraphDoc.js";
@@ -43,7 +39,7 @@ interface NodeView {
   height: number;
   // Needs its transform written once more
   dirty: boolean;
-  // Was moving last frame (its wires update once more as it comes to rest)
+  // Was moving last frame, so its wires update once more
   moving: boolean;
 }
 
@@ -55,8 +51,7 @@ interface WireView {
   path: SVGPathElement;
   flow: SVGPathElement;
   rope?: Rope;
-  // Right-angle route (ELK's from the last layout, else orthoRoute's once
-  // both nodes rest), until one of its nodes moves
+  // ELK's route from the last layout, else orthoRoute's once both nodes rest
   route?: [number, number][];
   awake: boolean;
 }
@@ -68,10 +63,8 @@ interface Cam {
   zoom: number;
 }
 
-// Into or out of a group: the parent level zooms through the group's card
-// while the inside grows out of it (or shrinks back in). p runs from 0
-// (parent shown) to 1 (inside shown); `ghost` is a still copy of the level
-// being left.
+// A move into or out of a group. from and to are p, 0 for the parent and 1 for
+// the inside, and ghost is a still copy of the level being left.
 interface LevelMove {
   from: number;
   to: number;
@@ -85,8 +78,7 @@ interface LevelMove {
   cz: Cam;
   f: Cam;
   card: [number, number];
-  // The card's element (in the ghost on the way in, live on the way out):
-  // its contents fade as it opens into a window
+  // In the ghost on the way in, live on the way out
   cardEl?: HTMLElement;
 }
 
@@ -128,7 +120,7 @@ export class GraphView {
   onProbe?: (port: string | undefined) => void;
   onFlow?: (on: boolean) => void;
   onHistory?: () => void;
-  // Into or out of a group (after the doc moved)
+  // After the doc entered or left a group
   onLevel?: () => void;
 
   private doc: GraphDoc;
@@ -152,8 +144,7 @@ export class GraphView {
   private laying = false;
   private reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   private crumbs: HTMLElement;
-  // The level on screen (doc.path joined), cameras left at each level, and
-  // the move between levels under way
+  // The level on screen (doc.path joined), each level's last camera, and the move under way
   private levelKey = "";
   private levelCams = new Map<string, Cam>();
   private levelMove?: LevelMove;
@@ -236,8 +227,6 @@ export class GraphView {
     return this.settings.motion[this.theme.name];
   }
 
-  // --- Doc changes ---
-
   private changed(change: Change) {
     if (change.kind === "structure") {
       const moved = this.levelKey !== this.doc.path.join("/");
@@ -265,14 +254,11 @@ export class GraphView {
     this.onHistory?.();
   }
 
-  // Make the DOM match the doc: nodes in, out or rebuilt, wires, highlights.
-  // `swap`: another level replaces this one (old nodes go at once, a level
-  // move covers the change).
+  // swap: another level replaces this one, so old nodes go at once under the level move
   private sync(load: boolean, swap = false) {
     const graph = this.doc.level;
     this.levelKey = this.doc.path.join("/");
-    // A new graph replaces every node: the old ones fade out, the new ones
-    // without positions stay hidden until the layout places them
+    // A new graph replaces every node, and new ones without positions wait hidden for the layout
     for (const [id, view] of this.nodes) {
       if (load || !graph.nodes[id]) {
         this.removeNode(view, !swap);
@@ -399,7 +385,6 @@ export class GraphView {
     const groupName = groupOf(node.type);
     const group = groupName !== undefined ? this.doc.graph.groups?.[groupName] : undefined;
     if (group) {
-      // A card standing for nodes inside: open it to see them
       el.classList.add("group-node");
       const open = document.createElement("button");
       open.type = "button";
@@ -538,7 +523,6 @@ export class GraphView {
     }
   }
 
-  // "×" on a group port (on its boundary node): take it off the group
   private removePortButton(dir: "in" | "out", port: string) {
     const button = document.createElement("button");
     button.type = "button";
@@ -552,7 +536,6 @@ export class GraphView {
     return button;
   }
 
-  // The boundary node's new port: drop a wire on it to add a group port
   private newPortRow(view: NodeView, dir: "in" | "out") {
     const row = document.createElement("div");
     row.className = `fx-row ${dir} new-port`;
@@ -591,8 +574,6 @@ export class GraphView {
       port.y = y;
     }
   }
-
-  // --- Motion ---
 
   private moveTo(view: NodeView, x: number, y: number, instant = this.instant) {
     view.x.target = x;
@@ -653,8 +634,6 @@ export class GraphView {
     return active;
   }
 
-  // --- Wires ---
-
   private portPosition(port: string, dir: "in" | "out"): [number, number] | undefined {
     const [node, name] = splitPort(port);
     const view = this.nodes.get(node);
@@ -692,7 +671,7 @@ export class GraphView {
     return [...this.nodes.values()].map((view) => ({ id: view.id, x: view.x.target, y: view.y.target, w: view.width, h: view.height }));
   }
 
-  // A node moved on its own: its wires get new routes once it rests
+  // Its wires get new routes once it rests
   private dropRoutes(node: string) {
     for (const wire of this.wires.values()) {
       if (splitPort(wire.from)[0] === node || splitPort(wire.to)[0] === node) {
@@ -710,11 +689,9 @@ export class GraphView {
     }
     let d: string;
     const [fromNode, toNode] = [splitPort(wire.from)[0], splitPort(wire.to)[0]];
-    // Resting wires take right-angle routes (rope themes only for wires
-    // running backward); moving ones stay fluid curves
+    // Resting wires take right-angle routes (with ropes only backward ones), moving ones curves
     if (this.resting(fromNode) && this.resting(toNode) && (this.theme.wire !== "rope" || b[0] < a[0])) {
-      // A stored route (ELK's) that no longer leaves and enters its ports
-      // sideways, outward, gives way to a fresh one
+      // A stored route that no longer leaves and enters its ports sideways is replaced
       let route = wire.route && fitRoute(wire.route, a, b);
       if (!route || !routeOk(route, a, b)) {
         route = wire.route = orthoRoute(a, b, this.obstacles(), [fromNode, toNode]);
@@ -734,8 +711,6 @@ export class GraphView {
     wire.path.setAttribute("d", d);
     wire.flow.setAttribute("d", d);
   }
-
-  // --- Camera ---
 
   screenToWorld(x: number, y: number): [number, number] {
     return [(x - this.cam.x) / this.cam.zoom, (y - this.cam.y) / this.cam.zoom];
@@ -782,7 +757,7 @@ export class GraphView {
     this.setCamera(sx - (sx - this.cam.x) * k, sy - (sy - this.cam.y) * k, zoom, false);
   }
 
-  // Frame every node where it is headed (or at `positions`)
+  // Frame every node where it is headed, or at positions
   fit({ animate = true, positions }: { animate?: boolean; positions?: Map<string, [number, number]> } = {}) {
     if (this.nodes.size === 0) {
       return;
@@ -791,7 +766,7 @@ export class GraphView {
     this.setCamera(cam.x, cam.y, cam.zoom, animate);
   }
 
-  // Where every node is headed (or `positions`): [x0, y0, x1, y1]
+  // Where every node is headed, or positions: [x0, y0, x1, y1]
   private bounds(positions?: Map<string, [number, number]>): [number, number, number, number] {
     let x0 = Infinity;
     let y0 = Infinity;
@@ -812,14 +787,12 @@ export class GraphView {
     const width = this.root.clientWidth;
     const height = this.root.clientHeight;
     const pad = 40;
-    // The whole graph, unless that gets unreadable (then big graphs overflow and pan)
+    // The whole graph unless too small to read, else it overflows and pans
     const zoom = clamp(Math.min((width - 2 * pad) / Math.max(1, x1 - x0), (height - 2 * pad) / Math.max(1, y1 - y0)), 0.36, 1.1);
     const x = (x1 - x0) * zoom > width - 2 * pad ? pad - x0 * zoom : width / 2 - ((x0 + x1) / 2) * zoom;
     const y = (y1 - y0) * zoom > height - 2 * pad ? pad - y0 * zoom : height / 2 - ((y0 + y1) / 2) * zoom;
     return { x, y, zoom };
   }
-
-  // --- Layout ---
 
   async layout({ animate = true, quiet = false }: { animate?: boolean; quiet?: boolean } = {}) {
     const boxes = new Map<string, NodeBox>();
@@ -848,7 +821,7 @@ export class GraphView {
       wire.awake = true;
     }
     const instant = !animate || this.instant;
-    // Hidden new nodes appear in place, left to right; the wires fade in after
+    // Hidden new nodes appear in place left to right, then the wires fade in
     const appearing = [...this.nodes.values()].some((view) => view.el.classList.contains("pending"));
     let last = 0;
     for (const [id, [x, y]] of positions) {
@@ -899,8 +872,6 @@ export class GraphView {
       this.sound.play("drop");
     }
   }
-
-  // --- Preview state ---
 
   setFlow(on: boolean) {
     this.flow = on;
@@ -954,7 +925,7 @@ export class GraphView {
     this.root.querySelectorAll<HTMLElement>(".fx-eye").forEach((eye) => eye.classList.toggle("on", eye.dataset.port === this.probe));
   }
 
-  // Validation messages name nodes; mark those nodes
+  // Marks the nodes that validation messages name
   private applyErrors() {
     const byNode = new Map<string, string[]>();
     const mark = (id: string | undefined, message: string) => {
@@ -1000,7 +971,6 @@ export class GraphView {
     return byNode;
   }
 
-  // Wiggle the nodes with errors
   shakeErrors() {
     for (const view of this.nodes.values()) {
       if (view.el.classList.contains("has-error")) {
@@ -1009,7 +979,6 @@ export class GraphView {
     }
   }
 
-  // Burst at the output node: the graph compiled
   celebrate() {
     for (const id of outputNodes(this.doc.level, this.doc.lookup)) {
       const view = this.nodes.get(id);
@@ -1073,10 +1042,7 @@ export class GraphView {
     return { x: rect.left + x, y: rect.top + y };
   }
 
-  // --- Levels (groups) ---
-
-  // The level the doc is at, placed (laid out if new); its camera: the one
-  // left there, else a fit
+  // Lays out a new level and returns its last camera, else a fit
   private async settle(): Promise<Cam> {
     if (Object.values(this.doc.level.nodes).some((node) => !node.position)) {
       await this.layout({ animate: false, quiet: true });
@@ -1084,8 +1050,7 @@ export class GraphView {
     return this.levelCams.get(this.levelKey) ?? this.fitCamera();
   }
 
-  // A still copy of the level on screen, to animate while the real layer
-  // shows the next one
+  // A still copy of the level on screen to animate while the layer shows the next
   private makeGhost(card?: string) {
     const ghost = this.world.cloneNode(true) as HTMLElement;
     ghost.classList.add("fx-ghost");
@@ -1096,15 +1061,15 @@ export class GraphView {
     return ghost;
   }
 
-  // The parent camera that lays the card (world box `r`) over the inside's
-  // box `b` as the inside's camera `f` frames it
+  // The parent camera that lays the card (world box r) over the inside's box b
+  // as the inside's camera f frames it
   private cardCamera(r: [number, number, number, number], b: [number, number, number, number], f: Cam): Cam {
     const [bx0, by0, bx1, by1] = [b[0] * f.zoom + f.x, b[1] * f.zoom + f.y, b[2] * f.zoom + f.x, b[3] * f.zoom + f.y];
     const zoom = Math.max((bx1 - bx0) / Math.max(1, r[2] - r[0]), (by1 - by0) / Math.max(1, r[3] - r[1]));
     return { zoom, x: (bx0 + bx1) / 2 - ((r[0] + r[2]) / 2) * zoom, y: (by0 + by1) / 2 - ((r[1] + r[3]) / 2) * zoom };
   }
 
-  // Open a group card: the parent zooms through it as the inside grows out
+  // The parent zooms through the card as the inside grows out of it
   async enter(id: string) {
     const view = this.nodes.get(id);
     if (!view || this.navigating || !this.doc.isGroupNode(id)) {
@@ -1128,7 +1093,7 @@ export class GraphView {
     this.onLevel?.();
   }
 
-  // Back up to `depth` (default one level): the inside shrinks into its card
+  // Back up to depth (default one level): the inside shrinks into its card
   async exit(depth = this.doc.path.length - 1) {
     if (depth < 0 || depth >= this.doc.path.length || this.navigating) {
       return;
@@ -1169,8 +1134,7 @@ export class GraphView {
     this.animator.wake();
   }
 
-  // One frame of a level move: both levels' cameras from one eased p, so
-  // the inside stays glued to the card as it grows or shrinks
+  // Both levels' cameras come from one eased p, so the inside stays on the card
   private stepLevelMove(dt: number): boolean {
     const move = this.levelMove;
     if (!move) {
@@ -1208,8 +1172,6 @@ export class GraphView {
     return false;
   }
 
-  // Where you are: the graph, then each group opened; click one to go back
-  // up, double-click the last to rename its group
   private updateCrumbs() {
     const path = this.doc.path;
     this.crumbs.replaceChildren();
@@ -1277,7 +1239,7 @@ export class GraphView {
     });
   }
 
-  // Fold the selection into a group: the nodes pull together, then one card
+  // The nodes pull together before the card replaces them
   groupSelection() {
     const ids = [...this.selection].filter((id) => {
       const type = this.doc.level.nodes[id]?.type;
@@ -1317,7 +1279,6 @@ export class GraphView {
     }, this.instant ? 0 : 220);
   }
 
-  // Spill the selected groups' nodes back out where each card was
   ungroupSelection() {
     const groups = [...this.selection].filter((id) => this.doc.isGroupNode(id));
     if (groups.length === 0) {
@@ -1347,7 +1308,6 @@ export class GraphView {
     this.animator.wake();
   }
 
-  // The toolbar's group button: ungroup when only groups are selected
   toggleGroup() {
     const ids = [...this.selection];
     if (ids.length > 0 && ids.every((id) => this.doc.isGroupNode(id))) {
@@ -1356,8 +1316,6 @@ export class GraphView {
       this.groupSelection();
     }
   }
-
-  // --- Interaction ---
 
   private local(event: { clientX: number; clientY: number }): [number, number] {
     const rect = this.root.getBoundingClientRect();

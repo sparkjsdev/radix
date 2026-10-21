@@ -1,5 +1,3 @@
-// Math on numbers, plus the two vector operations masks need to drive a
-// displacement (scale a direction, add offsets)
 import { TSL } from "@sparkjsdev/radix";
 import type { NodeDef, PortType } from "../types.js";
 
@@ -125,7 +123,6 @@ export const mathNodes: NodeDef[] = [
     description: "A wave: amplitude * sin(2 pi (frequency x + phase))",
     category: "math",
     inputs: { x: f(0), frequency: f(1, 0, 10), phase: f(0, 0, 1), amplitude: f(1, 0, 2) },
-    // amplitude sin(2 pi (frequency x + phase))
     outputs: { value: "float" },
     build: ({ x, frequency, phase, amplitude }) => ({ value: sin(frequency.mul(x).add(phase).mul(2 * Math.PI)).mul(amplitude) }),
   },

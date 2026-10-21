@@ -1,9 +1,4 @@
-// Auto-layout with ELK's layered algorithm (elkjs, EPL-2.0), run in a worker.
-// elk-api.js is UMD, not a module: index.html loads it from node_modules as
-// a classic script (window.ELK), and its worker is the elk-worker.min.js
-// beside it (a single-file build inlines both and sets window.ELK_WORKER_URL).
-// Ports sit where the DOM put them (FIXED_POS), so wires leave and enter
-// where they are drawn and ELK orders nodes to cut crossings.
+// Auto-layout with ELK's layered algorithm (elkjs, EPL-2.0), run in a worker
 import type ElkApi from "elkjs/lib/elk-api.js";
 import type { ElkExtendedEdge, ElkNode } from "elkjs/lib/elk-api";
 import { GROUP_INPUT, GROUP_OUTPUT, splitPort, type GraphLevel } from "./fx/index.js";
@@ -36,16 +31,13 @@ let elk: InstanceType<typeof ElkApi> | undefined;
 export interface LayoutResult {
   // Top-left corner of each node
   positions: Map<string, [number, number]>;
-  // ELK's right-angle route of each link (by its input "node.port"): start,
-  // bends, end; it keeps clear of nodes, including wires that run back to a
-  // wrapped row
+  // ELK's right-angle route of each link by its input "node.port": start, bends, end
   routes: Map<string, [number, number][]>;
 }
 
-// Long chains make wide strips, so besides one row of layers this tries
-// ELK's graph wrapping (rows of layers stacked to the view's shape) and keeps
-// the layout that fits `view` at the largest zoom, less a penalty for wires
-// that cross or run backward.
+// Long chains make wide strips, so this also tries ELK's wrapping into rows,
+// and keeps the layout that fits view at the largest zoom less a penalty for
+// crossing or backward wires
 export async function autoLayout(graph: GraphLevel, boxes: Map<string, NodeBox>, { layerSpacing, nodeSpacing }: LayoutOptions, view: { width: number; height: number }): Promise<LayoutResult> {
   elk ??= new ELK({ workerUrl: ELK_WORKER });
   const portId = (node: string, side: string, name: string) => `${node}|${side}|${name}`;
@@ -54,7 +46,7 @@ export async function autoLayout(graph: GraphLevel, boxes: Map<string, NodeBox>,
     id,
     width: box.width,
     height: box.height,
-    // A group's inputs stay at the left edge and its outputs at the right
+    // Ports stay where they are drawn, a group's inputs left and its outputs right
     layoutOptions: {
       "elk.portConstraints": "FIXED_POS",
       ...(graph.nodes[id]?.type === GROUP_INPUT ? { "elk.layered.layering.layerConstraint": "FIRST" } : {}),
@@ -87,8 +79,7 @@ export async function autoLayout(graph: GraphLevel, boxes: Map<string, NodeBox>,
     "elk.spacing.componentComponent": String(layerSpacing),
     "elk.padding": "[top=0,left=0,bottom=0,right=0]",
   };
-  // The JSON's node order (stable, often how the author thinks) or free
-  // reordering (fewer crossings)
+  // Also the JSON's node order, which is stable and often how the author thinks
   const ordered = { ...base, "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES" };
   const aspect = Math.max(0.3, view.width / Math.max(1, view.height));
   const wrapped = (options: Record<string, string>, strategy: string) => ({
@@ -103,8 +94,7 @@ export async function autoLayout(graph: GraphLevel, boxes: Map<string, NodeBox>,
   const results = await Promise.all(candidates.map((options) => elk!.layout({ id: "root", layoutOptions: options, children, edges } as ElkNode).catch(() => undefined)));
 
   const inputOf = new Map(edges.map((edge, i) => [edge.id, graph.links[Number(edge.id.slice(1))]?.to ?? String(i)]));
-  // Inside a group, inputs-left-to-outputs-right reads best: one row
-  // whenever it fits at the smallest zoom a fit allows
+  // Inside a group one row reads best, whenever it fits at the smallest zoom a fit allows
   const zoomOf = (result: ElkNode | undefined) => (result ? Math.min(view.width / ((result.width ?? 1) + 80), view.height / ((result.height ?? 1) + 80)) : 0);
   const boundary = Object.values(graph.nodes).some((node) => node.type === GROUP_INPUT || node.type === GROUP_OUTPUT);
   const oneRow = boundary && Math.max(zoomOf(results[0]), zoomOf(results[1])) >= 0.36;
@@ -138,8 +128,7 @@ export async function autoLayout(graph: GraphLevel, boxes: Map<string, NodeBox>,
   return best;
 }
 
-// How hard a layout's wires are to follow, with wires as straight port-to-
-// port segments: pairs that cross and wires running right to left
+// Crossing pairs and right-to-left wires, as straight port-to-port segments
 function tangle(graph: GraphLevel, boxes: Map<string, NodeBox>, positions: Map<string, [number, number]>) {
   const port = (node: string, side: "in" | "out", name: string): [number, number] | undefined => {
     const p = positions.get(node);

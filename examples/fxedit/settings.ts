@@ -1,10 +1,8 @@
-// Editor settings, saved in localStorage ("radix-fxedit"): the theme, motion
-// (per theme, so each look keeps its tuning), flow speed, sound, layout.
 import { THEMES, type MotionPreset, type ThemeName } from "./themes.js";
 
 export interface EditorSettings {
   theme: ThemeName;
-  // No springs: everything jumps to where it goes
+  // No springs: everything jumps into place
   instant: boolean;
   motion: Record<ThemeName, MotionPreset>;
   // Flow preview cycles per second
@@ -13,8 +11,7 @@ export interface EditorSettings {
   volume: number;
   // Editor pane width as a fraction of the window
   split: number;
-  // Render at the display's pixel ratio (up to 2) instead of 1: objects,
-  // and scene-scale scans (on by default)
+  // The display's pixel ratio, at most 2, instead of 1, for objects and for scenes
   hiDpi: boolean;
   hiDpiScenes: boolean;
   layerSpacing: number;

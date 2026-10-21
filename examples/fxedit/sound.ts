@@ -1,4 +1,3 @@
-// Tiny synthesized UI sounds (WebAudio, nothing to download); muted by default.
 export type SoundName = "connect" | "disconnect" | "pick" | "drop" | "ok" | "error" | "delete" | "open" | "tick" | "add";
 
 export class Sound {

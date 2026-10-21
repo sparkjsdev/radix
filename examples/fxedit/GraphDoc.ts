@@ -1,12 +1,3 @@
-// The edited graph: edit operations that keep it well-formed where they can
-// (one link per input, no cycles, labelled params only on unlinked inputs),
-// an undo history of snapshots and change events. A "value" change is a
-// param write (no rebuild), "structure" needs a new GraphModifier, "layout"
-// only moved nodes.
-//
-// Edits apply to the current level: the top of the graph, or the inside of
-// a group reached through `path` (instance ids from the top). Groups are
-// shared, so an edit inside one shows in every instance.
 import {
   boundaryNode, canLink, GROUP_INPUT, GROUP_OUTPUT, GROUP_PREFIX, groupOf, groupsInside, instancePaths, linkSources, splitPort, validate,
   valueFits, withGroups, zeroValue, type Graph, type GraphGroup, type GraphLevel, type GraphNode, type NodeDef, type NodeLookup,
@@ -21,17 +12,16 @@ export type ChangeKind = "structure" | "value" | "layout";
 
 export interface Change {
   kind: ChangeKind;
-  // A new graph, a step through the history, or into / out of a group (else an edit)
+  // Undefined for an edit
   reason?: "load" | "history" | "enter" | "exit";
-  // For "value": the param "node.input" at the level, its names in the
-  // flat graph (one per instance of the group) and its new value
+  // For "value": the param at this level, its flat names (one per instance) and its value
   param?: string;
   params?: string[];
   value?: Value;
 }
 
 const HISTORY = 200;
-// A group's input ports on its boundary node: drop a wire on it to add one
+// The boundary nodes' port that adds a group port when wired
 export const NEW_PORT = "+";
 
 const sanitize = (text: string) => text.replace(/[^A-Za-z0-9_-]/g, "").replace(/^[^A-Za-z_]+/, "") || "port";
@@ -74,8 +64,6 @@ export class GraphDoc {
     this.emit({ kind: "structure", reason: "load" });
   }
 
-  // --- Levels ---
-
   // The group whose inside is shown (undefined: the top)
   get groupName(): string | undefined {
     let name: string | undefined;
@@ -107,14 +95,13 @@ export class GraphDoc {
     return this.cachedLookup;
   }
 
-  // Groups that can be placed here (not this group or one that contains it)
+  // Every group but this one and those that contain it
   placeableGroups(): string[] {
     const here = this.groupName;
     const groups = this.graph.groups ?? {};
     return Object.keys(groups).filter((name) => here === undefined || (name !== here && !groupsInside(groups, name).has(here)));
   }
 
-  // What the palette offers here
   paletteDefs(): NodeDef[] {
     const groups = this.placeableGroups().map((name) => this.lookup.get(`${GROUP_PREFIX}${name}`)!).filter(Boolean);
     return [...this.registry.list(), ...groups];
@@ -135,7 +122,7 @@ export class GraphDoc {
     return true;
   }
 
-  // Up to `depth` levels from the top (default: one level up)
+  // Up to depth levels from the top (default: one level up)
   exit(depth = this.path.length - 1) {
     if (depth < 0 || depth >= this.path.length) {
       return false;
@@ -174,7 +161,6 @@ export class GraphDoc {
     return linkSources(this.level);
   }
 
-  // The output "node.port" feeding an input, if linked
   sourceOf(input: string) {
     return this.level.links.find((link) => link.to === input)?.from;
   }
@@ -185,7 +171,7 @@ export class GraphDoc {
     return def?.optional === true && !this.sourceOf(`${node}.${input}`) && this.level.nodes[node].inputs?.[input] === undefined;
   }
 
-  // Undo snapshot, unless this edit continues the gesture `key`
+  // Undo snapshot, unless this edit continues the gesture key
   private record(key?: string) {
     if (key !== undefined && key === this.gesture) {
       return;
@@ -260,8 +246,7 @@ export class GraphDoc {
     this.emit({ kind: "structure" });
   }
 
-  // Why output `from` cannot feed input `to` (undefined: it can). The new
-  // port of a group's boundary node takes any type.
+  // Why the output cannot feed the input, or undefined. A new port takes any type.
   canConnect(from: string, to: string): string | undefined {
     const [fromNode, fromPort] = splitPort(from);
     const [toNode, toPort] = splitPort(to);
@@ -284,7 +269,7 @@ export class GraphDoc {
     return undefined;
   }
 
-  // Nodes `id` depends on, itself included
+  // Nodes that id depends on, itself included
   upstream(id: string) {
     const seen = new Set<string>();
     const visit = (node: string) => {
@@ -302,8 +287,8 @@ export class GraphDoc {
     return seen;
   }
 
-  // Link output `from` to input `to`, replacing what fed it; the error if
-  // not. A wire to a boundary node's new port first adds that group port.
+  // Replaces what fed the input, or returns why it can't. A wire to a new port
+  // first adds that group port.
   link(from: string, to: string): string | undefined {
     const error = this.canConnect(from, to);
     if (error) {
@@ -335,7 +320,7 @@ export class GraphDoc {
     return undefined;
   }
 
-  // Add a port to a group's interface (no record or emit); its name
+  // Adds a group port without record or emit, and returns its name
   private addPort(group: GraphGroup, dir: "in" | "out", name: string, type: PortType, value?: Value, like?: { min?: number; max?: number; step?: number }) {
     const ports = dir === "in" ? group.inputs : group.outputs;
     const port = this.newId(sanitize(name), ports);
@@ -347,8 +332,7 @@ export class GraphDoc {
     return port;
   }
 
-  // Take a port off the current group's interface, with every wire and
-  // value that used it, here and on every instance
+  // With every wire and value that used it, inside and on every instance
   removeGroupPort(dir: "in" | "out", port: string) {
     const name = this.groupName;
     const group = this.group;
@@ -409,8 +393,7 @@ export class GraphDoc {
     return from;
   }
 
-  // Write an input's value. A param only needs a param write; giving an
-  // absent optional input a value changes the structure.
+  // A param write, except that giving an absent optional input a value changes the structure
   setValue(node: string, input: string, value: Value, gesture?: string) {
     const target = this.level.nodes[node];
     if (!target) {
@@ -450,7 +433,7 @@ export class GraphDoc {
     this.emit({ kind: "structure" });
   }
 
-  // Place nodes (one undo step)
+  // One undo step
   moveNodes(positions: Map<string, [number, number]>) {
     const nodes = this.level.nodes;
     const moved = [...positions].filter(([id, [x, y]]) => {
@@ -467,11 +450,8 @@ export class GraphDoc {
     this.emit({ kind: "layout" });
   }
 
-  // --- Grouping ---
-
-  // Why these nodes cannot fold into one group (undefined: they can): a
-  // wire may not leave them and come back through another node, which
-  // would make the group feed itself
+  // Why these nodes cannot be grouped, or undefined: a wire that leaves them and
+  // comes back through another node would make the group feed itself
   groupProblem(ids: Iterable<string>): string | undefined {
     const chosen = new Set(ids);
     const downstream = new Set<string>();
@@ -491,10 +471,9 @@ export class GraphDoc {
     return between ? `a wire leaves the selection and comes back through ${between}: add it to the selection` : undefined;
   }
 
-  // Fold nodes of this level into a new group and put an instance in their
-  // place. Wires crossing the selection become the group's ports; knobs on
-  // the folded nodes become group inputs, so they keep working. The id of
-  // the instance, if anything was grouped.
+  // Wires crossing the selection become the group's ports, and knobs on the
+  // folded nodes group inputs so they keep working. Returns the instance's id
+  // if anything was grouped.
   groupNodes(ids: Iterable<string>, label = "Group"): string | undefined {
     const level = this.level;
     const chosen = new Set([...ids].filter((id) => {
@@ -592,8 +571,7 @@ export class GraphDoc {
     return instance;
   }
 
-  // Put a group instance's nodes back in its place; the group goes too when
-  // nothing else uses it. The ids of the placed nodes.
+  // The group goes too when nothing else uses it. Returns the placed nodes' ids.
   ungroup(id: string): string[] {
     const level = this.level;
     const name = groupOf(level.nodes[id]?.type ?? "");

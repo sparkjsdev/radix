@@ -1,6 +1,4 @@
-/* fx editor: shared layout and behavior, then one block per theme
-   (body[data-theme]). Nodes are positioned by an inline transform, so
-   effects animate the independent translate / scale / rotate properties. */
+/* Nodes are placed by an inline transform, so effects animate translate, scale and rotate */
 
 * {
   box-sizing: border-box;
@@ -29,8 +27,6 @@ input {
   height: 100vh;
 }
 
-/* --- Render pane --- */
-
 #render-pane {
   position: relative;
   min-width: 0;
@@ -43,7 +39,7 @@ input {
   width: 100%;
   height: 100%;
   touch-action: none;
-  /* Shown when a screenshot hides everything but canvases (body > :not(canvas)) */
+  /* Stays visible when check-examples.mjs hides the rest for a screenshot */
   visibility: visible;
 }
 
@@ -195,8 +191,6 @@ input {
   background: var(--accent);
 }
 
-/* --- Editor pane --- */
-
 #editor-pane {
   position: relative;
   display: flex;
@@ -254,7 +248,6 @@ input {
   color: var(--accent);
 }
 
-/* Controls overlay */
 #keys {
   position: fixed;
   inset: 0;
@@ -348,7 +341,7 @@ kbd {
   text-align: center;
 }
 
-/* Theme switches crossfade (document.startViewTransition) */
+/* The theme switch's crossfade */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 0.45s;
@@ -392,7 +385,7 @@ kbd {
   white-space: nowrap;
 }
 
-/* Where the scan was clicked (input.click) */
+/* Marks a click on the scan */
 .render-ping {
   position: absolute;
   width: 16px;
@@ -451,8 +444,6 @@ kbd {
     translate: 0 8px;
   }
 }
-
-/* --- Graph canvas --- */
 
 .fx-graph {
   position: absolute;
@@ -514,8 +505,6 @@ kbd {
   border-radius: 3px;
 }
 
-/* --- Nodes --- */
-
 .fx-node {
   position: absolute;
   left: 0;
@@ -555,9 +544,7 @@ kbd {
   --cat: var(--cat-group);
 }
 
-/* --- Groups: cards standing for nodes inside, boundaries, the trail --- */
-
-/* Two sheets peek out behind a group card: there is more inside */
+/* Two sheets behind a group card show there is more inside */
 .fx-node.group-node {
   width: 216px;
   --sheets: 6px 6px 0 -1px color-mix(in srgb, var(--cat) 45%, transparent), 12px 12px 0 -2px color-mix(in srgb, var(--cat) 25%, transparent);
@@ -698,12 +685,11 @@ body[data-theme] .fx-node.group-node.selected {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* Inside a group the canvas gets a faint frame of the group's color */
 .fx-graph.in-group {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cat-group) 35%, transparent), inset 0 0 60px color-mix(in srgb, var(--cat-group) 10%, transparent);
 }
 
-/* A still copy of the level being left, zooming away */
+/* The still copy of the level being left */
 .fx-world.fx-ghost {
   pointer-events: none;
   will-change: transform, opacity;
@@ -718,7 +704,7 @@ body[data-theme] .fx-node.group-node.selected {
   transition: none;
 }
 
-/* The opening card turns into a window onto its inside */
+/* The opening card's contents fade so its inside shows through */
 .fx-node.zoom-card > * {
   opacity: max(0, 1 - var(--open, 0) * 4);
 }
@@ -834,8 +820,6 @@ body[data-theme] .fx-node.group-node.selected {
   font-size: 8px;
   vertical-align: 1px;
 }
-
-/* --- Ports --- */
 
 .fx-port {
   position: absolute;
@@ -968,8 +952,6 @@ body[data-theme] .fx-node.group-node.selected {
   background: var(--bg);
 }
 
-/* --- Editors --- */
-
 .fx-scrub {
   position: relative;
   display: inline-flex;
@@ -1100,7 +1082,7 @@ body[data-theme] .fx-node.group-node.selected {
   opacity: 0.7;
 }
 
-/* Far out: no editors or notes (hidden in place, so ports stay put) */
+/* Hidden in place so the ports stay put */
 .zoom-mid .fx-edit,
 .zoom-mid .fx-note,
 .zoom-mid .fx-eye {
@@ -1115,8 +1097,6 @@ body[data-theme] .fx-node.group-node.selected {
 .zoom-far .fx-title {
   transform: scale(1.7);
 }
-
-/* --- Wires --- */
 
 .fx-wire-path {
   fill: none;
@@ -1162,8 +1142,6 @@ body[data-theme] .fx-node.group-node.selected {
   }
 }
 
-/* --- Flow preview --- */
-
 .flow-on .fx-flow {
   opacity: 1;
   animation: fx-flow calc(var(--flow-period) / 2) linear infinite;
@@ -1206,8 +1184,6 @@ body[data-theme] .fx-node.group-node.selected {
   }
 }
 
-/* --- Probe --- */
-
 .probing .fx-node:not(.probe-chain) {
   opacity: 0.3;
   filter: saturate(0.3);
@@ -1224,8 +1200,6 @@ body[data-theme] .fx-node.group-node.selected {
 .fx-node.probed {
   box-shadow: var(--node-shadow-probed);
 }
-
-/* --- Errors --- */
 
 .fx-node.has-error {
   box-shadow: 0 0 0 2px var(--error), 0 0 20px color-mix(in srgb, var(--error) 50%, transparent);
@@ -1262,9 +1236,7 @@ body[data-theme] .fx-node.group-node.selected {
   z-index: 10;
 }
 
-/* --- One-shot effects --- */
-
-/* A freshly loaded graph: nodes wait for their layout, wires fade in last */
+/* A loaded graph's nodes wait for their layout, and its wires fade in last */
 .fx-node.pending {
   opacity: 0;
   pointer-events: none;
@@ -1427,8 +1399,6 @@ body[data-theme] .fx-node.group-node.selected {
     opacity: 0;
   }
 }
-
-/* --- HUD, palette --- */
 
 .fx-hud {
   position: absolute;
@@ -1598,8 +1568,6 @@ body[data-theme] .fx-node.group-node.selected {
   color: var(--muted);
 }
 
-/* ============ Neon Circuit ============ */
-
 body[data-theme="neon"] {
   --bg: #07060d;
   --ink: #dbe4ff;
@@ -1703,8 +1671,6 @@ body[data-theme="neon"] .fx-port {
     box-shadow: 0 0 0 1px var(--cat), 0 0 38px var(--cat), 0 10px 30px rgba(0, 0, 0, 0.6);
   }
 }
-
-/* ============ Toybox ============ */
 
 body[data-theme="toybox"] {
   --bg: #fff3dc;
@@ -1823,8 +1789,6 @@ body[data-theme="toybox"] #status {
     translate: 0 0;
   }
 }
-
-/* ============ Lab Glass ============ */
 
 body[data-theme="glass"] {
   --bg: #0b0f16;

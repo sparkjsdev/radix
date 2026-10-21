@@ -1,15 +1,13 @@
-// Effects: bursts of sparks, confetti or ripples in the graph's world layer,
-// shakes and toasts. CSS animations on throwaway elements (fxedit.css).
+// UI effects: bursts, shakes and toasts as CSS animations on throwaway elements
 import type { Theme } from "./themes.js";
 
 export class Juice {
   theme: Theme;
-  // Off with prefers-reduced-motion
   enabled = !matchMedia("(prefers-reduced-motion: reduce)").matches;
   private layer: HTMLElement;
   private hud: HTMLElement;
 
-  // `layer` is in world coordinates, `hud` in screen coordinates
+  // layer is in world coordinates, hud in screen coordinates
   constructor(layer: HTMLElement, hud: HTMLElement, theme: Theme) {
     this.layer = layer;
     this.hud = hud;
