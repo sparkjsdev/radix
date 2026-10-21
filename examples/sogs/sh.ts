@@ -1,6 +1,8 @@
 /*!
  * The PlayCanvas engine, https://github.com/playcanvas/engine
  *
+ * MIT License
+ *
  * Copyright (c) 2011-2026 PlayCanvas Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
