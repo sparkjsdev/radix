@@ -498,3 +498,66 @@ Simple and direct, short files with one purpose, a blank line between
 stanzas (groups of related lines), few comments (constraints the code cannot
 show), plain types (generics only to type `data.bundles.x.channels.y.data`,
 storage arrays and splat forms).
+
+## Doc comments
+
+`/** */` comments document the public API: the exports of `src/index.ts` and
+`src/core/index.ts` and their public members. The published types and editors
+show them.
+
+They follow three.js's JSDoc conventions, with four differences: they hold
+only essential information, in as few words as it takes, they carry no types,
+since the TypeScript signatures do (no `@type`, no `{type}` in tags), nothing
+is written for what a name and type already say, and a comment of one sentence
+without tags goes on one line.
+
+- Every export gets one sentence saying what it is for. A class or interface
+  may add a few sentences and a compact list, only for what a caller needs
+  across its members, such as how its modes work or the inputs it reads.
+- Every public member gets one sentence of essential information: what it is,
+  its unit or range, or when it runs or is called. A second sentence only for
+  a constraint a caller would otherwise break. A default goes in a `@default`
+  tag. A member whose name and type say it all, such as `Rgb.r` or `Cov.xx`,
+  gets no comment unless it has a unit or a default.
+
+  ```ts
+  /**
+   * The speed of keys and sticks, in meters per second.
+   *
+   * @default 1
+   */
+  moveSpeed: number;
+  ```
+
+- An options object with a named type documents its fields as members. An
+  inline options type is documented on its function with three.js's
+  `@param [options.x=default]` tags.
+- Every parameter gets a `@param` tag and every returned value a `@return` tag,
+  each a short phrase, as in three.js, unless its name and type say it all.
+  Types stay in the signature, never in a tag.
+- Defaults are read from the code: a parameter default, a defaults table or a
+  constructor's `??`.
+- No references to anything outside `src/`.
+- `@internal` comments keep their form.
+- The text is whole sentences that end with a period. A comment of one sentence
+  without tags goes on one line when it fits in about 100 columns:
+  `/** The x component. */`. Otherwise `/**` and `*/` go on lines of their own,
+  and a blank line comes before the tags.
+
+## Inline comments
+
+`//` comments are for everything else, and only where the code is not clear on
+its own.
+
+- They give why the code does something unexpected, a constraint, a workaround
+  for TSL, three or WebGPU, a bit layout or derivation, or the unit of a value
+  that is not public.
+- They never narrate the next line, and hold no history or measurements.
+- No references to anything outside `src/` other than attribution: credits,
+  `/*!` notices and the Spark code, spec or paper a part follows, as one short
+  clause.
+- A file header is one line, only when the file name does not say its purpose.
+- A choice made from a measurement keeps its reason without the numbers, such
+  as "11 + 13 bits sorts faster than 12 + 12".
+- One line when it fits in about 100 columns, fewest words. A single sentence
+  has no period; two each end with one.
