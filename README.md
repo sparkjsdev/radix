@@ -3,11 +3,18 @@
 > [!CAUTION]
 > ⚠️ **Radix is experimental.** Its API may change completely in any version.
 
-Radix draws 3D Gaussian splats with three.js's `WebGPURenderer`, on WebGPU or WebGL2 from the same TSL shaders. It sorts the splats of all objects together and draws them in one call, on WebGPU entirely on the GPU.
-
-Each splat is made in the projection shader, so it can come from a file, from arrays a GPU simulation writes, or from a formula. In XR, Radix projects and sorts the splats once for both eyes.
+An advanced WebGPU 3D Gaussian Splatting renderer for three.js.
 
 Built by [World Labs](https://www.worldlabs.ai).
+
+## Features
+
+- Runs on WebGPU or WebGL2, from the same TSL shaders.
+- Sorts the splats of all objects together and draws them in one call.
+- On WebGPU, sorts and draws entirely on the GPU.
+- Makes each splat in the projection shader, so it can come from a file, from arrays a GPU simulation writes, or from a formula.
+- In XR, projects and sorts the splats once for both eyes.
+- Reads and writes [PLY](https://github.com/graphdeco-inria/gaussian-splatting) (also [compressed](https://blog.playcanvas.com/compressing-gaussian-splats/#compressed-ply-format)), [SPZ](https://github.com/nianticlabs/spz), [RAD](https://sparkjs.dev/docs/new-features-2.0/) and [RDX](docs/rdx.md).
 
 ## Install
 
@@ -44,7 +51,8 @@ camera.position.set(0, 0, 3);
 const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: { mode: "orbit" } });
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 
-const splats = GpuArrays.fromData(renderer, await loadSplats("scene.spz"));
+const url = "https://sparkjs.dev/assets/splats/butterfly.spz";
+const splats = GpuArrays.fromData(renderer, await loadSplats(url));
 // Most captures are stored y down
 const matrixWorld = new THREE.Matrix4().makeRotationX(Math.PI);
 const collection = new SplatCollection([SplatCollection.arrays(splats, { matrixWorld })]);
@@ -56,7 +64,7 @@ renderer.setAnimationLoop(() => {
 });
 ```
 
-This draws `scene.spz` with orbit controls. [The quickstart](docs/quickstart.md) explains each step.
+This loads a butterfly from sparkjs.dev and draws it with orbit controls. [The quickstart](docs/quickstart.md) explains each step.
 
 `@sparkjsdev/radix` is the whole library, with `three` as a peer dependency. `@sparkjsdev/radix/core` is its CPU part alone, with the readers and writers for PLY, compressed PLY, SPZ, RAD and RDX ([docs/files.md](docs/files.md)). It needs neither three.js nor a browser, so it runs in workers and in Node, for example to convert a PLY file to SPZ:
 

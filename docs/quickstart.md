@@ -33,7 +33,8 @@ const controls = new CameraControls({
 controls.lookAt(new THREE.Vector3(0, 0, 0));
 
 // 3. Load the file on a worker, then upload it
-const data = await loadSplats("scene.spz", {
+const url = "https://sparkjs.dev/assets/splats/butterfly.spz";
+const data = await loadSplats(url, {
   onProgress: (fraction, stage) => console.log(stage, fraction),
 });
 const splats = GpuArrays.fromData(renderer, data);
