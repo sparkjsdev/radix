@@ -561,3 +561,21 @@ its own.
   as "11 + 13 bits sorts faster than 12 + 12".
 - One line when it fits in about 100 columns, fewest words. A single sentence
   has no period; two each end with one.
+
+## Comments outside `src/`
+
+`examples/`, `test/` and `scripts/` follow the inline comment rules, with
+these differences. Nothing there is public API, so they have no `/** */`
+comments.
+
+- A page's `main.ts` and each script run from the command line open with one
+  sentence on what the page shows or the script does, then its usage, one line
+  per item with its values and default: a page's query parameters and console
+  handles, a script's command and flags.
+- A Spark port's header names the Spark example it follows, as in "Spark's
+  splat-portal", and says what the port does differently, such as using another
+  scan where Spark's is one Radix can't read.
+- They may name any file in the repo, such as the page a script drives or the
+  docs page that covers what an example shows. Outside the repo, attribution
+  only, as in `src/`.
+- HTML and CSS comments follow the same rules.
