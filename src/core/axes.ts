@@ -1,23 +1,15 @@
-// Coordinate systems of splat data, as nianticlabs/spz numbers them (SPZ 4's
-// coordinate-system record): three letters for where +x, +y and +z point,
-// Right / Left, Up / Down, Back / Front, in any order. Converting from one
-// to another is one signed permutation M, a rotation perhaps with a mirror:
-// centers and normals p' = M p, rotations R' = M R M^T (the quaternion's
-// vector part times det(M) M) with the scales permuted alike, covariances
-// M S M^T, and the SH of band l
-// by a (2l + 1)^2 matrix fitted once from the basis (least squares of
-// c' . Y(d) = c . Y(M^T d) over spread directions d, exact as the band is
-// closed under M). Flips, quarter turns and mirrors take the same path.
+// Coordinate systems, named and numbered as in nianticlabs/spz
 import type { ArrayData } from "./ArrayData";
 import type { Cov, Quat, Vec3 } from "./math";
 import { counter, type Progress } from "./progress";
 import { Sh, type ShDegree, type ShPalette } from "./sh";
 import { Splats, type ExtSplat, type Splat } from "./splats";
 
+/** Where +x, +y and +z point, each R or L, U or D, B or F. */
 export type CoordinateSystem = "LDB" | "RDB" | "LUB" | "RUB" | "LDF" | "RDF" | "LUF" | "RUF"
   | "LFD" | "RFD" | "LFU" | "RFU" | "LBD" | "RBD" | "LBU" | "RBU";
 
-// Index + 1 = SPZ's code
+// SPZ's code is the index plus 1
 const SYSTEMS: readonly CoordinateSystem[] = [
   "LDB", "RDB", "LUB", "RUB", "LDF", "RDF", "LUF", "RUF",
   "LFD", "RFD", "LFU", "RFU", "LBD", "RBD", "LBU", "RBU",
@@ -35,25 +27,33 @@ function axesOf(system: CoordinateSystem): (readonly number[])[] {
   return [...system].map((letter) => DIRECTIONS[letter]);
 }
 
+/** Converts values between two coordinate systems, in place. */
 export interface AxesConverter {
-  // 3x3 row-major, from -> to
+  /** The 3x3 row-major matrix from one system's coordinates to the other's. */
   readonly matrix: number[];
   readonly identity: boolean;
-  // In place, returning the argument
+  /** Converts a position or direction in place. */
   vec(v: Vec3): Vec3;
-  // M R M^T: the splat's own axes turn with the scene, so its scales move
-  // with them (`scales`)
+  /**
+   * Converts a rotation in place. Convert the scales with it, since the splat's
+   * axes turn.
+   */
   quat(q: Quat): Quat;
-  // Scales along the splat's axes, permuted as M permutes them
+  /** Permutes scales in place as the splat's axes turn. */
   scales(s: Vec3): Vec3;
+  /** Converts a covariance in place. */
   cov(c: Cov): Cov;
-  // Center, quaternion, scales, and normal when the splat has one
+  /** Converts a splat's center, rotation, scales and normal in place. */
   splat<S extends Splat | ExtSplat>(s: S): S;
-  // Bands 1 to `degree` of coefficient-major RGB values
+  /**
+   * Converts SH in place.
+   *
+   * @param coeffs Coefficient-major RGB values of bands 1 to degree.
+   */
   sh(coeffs: Float32Array, degree: ShDegree): Float32Array;
 }
 
-// Spread unit directions (a golden-angle spiral) for fitting band matrices
+// Golden-angle spiral directions for fitting band matrices
 const FIT = Array.from({ length: 32 }, (_, k) => {
   const z = 1 - (2 * k + 1) / 32;
   const r = Math.sqrt(1 - z * z);
@@ -61,7 +61,8 @@ const FIT = Array.from({ length: 32 }, (_, k) => {
   return { x: r * Math.cos(phi), y: r * Math.sin(phi), z };
 });
 
-// The band-l matrix T (row-major) with c' = T c for SH seen through M
+// Row-major T with c' = T c for band l seen through M, fitted by least squares
+// over FIT. Exact, since the band is closed under M.
 function bandMatrix(m: number[], l: number): Float64Array {
   const size = 2 * l + 1;
   const start = Sh.COEFFICIENTS[l - 1];
@@ -83,7 +84,7 @@ function bandMatrix(m: number[], l: number): Float64Array {
       }
     }
   }
-  // Gauss-Jordan with partial pivoting: normal T = right
+  // Gauss-Jordan solve of normal T = right
   for (let col = 0; col < size; col += 1) {
     let pivot = col;
     for (let row = col + 1; row < size; row += 1) {
@@ -112,7 +113,7 @@ function bandMatrix(m: number[], l: number): Float64Array {
       right[row * size + j] *= inv;
     }
   }
-  // Near-integers made exact, so flips copy values bit for bit
+  // Exact integers, so flips copy values bit for bit
   return right.map((v) => (Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v) : v));
 }
 
@@ -139,6 +140,7 @@ class Converter implements AxesConverter {
     return v;
   }
 
+  // The vector part times det(M) M
   quat(q: Quat): Quat {
     const m = this.matrix;
     const d = this.det;
@@ -214,10 +216,12 @@ class Converter implements AxesConverter {
   }
 }
 
+/** Converts splats, tables and SH between SPZ's 16 coordinate systems. */
 export class Axes {
+  /** All 16 systems, in SPZ's numbering. */
   static readonly SYSTEMS = SYSTEMS;
 
-  // 3x3 row-major: coordinates in `from` to coordinates in `to`
+  /** The 3x3 row-major matrix from one system's coordinates to another's. */
   static matrix(from: CoordinateSystem, to: CoordinateSystem): number[] {
     const a = axesOf(from);
     const b = axesOf(to);
@@ -234,9 +238,13 @@ export class Axes {
     return new Converter(Axes.matrix(from, to));
   }
 
-  // A splat table in place: its splat bundle (any layout; cov through its
-  // covariance), its per-splat SH, and `shPalette`'s entries when given;
-  // sets meta.coordinateSystem to `to`. Other bundles are left as they are.
+  /**
+   * Converts a table's splat bundle and per-splat SH in place, and sets
+   * meta.coordinateSystem.
+   *
+   * @param [options.from=data.meta.coordinateSystem] The system the data is in.
+   * @param [options.shPalette] An SH palette to convert as well.
+   */
   static convert(data: ArrayData, to: CoordinateSystem, {
     from = data.meta.coordinateSystem as CoordinateSystem | undefined, shPalette, progress,
   }: { from?: CoordinateSystem; shPalette?: ShPalette; progress?: Progress } = {}): ArrayData {

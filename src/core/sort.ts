@@ -1,17 +1,7 @@
-// Back-to-front sort keys of splat distances and their stable CPU radix
-// sort. The GPU computes the same keys (GpuSortKeys); the CPU only sorts
-// them, and WgpuRadixSort sorts them into the same order.
-//
-// f, the float32 bits of a distance >= 0 (sign bit 0), maps to a code q
-// that grows with distance: 32-bit q = f; 24-bit q = f >>> 7 (8 exponent
-// and 16 mantissa bits); 16-bit q keeps 6 exponent bits (distances
-// 2^-32..2^32, clamped outside) and 10 mantissa bits. key = min(mask ^ q,
-// validMax), so ascending keys run back to front. Invalid splats (culled,
-// non-finite distance) get `mask`: the top 8-bit digit is reserved for
-// them, so they sort last.
 import { defineBundle } from "./bundles";
 import { TextureLayout } from "./layout";
 
+/** The width of a sort key, in bits. */
 export type SortKeyBits = 16 | 24 | 32;
 
 const FLOAT_BITS_INFINITY = 0x7f800000;
@@ -24,25 +14,32 @@ const histogramHi = new Uint32Array(65536);
 let scratchIndex = new Uint32Array(0);
 let scratchDigit = new Uint16Array(0);
 
+/** Back-to-front sort keys of splat distances, as the GPU computes them, and their CPU sort. */
 export class SortKeys {
-  // The float bits 16-bit keys cover (distances 2^-32..2^32)
+  /** The lowest float bits 16-bit keys cover, a distance of 2^-32. */
   static readonly KEY16_LO = 95 << 23;
+  /** The highest float bits 16-bit keys cover, just below a distance of 2^32. */
   static readonly KEY16_HI = (159 << 23) - 1;
 
-  // Sort keys as projections write them: the 4 bytes of a key per RGBA8
-  // texel, read back as a Uint32Array (little-endian)
+  /** The bundle projections write sort keys to, read back as a little-endian Uint32Array. */
   static readonly KEYS = defineBundle({ key: "unorm8x4" }, { serialize: false });
 
-  // The invalid key of a width: all ones
+  /** Returns the key of splats that are not drawn, all ones. */
   static invalid(bits: SortKeyBits) {
     return 2 ** bits - 1;
   }
 
+  /** Returns the largest valid key. */
   static validMax(bits: SortKeyBits) {
     return 0xff * 2 ** (bits - 8) - 1;
   }
 
-  // Key of a distance >= 0; non-finite distances give the invalid key
+  /**
+   * Computes the key of a distance.
+   *
+   * @param distance The distance, from 0 up. Non-finite distances give the
+   *   invalid key.
+   */
   static compute(distance: number, bits: SortKeyBits): number {
     const mask = SortKeys.invalid(bits);
     f32[0] = distance;
@@ -54,13 +51,18 @@ export class SortKeys {
     const q = bits === 32 ? f
       : bits === 24 ? f >>> 7
       : (Math.min(Math.max(f, SortKeys.KEY16_LO), SortKeys.KEY16_HI) - SortKeys.KEY16_LO) >>> 13;
+    // q grows with distance, so ascending keys run back to front. Invalid keys
+    // alone use the top 8-bit digit.
     return Math.min((mask ^ q) >>> 0, SortKeys.validMax(bits));
   }
 
-  // Stable ascending sort of `count` keys into `ordering` (indices; by
-  // default a whole capacity, as an ArrayData.INDICES channel holds). Invalid keys sort
-  // last; `visible` counts the others. 16-bit keys take one counting pass,
-  // 24-bit keys two LSD passes of 11 and 13 bits, 32-bit keys two of 16.
+  /**
+   * Sorts keys stably in ascending order, with invalid keys last.
+   *
+   * @param [options.ordering=new Uint32Array(TextureLayout.alignCapacity(count))] The array
+   *   the indices are written to.
+   * @return The ordering, and visible, the number of valid keys.
+   */
   static sort<O extends Uint32Array = Uint32Array<ArrayBuffer>>({ keys, count, bits, ordering = new Uint32Array(TextureLayout.alignCapacity(count)) as O }: {
     keys: Uint32Array;
     count: number;
@@ -91,8 +93,7 @@ function prefixSum(histogram: Uint32Array, last: number) {
   }
 }
 
-// Written out per layout so each hot loop has constant shifts and masks,
-// which measured 6-9% faster than one function taking the digit width
+// Written out per key width, since constant shifts and masks are faster
 
 function sort1x16(keys: Uint32Array, count: number, ordering: Uint32Array) {
   const histogram = histogramLo;
@@ -109,7 +110,7 @@ function sort1x16(keys: Uint32Array, count: number, ordering: Uint32Array) {
   return visible;
 }
 
-// 11 + 13 measured 10-20% faster than 12 + 12 (bench-core.ts)
+// 11 + 13 bits sorts faster than 12 + 12
 function sort11x13(keys: Uint32Array, count: number, ordering: Uint32Array) {
   const lo = histogramLo;
   const hi = histogramHi;

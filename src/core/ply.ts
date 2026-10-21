@@ -1,10 +1,3 @@
-// Binary PLY: standard 3DGS files (x, y, z, scale_*, rot_*, opacity,
-// f_dc_*; optional nx / ny / nz, roughness and metallic), RGB point clouds,
-// or SuperSplat / PlayCanvas compressed PLY (a chunk element of quantization
-// ranges per 256 splats and packed_* vertex words; compressedPly.ts writes
-// it). Spherical harmonics (f_rest_*, or a compressed file's sh element) load
-// into an SH bundle in the asked codec (core/sh.ts; default ext), or are
-// skipped with `sh: false` (their degree goes to meta.ignoredShDegree).
 import { ArrayData } from "./ArrayData";
 import { Compression, type BytesInput } from "./compress";
 import { SplatMath } from "./math";
@@ -14,11 +7,9 @@ import { Splats, type LoadedSplats, type SplatData, type SplatLayout, type Splat
 
 export const SH_C0 = 0.28209479177387814;
 const HEADER_MAX_BYTES = 64 * 1024;
-// Size of a point cloud's points
 const POINT_SCALE = 0.001;
 
-// Compressed PLY: splats per chunk, the chunk properties (older files stop
-// after the scales: colors then span 0..1) and the packed vertex words
+// Older files stop after the scales, and their colors span 0 to 1
 export const COMPRESSED_CHUNK_SIZE = 256;
 export const COMPRESSED_CHUNK_PROPERTIES = [
   "min_x", "min_y", "min_z", "max_x", "max_y", "max_z",
@@ -45,7 +36,7 @@ const TYPES: Record<PlyType, { bytes: number; scale: number }> = {
 interface PlyProperty {
   name: string;
   type: PlyType;
-  // List properties: the type of the count (the entries have `type`)
+  // Set for list properties, whose entries have type
   countType?: PlyType;
   offset: number;
 }
@@ -108,14 +99,13 @@ async function readPly<L extends SplatLayout = "extSplats">(input: BytesInput, {
   const rot = isStandard ? ["rot_1", "rot_2", "rot_3", "rot_0"].map((name) => r(name)) : [];
   const opacity = isStandard ? r("opacity") : reader(prop("alpha"), true);
   const color = isStandard ? ["f_dc_0", "f_dc_1", "f_dc_2"].map((name) => r(name)) : ["red", "green", "blue"].map((name) => r(name, true));
-  // f_rest is channel-major (f_rest_{c * N + k}, N per channel); coeffs is
-  // coefficient-major (3k + c)
+  // f_rest_{c * N + k} is channel-major, coeffs 3k + c coefficient-major
   const perChannel = shRest / 3;
   const shValues = Sh.COEFFICIENTS[degree] * 3;
   const rest = Array.from({ length: shValues }, (_, v) => r(`f_rest_${(v % 3) * perChannel + Math.floor(v / 3)}`));
   const coeffs = new Float32Array(Sh.VALUES);
 
-  // One record reused for every splat (no allocations in the loop)
+  // Reused, so the loop allocates nothing
   const s = Splats.makeExtSplat();
   const q = { x: 0, y: 0, z: 0, w: 1 };
   const tick = counter(progress, vertex.count, "decoding");
@@ -166,9 +156,7 @@ async function readPly<L extends SplatLayout = "extSplats">(input: BytesInput, {
 
 type PlyHeader = ReturnType<typeof parseHeader>;
 
-// SuperSplat compressed PLY: splat i is quantized in chunk floor(i / 256)'s
-// ranges (11/10/11-bit positions and log scales, 8-bit colors and linear
-// opacity, the smallest three of w, x, y, z in 10 bits each)
+// Splat i is quantized in the ranges of chunk floor(i / 256)
 function readCompressed<L extends SplatLayout>({ bytes, header: { headerLength, littleEndian, elements, comments }, vertex, chunk, target, sh: shTarget, progress }: {
   bytes: Uint8Array;
   header: PlyHeader;
@@ -215,7 +203,7 @@ function readCompressed<L extends SplatLayout>({ bytes, header: { headerLength, 
   const encode = Splats.encoder(Splats.add(data, target));
   const degree = shDegree(shRest);
   const encodeSh = Sh.prepare(data, sh && sh.count >= vertex.count ? degree : 0, shTarget);
-  // uchar f_rest_{c * N + k}, channel-major, over [-4, 4] (splat-transform)
+  // uchar f_rest_{c * N + k}, channel-major, over [-4, 4] as in splat-transform
   const shValues = Sh.COEFFICIENTS[degree] * 3;
   const shOffset = sh && encodeSh ? elementOffset(bytes, headerLength, elements, sh) : 0;
   const shBytes = Uint8Array.from({ length: shValues }, (_, v) => sh!.properties.find((p) => p.name === `f_rest_${(v % 3) * (shRest / 3) + Math.floor(v / 3)}`)?.offset ?? 0);
@@ -271,7 +259,7 @@ function readCompressed<L extends SplatLayout>({ bytes, header: { headerLength, 
   return data as unknown as SplatData<L>;
 }
 
-// A compressed PLY SH byte (splat-transform's mapping over [-4, 4]), and back
+// splat-transform's SH byte mapping over [-4, 4]
 export function decodeCompressedSh(byte: number) {
   return ((byte === 0 ? 0 : byte === 255 ? 1 : (byte + 0.5) / 256) - 0.5) * 8;
 }
@@ -281,10 +269,6 @@ export function encodeCompressedSh(value: number) {
   return Math.max(0, Math.min(255, Math.trunc((value / 8 + 0.5) * 256)));
 }
 
-// Standard 3DGS PLY of the splat bundle of `data` (any layout); `pbr` adds
-// normals, roughness and metallic (ext splats), `compatibility` zero normals
-// for tools expecting nx / ny / nz, `sh` (default true) its SH bundle as
-// float f_rest_*. A LoD tree is not written.
 function writePly(data: ArrayData, { pbr = false, compatibility = false, sh = true, progress }: {
   pbr?: boolean;
   compatibility?: boolean;
@@ -359,12 +343,19 @@ function writePly(data: ArrayData, { pbr = false, compatibility = false, sh = tr
   return bytes;
 }
 
-// Binary PLY files of splats
+/** Reads and writes binary PLY splat files, and reads compressed PLY. */
 export class PlyFile {
-  // { splats }: the bundle of the asked layout (default extSplats), its
-  // SH included
+  /** Reads a binary PLY file of splats or points, or a compressed PLY file. */
   static readonly read = readPly;
-  // The splat bundle of `data` (any layout)
+  /**
+   * Writes a table's splat bundle as standard 3DGS PLY.
+   *
+   * @param [options.pbr=false] Whether to write ext splats' normals, roughness
+   *   and metallic.
+   * @param [options.compatibility=false] Whether to write zero normals for
+   *   tools that expect them.
+   * @param [options.sh=true] Whether to write the SH bundle.
+   */
   static readonly write = writePly;
 }
 
@@ -426,8 +417,6 @@ function shDegree(shRest: number) {
   return shRest >= 72 ? 4 : shRest >= 45 ? 3 : shRest >= 24 ? 2 : shRest > 0 ? 1 : 0;
 }
 
-// Byte offset of `element` (elements before it must be list-free), checked
-// against the file's size
 function elementOffset(bytes: Uint8Array, headerLength: number, elements: PlyElement[], element: PlyElement) {
   let offset = headerLength;
   for (const before of elements) {
@@ -445,8 +434,7 @@ function elementOffset(bytes: Uint8Array, headerLength: number, elements: PlyEle
   return offset;
 }
 
-// Reader of one property at a record's byte offset (normalized: integer
-// types scaled to [0, 1] / [-1, 1])
+// normalized maps integers to [0, 1] or [-1, 1]
 function propertyReader(view: DataView, { offset: at, type }: PlyProperty, littleEndian: boolean, normalized = false) {
   if (type === "float") {
     return (base: number) => view.getFloat32(base + at, littleEndian);

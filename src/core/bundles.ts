@@ -1,20 +1,26 @@
 import { ArrayFormats, type ArrayFormat } from "./formats";
 
+/** Channel formats, by channel name. */
 export type BundleChannels = Record<string, ArrayFormat>;
 
-// A named set of channels that belong together (one codec, reader or file
-// section binds to all of them). Plain data: it travels through postMessage
-// and RDX headers as is.
+/** A named set of channels that belong together. */
 export interface BundleDef<C extends BundleChannels = BundleChannels> {
   channels: C;
-  // Elements per GPU texel; CPU bytes are the same for every packing
+  /** Elements per GPU texel, which leaves the CPU arrays unchanged. */
   packing: 1 | 2 | 4;
-  // false for data rebuilt after loading (skipped by RDX)
+  /** Whether RDX files save the bundle, false for data rebuilt after loading. */
   serialize: boolean;
 }
 
+/** Bundle definitions, by bundle name. */
 export type Schema = Record<string, BundleDef>;
 
+/**
+ * Defines a bundle of channels.
+ *
+ * @param [options.packing=1] Elements per GPU texel.
+ * @param [options.serialize=true] Whether RDX files save the bundle.
+ */
 export function defineBundle<const C extends BundleChannels>(
   channels: C,
   { packing = 1, serialize = true }: { packing?: 1 | 2 | 4; serialize?: boolean } = {},

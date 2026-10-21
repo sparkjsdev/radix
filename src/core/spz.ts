@@ -1,25 +1,3 @@
-// Niantic SPZ (nianticlabs/spz), in two containers:
-// - gzip (versions 1-4 read, 2 or 3 written): a 16-byte header, columns of
-//   centers, alphas, colors, scales, rotations and SH, then this project's
-//   trailer (flag 0x80: the LoD tree; flag 0x40: PBR), then upstream's
-//   extension records (flag 0x02) to the end. Versions 2 and 3 differ only
-//   in the rotations: 3 bytes of x, y, z (w >= 0) in v2, 4 bytes of
-//   smallest-three in v3. Version 4 inside gzip, which some files carry, is
-//   v3's layout (Niantic's gzip reader takes versions 1 to 4).
-// - SPZ 4 (version 4, read and written): a plaintext 32-byte header (magic
-//   NGSP), extension records, a table of contents, then one zstd stream per
-//   column, empty ones left out. This project's LoD tree and PBR are vendor
-//   records "RX" (0x52580001, 0x52580002), zstd frames of the trailer's
-//   bytes; flags 0x40 / 0x80 are never set.
-// Per splat: SH of degree 1 to 4, coefficient-major RGB bytes, (b - 128) /
-// 128 (loaded into an SH bundle, skipped with `sh: false`; written at full
-// 8 bits, clamped to +-1 by the format); LoD tree u16 child counts, then u32
-// child starts; PBR Oct24 normals (0: none), then unorm8 roughness, then
-// unorm8 metallic, the bits ext splats hold. Records read: 0xADBE0002, the
-// safe orbit camera (meta.safeOrbitCamera); 0xADBE0003, the coordinate
-// system the data is stored in (meta.coordinateSystem, RUB without one;
-// `coordinateSystem` converts to another); others are skipped, their types
-// in meta.skippedExtensions.
 import { ArrayData } from "./ArrayData";
 import { Axes, type AxesConverter, type CoordinateSystem } from "./axes";
 import { ByteReader, Compression, type BytesInput } from "./compress";
@@ -50,54 +28,93 @@ const PBR_BYTES = 5;
 const COLOR_SCALE = SH_C0 / 0.15;
 const SH_VECTORS: Record<number, number> = { 0: 0, 1: 3, 2: 8, 3: 15, 4: 24 };
 
+/** The options of SpzFile.write. */
 export interface SpzWriteOptions {
-  // 2, 3 (default) or 4 (SPZ 4's NGSP container)
+  /**
+   * The version, where 2 and 3 use the gzip container and 4 SPZ 4's.
+   *
+   * @default 3
+   */
   version?: 2 | 3 | 4;
-  // Fraction bits of the 24-bit fixed-point centers
+  /**
+   * Fraction bits of the 24-bit fixed-point centers.
+   *
+   * @default 12
+   */
   fractionalBits?: number;
+  /**
+   * The file's antialiasing flag.
+   *
+   * @default true
+   */
   antialiased?: boolean;
-  // Ext splats' normals, roughness and metallic
+  /**
+   * Whether to write ext splats' normals, roughness and metallic.
+   *
+   * @default false
+   */
   pbr?: boolean;
-  // The lodTree bundle (default: when the data has one), child counts below 2^16
+  /**
+   * Whether to write the lodTree bundle, whose child counts must be below 2^16.
+   *
+   * @default true when the data has a lodTree
+   */
   lod?: boolean;
-  // The SH bundle (default true when the data has one)
+  /**
+   * Whether to write the SH bundle.
+   *
+   * @default true
+   */
   sh?: boolean;
-  // Version 4: the system the data is stored in, recorded when not RUB
-  // (default meta.coordinateSystem); the data is written as it is
+  /**
+   * The system to record in version 4. The data is not converted.
+   *
+   * @default meta.coordinateSystem
+   */
   coordinateSystem?: CoordinateSystem;
-  // Version 4: Node's zstd level (Zstd.compress; elsewhere no effect)
+  /**
+   * Node's zstd level for version 4, from 1 to 22.
+   *
+   * @default 12
+   */
   zstdLevel?: number;
   progress?: Progress;
 }
 
+/** An extension record of an SPZ file. */
 export interface SpzExtension {
   type: number;
   data: Uint8Array<ArrayBuffer>;
 }
 
-// A file's header and byte columns, before decoding
+/** An SPZ file's header and byte columns, before decoding. */
 export interface SpzUnpacked {
-  // "ngsp": SPZ 4's container; "gzip": versions 1 to 4 in gzip
+  /** The container, where ngsp is SPZ 4's. */
   container: "gzip" | "ngsp";
   version: number;
   count: number;
+  /** The SH degree, from 0 to 4. */
   shDegree: number;
+  /** Fraction bits of the 24-bit fixed-point centers. */
   fractionalBits: number;
   flags: number;
-  // Per splat, in file order: centers (9 B, 6 in v1), alphas (1), colors
-  // (3), scales (3), rotations (4 from v3, else 3), SH (3 per coefficient;
-  // undefined at degree 0 or with sh: false)
+  /** The centers, 9 bytes per splat, or 6 in version 1. */
   centers: Uint8Array<ArrayBuffer>;
+  /** The opacities, 1 byte per splat. */
   alphas: Uint8Array<ArrayBuffer>;
+  /** The colors, 3 bytes per splat. */
   colors: Uint8Array<ArrayBuffer>;
+  /** The scales, 3 bytes per splat. */
   scales: Uint8Array<ArrayBuffer>;
+  /** The rotations, 4 bytes per splat from version 3, or 3 before. */
   rotations: Uint8Array<ArrayBuffer>;
+  /** The SH, 3 bytes per coefficient, or undefined at degree 0 or with sh: false. */
   sh?: Uint8Array<ArrayBuffer>;
-  // This project's LoD tree (6 B per splat) and PBR (5 B per splat), from
-  // the trailer or the RX records
+  /** Radix's LoD tree, 6 bytes per splat. */
   lodTree?: Uint8Array<ArrayBuffer>;
+  /** Radix's PBR data, 5 bytes per splat. */
   pbr?: Uint8Array<ArrayBuffer>;
-  // Other extension records, in file order
+  /** The other extension records, in file order. */
   extensions: SpzExtension[];
 }
 
@@ -119,7 +136,6 @@ function parseRecords(bytes: Uint8Array<ArrayBuffer>): SpzExtension[] {
   return records;
 }
 
-// RX records into the LoD tree and PBR columns; the others as they are
 async function splitRecords(records: SpzExtension[], count: number, out: Pick<SpzUnpacked, "lodTree" | "pbr" | "extensions">) {
   for (const record of records) {
     if (record.type === RECORD_LOD) {
@@ -146,8 +162,7 @@ async function unpackGzip(r: ByteReader, sh: boolean): Promise<SpzUnpacked> {
   const version = le32(head, 4);
   const count = le32(head, 8);
   const [shDegree, fractionalBits, flags] = [head[12], head[13], head[14]];
-  // Version 4 here means v3's layout inside gzip, not SPZ 4's NGSP / zstd
-  // container
+  // Version 4 in gzip is version 3's layout
   checkHeader(version, shDegree, GZIP_LATEST);
   const shBytes = count * SH_VECTORS[shDegree] * 3;
   const out: SpzUnpacked = {
@@ -195,7 +210,7 @@ async function unpackNgsp(r: ByteReader, sh: boolean): Promise<SpzUnpacked> {
     throw new Error("SPZ 4 table of contents inside the header");
   }
   const records = await r.read(tocByteOffset - 32);
-  // Positions, alphas, colors, scales, rotations, SH; empty ones left out
+  // Bytes per splat of centers, alphas, colors, scales, rotations and SH
   const sizes = [9, 1, 3, 3, 4, SH_VECTORS[shDegree] * 3].map((bytes) => count * bytes);
   const present = sizes.flatMap((size, i) => (size > 0 ? [i] : []));
   if (numStreams !== present.length) {
@@ -212,7 +227,7 @@ async function unpackNgsp(r: ByteReader, sh: boolean): Promise<SpzUnpacked> {
     compressed.push(high * 2 ** 32 + low);
     total += compressed[k];
   }
-  // Upstream's bound: at most 1024 times the file's bytes over 9 per point
+  // Upstream's bound
   if (count * 9 > total * 1024) {
     throw new Error(`Invalid SPZ point count ${count} for ${total} bytes`);
   }
@@ -241,9 +256,7 @@ async function unpackNgsp(r: ByteReader, sh: boolean): Promise<SpzUnpacked> {
   return out;
 }
 
-// The header and columns of either container, from bytes or a stream (read
-// in order, so a stream is consumed as it arrives: gzip inflated, SPZ 4's
-// streams decompressed one by one, its SH stream not read with sh: false)
+// Reads in order, so a stream decodes as it arrives
 async function unpackSpz(input: BytesInput, { sh = true }: { sh?: boolean } = {}): Promise<SpzUnpacked> {
   const raw = new ByteReader(input, "SPZ file");
   const head = await raw.peek(4);
@@ -296,7 +309,7 @@ async function readSpz<L extends SplatLayout = "extSplats">(input: BytesInput, {
   const rotationView = new DataView(rotations.buffer, rotations.byteOffset, rotations.byteLength);
   const fixed = 1 / (1 << u.fractionalBits);
   const int24 = (at: number) => ((centers[at] | (centers[at + 1] << 8) | (centers[at + 2] << 16)) << 8) >> 8;
-  // One record reused for every splat (no allocations in the loop)
+  // Reused, so the loop allocates nothing
   const s = Splats.makeExtSplat();
   const color = (byte: number) => (byte / 255 - 0.5) * COLOR_SCALE + 0.5;
   const scale = (byte: number) => Math.exp(byte / 16 - 10);
@@ -394,8 +407,7 @@ async function writeSpz(data: ArrayData, {
   const shValues = found ? SH_VECTORS[found.degree] * 3 : 0;
   const coeffs = new Float32Array(Sh.VALUES);
 
-  // The gzip layout: header, columns, then the LoD tree and PBR; SPZ 4
-  // takes its columns and trailers apart
+  // Laid out as gzip, which SPZ 4 then splits into its streams
   const count = data.count;
   const rotationBytes = version === 2 ? 3 : 4;
   const alphas = 16 + count * 9;
@@ -532,20 +544,22 @@ async function writeSpz(data: ArrayData, {
   return concat([head, ...streams]) as Uint8Array<ArrayBuffer>;
 }
 
-// Niantic SPZ files of splats, with their SH up to degree 4
+/** Reads and writes SPZ files, with SH up to degree 4. */
 export class SpzFile {
-  // Versions 1 to 4 in gzip and SPZ 4 (NGSP), from bytes or a stream, as
-  // { splats }: the bundle of the asked layout (default extSplats), plus
-  // lodTree, its SH included
+  /** Reads versions 1 to 4 in the gzip container, and SPZ 4. */
   static readonly read = readSpz;
-  // The splat bundle of `data` (any layout): version 2, 3 or 4
+  /** Writes a table's splat bundle, in any layout. */
   static readonly write = writeSpz;
-  // A file's header and byte columns (sh: false leaves the SH out)
+  /**
+   * Reads the header and byte columns without decoding them.
+   *
+   * @param [options.sh=true] Whether to read the SH.
+   */
   static readonly unpack = unpackSpz;
 }
 
-// Index of the largest component in the top 2 bits, then the other three
-// as 10 bits each (sign, 9-bit magnitude over sqrt(1/2))
+// The largest component's index in the top 2 bits, then the others in 10 bits:
+// a sign and a 9-bit magnitude over sqrt(1/2)
 function encodeSmallestThree(quaternion: Quat) {
   const n = SplatMath.normalizeQuat(quaternion, { x: 0, y: 0, z: 0, w: 1 });
   const q = [n.x, n.y, n.z, n.w];

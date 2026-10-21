@@ -1,23 +1,3 @@
-// RAD splat files: a RAD0 header (JSON meta, padded to 8 bytes) then RADC
-// chunks, each a JSON meta, a u64 payload size and a payload of column
-// properties (optionally deflate / gzip compressed). Centers, alpha, rgb,
-// scales, orientation and the LoD tree (child_count, child_start: the
-// lodTree bundle) are read, and SH (sh1, sh2, sh3: 9, 15 and 21 values per
-// splat, coefficient-major RGB, as f32, f16, s8 or s8_delta over +-max)
-// into an SH bundle (default ext; `sh: false` skips it, degree in
-// meta.ignoredShDegree). Clustered SH (Spark's build-lod --cluster-sh: the
-// header's shCodeCount entries in chunk 0's sh1_code .. sh3_code, laid out
-// as sh1 .. sh3 are, and an sh_label per splat in every chunk) reads into
-// an ShPalette in the same codec and bundle shLabel; past 65,536 entries a
-// label no longer fits shLabel, so they expand to per-splat SH. A
-// standalone RADC chunk reads as a file of one chunk. External chunk files
-// are not read.
-//
-// writeRad writes the plain subset readRad reads: embedded chunks of f32
-// columns (u32 for the tree), each gzipped, and SH (degree 3 at most) as s8
-// over each band's largest |value| in the chunk (or f16 / f32 with
-// `radSh`); given an `shPalette` for the splats' shLabel, clustered SH
-// (codes as s8 over each band's largest |value| in the palette, labels u16).
 import { ArrayData } from "./ArrayData";
 import { Compression, type BytesInput } from "./compress";
 import { Encoding } from "./encoding";
@@ -25,7 +5,6 @@ import { counter, type Progress } from "./progress";
 import { Sh, ShPalette, type ShDegree } from "./sh";
 import { Splats, type ExtSplat, type LoadedSplats, type SplatLayout, type SplatReadOptions } from "./splats";
 
-// Values per splat of RAD's SH properties (bands 1, 2, 3)
 const SH_BANDS = [["sh1", 9], ["sh2", 15], ["sh3", 21]] as const;
 
 export const RAD_MAGIC = 0x30444152; // "RAD0"
@@ -53,8 +32,7 @@ interface RadChunkMeta {
 
 const pad8 = (n: number) => (n + 7) & ~7;
 
-// Clustered SH being read: the palette (filled from chunk 0's codes) and
-// every splat's label
+// Clustered SH, whose palette comes from chunk 0's codes
 interface RadClusters {
   palette: ShPalette;
   labels: Uint32Array;
@@ -196,7 +174,7 @@ async function decodeChunk(
 
   const { center, alpha, rgb, scales, orientation, child_count: childCounts, child_start: childStarts } = columns;
   const s = Splats.makeExtSplat();
-  // One record reused for every splat (no allocations in the loop)
+  // Reused, so the loop allocates nothing
   for (let i = 0; i < n; i += 1) {
     s.center.x = center[i * 3];
     s.center.y = center[i * 3 + 1];
@@ -233,8 +211,7 @@ async function decodeChunk(
   }
 }
 
-// Entries 0 .. n - 1 of interleaved band columns (sh1 .. sh3, missing ones
-// zero) as coefficient-major RGB
+// Band columns sh1 to sh3 as coefficient-major RGB, missing bands zero
 function gatherSh(n: number, degree: number, columns: Record<string, ArrayLike<number> | undefined>, put: (i: number, coeffs: Float32Array) => void) {
   const coeffs = new Float32Array(Sh.VALUES);
   const bands = SH_BANDS.slice(0, degree).map(([name, values]) => ({ values, column: columns[name] }));
@@ -258,7 +235,7 @@ const floatOfBits = (bits: number) => {
   return f32[0];
 };
 
-// Dimension-planar values (all x, then all y, ...) as interleaved float32
+// Dimension-planar values to interleaved float32
 function decodeNumbers(property: RadProperty, bytes: Uint8Array, dims: number, n: number): Float32Array {
   const out = new Float32Array(dims * n);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -290,14 +267,14 @@ function decodeNumbers(property: RadProperty, bytes: Uint8Array, dims: number, n
   return out;
 }
 
-// Quaternions (x, y, z, w) from oct88r8 or xyz values (w >= 0)
+// From oct88r8, or xyz with w >= 0
 function decodeOrientation(property: RadProperty, bytes: Uint8Array, n: number): Float32Array {
   const out = new Float32Array(n * 4);
   if (property.encoding === "oct88r8") {
     const axis = { x: 0, y: 0, z: 0 };
     for (let i = 0; i < n; i += 1) {
       const code = bytes[i * 3] | (bytes[i * 3 + 1] << 8);
-      // Code 0 is the (0, 0) corner, -Z, as in any other octahedral map
+      // Code 0 is the (0, 0) corner, -Z
       if (code === 0) {
         Object.assign(axis, { x: 0, y: 0, z: -1 });
       } else {
@@ -337,26 +314,37 @@ function decodeUints(property: RadProperty, bytes: Uint8Array, n: number): Uint3
   return out;
 }
 
-// "gz" properties: zlib, raw deflate or gzip (early files kept raw bytes)
+// "gz" is zlib, raw deflate or gzip, and early files kept raw bytes
 async function decompress(bytes: Uint8Array): Promise<Uint8Array> {
   for (const format of ["deflate", "deflate-raw", "gzip"] as const) {
     try {
       const stream = new Blob([bytes.slice()]).stream().pipeThrough(new DecompressionStream(format));
       return new Uint8Array(await new Response(stream).arrayBuffer());
     } catch {
-      // the next wrapper format
+      // Try the next format
     }
   }
   return bytes;
 }
 
-// RAD splat files
+/** Reads and writes RAD splat files. */
 export class RadFile {
-  // { splats, shPalette? }: the bundle of the asked layout (default
-  // extSplats), plus lodTree, and the palette of clustered SH
+  /**
+   * Reads a RAD file, or one RADC chunk.
+   *
+   * @return The splats, and a palette for clustered SH.
+   */
   static readonly read = readRad;
-  // One RAD0 file of the splat bundle of `data` (any layout) and its
-  // lodTree when it has one, in chunks of `chunkSize` splats
+  /**
+   * Writes a table's splat bundle and LoD tree as one RAD0 file.
+   *
+   * @param [options.chunkSize=65536] Splats per chunk.
+   * @param [options.sh=true] Whether to write the SH bundle.
+   * @param [options.radSh="s8"] The SH encoding, where s8 is over each band's
+   *   largest value per chunk.
+   * @param [options.shPalette] The palette shLabel indexes, written as
+   *   clustered SH.
+   */
   static readonly write = writeRad;
 }
 
@@ -366,11 +354,8 @@ const bytesOf = (values: Float32Array<ArrayBuffer> | Uint32Array<ArrayBuffer> | 
 
 async function writeRad(data: ArrayData, { chunkSize = RAD_CHUNK_SIZE, sh = true, radSh = "s8", shPalette, progress }: {
   chunkSize?: number;
-  // The SH bundle (default true when the data has one), as s8 (over each
-  // band's largest |value| in the chunk), f16 or f32
   sh?: boolean;
   radSh?: "s8" | "f16" | "f32";
-  // The palette of the splats' shLabel bundle: written as clustered SH
   shPalette?: ShPalette;
   progress?: Progress;
 } = {}): Promise<Uint8Array<ArrayBuffer>> {
@@ -379,16 +364,14 @@ async function writeRad(data: ArrayData, { chunkSize = RAD_CHUNK_SIZE, sh = true
   const labels = sh && shPalette ? data.bundles.shLabel?.channels.label?.data : undefined;
   const found = sh && !labels ? Sh.find(data.bundles) : undefined;
   const decodeSh = found && Sh.decoder(data, found);
-  // RAD stops at sh3: higher degrees write their first 3 bands
+  // RAD stops at sh3
   const maxSh = Math.min(labels ? shPalette!.degree : (found?.degree ?? 0), 3);
   const bandMax = [0, 0, 0];
   const encoder = new TextEncoder();
   const s = Splats.makeExtSplat();
 
-  // The bands of `n` entries from get(i, coeffs), as columns sh1 .. sh3
-  // plus `suffix`
   const shColumns = (n: number, suffix: string, get: (i: number, coeffs: Float32Array) => void) => {
-    // Dimension-planar: all of value 0, then all of value 1, ...
+    // Dimension-planar
     const coeffs = new Float32Array(Sh.VALUES);
     const bands = SH_BANDS.slice(0, maxSh).map(([, values]) => new Float32Array(values * n));
     for (let i = 0; i < n; i += 1) {
@@ -445,7 +428,7 @@ async function writeRad(data: ArrayData, { chunkSize = RAD_CHUNK_SIZE, sh = true
       decode(base + i, s);
       const q = s.quaternion;
       const sign = q.w < 0 ? -1 : 1;
-      // Dimension-planar columns: all x, then all y, then all z
+      // Dimension-planar
       center[i] = s.center.x;
       center[n + i] = s.center.y;
       center[2 * n + i] = s.center.z;

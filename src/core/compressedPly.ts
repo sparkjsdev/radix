@@ -1,8 +1,3 @@
-// SuperSplat / PlayCanvas compressed PLY: a chunk element of quantization
-// ranges per 256 splats (positions, log scales, colors), then four packed
-// uint32 words per splat. Not standard 3DGS PLY; PlyFile.read reads both.
-// Writers sort splats in Morton order of their centers so that each chunk's
-// ranges are small.
 import type { ArrayData } from "./ArrayData";
 import { SplatMath } from "./math";
 import { COMPRESSED_CHUNK_PROPERTIES, COMPRESSED_CHUNK_SIZE, COMPRESSED_VERTEX_PROPERTIES, PlyFile, encodeCompressedSh } from "./ply";
@@ -11,15 +6,11 @@ import { Sh } from "./sh";
 import { SortKeys } from "./sort";
 import { Splats } from "./splats";
 
-// Per splat: center, ln scales, quaternion w x y z, rgb, opacity
+// Center, ln scales, quaternion w x y z, rgb, opacity
 const VALUES = 14;
 // splat-transform's clamp of ln scales
 const LN_SCALE_LIMIT = 20;
 
-// The splat bundle of `data` (any layout), in Morton order unless `sort` is
-// false, and with `sh` (default true) its SH bundle as an sh element of
-// uchar f_rest_* in splat-transform's mapping (clamped to [-4, 4] by the
-// format; degree 3 at most). A LoD tree is not written.
 function writeCompressedPly(data: ArrayData, { sort = true, sh = true, progress }: {
   sort?: boolean;
   sh?: boolean;
@@ -29,7 +20,7 @@ function writeCompressedPly(data: ArrayData, { sort = true, sh = true, progress 
   const decode = Splats.decoder(Splats.get(data).bundle);
   const found = sh ? Sh.find(data.bundles) : undefined;
   const decodeSh = found && Sh.decoder(data, found);
-  // The format stops at degree 3: higher degrees write their first 3 bands
+  // The format stops at degree 3
   const perChannel = found ? Sh.COEFFICIENTS[Math.min(found.degree, 3)] : 0;
   const shValues = perChannel * 3;
   const tick = counter(progress, 2 * count, "encoding");
@@ -74,7 +65,7 @@ function writeCompressedPly(data: ArrayData, { sort = true, sh = true, progress 
   bytes.set(header);
   const view = new DataView(bytes.buffer);
 
-  // Mins then maxes of the center, ln scales and rgb, as the chunk properties
+  // Mins, then maxes, in the chunk properties' order
   const range = new Float32Array(stride);
   const extend = (at: number, value: number) => {
     range[at] = Math.min(range[at], value);
@@ -110,7 +101,7 @@ function writeCompressedPly(data: ArrayData, { sort = true, sh = true, progress 
     }
   }
 
-  // f_rest_{c * N + k} (channel-major) of each splat in the written order
+  // Channel-major f_rest_{c * N + k}, in the written order
   if (decodeSh) {
     const coeffs = new Float32Array(Sh.VALUES);
     for (let j = 0; j < count; j += 1) {
@@ -126,11 +117,17 @@ function writeCompressedPly(data: ArrayData, { sort = true, sh = true, progress 
   return bytes;
 }
 
-// SuperSplat / PlayCanvas compressed PLY files of splats
+/** Reads and writes compressed PLY splat files. */
 export class CompressedPlyFile {
-  // Either kind of PLY (the same as PlyFile.read)
+  /** Reads either kind of PLY file, as PlyFile.read does. */
   static readonly read = PlyFile.read;
-  // The splat bundle of `data` (any layout)
+  /**
+   * Writes a table's splat bundle as compressed PLY.
+   *
+   * @param [options.sort=true] Whether to write the splats in Morton order of
+   *   their centers.
+   * @param [options.sh=true] Whether to write the SH bundle, up to degree 3.
+   */
   static readonly write = writeCompressedPly;
 }
 
@@ -138,14 +135,14 @@ function lnScale(scale: number) {
   return Math.max(-LN_SCALE_LIMIT, Math.min(LN_SCALE_LIMIT, Math.log(scale)));
 }
 
-// `value` in [min, max] as a `bits`-bit code (0 for an empty range)
+// 0 for an empty range
 function unorm(value: number, min: number, max: number, bits: number) {
   const top = 2 ** bits - 1;
   const t = max > min ? (value - min) / (max - min) : 0;
   return Math.max(0, Math.min(top, Math.floor(t * top + 0.5)));
 }
 
-// Three values at `v` in the ranges at `at` (mins) and `at + 3` (maxes)
+// Mins from index at, maxes 3 later
 function pack111011(values: Float32Array, v: number, range: Float32Array, at: number) {
   return unorm(values[v], range[at], range[at + 3], 11) * 2 ** 21
     + unorm(values[v + 1], range[at + 1], range[at + 4], 10) * 2 ** 11
@@ -160,8 +157,8 @@ function packColor(values: Float32Array, v: number, range: Float32Array) {
     + unorm(values[v + 3], 0, 1, 8);
 }
 
-// The index of the largest of w, x, y, z in 2 bits, then the other three
-// (made positive by flipping the sign, each within +-1 / sqrt(2)) in 10
+// The largest's index in 2 bits, then the others in 10 bits each, signed so
+// the largest is positive
 function packRotation(values: Float32Array, v: number) {
   let largest = 0;
   for (let k = 1; k < 4; k += 1) {
@@ -179,8 +176,6 @@ function packRotation(values: Float32Array, v: number) {
   return word;
 }
 
-// Splat indices in Morton order of their centers on a 1024^3 grid over
-// their bounds
 function mortonOrder(values: Float32Array, count: number) {
   const lo = [Infinity, Infinity, Infinity];
   const hi = [-Infinity, -Infinity, -Infinity];

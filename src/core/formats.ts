@@ -1,20 +1,26 @@
-// Format names follow WebGPU vertex formats: a scalar type, optionally
-// followed by "x" and a component count ("uint32", "uint32x2", "unorm8x4").
-// Only 1, 2 or 4 components can live on the GPU; other counts are CPU-only.
-
+/**
+ * A scalar type of an array format. float16 holds raw half-float bits.
+ */
 export type ScalarType =
   | "uint8" | "sint8" | "unorm8" | "snorm8"
   | "uint16" | "sint16" | "float16"
   | "uint32" | "sint32" | "float32";
 
+// Names follow WebGPU's vertex formats
+/**
+ * An array format, a scalar type with an optional component count such as x4.
+ * Only formats of 1, 2 or 4 components can be stored on the GPU.
+ */
 export type ArrayFormat = ScalarType | `${ScalarType}x${number}`;
 
+/** A typed array that holds an array format. */
 export type TypedArray =
   | Uint8Array<ArrayBuffer> | Int8Array<ArrayBuffer>
   | Uint16Array<ArrayBuffer> | Int16Array<ArrayBuffer>
   | Uint32Array<ArrayBuffer> | Int32Array<ArrayBuffer>
   | Float32Array<ArrayBuffer>;
 
+/** The class of a TypedArray. */
 export type TypedArrayConstructor =
   | Uint8ArrayConstructor | Int8ArrayConstructor
   | Uint16ArrayConstructor | Int16ArrayConstructor
@@ -36,10 +42,9 @@ interface ScalarArrays {
 
 type ScalarOf<F extends string> = F extends `${infer S}x${number}` ? S : F;
 
-// The CPU array type of a format, e.g. ArrayOf<"uint32x4"> = Uint32Array
+/** The CPU array type of a format. */
 export type ArrayOf<F extends ArrayFormat> = ScalarArrays[ScalarOf<F> & ScalarType];
 
-// float16 is stored as raw half-float bits
 const SCALARS: Record<ScalarType, { bytes: number; array: TypedArrayConstructor }> = {
   uint8: { bytes: 1, array: Uint8Array },
   sint8: { bytes: 1, array: Int8Array },
@@ -53,20 +58,25 @@ const SCALARS: Record<ScalarType, { bytes: number; array: TypedArrayConstructor 
   float32: { bytes: 4, array: Float32Array },
 };
 
+/** The parts and sizes of an array format. */
 export interface FormatInfo {
   format: ArrayFormat;
   scalar: ScalarType;
   components: number;
+  /** The size of a scalar, in bytes. */
   scalarBytes: number;
-  // Bytes per element
+  /** The size of an element, in bytes. */
   bytes: number;
   array: TypedArrayConstructor;
+  /** Whether the GPU can store the format. */
   gpu: boolean;
 }
 
 const cache = new Map<string, FormatInfo>();
 
+/** Parses and builds array format names. */
 export class ArrayFormats {
+  /** Returns the parts and sizes of a format, throwing for an invalid one. */
   static info(format: string): FormatInfo {
     let info = cache.get(format);
     if (!info) {
@@ -91,7 +101,7 @@ export class ArrayFormats {
     return info;
   }
 
-  // Format of `scalar` with `components` components ("uint32", "uint32x4")
+  /** Builds a format from a scalar type and a component count. */
   static make(scalar: ScalarType, components: number): ArrayFormat {
     return components === 1 ? scalar : `${scalar}x${components}`;
   }

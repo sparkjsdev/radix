@@ -1,45 +1,57 @@
-// How elements map to texels of a 2D array texture, shared by the CPU side
-// (capacity alignment) and the GPU side (uploads, reads, copies, shaders).
-// Width and height are powers of two, so texel t sits at x = t & 1023,
-// y = (t >> 10) & (height - 1), layer = t >> (10 + yBits): shifts and masks
-// only. The layer count is not a power of two.
-
-// A rectangle of texels within one layer; `offset` counts texels from the
-// start of the range
+/** A rectangle of texels in one layer. */
 export interface TexelSpan {
   x: number;
   y: number;
   layer: number;
+  /** The width, in texels. */
   width: number;
+  /** The height, in rows. */
   rows: number;
+  /** Texels from the start of the range. */
   offset: number;
 }
 
+/** A rectangle of texels copied between two layouts. */
 export interface CopySpan {
   src: { x: number; y: number; layer: number };
   dst: { x: number; y: number; layer: number };
+  /** The width, in texels. */
   width: number;
+  /** The height, in rows. */
   rows: number;
 }
 
+/**
+ * Maps elements to texels of a 2D array texture.
+ *
+ * Texel t is at x = t & 1023, y = (t >> 10) & (height - 1) and layer = t >> (10
+ * + yBits).
+ */
 export class TextureLayout {
+  /** Texels per row. */
   static readonly WIDTH = 1024;
+  /** The most elements per texel. */
   static readonly MAX_PACKING = 4;
-  // One texture row for every packing (1, 2 or 4 elements per texel)
+  /** Elements that fill whole rows at every packing. */
   static readonly ROW_ELEMENTS = TextureLayout.WIDTH * TextureLayout.MAX_PACKING;
-  // Array textures are limited by MAX_TEXTURE_SIZE (not MAX_3D_TEXTURE_SIZE),
-  // >= 4096 on 100% of WebGL2 devices (web3dsurvey.com, Sep 2026)
+  // Every WebGL2 device's MAX_TEXTURE_SIZE allows this
+  /** The largest height, in rows. */
   static readonly MAX_HEIGHT = 4096;
-  // WebGL2 MAX_ARRAY_TEXTURE_LAYERS: 100% of devices; WebGPU baseline 2048
-  // (its default is 256, so createRenderer requests more)
+  /**
+   * Every WebGL2 device allows this many. createRenderer raises WebGPU's
+   * default of 256.
+   */
   static readonly MAX_LAYERS = 512;
 
+  /** Texels per row. */
   readonly width: number;
+  /** Rows per layer. */
   readonly height: number;
   readonly layers: number;
+  /** The base-2 log of width. */
   readonly xBits: number;
+  /** The base-2 log of height. */
   readonly yBits: number;
-  // width * height * layers
   readonly texels: number;
 
   private constructor(height: number, layers: number) {
@@ -51,14 +63,12 @@ export class TextureLayout {
     this.texels = this.width * height * layers;
   }
 
-  // Layout holding at least `texels` texels in 2 to 4 layers (at most 50%
-  // padding) until the height reaches its cap, then one more 4096-row layer
-  // at a time. At least 2 layers: the WebGL backend only renders to single
-  // layers of targets with more than one layer.
+  /** Returns the layout for a number of texels, throwing when they do not fit. */
   static for(texels: number): TextureLayout {
     const rows = Math.max(1, Math.ceil(texels / TextureLayout.WIDTH));
     const height = Math.min(TextureLayout.MAX_HEIGHT, 2 ** Math.max(0, Math.floor(Math.log2(rows / 2))));
 
+    // At least 2, since WebGL renders to one layer only of multi-layer targets
     const layers = Math.max(2, Math.ceil(rows / height));
     if (layers > TextureLayout.MAX_LAYERS) {
       throw new Error(`${texels} texels do not fit in an array texture`);
@@ -66,13 +76,12 @@ export class TextureLayout {
     return new TextureLayout(height, layers);
   }
 
-  // Capacity for `count` elements: whole rows for every packing
+  /** Rounds a capacity up to whole rows at every packing, a multiple of 4096. */
   static alignCapacity(count: number) {
     return Math.max(1, Math.ceil(count / TextureLayout.ROW_ELEMENTS)) * TextureLayout.ROW_ELEMENTS;
   }
 
-  // Texels [start, start + count) as few rectangles as possible: partial
-  // rows at the ends, whole rows in between (one span per layer)
+  /** Covers a range of texels with the fewest rectangles. */
   spans(start: number, count: number): TexelSpan[] {
     const { width, height } = this;
     const layerSize = width * height;
@@ -99,9 +108,7 @@ export class TextureLayout {
     return spans;
   }
 
-  // Rectangles copying texels [srcStart, srcStart + count) of `src` to
-  // dstStart of `dst`. Whole rows are copied together when both sides are
-  // row-aligned; otherwise pieces stop at the row end of either side.
+  /** Splits a copy between two layouts into rectangles. */
   static copySpans(src: TextureLayout, srcStart: number, dst: TextureLayout, dstStart: number, count: number): CopySpan[] {
     const width = TextureLayout.WIDTH;
     const position = (layout: TextureLayout, t: number) => {

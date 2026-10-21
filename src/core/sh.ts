@@ -4,52 +4,41 @@ import { Encoding } from "./encoding";
 import type { TypedArray } from "./formats";
 import type { BundleLike } from "./splats";
 
-// Spherical harmonics, bands 1-4 (the DC band is the splat's base color):
-// 3 + 5 + 7 + 9 RGB coefficients in the 3DGS basis, coefficient-major RGB
-// (value 3k + c is coefficient k's channel c). A codec turns an entry's
-// coefficients into a stream of uint32 words with the bands in order, so a
-// lower degree reads a prefix of a higher-degree entry; the stream is cut into
-// uint32x4 texels. Storage:
-//   per splat  bundle <codec>Sh beside the splat bundle, one uint32x4
-//              channel per texel (<codec>ShA, <codec>ShB, ...);
-//              meta { codec, degree }
-//   palette    ShPalette: one table of entries, each `stride` texels side by
-//              side in channel shEntries, and bundle shLabel (uint16) in the
-//              splat table picking an entry per splat
-// Built-in codecs (bytes and texels for degree 1 / 2 / 3 / 4):
-//   ext        one Encoding.encodeExtRgb word per coefficient: 12 / 32 /
-//              60 / 96 B, 1 / 2 / 4 / 6 texels
-//   packed     per band a log scale byte (0: all zero, else the band's max
-//              is 2^((code - 192) / 16), rounded up) then its sint8 codes
-//              (value = code / 127 * max): 10 / 26 / 48 / 76 B, 1 / 2 / 3 /
-//              5 texels
-// The set is fixed, so a codec's name means the same on every thread.
-
+/** The highest SH band an entry holds. */
 export type ShDegree = 1 | 2 | 3 | 4;
 
+/** The name of a built-in SH codec. */
 export type ShCodecName = "ext" | "packed";
 
-// What file readers do with SH: the codec to store it in, or false to skip
-// it (meta.ignoredShDegree records the degree skipped). Readers default to
-// "ext".
+/** The codec file readers store SH in, or false to skip it. */
 export type ShTarget = ShCodecName | false;
 
-// A built-in codec (Sh.codec)
+/** A built-in SH codec, which turns an entry's coefficients into uint32 words and back. */
 export interface ShCodec {
-  // Names the per-splat bundle (<name>Sh) and its channels
+  /** The codec's name, which also names its bundle, <name>Sh, and channels. */
   readonly name: ShCodecName;
+  /** Returns the number of uint32 words of an entry. */
   words(degree: ShDegree): number;
-  // Channel suffixes of the per-splat bundle, one per texel
+  /** Returns the channel suffixes of the per-splat bundle, one per texel. */
   channels(degree: ShDegree): string[];
-  // Writes words(degree) words of `coeffs` (Sh.COEFFICIENTS[degree] * 3
-  // values) at out[at]
+  /**
+   * Encodes an entry.
+   *
+   * @param coeffs Sh.COEFFICIENTS[degree] * 3 values.
+   * @param at The first word.
+   */
   encode(coeffs: ArrayLike<number>, degree: ShDegree, out: Uint32Array, at: number): void;
-  // Fills Sh.COEFFICIENTS[degree] * 3 values of `out` (Sh.VALUES fits every
-  // degree)
+  /**
+   * Decodes an entry.
+   *
+   * @param at The first word.
+   * @param out Holds at least Sh.COEFFICIENTS[degree] * 3 values.
+   * @return out.
+   */
   decode(words: Uint32Array, at: number, degree: ShDegree, out: Float32Array): Float32Array;
 }
 
-// What Sh.find found: a per-splat SH bundle
+/** A per-splat SH bundle, as Sh.find returns it. */
 export interface FoundSh {
   name: string;
   codec: ShCodecName;
@@ -67,7 +56,11 @@ const PACKED_CHANNELS: Record<ShDegree, string[]> = { 1: ["A"], 2: ["A", "B"], 3
 const SCALE_BIAS = 192;
 const SCALE_STEPS = 16;
 
-// The packed scale byte of a band whose largest |value| is `max`, and back
+/**
+ * Returns the packed codec's scale byte for a band.
+ *
+ * @param max The band's largest absolute value.
+ */
 export function encodeShScale(max: number) {
   if (!(max > 0)) {
     return 0;
@@ -79,14 +72,18 @@ export function encodeShScale(max: number) {
   return code;
 }
 
+/**
+ * Returns the largest absolute value a packed codec's scale byte stands for.
+ *
+ * @return The value, 0 for code 0.
+ */
 export function decodeShScale(code: number) {
   return code === 0 ? 0 : 2 ** ((code - SCALE_BIAS) / SCALE_STEPS);
 }
 
 const getByte = (words: Uint32Array, at: number, b: number) => (words[at + (b >> 2)] >>> ((b & 3) * 8)) & 0xff;
 
-// Bytes written in order into whole words (the last one zero-padded):
-// startBytes, putByte per byte, endBytes
+// Packs bytes into words, zero-padding the last: startBytes, putByte, endBytes
 const bytes: { out: Uint32Array; at: number; word: number; shift: number } = { out: new Uint32Array(0), at: 0, word: 0, shift: 0 };
 const startBytes = (out: Uint32Array, at: number) => {
   bytes.out = out;
@@ -138,8 +135,6 @@ const packed: ShCodec = {
   name: "packed",
   words: (degree) => Math.ceil(PACKED_BYTES[degree] / 4),
   channels: (degree) => PACKED_CHANNELS[degree],
-  // Bands are contiguous (each its scale byte and values), so the bytes
-  // go out in order
   encode(coeffs, degree, out, at) {
     startBytes(out, at);
     for (let band = 0; band < degree; band += 1) {
@@ -175,8 +170,7 @@ const packed: ShCodec = {
 
 const CODECS: Record<ShCodecName, ShCodec> = { ext, packed };
 
-// For Sh.find: each channel label's codec and the degrees whose bundle has
-// it (bit d), and each codec's channel count per degree
+// For Sh.find: each label's codec, with bit d set for each degree d that has it
 const channelLookup = new Map<string, { codec: ShCodecName; degrees: number }>();
 const channelCounts = {} as Record<ShCodecName, number[]>;
 for (const codec of Object.values(CODECS)) {
@@ -198,18 +192,23 @@ for (const codec of Object.values(CODECS)) {
 
 const shDegreeOf = (n: number): ShDegree | undefined => (n === 1 || n === 2 || n === 3 || n === 4 ? n : undefined);
 
-// Spherical harmonics: codecs, per-splat bundles and the CPU evaluator.
-// GpuSh is the TSL twin.
+/**
+ * Spherical harmonics codecs, per-splat bundles and the CPU evaluator, matching
+ * GpuSh.
+ *
+ * Coefficients leave out the DC band and are coefficient-major RGB: value 3k +
+ * c is channel c of coefficient k.
+ */
 export class Sh {
-  // RGB coefficients per degree, the DC band excluded
+  /** RGB coefficients per degree, without the DC band. */
   static readonly COEFFICIENTS = COEFFICIENTS;
   static readonly MAX_DEGREE = MAX_DEGREE;
-  // Values of the highest degree's entry: a coefficient array that fits
-  // any degree
+  /** The values of a degree-4 entry, so an array of this length fits any degree. */
   static readonly VALUES = VALUES;
+  /** The shLabel bundle, which picks a palette entry per splat. */
   static readonly LABEL = defineBundle({ label: "uint16" });
 
-  // A codec by name (a string from meta is checked)
+  /** Returns a codec by name, throwing for an unknown one. */
   static codec(name: string): ShCodec {
     const codec = CODECS[name as ShCodecName];
     if (!codec) {
@@ -218,34 +217,44 @@ export class Sh {
     return codec;
   }
 
+  /** Returns the texels of an entry. */
   static texels(codec: ShCodecName, degree: ShDegree) {
     return Math.ceil(Sh.codec(codec).words(degree) / 4);
   }
 
-  // The degree of `coefficients` RGB coefficients past DC (3, 8, 15, 24), else
-  // undefined
+  /**
+   * Returns the degree of a coefficient count.
+   *
+   * @param coefficients RGB coefficients past DC, 3, 8, 15 or 24.
+   * @return The degree, or undefined for other counts.
+   */
   static degreeOf(coefficients: number): ShDegree | undefined {
     return shDegreeOf(COEFFICIENTS.indexOf(coefficients as never));
   }
 
+  /** Returns the name of a codec's per-splat bundle. */
   static bundleName(codec: ShCodecName) {
     return `${Sh.codec(codec).name}Sh`;
   }
 
+  /** Defines a codec's per-splat bundle. */
   static bundle(codec: ShCodecName, degree: ShDegree): BundleDef {
     return defineBundle(Object.fromEntries(Sh.codec(codec).channels(degree).map((suffix) => [`${codec}Sh${suffix}`, "uint32x4" as const])));
   }
 
-  // Adds an empty per-splat SH bundle to `data`
+  /** Adds an empty per-splat SH bundle to a table. */
   static add(data: ArrayData, codec: ShCodecName, degree: ShDegree): ArrayBundle {
     data.addBundle(Sh.bundleName(codec), Sh.bundle(codec, degree), { meta: { codec, degree } });
     return data.bundles[Sh.bundleName(codec)];
   }
 
-  // The per-splat SH bundle among `bundles` (of an ArrayData or GpuArrays):
-  // a bundle whose channels are exactly a codec's for some degree.
-  // Renderers call it per object per frame, so it allocates only the result.
+  /**
+   * Finds the per-splat SH bundle by its channel names and formats.
+   *
+   * @param bundles The bundles of an ArrayData or GpuArrays.
+   */
   static find(bundles: Record<string, BundleLike & { meta?: Record<string, unknown> }>): FoundSh | undefined {
+    // Called per object per frame, so it allocates only its result
     for (const name in bundles) {
       const bundle = bundles[name];
       let codec: ShCodecName | undefined;
@@ -274,9 +283,14 @@ export class Sh {
     return undefined;
   }
 
-  // For file readers: a bundle for a file's `degree` (0..4) of SH in
-  // `target` (default ext) and its encoder, or undefined when there is none
-  // or it is skipped (then meta.ignoredShDegree is the degree)
+  /**
+   * Adds an SH bundle for a file reader and returns its encoder.
+   *
+   * @param degree The file's SH degree, from 0 to 4.
+   * @param [target="ext"] The codec, or false to skip SH and record the degree
+   *   in meta.ignoredShDegree.
+   * @return The encoder, or undefined when there is no SH or it is skipped.
+   */
   static prepare(data: ArrayData, degree: number, target: ShTarget = "ext"): ((i: number, coeffs: ArrayLike<number>) => void) | undefined {
     const d = shDegreeOf(degree);
     data.meta.ignoredShDegree = d && target === false ? d : 0;
@@ -287,7 +301,12 @@ export class Sh {
     return Sh.encoder(data);
   }
 
-  // The encoder of a per-splat bundle: (i, coeffs) writes splat i
+  /**
+   * Returns a function that writes splat i's coefficients to a per-splat
+   * bundle.
+   *
+   * @param [found=Sh.find(data.bundles)] The bundle.
+   */
   static encoder(data: ArrayData, found = Sh.find(data.bundles)): (i: number, coeffs: ArrayLike<number>) => void {
     if (!found) {
       throw new Error("No SH bundle");
@@ -310,8 +329,14 @@ export class Sh {
     };
   }
 
-  // The decoder of a per-splat bundle: (i, out) fills out with splat i's
-  // coefficients (out holds at least COEFFICIENTS[degree] * 3 values)
+  /**
+   * Returns a function that reads splat i's coefficients from a per-splat
+   * bundle.
+   *
+   * @param [found=Sh.find(data.bundles)] The bundle.
+   * @return The decoder, whose out holds at least COEFFICIENTS[degree] * 3
+   *   values.
+   */
   static decoder(data: ArrayData, found = Sh.find(data.bundles)): (i: number, out: Float32Array) => Float32Array {
     if (!found) {
       throw new Error("No SH bundle");
@@ -334,8 +359,14 @@ export class Sh {
     };
   }
 
-  // `data` with its SH in `codec` (at most `degree`): `data` itself when it
-  // already is, else a new ArrayData sharing every other bundle's arrays
+  /**
+   * Returns a table with its SH in another codec, sharing every other bundle's
+   * arrays.
+   *
+   * @param [options.degree] The highest degree to keep. By default the stored
+   *   degree.
+   * @return data itself when it already is in codec, else a new table.
+   */
   static convert(data: ArrayData, codec: ShCodecName, { degree }: { degree?: ShDegree } = {}): ArrayData {
     const found = Sh.find(data.bundles);
     if (!found) {
@@ -357,8 +388,12 @@ export class Sh {
     return out;
   }
 
-  // The SH color of `coeffs` along unit `dir` (object space, from the view
-  // to the splat) through `degree`, added to the base color by the caller
+  /**
+   * Evaluates the SH color of a direction, which the caller adds to the base
+   * color.
+   *
+   * @param dir A unit vector in object space, from the view to the splat.
+   */
   static evaluate(coeffs: ArrayLike<number>, dir: { x: number; y: number; z: number }, degree: number, out = [0, 0, 0]) {
     Sh.basis(dir, basis);
     out[0] = 0;
@@ -372,7 +407,12 @@ export class Sh {
     return out;
   }
 
-  // The 24 basis functions of bands 1-4 along unit `dir` (3DGS signs)
+  /**
+   * Evaluates the 24 basis functions of bands 1 to 4, with 3DGS signs.
+   *
+   * @param dir A unit vector.
+   * @return out.
+   */
   static basis<T extends Float64Array | Float32Array | number[] = Float64Array>(dir: { x: number; y: number; z: number }, out: T = new Float64Array(COEFFICIENTS[MAX_DEGREE]) as T): T {
     const { x, y, z } = dir;
     const xx = x * x;
@@ -393,7 +433,7 @@ export class Sh {
     out[12] = -0.4570458 * x * (4 * zz - xx - yy);
     out[13] = 1.4453057 * z * (xx - yy);
     out[14] = -0.5900436 * x * (xx - 3 * yy);
-    // Band 4 uses xx + yy + zz = 1: `dir` must be unit
+    // Band 4 uses xx + yy + zz = 1, so dir must be unit
     out[15] = 2.5033429 * x * y * (xx - yy);
     out[16] = -1.7701308 * y * z * (3 * xx - yy);
     out[17] = 0.9461747 * x * y * (7 * zz - 1);
@@ -412,7 +452,6 @@ const basis = new Float64Array(COEFFICIENTS[MAX_DEGREE]);
 const channelArrays = (bundle: ArrayBundle) => Object.values(bundle.channels).map((channel) => channel.data as Uint32Array);
 const channelRecord = (bundle: ArrayBundle) => Object.fromEntries(Object.entries(bundle.channels).map(([label, channel]) => [label, channel.data])) as Record<string, TypedArray>;
 
-// A new ArrayData sharing every bundle of `data` but `without`
 function shareBundles(data: ArrayData, without: string) {
   const out = new ArrayData({ count: data.count, capacity: data.capacity, meta: { ...data.meta } });
   for (const [name, bundle] of Object.entries(data.bundles)) {
@@ -425,14 +464,17 @@ function shareBundles(data: ArrayData, without: string) {
 
 const PALETTE = defineBundle({ shEntries: "uint32x4" });
 
-// A table of SH entries that splats pick by label (bundle shLabel in the
-// splat table): entry n is `stride` texels, elements n * stride .. in
-// channel shEntries, side by side in a texture row. The stride is the
-// codec's texels rounded up to a power of two, unless given.
+/**
+ * A table of SH entries that splats pick by shLabel.
+ *
+ * Entry n starts at texel n * stride of channel shEntries.
+ */
 export class ShPalette {
+  /** The bundle of the palette's table, named shPalette. */
   static readonly BUNDLE = PALETTE;
   readonly data: ArrayData<{ shPalette: typeof PALETTE }>;
 
+  /** Wraps a table with an shPalette bundle, throwing for any other. */
   constructor(data: ArrayData) {
     if (data.bundles.shPalette?.channels.shEntries?.format !== "uint32x4") {
       throw new Error("Not an SH palette: no shPalette.shEntries channel");
@@ -440,12 +482,21 @@ export class ShPalette {
     this.data = data as ArrayData<{ shPalette: typeof PALETTE }>;
   }
 
-  // The default stride of a codec's entries: its texels rounded up to a
-  // power of two (1 / 2 / 4 / 8 for degree 1 / 2 / 3 / 4)
+  /**
+   * Returns the default stride, the codec's texels rounded up to a power of
+   * two.
+   *
+   * @return The stride, in texels.
+   */
   static strideOf(codec: ShCodecName, degree: ShDegree) {
     return 2 ** Math.ceil(Math.log2(Sh.texels(codec, degree)));
   }
 
+  /**
+   * Makes an empty palette.
+   *
+   * @param [options.stride=ShPalette.strideOf(codec, degree)] Texels per entry.
+   */
   static create({ codec, degree, size, stride }: {
     codec: ShCodecName;
     degree: ShDegree;
@@ -461,6 +512,7 @@ export class ShPalette {
     return new ShPalette(data);
   }
 
+  /** The palette's codec, degree, size and stride, as stored. */
   get meta() {
     return this.data.bundles.shPalette.meta;
   }
@@ -477,6 +529,7 @@ export class ShPalette {
     return this.meta.size as number;
   }
 
+  /** Texels per entry. */
   get stride(): number {
     return this.meta.stride as number;
   }
@@ -485,15 +538,26 @@ export class ShPalette {
     return this.data.bundles.shPalette.channels.shEntries.data;
   }
 
+  /** Encodes entry n. */
   set(n: number, coeffs: ArrayLike<number>) {
     Sh.codec(this.codec).encode(coeffs, this.degree, this.words, n * this.stride * 4);
   }
 
+  /**
+   * Decodes entry n.
+   *
+   * @return out.
+   */
   get(n: number, out: Float32Array = new Float32Array(VALUES)): Float32Array {
     return Sh.codec(this.codec).decode(this.words, n * this.stride * 4, this.degree, out);
   }
 
-  // The same entries in another codec
+  /**
+   * Returns the same entries in another codec.
+   *
+   * @param [options.stride=ShPalette.strideOf(codec, this.degree)] Texels per
+   *   entry.
+   */
   convert(codec: ShCodecName, { stride }: { stride?: number } = {}): ShPalette {
     const out = ShPalette.create({ codec, degree: this.degree, size: this.size, stride });
     const coeffs = new Float32Array(VALUES);
@@ -503,7 +567,13 @@ export class ShPalette {
     return out;
   }
 
-  // Per-splat SH in `codec` for `labels` (one per splat), added to `data`
+  /**
+   * Adds per-splat SH to a table from one label per splat.
+   *
+   * @param labels The entry of each splat.
+   * @param [codec=this.codec] The codec's name.
+   * @return data.
+   */
   expand(data: ArrayData, labels: ArrayLike<number>, codec: ShCodecName = this.codec) {
     Sh.add(data, codec, this.degree);
     const encode = Sh.encoder(data);
@@ -514,9 +584,13 @@ export class ShPalette {
     return data;
   }
 
-  // `data` with per-splat SH in place of its shLabel bundle: a new
-  // ArrayData sharing every other bundle's arrays (`data` itself when it
-  // has no labels)
+  /**
+   * Returns a table with per-splat SH in place of its shLabel bundle, sharing
+   * every other bundle's arrays.
+   *
+   * @param [codec=this.codec] The codec's name.
+   * @return The new table, or data itself when it has no labels.
+   */
   expanded(data: ArrayData, codec: ShCodecName = this.codec): ArrayData {
     const labels = data.bundles.shLabel?.channels.label?.data;
     if (!labels) {

@@ -1,31 +1,3 @@
-// Zstandard frames (RFC 8878), for SPZ 4's streams. Decoding: Node's zlib
-// where it has zstd, DecompressionStream("zstd") where a browser has it,
-// else fzstd. Encoding: Node's zlib (at `level`), CompressionStream("zstd"),
-// else the encoder below: blocks of literals only (no matches), Huffman-coded
-// in four streams (code lengths up to 11, weights FSE-coded or direct), the
-// previous block's table reused (treeless) when that is cheaper, RLE or raw
-// blocks when those are smaller. Frames from different encoders differ in
-// bytes, never in what they decode to.
-//
-// Why the encoder codes literals only: SPZ's columns are mostly quantized
-// bytes that look nearly random, so there are few repeats for matches to
-// exploit, and coding each byte by its frequency already gets close to what
-// full compressors reach. We measured this on the splats viewer's samples and
-// SharedTestModels' SH files (2 GB of columns), with sizes relative to SPZ
-// v3's gzip:
-// - this encoder: +2.1%, at about 170 MB/s;
-// - Node's native zstd: +1.7% at level 3, -1.7% at level 12 (25 MB/s), and
-//   -4.9% at level 19 (2 MB/s).
-// We also tried adding matches (LZ77 sequences) to this encoder:
-// - matches at fixed offsets (byte runs, the previous records): +2.7%;
-// - a greedy hash-chain search, like gzip's: +3.6%, larger than literals
-//   alone, since short matches cost more bits than the cheap literals they
-//   replace;
-// - that search plus lazy matching, repeat offsets and tables fitted per
-//   block: -0.3%, about gzip's size, but at 5.5 MB/s (30 times slower) and
-//   with about 360 more lines (+10 KB in the core bundle).
-// None was worth its cost. Where file size matters, write SPZ v3 (gzip), or
-// write v4 from Node, where native zstd is used.
 import { decompress as fzstdDecompress } from "fzstd";
 import { pipe } from "./compress";
 
@@ -35,7 +7,7 @@ interface ZlibZstd {
   constants: { ZSTD_c_compressionLevel: number };
 }
 
-// Node's zstd level by default: a little smaller than gzip on SPZ columns
+// A little smaller than gzip on SPZ columns
 const LEVEL = 12;
 
 let zlib: ZlibZstd | null | undefined;
@@ -52,7 +24,7 @@ const streamSupport: { compress?: boolean; decompress?: boolean } = {};
 function streams(kind: "compress" | "decompress"): boolean {
   if (streamSupport[kind] === undefined) {
     try {
-      // The constructors throw on a format they don't know
+      // Throws on an unknown format
       void (kind === "compress" ? new CompressionStream("zstd" as CompressionFormat) : new DecompressionStream("zstd" as CompressionFormat));
       streamSupport[kind] = true;
     } catch {
@@ -62,16 +34,22 @@ function streams(kind: "compress" | "decompress"): boolean {
   return streamSupport[kind]!;
 }
 
-// A Node Buffer (perhaps a view into a pool) as a plain array of its own
+// A Node Buffer may view a shared pool
 function own(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength && bytes.buffer instanceof ArrayBuffer
     ? new Uint8Array(bytes.buffer)
     : new Uint8Array(bytes);
 }
 
+/** Zstandard compression, with the platform's zstd where it has one. */
 export class Zstd {
-  // One or more frames of exactly `size` bytes in all; `native: false`
-  // decodes with fzstd
+  /**
+   * Decodes one or more frames.
+   *
+   * @param size The decoded size in bytes, which must match.
+   * @param [options.native=true] Whether to try the platform's zstd before
+   *   fzstd.
+   */
   static async decompress(bytes: Uint8Array, size: number, { native = true }: { native?: boolean } = {}): Promise<Uint8Array<ArrayBuffer>> {
     const zstd = native ? nodeZstd() : null;
     let out: Uint8Array;
@@ -90,8 +68,13 @@ export class Zstd {
     return own(out);
   }
 
-  // One frame; `level` (1 to 22) is Node's zstd level; `native: false` uses
-  // the encoder below
+  /**
+   * Encodes bytes as one frame.
+   *
+   * @param [options.native=true] Whether to try the platform's zstd before
+   *   Radix's encoder.
+   * @param [options.level=12] Node's zstd level, from 1 to 22.
+   */
   static async compress(bytes: Uint8Array, { native = true, level = LEVEL }: { native?: boolean; level?: number } = {}): Promise<Uint8Array<ArrayBuffer>> {
     const zstd = native ? nodeZstd() : null;
     if (zstd) {
@@ -106,13 +89,12 @@ export class Zstd {
 
 const BLOCK = 1 << 17;
 const MAX_BITS = 11;
-// Weights FSE-coded at this accuracy (the format's limit for them)
+// The format's limit for FSE-coded weights
 const WEIGHT_LOG = 6;
-// Smaller blocks are stored raw (four streams need a few bytes each)
+// Smaller blocks are stored raw, as four streams cost a few bytes each
 const MIN_HUFFMAN = 64;
 
-// Bits from the lowest up, bytes in order; close() ends a backward stream
-// with its 1 marker bit
+// Bits from the lowest up. close() adds a backward stream's 1 marker bit.
 class BitWriter {
   bytes: Uint8Array;
   pos: number;
@@ -135,7 +117,6 @@ class BitWriter {
     }
   }
 
-  // The last partial byte; returns the end
   flush() {
     if (this.n > 0) {
       this.bytes[this.pos++] = this.acc & 0xff;
@@ -151,8 +132,7 @@ class BitWriter {
   }
 }
 
-// Optimal code lengths limited to MAX_BITS (Huffman, then JPEG's Annex K
-// rebalancing); lengths[s] 0 for absent symbols; returns the longest
+// Huffman code lengths, limited to MAX_BITS by JPEG's Annex K rebalancing
 function huffmanLengths(counts: Uint32Array, lengths: Uint8Array): number {
   lengths.fill(0);
   const syms: number[] = [];
@@ -212,8 +192,7 @@ function huffmanLengths(counts: Uint32Array, lengths: Uint8Array): number {
   return max;
 }
 
-// Canonical codes as the decoder builds them: symbols by increasing weight,
-// then value, each taking 2^(weight - 1) slots of a 2^maxBits table
+// Canonical codes in the decoder's order: by increasing weight, then value
 function huffmanCodes(lengths: Uint8Array, maxBits: number, codes: Uint16Array) {
   let slot = 0;
   for (let len = maxBits; len >= 1; len -= 1) {
@@ -229,8 +208,7 @@ function huffmanCodes(lengths: Uint8Array, maxBits: number, codes: Uint16Array) 
 
 const highBit = (v: number) => 31 - Math.clz32(v);
 
-// The weights' FSE description and two-state bitstream, or undefined when
-// FSE cannot code them (a single distinct weight) or they don't fit 127 B
+// FSE-coded weights. Undefined for a single distinct weight or over 127 bytes.
 function fseWeights(weights: Uint8Array, count: number, out: Uint8Array, at: number): number | undefined {
   const size = 1 << WEIGHT_LOG;
   const freq = new Uint32Array(MAX_BITS + 1);
@@ -363,9 +341,8 @@ function fseWeights(weights: Uint8Array, count: number, out: Uint8Array, at: num
   return end;
 }
 
-// The tree description: weights of symbols 0 .. last - 1 (the last one's is
-// implied), FSE-coded or 4 bits each, whichever is smaller; undefined when
-// neither fits
+// Weights of all symbols but the last, whose weight is implied, FSE-coded or
+// 4 bits each, whichever is smaller
 function treeDescription(lengths: Uint8Array, maxBits: number, out: Uint8Array, at: number): number | undefined {
   let last = 255;
   while (lengths[last] === 0) {
@@ -400,8 +377,8 @@ function writeLE(out: Uint8Array, at: number, value: number, bytes: number) {
   }
 }
 
-// One frame: magic, a 128 KB window (no matches reach back), the content
-// size, then blocks
+// An RFC 8878 frame: magic, a 128 KB window, the content size, then RLE, raw or
+// Huffman blocks. It codes literals only, since SPZ's columns have few repeats.
 function encodeFrame(src: Uint8Array): Uint8Array<ArrayBuffer> {
   const blocks = Math.max(1, Math.ceil(src.byteLength / BLOCK));
   const out = new Uint8Array(14 + src.byteLength + blocks * 3);
@@ -455,9 +432,7 @@ function encodeFrame(src: Uint8Array): Uint8Array<ArrayBuffer> {
   return out.slice(0, at);
 }
 
-// A compressed block of literals and no sequences into `block`: its size (0
-// when Huffman can't code it), and whether it wrote a new table (left in
-// lengths and codes)
+// Returns its size, 0 if Huffman can't code it, and whether lengths and codes hold a new table
 function compressBlock(
   lit: Uint8Array, counts: Uint32Array, lengths: Uint8Array, codes: Uint16Array,
   prevLengths: Uint8Array, prevCodes: Uint16Array, hasPrev: boolean, block: Uint8Array,
@@ -485,7 +460,7 @@ function compressBlock(
   const useLengths = treeless ? prevLengths : lengths;
   const useCodes = treeless ? prevCodes : codes;
 
-  // Header (at most 5 B) written last, once the sizes are known
+  // The header, at most 5 bytes, goes in last
   const headerMax = 5;
   let at = headerMax;
   if (!treeless) {

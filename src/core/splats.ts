@@ -7,132 +7,148 @@ import { SplatMath, type Cov, type Quat, type Rgb, type Vec3 } from "./math";
 import type { Progress } from "./progress";
 import type { ShPalette, ShTarget } from "./sh";
 
-// CPU splat codecs. Bit layouts (A and B are uint32x4, one per splat):
-//
-// ext (32 B):
-//   A.xyz  center as float32
-//   A.w    normal, Oct24 (0 = none) | LoD opacity byte << 24
-//   B.x    ext rgb (Encoding.encodeExtRgb)
-//   B.y    half(ln sx) | half(ln sy) << 16
-//   B.z    half(ln sz) | roughness unorm8 << 16 | metallic unorm8 << 24
-//   B.w    quaternion, QuatOct32: axis oct 10 + 10 | angle 12 bits << 20.
-//          The angle gets the most bits for splats that sit near identity
-//          and turn slightly: the axis error scales with sin(angle / 2), so
-//          small turns are as fine as the angle step (pi / 4095).
-//          Axis-aligned splats benefit when stored as a small turn from
-//          identity with their scales permuted; near a quarter turn the
-//          axis decides.
-// cov (32 B): A and B.x as ext; B.y half(ln xx) | half(ln yy) << 16,
-//   B.z half(ln zz) | half(c_xy) << 16, B.w half(c_xz) | half(c_yz) << 16,
-//   with c = sign * ln|correlation|. No roughness or metallic.
-// packed (16 B):
-//   x  rgb over [rgbMin, rgbMax] and opacity as unorm8
-//   y  half(cx) | half(cy) << 16
-//   z  half(cz) | axis oct 8 + 8 << 16 (QuatOct24)
-//   w  three log8 scales over [lnScaleMin, lnScaleMax] (0 = zero) | angle8 << 24
-//   No normal, roughness or metallic.
-//
-// Two layers over the same bits: Splats.load / store / loadPbr / storePbr /
-// loadCenter take any bundle whose type allows them (the standard 3DGS
-// fields for every layout, PBR for ext only); Splats.encode* / decode* read
-// or write every word of one splat of one layout.
-
-// The standard 3DGS fields, stored by every layout
+/** The 3DGS fields that every layout stores. */
 export interface Splat {
   center: Vec3;
+  /** The scales along the splat's own axes. */
   scales: Vec3;
   quaternion: Quat;
+  /** The base color. */
   rgb: Rgb;
-  // 1 = opaque; up to 255 / 128 in ext and cov (LoD)
+  /** The opacity, where 1 is opaque, up to 255 / 128 in ext and cov. */
   opacity: number;
 }
 
-// Ext splats only
+/** The PBR fields, which only ext splats store. */
 export interface Pbr {
-  // Unit, or zero for none
+  /** The normal, a unit vector or zero for none. */
   normal: Vec3;
-  // Perceptual, 0..1
+  /** The perceptual roughness, from 0 to 1. */
   roughness: number;
+  /** The metalness, from 0 to 1. */
   metallic: number;
 }
 
+/** The fields of an ext splat. */
 export type ExtSplat = Splat & Pbr;
 
+/** The fields of a cov splat. */
 export interface CovSplat {
   center: Vec3;
   cov: Cov;
+  /** The base color. */
   rgb: Rgb;
+  /** The opacity, where 1 is opaque, up to 255 / 128. */
   opacity: number;
+  /** The normal, a unit vector or zero for none. */
   normal: Vec3;
 }
 
 const EXT = defineBundle({ extA: "uint32x4", extB: "uint32x4" });
 const COV = defineBundle({ covA: "uint32x4", covB: "uint32x4" });
-// meta.encoding: a PackedEncoding (defaults below)
 const PACKED = defineBundle({ packed: "uint32x4" });
-// A LoD tree beside the splats, one node per splat: x = child count,
-// y = first child's index
 const LOD_TREE = defineBundle({ node: "uint32x2" });
-// A layout's name is also its standard bundle name: data.bundles.extSplats
 const LAYOUTS = { extSplats: EXT, covSplats: COV, packedSplats: PACKED } as const;
 
+/** A bundle of ext splats. */
 export type ExtSplats = ArrayBundle<typeof EXT>;
+/** A bundle of cov splats. */
 export type CovSplats = ArrayBundle<typeof COV>;
+/** A bundle of packed splats. */
 export type PackedSplats = ArrayBundle<typeof PACKED>;
+/** A bundle of splats in any layout. */
 export type SplatBundle = ExtSplats | CovSplats | PackedSplats;
+/** The name of a splat layout, which is also its standard bundle name. */
 export type SplatLayout = keyof typeof LAYOUTS;
+/** The splat bundles, by standard name. */
 export interface SplatBundles {
   extSplats: ExtSplats;
   covSplats: CovSplats;
   packedSplats: PackedSplats;
 }
 
+/** The ranges of the packed layout's 8-bit color and ln scale codes. */
 export interface PackedEncoding {
+  /**
+   * The lowest color.
+   *
+   * @default 0
+   */
   rgbMin: number;
+  /**
+   * The highest color.
+   *
+   * @default 1
+   */
   rgbMax: number;
+  /**
+   * The lowest ln scale.
+   *
+   * @default -12
+   */
   lnScaleMin: number;
+  /**
+   * The highest ln scale.
+   *
+   * @default 9
+   */
   lnScaleMax: number;
 }
 
 const DEFAULT_PACKED_ENCODING: PackedEncoding = { rgbMin: 0, rgbMax: 1, lnScaleMin: -12, lnScaleMax: 9 };
 
-// ArrayData with the splats of layout L in the bundle of that name
-// (data.bundles.extSplats); other bundles, such as lodTree, may sit beside
+/** An ArrayData with splats of layout L in the bundle named L. */
 export type SplatData<L extends SplatLayout = "extSplats"> = ArrayData<{ [K in L]: (typeof LAYOUTS)[K] }>;
 
-// Where splats go when made or loaded. `encoding` is for packedSplats: the
-// color and scale ranges of its 8-bit codes (default: the source's
-// encoding when it has one, else Splats.DEFAULT_PACKED_ENCODING)
+/** The layout to make or load splats in. */
 export interface SplatTarget<L extends SplatLayout = SplatLayout> {
+  /**
+   * The layout.
+   *
+   * @default "extSplats"
+   */
   layout?: L;
+  /**
+   * For packedSplats, the ranges of its codes.
+   *
+   * @default the source's encoding, else Splats.DEFAULT_PACKED_ENCODING
+   */
   encoding?: Partial<PackedEncoding>;
 }
 
-// Options of the splat file readers: the layout to read into (default
-// extSplats), for packedSplats its encoding, `sh`, what to do with
-// spherical harmonics (a codec, default "ext"; false skips them; RDX keeps
-// its stored codec unless `sh` is given), and `coordinateSystem`, the axes
-// to convert to (SPZ, whose files say what theirs are; default: as stored)
+/** Options of the splat file readers. */
 export type SplatReadOptions<L extends SplatLayout = "extSplats"> = SplatTarget<L> & {
+  /** Called with the progress of the read. */
   progress?: Progress;
+  /**
+   * The codec SH is stored in, or false to skip it.
+   *
+   * @default "ext", or the stored codec for RDX
+   */
   sh?: ShTarget;
+  /**
+   * The axes SPZ files are converted to.
+   *
+   * @default the axes the file is stored in
+   */
   coordinateSystem?: CoordinateSystem;
 };
 
-// A loaded file: its splats and, when its SH is a palette (RAD's clustered
-// SH: bundle shLabel in the splats), the palette
+/** A loaded file's splats, and its SH palette when it has one. */
 export interface LoadedSplats<L extends SplatLayout = "extSplats"> {
   splats: SplatData<L>;
+  /** The SH palette, when the file's SH is clustered. */
   shPalette?: ShPalette;
 }
 
+/** A splat bundle, as Splats.find returns it. */
 export interface FoundSplats {
   name: string;
   layout: SplatLayout;
   bundle: SplatBundle;
 }
 
-// Anything with named channels of formats: an ArrayBundle or a GpuBundle
+/** Anything with named channels of formats, as ArrayBundle and GpuBundle have. */
 export interface BundleLike {
   channels: Record<string, { format: string } | undefined>;
 }
@@ -143,15 +159,14 @@ function hasLayout(bundle: BundleLike, layout: SplatLayout) {
   return labels.length === Object.keys(bundle.channels).length && labels.every((label) => bundle.channels[label]?.format === channels[label]);
 }
 
-// One property check per call; the type already fixed the formats
+// One property check, since the type already fixed the formats
 const isExtBundle = (bundle: SplatBundle): bundle is ExtSplats => "extA" in bundle.channels;
 const isCovBundle = (bundle: SplatBundle): bundle is CovSplats => "covA" in bundle.channels;
 
 const lnHalf = (v: number) => Encoding.encodeHalf(Math.log(v));
 const expHalf = (h: number) => Math.exp(Encoding.decodeHalf(h));
 
-// --- Word A, shared by ext and cov (f: the same words as floats) ---
-
+// Word A of ext and cov, f being its floats
 function storeA(a: Uint32Array, f: Float32Array, i4: number, center: Vec3, opacity: number) {
   f[i4] = center.x;
   f[i4 + 1] = center.y;
@@ -170,7 +185,6 @@ function loadCenterA(f: Float32Array, i4: number, out: Vec3) {
   return out;
 }
 
-// --- Ext ---
 
 function storeExtFields(a: Uint32Array, f: Float32Array, b: Uint32Array, i4: number, s: Splat) {
   storeA(a, f, i4, s.center, s.opacity);
@@ -216,10 +230,8 @@ function decodeExtWords(a: Uint32Array, f: Float32Array, b: Uint32Array, i4: num
   return out;
 }
 
-// --- Cov ---
 
-// Correlation c = xy / sqrt(xx yy) as sign(c) * ln|c|, so values near +-1
-// keep their precision in a half float
+// sign(c) * ln|c| keeps correlations near +-1 precise in a half float
 function encodeCorrelation(value: number, a: number, b: number) {
   const c = Math.max(-1, Math.min(1, value / Math.sqrt(a * b)));
   if (c === 0 || !Number.isFinite(c)) {
@@ -266,8 +278,7 @@ function decodeCovWords(a: Uint32Array, f: Float32Array, b: Uint32Array, i4: num
   return out;
 }
 
-// --- Packed: a codec per encoding, its constants computed once ---
-
+// One codec per packed encoding, its constants computed once
 function packedCodec({ rgbMin, rgbMax, lnScaleMin, lnScaleMax }: PackedEncoding) {
   const rgbRange = rgbMax - rgbMin;
   const lnStep = (lnScaleMax - lnScaleMin) / 254;
@@ -324,31 +335,44 @@ const covScratch: CovSplat = {
   center: { x: 0, y: 0, z: 0 }, cov: { xx: 1, yy: 1, zz: 1, xy: 0, xz: 0, yz: 0 }, rgb: { r: 1, g: 1, b: 1 }, opacity: 1, normal: { x: 0, y: 0, z: 0 },
 };
 
-// Splat tables of any layout and the CPU codecs of each: made for a layout,
-// found in any data, converted between layouts, read and written one splat
-// at a time. GpuSplats is the TSL twin of the codecs.
+/**
+ * Reads, writes, finds and converts splat tables of any layout on the CPU,
+ * matching GpuSplats.
+ *
+ * Methods that take a bundle are typed by it, so they accept only the layouts
+ * that store what they read.
+ */
 export class Splats {
   static readonly EXT = EXT;
   static readonly COV = COV;
+  /** The packed layout's bundle, which keeps its PackedEncoding in meta.encoding. */
   static readonly PACKED = PACKED;
+  /**
+   * A LoD tree in bundle lodTree, one node per splat holding its child count
+   * and first child's index.
+   */
   static readonly LOD_TREE = LOD_TREE;
   static readonly LAYOUTS = LAYOUTS;
+  /** Colors from 0 to 1 and ln scales from -12 to 9. */
   static readonly DEFAULT_PACKED_ENCODING: Readonly<PackedEncoding> = DEFAULT_PACKED_ENCODING;
 
-  // --- Plain splat records ---
 
+  /** Makes a unit splat at the origin, white and opaque. */
   static makeSplat(): Splat {
     return { center: { x: 0, y: 0, z: 0 }, scales: { x: 1, y: 1, z: 1 }, quaternion: { x: 0, y: 0, z: 0, w: 1 }, rgb: { r: 1, g: 1, b: 1 }, opacity: 1 };
   }
 
+  /** Makes PBR fields with no normal, roughness 1 and metallic 0. */
   static makePbr(): Pbr {
     return { normal: { x: 0, y: 0, z: 0 }, roughness: 1, metallic: 0 };
   }
 
+  /** Makes an ext splat with the fields of makeSplat and makePbr. */
   static makeExtSplat(): ExtSplat {
     return { ...Splats.makeSplat(), ...Splats.makePbr() };
   }
 
+  /** Makes a unit cov splat at the origin, white and opaque, with no normal. */
   static makeCovSplat(): CovSplat {
     return {
       center: { x: 0, y: 0, z: 0 }, cov: { xx: 1, yy: 1, zz: 1, xy: 0, xz: 0, yz: 0 }, rgb: { r: 1, g: 1, b: 1 },
@@ -356,34 +380,41 @@ export class Splats {
     };
   }
 
-  // --- Bundles and tables ---
 
+  /** Returns a packed bundle's encoding with the defaults filled in. */
   static packedEncodingOf(bundle: { meta: Record<string, unknown> }): PackedEncoding {
     return { ...DEFAULT_PACKED_ENCODING, ...(bundle.meta.encoding as Partial<PackedEncoding> | undefined) };
   }
 
+  /** Checks whether a bundle has the ext layout's channels. */
   static isExt(bundle: ArrayBundle): bundle is ExtSplats {
     return hasLayout(bundle, "extSplats");
   }
 
+  /** Checks whether a bundle has the cov layout's channels. */
   static isCov(bundle: ArrayBundle): bundle is CovSplats {
     return hasLayout(bundle, "covSplats");
   }
 
+  /** Checks whether a bundle has the packed layout's channels. */
   static isPacked(bundle: ArrayBundle): bundle is PackedSplats {
     return hasLayout(bundle, "packedSplats");
   }
 
-  // The layout of a bundle by its channel names and formats
+  /** Returns the layout of a splat bundle. */
   static layoutOf(bundle: SplatBundle): SplatLayout;
+  /** Returns a bundle's layout, by its channel names and formats. */
   static layoutOf(bundle: BundleLike): SplatLayout | undefined;
   static layoutOf(bundle: BundleLike): SplatLayout | undefined {
     return (Object.keys(LAYOUTS) as SplatLayout[]).find((layout) => hasLayout(bundle, layout));
   }
 
-  // The splat bundle among `bundles` (of an ArrayData or GpuArrays):
-  // `name` when given, else the standard names first, then any bundle of a
-  // splat layout
+  /**
+   * Finds the splat bundle among the bundles of an ArrayData or GpuArrays.
+   *
+   * @param [name] The bundle to check. Without it, the standard names come
+   *   first, then any bundle of a splat layout.
+   */
   static findBundle(bundles: Record<string, BundleLike>, name?: string): { name: string; layout: SplatLayout } | undefined {
     const names = name !== undefined ? [name] : [...Object.keys(LAYOUTS), ...Object.keys(bundles)];
     for (const candidate of names) {
@@ -396,13 +427,13 @@ export class Splats {
     return undefined;
   }
 
-  // The splat bundle of `data` (as findBundle), or undefined
+  /** Finds a table's splat bundle, as findBundle does. */
   static find(data: ArrayData, name?: string): FoundSplats | undefined {
     const found = Splats.findBundle(data.bundles, name);
     return found && { ...found, bundle: data.bundles[found.name] as unknown as SplatBundle };
   }
 
-  // The splat bundle of `data`; throws when there is none
+  /** Gets a table's splat bundle as findBundle finds it, throwing when there is none. */
   static get(data: ArrayData, name?: string): FoundSplats {
     const found = Splats.find(data, name);
     if (!found) {
@@ -411,20 +442,20 @@ export class Splats {
     return found;
   }
 
-  // The tree beside the splats, when the data has one
+  /** Finds the lodTree bundle beside the splats. */
   static findLodTree(data: ArrayData): ArrayBundle<typeof LOD_TREE> | undefined {
     const bundle = data.bundles.lodTree;
     return bundle?.channels.node?.format === "uint32x2" ? (bundle as ArrayBundle<typeof LOD_TREE>) : undefined;
   }
 
-  // Adds an empty splat bundle of `layout` (default extSplats), named after it
+  /** Adds an empty splat bundle named after its layout. */
   static add(data: ArrayData, { layout = "extSplats", encoding }: SplatTarget = {}): SplatBundle {
     const meta = layout === "packedSplats" ? { encoding: { ...DEFAULT_PACKED_ENCODING, ...encoding } } : {};
     data.addBundle(layout, LAYOUTS[layout] as BundleDef, { meta });
     return data.bundles[layout] as unknown as SplatBundle;
   }
 
-  // Empty splats of `layout` in a new ArrayData of `count` elements
+  /** Makes a table of empty splats. */
   static make<L extends SplatLayout = "extSplats">(count: number, { meta, ...target }: SplatTarget<L> & {
     meta?: Record<string, unknown>;
   } = {}): SplatData<L> {
@@ -433,9 +464,14 @@ export class Splats {
     return data as unknown as SplatData<L>;
   }
 
-  // `data` with its splats in `layout` (packed: in `encoding`, default the
-  // source's): `data` itself when they already are, else a new ArrayData
-  // sharing every other bundle's arrays
+  /**
+   * Returns a table with its splats in another layout, sharing every other
+   * bundle's arrays.
+   *
+   * @param target The layout, and for packedSplats the encoding, by default the
+   *   source's.
+   * @return data itself when it already is in the layout, else a new table.
+   */
   static convert<L extends SplatLayout>(data: ArrayData, { layout, encoding }: SplatTarget<L> & { layout: L }): SplatData<L> {
     const found = Splats.get(data);
     const source = found.layout === "packedSplats" ? Splats.packedEncodingOf(found.bundle) : undefined;
@@ -466,39 +502,64 @@ export class Splats {
     return out as unknown as SplatData<L>;
   }
 
-  // --- One layout's words ---
 
+  /** Writes every field of an ext splat. */
   static encodeExt(bundle: ExtSplats, i: number, s: ExtSplat) {
     const { a, f, b } = extWords(bundle);
     encodeExtWords(a, f, b, i * 4, s);
   }
 
+  /**
+   * Reads every field of an ext splat.
+   *
+   * @return out.
+   */
   static decodeExt(bundle: ExtSplats, i: number, out: ExtSplat): ExtSplat {
     const { a, f, b } = extWords(bundle);
     return decodeExtWords(a, f, b, i * 4, out);
   }
 
+  /** Writes every field of a cov splat. */
   static encodeCov(bundle: CovSplats, i: number, c: CovSplat) {
     const { a, f, b } = covWords(bundle);
     encodeCovWords(a, f, b, i * 4, c);
   }
 
+  /**
+   * Reads every field of a cov splat.
+   *
+   * @return out.
+   */
   static decodeCov(bundle: CovSplats, i: number, out: CovSplat): CovSplat {
     const { a, f, b } = covWords(bundle);
     return decodeCovWords(a, f, b, i * 4, out);
   }
 
+  /**
+   * Writes a packed splat.
+   *
+   * @param [encoding=Splats.packedEncodingOf(bundle)] The ranges of its codes.
+   */
   static encodePacked(bundle: PackedSplats, i: number, s: Splat, encoding = Splats.packedEncodingOf(bundle)) {
     packedCodec(encoding).encode(bundle.channels.packed.data, i * 4, s);
   }
 
+  /**
+   * Reads a packed splat.
+   *
+   * @param [encoding=Splats.packedEncodingOf(bundle)] The ranges of its codes.
+   * @return out.
+   */
   static decodePacked(bundle: PackedSplats, i: number, out: Splat, encoding = Splats.packedEncodingOf(bundle)): Splat {
     return packedCodec(encoding).decode(bundle.channels.packed.data, i * 4, out);
   }
 
-  // --- Any layout, by the bundle's type ---
 
-  // The standard 3DGS fields of splat i (cov splats are diagonalized)
+  /**
+   * Reads the 3DGS fields of a splat in any layout, diagonalizing cov splats.
+   *
+   * @return out.
+   */
   static load(bundle: SplatBundle, i: number, out: Splat): Splat {
     if (isExtBundle(bundle)) {
       const { a, f, b } = extWords(bundle);
@@ -510,7 +571,7 @@ export class Splats {
     return Splats.decodePacked(bundle, i, out);
   }
 
-  // Writes the standard 3DGS fields; ext keeps its PBR bits, cov its normal
+  /** Writes the 3DGS fields of a splat in any layout, keeping ext's PBR bits and cov's normal. */
   static store(bundle: SplatBundle, i: number, s: Splat) {
     if (isExtBundle(bundle)) {
       const { a, f, b } = extWords(bundle);
@@ -523,15 +584,25 @@ export class Splats {
     }
   }
 
+  /**
+   * Reads the PBR fields of an ext splat.
+   *
+   * @return out.
+   */
   static loadPbr(bundle: ExtSplats, i: number, out: Pbr): Pbr {
     return loadExtPbr(bundle.channels.extA.data, bundle.channels.extB.data, i * 4, out);
   }
 
-  // Writes the PBR fields; keeps the 3DGS bits
+  /** Writes the PBR fields of an ext splat, keeping its 3DGS bits. */
   static storePbr(bundle: ExtSplats, i: number, p: Pbr) {
     storeExtPbr(bundle.channels.extA.data, bundle.channels.extB.data, i * 4, p);
   }
 
+  /**
+   * Reads the center of a splat in any layout.
+   *
+   * @return out.
+   */
   static loadCenter(bundle: SplatBundle, i: number, out: Vec3): Vec3 {
     if (isExtBundle(bundle)) {
       return loadCenterA(Encoding.floatView(bundle.channels.extA.data), i * 4, out);
@@ -546,9 +617,10 @@ export class Splats {
     return out;
   }
 
-  // The encoder of the bundle's layout, made once for a loop over splats:
-  // (i, s) writes every field the layout stores (ext all of them, cov the
-  // covariance and normal, packed the 3DGS fields in its encoding)
+  /**
+   * Returns a function that writes every field the layout stores, made once for
+   * a loop over splats.
+   */
   static encoder(bundle: SplatBundle): (i: number, s: ExtSplat) => void {
     if (isExtBundle(bundle)) {
       const { a, f, b } = extWords(bundle);
@@ -570,8 +642,11 @@ export class Splats {
     return (i, s) => codec.encode(data, i * 4, s);
   }
 
-  // The decoder of the bundle's layout: (i, out) fills every field, with the
-  // defaults for those the layout lacks (no normal, roughness 1, metallic 0)
+  /**
+   * Returns a function that reads every field of a splat, made once for a loop
+   * over splats, with no normal, roughness 1 and metallic 0 where the layout
+   * lacks them.
+   */
   static decoder(bundle: SplatBundle): (i: number, out: ExtSplat) => ExtSplat {
     if (isExtBundle(bundle)) {
       const { a, f, b } = extWords(bundle);
@@ -598,9 +673,12 @@ export class Splats {
     return (i, out) => noPbr(codec.decode(data, i * 4, out) as ExtSplat);
   }
 
-  // --- Conversions ---
 
-  // The covariance of s; out.normal is left as is
+  /**
+   * Converts a splat to its covariance form, leaving out.normal as is.
+   *
+   * @return out.
+   */
   static toCov(s: Splat, out: CovSplat): CovSplat {
     out.center.x = s.center.x;
     out.center.y = s.center.y;
@@ -613,7 +691,11 @@ export class Splats {
     return out;
   }
 
-  // Diagonalizes the covariance; the normal is dropped
+  /**
+   * Diagonalizes a cov splat into scales and a rotation, dropping its normal.
+   *
+   * @return out.
+   */
   static fromCov(c: CovSplat, out: Splat): Splat {
     const { values, basis } = SplatMath.symEigens(c.cov);
     out.center.x = c.center.x;

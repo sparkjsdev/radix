@@ -2,19 +2,21 @@ import { defineBundle, type BundleDef, type Schema } from "./bundles";
 import { ArrayFormats, type ArrayFormat, type ArrayOf, type TypedArray } from "./formats";
 import { TextureLayout } from "./layout";
 
-// data holds capacity * components scalars. Distributive over F, so a typed
-// ArrayData is usable wherever ArrayData is expected.
+// Distributive, so a typed ArrayData fits where ArrayData is expected
+/** A typed-array column of capacity * components scalars. */
 export type ArrayChannel<F extends ArrayFormat = ArrayFormat> = F extends ArrayFormat ? { format: F; data: ArrayOf<F> } : never;
 
+/** A bundle of an ArrayData. */
 export interface ArrayBundle<D extends BundleDef = BundleDef> {
   def: D;
   channels: { [K in keyof D["channels"]]: ArrayChannel<D["channels"][K]> };
   meta: Record<string, unknown>;
 }
 
+/** The bundles of an ArrayData, by name. */
 export type ArrayBundles<S extends Schema> = { [K in keyof S]: ArrayBundle<S[K]> };
 
-// Plain-object form of an ArrayData for postMessage (arrays shared, not copied)
+/** An ArrayData as a plain object, for postMessage. */
 export interface TransferableArrayData {
   count: number;
   capacity: number;
@@ -22,17 +24,31 @@ export interface TransferableArrayData {
   bundles: Record<string, { def: BundleDef; meta: Record<string, unknown>; channels: Record<string, TypedArray> }>;
 }
 
-// A table: `count` valid rows (elements) of `capacity`, in named bundles of
-// named channels (typed-array columns)
+/**
+ * A table of elements, stored as typed-array channels in named bundles.
+ *
+ * Every bundle has count valid rows out of capacity.
+ */
 export class ArrayData<S extends Schema = Schema> {
-  // A list of element indices, 4 per uint32x4 texel: a draw order, a subset
+  /** The bundle of element index lists, such as draw orders and subsets. */
   static readonly INDICES = defineBundle({ index: "uint32" }, { packing: 4 });
 
+  /** The number of valid rows. */
   count: number;
+  /** The number of allocated rows. */
   capacity: number;
   bundles: ArrayBundles<S>;
+  /** The table's own metadata, which RDX files save. */
   meta: Record<string, unknown>;
 
+  /**
+   * Makes a table.
+   *
+   * @param [options.count=0] The number of valid rows.
+   * @param [options.capacity=TextureLayout.alignCapacity(count)] The number of
+   *   allocated rows.
+   * @param [options.meta={}] The table's metadata.
+   */
   constructor({ bundles, count = 0, capacity, meta = {} }: {
     bundles?: S;
     count?: number;
@@ -52,8 +68,13 @@ export class ArrayData<S extends Schema = Schema> {
     }
   }
 
-  // `data` arrays are used as given when they hold capacity elements, else
-  // copied into a new array of that size
+  /**
+   * Adds a bundle.
+   *
+   * @param [init.data] Arrays by channel name. Arrays that hold capacity
+   *   elements are used as given, and shorter ones are copied.
+   * @return This table, typed with the new bundle.
+   */
   addBundle<N extends string, D extends BundleDef>(name: N, def: D, init: {
     data?: Partial<Record<keyof D["channels"], TypedArray>>;
     meta?: Record<string, unknown>;
@@ -82,6 +103,11 @@ export class ArrayData<S extends Schema = Schema> {
     return this as unknown as ArrayData<S & Record<N, D>>;
   }
 
+  /**
+   * Removes a bundle.
+   *
+   * @return Whether the bundle was there.
+   */
   removeBundle(name: string) {
     if (!(name in this.bundles)) {
       return false;
@@ -90,7 +116,11 @@ export class ArrayData<S extends Schema = Schema> {
     return true;
   }
 
-  // Resize every channel, keeping contents; count is clamped to the capacity
+  /**
+   * Resizes every channel, keeping its contents, and clamps count.
+   *
+   * @return Whether the capacity changed.
+   */
   setCapacity(capacity: number) {
     if (capacity === this.capacity) {
       return false;
@@ -110,7 +140,11 @@ export class ArrayData<S extends Schema = Schema> {
     return true;
   }
 
-  // Grow (at least doubling, whole rows) to hold `capacity` elements
+  /**
+   * Grows every channel to hold a number of rows, at least doubling.
+   *
+   * @return Whether it grew.
+   */
   ensureCapacity(capacity: number) {
     if (capacity <= this.capacity) {
       return false;
@@ -118,7 +152,15 @@ export class ArrayData<S extends Schema = Schema> {
     return this.setCapacity(TextureLayout.alignCapacity(Math.max(capacity, this.capacity * 2)));
   }
 
-  // Copy elements of matching bundles (default: all bundles both have)
+  /**
+   * Copies rows of another table, growing this one as needed.
+   *
+   * @param [options.bundles] The bundles to copy. By default every bundle both
+   *   tables have.
+   * @param [options.srcStart=0] The first row to copy.
+   * @param [options.dstStart=0] The row to copy to.
+   * @param [options.count=src.count - srcStart] The number of rows.
+   */
   copyFrom(src: ArrayData, { bundles, srcStart = 0, dstStart = 0, count = src.count - srcStart }: {
     bundles?: string[];
     srcStart?: number;
@@ -153,6 +195,7 @@ export class ArrayData<S extends Schema = Schema> {
     this.count = Math.max(this.count, dstStart + count);
   }
 
+  /** Makes a deep copy. */
   clone(): ArrayData<S> {
     const copy = new ArrayData<S>({ count: this.count, capacity: this.capacity, meta: structuredClone(this.meta) });
     for (const [name, bundle] of Object.entries(this.anyBundles)) {
@@ -162,7 +205,7 @@ export class ArrayData<S extends Schema = Schema> {
     return copy;
   }
 
-  // Swap contents with `other` (double buffering)
+  /** Swaps contents with another table, for double buffering. */
   swap(other: ArrayData<S>) {
     [this.count, other.count] = [other.count, this.count];
     [this.capacity, other.capacity] = [other.capacity, this.capacity];
@@ -170,8 +213,11 @@ export class ArrayData<S extends Schema = Schema> {
     [this.meta, other.meta] = [other.meta, this.meta];
   }
 
-  // The arrays are shared, not copied: pass transferables(t) to postMessage
-  // and this ArrayData is unusable until setFromTransferable
+  /**
+   * Returns the table as a plain object holding the same arrays. Once
+   * postMessage transfers them, this table is unusable until
+   * setFromTransferable.
+   */
   toTransferable(): TransferableArrayData {
     const bundles: TransferableArrayData["bundles"] = {};
     for (const [name, bundle] of Object.entries(this.anyBundles)) {
@@ -181,9 +227,10 @@ export class ArrayData<S extends Schema = Schema> {
     return { count: this.count, capacity: this.capacity, meta: this.meta, bundles };
   }
 
-  // Take over `t` in place (e.g. data coming back from a worker). Bundles
-  // and channels with the same names and formats keep their objects, so
-  // references held elsewhere stay valid; others are replaced.
+  /**
+   * Takes over a plain object in place, keeping the bundle and channel objects
+   * whose names and formats match.
+   */
   setFromTransferable(t: TransferableArrayData): this {
     this.count = t.count;
     this.capacity = t.capacity;
@@ -213,12 +260,12 @@ export class ArrayData<S extends Schema = Schema> {
     return this;
   }
 
+  /** Makes a table from a plain object. */
   static fromTransferable(t: TransferableArrayData): ArrayData {
     return new ArrayData().setFromTransferable(t);
   }
 
-  // The ArrayBuffers inside `value` (a TransferableArrayData or anything
-  // else), for postMessage's transfer list
+  /** Collects the ArrayBuffers inside any value, for postMessage's transfer list. */
   static transferables(value: unknown): ArrayBuffer[] {
     const buffers = new Set<ArrayBuffer>();
     const seen = new Set<unknown>();

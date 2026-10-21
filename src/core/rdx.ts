@@ -6,34 +6,23 @@ import { TextureLayout } from "./layout";
 import type { Progress } from "./progress";
 import { fileName } from "./url";
 
-// RDX files: the serialized bundles of an ArrayData, split into chunks of
-// rows. Every piece is a container:
-//   u32 magic, u32 metaLength, u32 payloadCount, u32 0, JSON meta,
-//   u32 payloadSize[payloadCount], payloads (each section 16-byte aligned)
-// The header ("RDXH") holds an RdxHeader and no payloads; a chunk ("RDXC")
-// holds { start, count } and one payload per serialized channel, in header
-// order: that channel's elements [start, start + count), byte-transposed and
-// gzipped. A whole file is the header followed by every chunk, so chunk i
-// starts at the header's length plus the sizes of chunks 0..i-1. Chunked
-// files are the same pieces apart: scene.rdx (header), scene-0.rdx, ...
-
 const RDX_VERSION = 1;
 const RDX_CHUNK_SIZE = 65536;
-// "RDXH": every header and whole file starts with it
+// "RDXH", at the start of every header and whole file
 export const RDX_MAGIC = 0x48584452;
 const CHUNK_MAGIC = 0x43584452; // "RDXC"
 const HEAD_READ_BYTES = 64 * 1024;
 
+/** The header of an RDX file. */
 export interface RdxHeader {
   version: number;
   count: number;
-  // Elements per chunk, a multiple of 4096 (whole texture rows); the last
-  // chunk holds the rest
+  /** Rows per chunk, a multiple of 4096, with the rest in the last chunk. */
   chunkSize: number;
   meta: Record<string, unknown>;
-  // Serialized bundles only, in payload order
+  /** The serialized bundles, in payload order. */
   bundles: Record<string, { def: BundleDef; meta: Record<string, unknown> }>;
-  // Byte size of each chunk
+  /** The size of each chunk, in bytes. */
   chunks: number[];
 }
 
@@ -120,8 +109,6 @@ async function encodeRdxChunks(data: ArrayData, { chunkSize = RDX_CHUNK_SIZE, pr
   return { header: encodeContainer(RDX_MAGIC, header, []), chunks };
 }
 
-// Name of chunk i of a chunked set: scene.rdx -> scene-0.rdx (a query or
-// hash after .rdx is kept)
 function rdxChunkName(headerName: string, chunk: number) {
   const at = headerName.search(/\.rdx($|[?#])/);
   if (at < 0) {
@@ -130,8 +117,6 @@ function rdxChunkName(headerName: string, chunk: number) {
   return `${headerName.slice(0, at)}-${chunk}${headerName.slice(at)}`;
 }
 
-// Chunked files by name, ready to write or upload: { "scene.rdx": header,
-// "scene-0.rdx": chunk 0, ... }
 async function encodeRdxFiles(data: ArrayData, headerName: string, options: { chunkSize?: number; progress?: Progress } = {}) {
   const { header, chunks } = await encodeRdxChunks(data, options);
   const files: Record<string, Uint8Array<ArrayBuffer>> = { [headerName]: header };
@@ -139,7 +124,6 @@ async function encodeRdxFiles(data: ArrayData, headerName: string, options: { ch
   return files;
 }
 
-// Whole file: the header, then every chunk
 async function encodeRdx(data: ArrayData, options: { chunkSize?: number; progress?: Progress } = {}): Promise<Uint8Array<ArrayBuffer>> {
   const { header, chunks } = await encodeRdxChunks(data, options);
   const file = new Uint8Array(header.byteLength + chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
@@ -153,8 +137,6 @@ async function encodeRdx(data: ArrayData, options: { chunkSize?: number; progres
   return file;
 }
 
-// The header at the start of `bytes`; byteLength is where chunk 0 starts in
-// a whole file
 function decodeRdxHeader(bytes: Uint8Array<ArrayBuffer>): { header: RdxHeader; byteLength: number } {
   const { meta, byteLength } = decodeContainer(bytes, RDX_MAGIC);
   const header = meta as RdxHeader;
@@ -164,8 +146,6 @@ function decodeRdxHeader(bytes: Uint8Array<ArrayBuffer>): { header: RdxHeader; b
   return { header, byteLength };
 }
 
-// An empty ArrayData of the header's bundles, count and meta, for chunks to
-// be decoded into
 function rdxData(header: RdxHeader): ArrayData {
   const data = new ArrayData({ count: header.count, meta: header.meta });
   for (const [name, { def, meta }] of Object.entries(header.bundles)) {
@@ -174,7 +154,6 @@ function rdxData(header: RdxHeader): ArrayData {
   return data;
 }
 
-// Writes the chunk's elements [start, start + count) into `into`
 async function decodeRdxChunk(header: RdxHeader, bytes: Uint8Array<ArrayBuffer>, into: ArrayData): Promise<void> {
   const { meta, payloads } = decodeContainer(bytes, CHUNK_MAGIC);
   const { start, count } = meta as { start: number; count: number };
@@ -214,15 +193,12 @@ async function decodeRdx(bytes: Uint8Array<ArrayBuffer>, { progress }: { progres
   return data;
 }
 
+/** Reads an RDX file's chunks, in any order. */
 export interface RdxReader {
   header: RdxHeader;
-  // One readRange of chunk i, decoded into `into`
   readChunk(chunk: number, into: ArrayData): Promise<void>;
 }
 
-// A whole file through `readRange` (bytes [start, end); fewer past the end
-// of the file): the header with one read (two when it is over 64 KB), then
-// one read per chunk
 async function openRdx(readRange: (start: number, end: number) => Promise<Uint8Array<ArrayBuffer>>): Promise<RdxReader> {
   let head = await readRange(0, HEAD_READ_BYTES);
   if (head.byteLength < 16) {
@@ -261,9 +237,6 @@ async function fetchBytes(url: string, init: RequestInit) {
   return { status: response.status, bytes: new Uint8Array(await response.arrayBuffer()) };
 }
 
-// A whole file over HTTP Range requests (a server that ignores Range sends
-// the file once, 200 not 206, and later reads slice it), or with `chunked`
-// the header at `url` and chunk i at rdxChunkName(url, i)
 async function loadRdx(url: string, { chunked = false, init = {} }: { chunked?: boolean; init?: RequestInit } = {}): Promise<RdxReader> {
   if (chunked) {
     const { header } = decodeRdxHeader((await fetchBytes(url, init)).bytes);
@@ -284,35 +257,67 @@ async function loadRdx(url: string, { chunked = false, init = {} }: { chunked?: 
       if (status === 206) {
         return bytes;
       }
+      // A server that ignores Range sent the whole file
       whole = bytes;
     }
     return whole.subarray(start, end);
   });
 }
 
-// RDX files of any ArrayData: whole, or chunked (a header and chunk files),
-// read whole or a chunk at a time (range reads over HTTP)
+/** Reads and writes RDX files of any ArrayData, whole or chunked. */
 export class RdxFile {
-  // Elements per chunk by default (a multiple of 4096)
+  /** The default chunk size, in rows. */
   static readonly CHUNK_SIZE = RDX_CHUNK_SIZE;
-  // Whole file: the header, then every chunk
+  /**
+   * Writes a whole file: the header, then every chunk.
+   *
+   * @param [options.chunkSize=65536] Rows per chunk, a multiple of 4096.
+   */
   static readonly encode = encodeRdx;
   static readonly decode = decodeRdx;
-  // The header and the chunks as separate pieces
+  /**
+   * Writes the header and the chunks as separate pieces.
+   *
+   * @param [options.chunkSize=65536] Rows per chunk, a multiple of 4096.
+   * @return The header and the chunks.
+   */
   static readonly encodeChunks = encodeRdxChunks;
-  // Chunked files by name: { "scene.rdx": header, "scene-0.rdx": chunk 0, ... }
+  /**
+   * Writes a chunked set of files.
+   *
+   * @param headerName The header's file name, ending in .rdx.
+   * @param [options.chunkSize=65536] Rows per chunk, a multiple of 4096.
+   * @return The files by name, chunk 0 of scene.rdx being scene-0.rdx.
+   */
   static readonly encodeFiles = encodeRdxFiles;
-  // scene.rdx -> scene-0.rdx (a query or hash after .rdx is kept)
+  /**
+   * Names a chunk file, scene-0.rdx for scene.rdx.
+   *
+   * @param headerName The header's file name, ending in .rdx before any query
+   *   or hash.
+   */
   static readonly chunkName = rdxChunkName;
-  // The header at the start of `bytes`; byteLength is where chunk 0 starts
-  // in a whole file
+  /**
+   * Reads the header at the start of a file.
+   *
+   * @return The header, and its length in bytes, where chunk 0 starts.
+   */
   static readonly decodeHeader = decodeRdxHeader;
-  // An empty ArrayData of a header's bundles, count and meta, for chunks
+  /** Makes an empty table for a file's chunks. */
   static readonly makeData = rdxData;
-  // Writes a chunk's elements into `into`
   static readonly decodeChunk = decodeRdxChunk;
-  // A whole file through a range reader: one read for the header, one per chunk
+  /**
+   * Opens a whole file through a range reader, with one read per chunk.
+   *
+   * @param readRange Reads bytes [start, end), fewer past the end of the file.
+   */
   static readonly open = openRdx;
-  // A whole file over HTTP Range requests, or a chunked set with `chunked`
+  /**
+   * Opens a file over HTTP Range requests.
+   *
+   * @param url The file's URL, or the header's for a chunked set.
+   * @param [options.chunked=false] Whether to read a header file and one file
+   *   per chunk.
+   */
   static readonly load = loadRdx;
 }

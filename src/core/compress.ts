@@ -1,6 +1,6 @@
 import type { TypedArray } from "./formats";
 
-// Bytes of a file: given as bytes, an ArrayBuffer or a stream
+/** A file's bytes, whole or as a stream. */
 export type BytesInput = Uint8Array<ArrayBuffer> | ArrayBuffer | ReadableStream<Uint8Array>;
 
 function transposeBytes(data: Uint8Array, stride: number) {
@@ -23,15 +23,15 @@ export async function pipe(data: Uint8Array<ArrayBuffer>, transform: Compression
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-// Bytes taken in order from bytes or a stream that may split anywhere:
-// read(n) resolves with exactly n bytes (a view when they sit in one chunk,
-// else a copy), peek(n) without taking them, skip(n) without copying,
-// rest() the remainder, stream() the remainder as a stream; cancel() stops
-// the source. Bytes given whole are never copied.
+/**
+ * Reads bytes in order from a buffer or a stream.
+ *
+ * A read within one chunk returns a view of it, and other reads a copy.
+ */
 export class ByteReader {
-  // Bytes taken so far
+  /** The bytes taken so far. */
   position = 0;
-  // Unread chunks from `head` on, the first from `offset`
+  // Unread chunks start at head, the first at offset
   private chunks: Uint8Array[] = [];
   private head = 0;
   private offset = 0;
@@ -40,7 +40,11 @@ export class ByteReader {
   private done = false;
   private label: string;
 
-  // `label` names the data in errors
+  /**
+   * Starts reading.
+   *
+   * @param [label="Data"] The name errors give the data.
+   */
   constructor(input: BytesInput, label = "Data") {
     this.label = label;
     if (input instanceof ReadableStream) {
@@ -55,7 +59,7 @@ export class ByteReader {
     this.done = true;
   }
 
-  // Buffers at least n bytes, or all that remain; returns how many are
+  // Returns the bytes buffered, at least n unless the input ends
   private async fill(n: number): Promise<number> {
     while (this.buffered < n && !this.done) {
       const { done, value } = await this.reader!.read();
@@ -110,6 +114,7 @@ export class ByteReader {
     }
   }
 
+  /** Takes exactly n bytes, throwing when the input ends first. */
   async read(n: number): Promise<Uint8Array<ArrayBuffer>> {
     if ((await this.fill(n)) < n) {
       throw new Error(`${this.label} ended unexpectedly`);
@@ -117,11 +122,12 @@ export class ByteReader {
     return this.take(n, true);
   }
 
-  // Up to n bytes, fewer at the end
+  /** Returns up to n bytes without taking them, fewer at the end. */
   async peek(n: number): Promise<Uint8Array<ArrayBuffer>> {
     return this.take(Math.min(n, await this.fill(n)), false);
   }
 
+  /** Skips n bytes without copying them. */
   async skip(n: number) {
     while (n > 0) {
       const have = await this.fill(1);
@@ -134,15 +140,17 @@ export class ByteReader {
     }
   }
 
+  /** Takes the remaining bytes. */
   async rest(): Promise<Uint8Array<ArrayBuffer>> {
     return this.take(await this.fill(Infinity), true);
   }
 
+  /** Checks whether every byte is taken. */
   async atEnd(): Promise<boolean> {
     return (await this.fill(1)) === 0;
   }
 
-  // The bytes not taken yet, buffered ones first
+  /** Returns the bytes not taken yet as a stream. */
   stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
     return new ReadableStream({
       pull: async (controller) => {
@@ -156,6 +164,7 @@ export class ByteReader {
     });
   }
 
+  /** Stops reading and cancels the source stream. */
   cancel() {
     void this.reader?.cancel().catch(() => {});
     this.done = true;
@@ -166,18 +175,19 @@ export class ByteReader {
   }
 }
 
-// Plain gzip and reading bytes, for the file formats, and byte-transposed
-// gzip: byte k of every element is stored together, which compresses
-// element data (float exponents, packed fields) much better.
+/** Gzip, and byte-transposed gzip for element data. */
 export class Compression {
+  /** Compresses bytes with gzip. */
   static gzip(bytes: Uint8Array<ArrayBuffer>) {
     return pipe(bytes, new CompressionStream("gzip"));
   }
 
+  /** Decompresses gzip bytes. */
   static gunzip(bytes: Uint8Array<ArrayBuffer>) {
     return pipe(bytes, new DecompressionStream("gzip"));
   }
 
+  /** Reads a whole input into one array. */
   static async readBytes(input: BytesInput): Promise<Uint8Array<ArrayBuffer>> {
     if (input instanceof ArrayBuffer) {
       return new Uint8Array(input);
@@ -188,18 +198,29 @@ export class Compression {
     return new Uint8Array(await new Response(input as ReadableStream<Uint8Array<ArrayBuffer>>).arrayBuffer());
   }
 
-  // `values` holds whole elements of `elementBytes` bytes
+  /**
+   * Gzips element data with byte k of every element stored together, which
+   * compresses better.
+   *
+   * @param values Whole elements.
+   * @param elementBytes The size of an element, in bytes.
+   */
   static async compressTransposed(values: TypedArray, elementBytes: number): Promise<Uint8Array<ArrayBuffer>> {
     const bytes = new Uint8Array(values.buffer, values.byteOffset, values.byteLength);
     return pipe(transposeBytes(bytes, elementBytes), new CompressionStream("gzip"));
   }
 
+  /**
+   * Reverses compressTransposed.
+   *
+   * @param elementBytes The size of an element, in bytes.
+   */
   static async decompressTransposed(bytes: Uint8Array<ArrayBuffer>, elementBytes: number): Promise<Uint8Array<ArrayBuffer>> {
     const transposed = await pipe(bytes, new DecompressionStream("gzip"));
     if (transposed.byteLength % elementBytes !== 0) {
       throw new Error("Decompressed length must be divisible by the element size");
     }
-    // Transposing back is a transpose with the element count as the stride
+    // The inverse is a transpose with the element count as stride
     return transposed.byteLength === 0 ? transposed : transposeBytes(transposed, transposed.byteLength / elementBytes);
   }
 }

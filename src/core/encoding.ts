@@ -18,10 +18,7 @@ interface QuatCodec {
   decode(code: number, out: Quat): Quat;
 }
 
-// Octahedral direction, `bits` per axis: u | v << bits. The direction is
-// folded onto the octahedron and each coordinate rounded. Code 0 means "no
-// vector": a direction rounding to 0 (-Z) gets the all-ones code instead,
-// which decodes to the same direction.
+// Code 0 means no vector, so a direction rounding to 0 gets the all-ones code
 function makeOctCodec(bits: number): OctCodec {
   if (bits < 1 || bits > 16) {
     throw new Error(`Octahedral codes take 1 to 16 bits per axis, not ${bits}`);
@@ -69,9 +66,7 @@ function makeOctCodec(bits: number): OctCodec {
   };
 }
 
-// Axis (octahedral, 2 * axisBits) in the low bits, angle 0..pi above, for
-// the quaternion with w >= 0; a zero quaternion encodes as the identity (0).
-// At most 32 bits, so the code unpacks with shifts and masks.
+// The axis in the low 2 * axisBits bits, the angle 0 to pi above, for w >= 0
 function makeQuatCodec(axisBits: number, angleBits: number): QuatCodec {
   const axisCodeBits = 2 * axisBits;
   if (axisCodeBits + angleBits > 32) {
@@ -84,7 +79,7 @@ function makeQuatCodec(axisBits: number, angleBits: number): QuatCodec {
 
   return {
     encode(q) {
-      // Not Math.hypot: it guards against overflow and is several times slower
+      // Not Math.hypot, which is several times slower
       const length = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
       if (!(length > 0)) {
         return 0;
@@ -137,12 +132,9 @@ const oct24 = octCodec(12);
 const quatOct32 = quatCodec(10, 12);
 const quatOct24 = quatCodec(8, 8);
 
-// Scalar and vector packers of the splat codecs (GpuEncoding is the TSL
-// twin). Fixed-size codecs name the total bits of the code: Oct24 is a 12 +
-// 12 bit octahedral direction, QuatOct32 a 10 + 10 bit octahedral axis and a
-// 12-bit angle, QuatOct24 8 + 8 and 8.
+/** The codecs of the splat layouts, matching GpuEncoding bit for bit. */
 export class Encoding {
-  // The same memory as floats, cached per array
+  /** Returns a Float32Array over the same memory, cached per array. */
   static floatView(u32: Uint32Array<ArrayBuffer>): Float32Array<ArrayBuffer> {
     let view = floatViews.get(u32);
     if (!view) {
@@ -152,7 +144,11 @@ export class Encoding {
     return view;
   }
 
-  // Half-float bits of f, rounded to nearest even (like the GPU's packHalf2x16)
+  /**
+   * Encodes a half float, rounding to nearest even as the GPU does.
+   *
+   * @return The half-float bits.
+   */
   static encodeHalf(f: number): number {
     if (f16 && u16) {
       f16[0] = f;
@@ -173,7 +169,7 @@ export class Encoding {
       return sign | 0x7c00;
     }
     if (e <= 0) {
-      // Subnormal: multiples of 2^-24, ties to even
+      // Subnormals are multiples of 2^-24, ties to even
       const m = Math.abs(f32[0]) * 2 ** 24;
       let rounded = Math.floor(m);
       const fraction = m - rounded;
@@ -188,6 +184,7 @@ export class Encoding {
     return rest > 0x1000 || (rest === 0x1000 && (half & 1)) ? half + 1 : half;
   }
 
+  /** Decodes a half float. */
   static decodeHalf(h: number): number {
     const sign = h & 0x8000 ? -1 : 1;
     const exponent = (h >> 10) & 0x1f;
@@ -201,26 +198,29 @@ export class Encoding {
     return sign * (1 + mantissa / 1024) * 2 ** (exponent - 15);
   }
 
+  /** Encodes a value from 0 to 1 as a byte, clamped. */
   static encodeUnorm8(v: number) {
     return Math.max(0, Math.min(255, Math.round(v * 255)));
   }
 
-  // 128 = 1.0; merged LoD nodes can exceed 1, up to 255 / 128
+  /** Encodes an opacity as a byte where 128 is 1, so merged LoD nodes keep up to 255 / 128. */
   static encodeLodOpacity(opacity: number) {
     return Math.max(0, Math.min(255, Math.round(opacity * 128)));
   }
 
+  /** Decodes an opacity byte where 128 is 1. */
   static decodeLodOpacity(byte: number) {
     return byte / 128;
   }
 
-  // 8-bit magnitudes, 3 sign bits and a 5-bit shared exponent, so colors may
-  // exceed 1 or be negative
+  /**
+   * Encodes a color as 8-bit magnitudes and signs with a shared 5-bit exponent,
+   * keeping negatives and values above 1.
+   */
   static encodeExtRgb({ r, g, b }: Rgb): number {
     const maxAbs = Math.max(Math.abs(r), Math.abs(g), Math.abs(b));
     const base = Math.max(0, Math.min(31, (maxAbs > 0 ? Math.ceil(Math.log2(maxAbs)) : 0) + 15));
-    // Magnitudes are |v| / (2^e / 255), as |v| * (255 * 2^-e): exact, so a
-    // value halfway between two steps rounds up here and on the GPU alike
+    // |v| * (255 * 2^-e) is exact, so halfway values round up as on the GPU
     const scale = 255 * 2 ** (15 - base);
     const mr = Math.min(255, Math.round(Math.abs(r) * scale));
     const mg = Math.min(255, Math.round(Math.abs(g) * scale));
@@ -230,6 +230,11 @@ export class Encoding {
     return (mr | (mg << 8) | (mb << 16) | (((base << 3) | signs) << 24)) >>> 0;
   }
 
+  /**
+   * Decodes a shared-exponent color.
+   *
+   * @return out.
+   */
   static decodeExtRgb(encoded: number, out: Rgb): Rgb {
     const unit = 2 ** (((encoded >>> 27) & 0x1f) - 15) / 255;
     out.r = (encoded & 0xff) * unit * (encoded & 0x1000000 ? -1 : 1);
@@ -238,29 +243,67 @@ export class Encoding {
     return out;
   }
 
-  // Octahedral direction with `bits` per axis (1 to 16)
+  /**
+   * Encodes a direction as an octahedral code, where 0 means no vector.
+   *
+   * @param bits Bits per axis, from 1 to 16.
+   */
   static encodeOct(v: Vec3, bits: number): number {
     return octCodec(bits).encode(v);
   }
 
+  /**
+   * Decodes an octahedral direction.
+   *
+   * @param bits Bits per axis, from 1 to 16.
+   * @return out.
+   */
   static decodeOct(code: number, bits: number, out: Vec3): Vec3 {
     return octCodec(bits).decode(code, out);
   }
 
-  // Octahedral axis with `axisBits` per axis plus an `angleBits` angle (at
-  // most 32 bits in all)
+  /**
+   * Encodes a quaternion as an octahedral axis and an angle, the identity for a
+   * zero one.
+   *
+   * @param angleBits Bits of the angle, at most 32 - 2 * axisBits.
+   */
   static encodeQuatOct(q: Quat, axisBits: number, angleBits: number): number {
     return quatCodec(axisBits, angleBits).encode(q);
   }
 
+  /**
+   * Decodes a quaternion from an octahedral axis and an angle.
+   *
+   * @param angleBits Bits of the angle, at most 32 - 2 * axisBits.
+   * @return out.
+   */
   static decodeQuatOct(code: number, axisBits: number, angleBits: number, out: Quat): Quat {
     return quatCodec(axisBits, angleBits).decode(code, out);
   }
 
+  /** Encodes a direction in 12 + 12 bits, where 0 means no vector. */
   static readonly encodeOct24: (v: Vec3) => number = oct24.encode;
+  /**
+   * Decodes a 24-bit octahedral direction.
+   *
+   * @return out.
+   */
   static readonly decodeOct24: (code: number, out: Vec3) => Vec3 = oct24.decode;
+  /** Encodes a quaternion as a 10 + 10 bit axis and a 12-bit angle. */
   static readonly encodeQuatOct32: (q: Quat) => number = quatOct32.encode;
+  /**
+   * Decodes a 32-bit quaternion code.
+   *
+   * @return out.
+   */
   static readonly decodeQuatOct32: (code: number, out: Quat) => Quat = quatOct32.decode;
+  /** Encodes a quaternion as an 8 + 8 bit axis and an 8-bit angle. */
   static readonly encodeQuatOct24: (q: Quat) => number = quatOct24.encode;
+  /**
+   * Decodes a 24-bit quaternion code.
+   *
+   * @return out.
+   */
   static readonly decodeQuatOct24: (code: number, out: Quat) => Quat = quatOct24.decode;
 }

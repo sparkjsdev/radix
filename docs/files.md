@@ -129,7 +129,7 @@ Sizes against version 3 (gzip), over 2 GB of columns from the splats viewer's sa
 | Node, level 15 | -2.4% | 6 MB/s |
 | Node, level 19 | -4.9% | 2 MB/s |
 
-SPZ 4 does not make files much smaller, so version 3 stays the default. Write version 4 for readers that need it.
+SPZ 4 does not make files much smaller, so version 3 stays the default. Write version 4 for readers that need it. Where file size matters, write version 3, or write version 4 in Node, whose zstd compresses at `zstdLevel`.
 
 ### Coordinate systems
 

@@ -1,14 +1,42 @@
-// Field names match THREE.Vector3 / Quaternion / Color, so those fit as is
-export interface Vec3 { x: number; y: number; z: number }
-export interface Quat { x: number; y: number; z: number; w: number }
-export interface Rgb { r: number; g: number; b: number }
-// Symmetric 3x3 matrix
-export interface Cov { xx: number; yy: number; zz: number; xy: number; xz: number; yz: number }
+/** A 3D vector. */
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
 
-// Quaternion and covariance math of the splat codecs (GpuSplatMath is the
-// TSL twin)
+/** A quaternion. */
+export interface Quat {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+/** An RGB color. */
+export interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** A symmetric 3x3 matrix, as its six distinct entries. */
+export interface Cov {
+  xx: number;
+  yy: number;
+  zz: number;
+  xy: number;
+  xz: number;
+  yz: number;
+}
+
+/** The quaternion and covariance math of the splat codecs, matching GpuSplatMath. */
 export class SplatMath {
-  // Unit quaternion (identity for a zero one)
+  /**
+   * Normalizes a quaternion, giving the identity for a zero one.
+   *
+   * @return out.
+   */
   static normalizeQuat(q: Quat, out: Quat): Quat {
     const length = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     if (!(length > 0)) {
@@ -25,7 +53,11 @@ export class SplatMath {
     return out;
   }
 
-  // Sigma = M M^T with M = R(q) diag(scales)
+  /**
+   * Computes the covariance M M^T, where M = R(q) diag(scales).
+   *
+   * @return out.
+   */
   static covFromScaleQuat(scales: Vec3, q: Quat, out: Cov): Cov {
     const { x, y, z, w } = SplatMath.normalizeQuat(q, { x: 0, y: 0, z: 0, w: 1 });
     const m = [
@@ -44,10 +76,14 @@ export class SplatMath {
     return out;
   }
 
-  // Eigenvalues (descending) and eigenvectors (columns of `basis`,
-  // right-handed) of a symmetric 3x3 matrix, by Jacobi rotations
+  /**
+   * Computes the eigenvalues and eigenvectors of a symmetric 3x3 matrix.
+   *
+   * @return The eigenvalues in descending order, and the eigenvectors as the
+   *   columns of a right-handed basis.
+   */
   static symEigens(c: Cov): { values: Vec3; basis: number[] } {
-    // Column-major: element (col, row) at col * 3 + row
+    // Column-major, element (col, row) at col * 3 + row
     const a = [c.xx, c.xy, c.xz, c.xy, c.yy, c.yz, c.xz, c.yz, c.zz];
     const v = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     const at = (col: number, row: number) => col * 3 + row;
@@ -96,7 +132,6 @@ export class SplatMath {
       }
     }
 
-    // Eigenvector j is (v[0][j], v[1][j], v[2][j])
     const pairs = [0, 1, 2].map((j) => {
       const vector = [v[at(0, j)], v[at(1, j)], v[at(2, j)]];
       const length = Math.max(Math.hypot(vector[0], vector[1], vector[2]), 1e-30);
@@ -114,8 +149,13 @@ export class SplatMath {
     return { values: { x: pairs[0].value, y: pairs[1].value, z: pairs[2].value }, basis: [...v0, ...v1, ...v2] };
   }
 
-  // Quaternion (w >= 0) of an orthonormal basis given as columns, after
-  // glam's Quat::from_rotation_axes
+  // After glam's Quat::from_rotation_axes
+  /**
+   * Converts an orthonormal basis to a quaternion with w >= 0.
+   *
+   * @param m The basis, as columns.
+   * @return out.
+   */
   static basisToQuat(m: number[], out: Quat): Quat {
     const [m00, m01, m02, m10, m11, m12, m20, m21, m22] = m;
     let x: number;
