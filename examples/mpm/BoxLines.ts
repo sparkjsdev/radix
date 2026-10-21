@@ -1,12 +1,3 @@
-// The simulation box as fat lines of a constant pixel width: the 12 edges
-// and the 12 face midlines (together the three mid-plane rectangles). One
-// unit cube, placed and scaled onto the walls every frame. The lines are at
-// full opacity while the walls move (or `touch` is called), then ease down
-// to `settings.idle`.
-//
-// Drawn in the same pass as the splats, after them (transparent,
-// renderOrder 1, above the splat renderer's), blended and without depth
-// writes: every line shows over the water, back edges included.
 import * as THREE from "three";
 import { Line2NodeMaterial } from "three/webgpu";
 import { LineSegments2 } from "three/examples/jsm/lines/webgpu/LineSegments2.js";
@@ -17,9 +8,8 @@ const { abs, clamp, float, length, materialLineWidth, max, uniform, uv, vec2 } =
 
 const EDGES = 12;
 
-// A transparent Line2NodeMaterial composites itself over a copy of the
-// opaque pass (which has no splats) instead of blending: build its shader as
-// if it were opaque, and keep it transparent for the render list
+// A transparent Line2NodeMaterial composites over a copy of the opaque pass,
+// which has no splats: build it as opaque, keep it transparent for the render list
 class BlendedLineMaterial extends Line2NodeMaterial {
   setupDiffuseColor(builder: Parameters<Line2NodeMaterial["setupDiffuseColor"]>[0]) {
     this.transparent = false;
@@ -28,8 +18,6 @@ class BlendedLineMaterial extends Line2NodeMaterial {
   }
 }
 
-// Segments along each axis a at the four (b, c) corners of the other two
-// axes, then the four face midlines along a
 function unitBoxSegments() {
   const edges: number[] = [];
   const midlines: number[] = [];
@@ -55,7 +43,7 @@ function unitBoxSegments() {
 }
 
 export class BoxLines extends LineSegments2 {
-  /** Pixel width, the opacity when idle, seconds at full opacity after the last change, then seconds to fade */
+  // width in pixels, hold and fade in seconds
   readonly settings = { width: 2, idle: 0.15, hold: 0.3, fade: 1.0, midlines: true };
   readonly opacity = uniform(1);
   private lastActive = -Infinity;
@@ -64,7 +52,7 @@ export class BoxLines extends LineSegments2 {
   constructor(color: THREE.ColorRepresentation = 0xffffff) {
     const geometry = new LineSegmentsGeometry().setPositions(unitBoxSegments());
     // Normal blending spelled out as custom: the shader build would force
-    // alpha to 1 for NormalBlending while `transparent` is off
+    // alpha to 1 for NormalBlending while transparent is off
     const material = new BlendedLineMaterial({
       color,
       transparent: true,
@@ -82,12 +70,11 @@ export class BoxLines extends LineSegments2 {
     material.opacityNode = this.opacity.mul(clamp(float(1).sub(r).mul(materialLineWidth).mul(0.5), 0, 1));
   }
 
-  /** Show the lines at full opacity */
+  // Show the lines at full opacity
   touch(now = performance.now()) {
     this.lastActive = now;
   }
 
-  /** Fit the walls and fade; a wall change shows the lines at full opacity */
   update(walls: THREE.Box3, now = performance.now()) {
     const { settings } = this;
     walls.getSize(this.size);

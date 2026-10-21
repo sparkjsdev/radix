@@ -1,14 +1,4 @@
-// Reorders the MPM particle buffers by the Morton code of each particle's
-// grid cell, so that neighbouring threads work on neighbouring particles:
-// P2G's atomics and G2P's gathers then hit the same cache lines, and a
-// workgroup's particles span a small box of cells (what the tiled P2G needs).
-// The particles drift apart as the water moves; MpmSim re-sorts every
-// `sortEvery` steps.
-//
-// One sort: a kernel writes (Morton key, index) per particle, WgpuRadixSort
-// sorts the pairs, two gather kernels write the particles in sorted order to
-// scratch buffers (two, to stay within 8 storage buffers per stage), and the
-// scratch buffers are copied back.
+// Morton order of cells, for cache hits in P2G and G2P and small boxes for the tiled P2G
 import type { WebGPURenderer } from "three/webgpu";
 import { TSL, WgpuBuffer, WgpuCompute, WgpuRadixSort, type SortKeyBits, type TslNode } from "@sparkjsdev/radix";
 import type { MpmSim } from "./MpmSim.js";
@@ -28,7 +18,6 @@ function spreadBits(v: TslNode): TslNode {
 export class MpmParticleSort {
   sim: MpmSim;
   renderer: WebGPURenderer;
-  // Key bits the radix sort looks at (3 x the bits of the largest grid dimension)
   readonly bits: SortKeyBits;
   private keys: WgpuBuffer<"uint32">;
   private values: WgpuBuffer<"uint32">;
@@ -80,7 +69,7 @@ export class MpmParticleSort {
     });
   }
 
-  // dst[k][i] = src[k][values[i]]
+  // dst[k][i] = src[k][values[i]], in two kernels to stay within 8 storage buffers per stage
   private makeGather(src: WgpuBuffer<"float32x4">[], dst: WgpuBuffer<"float32x4">[]) {
     const { sim, values } = this;
     return new WgpuCompute({

@@ -1,27 +1,3 @@
-// A static splat scan as an MPM collider: its splats are baked on the GPU
-// into a dense narrow-band distance field in the scan's object space, and
-// the simulation kernels sample it through the scan's current transform, so
-// the scan can be moved, rotated and (uniformly) scaled without re-baking.
-//
-// The bake (WgpuCompute kernels, one dispatch each):
-//   1. splats: every splat with opacity >= minOpacity adds its coverage,
-//      opacity * 2 pi * s_mid * s_max / voxel^2 (its alpha integrated over
-//      its plane: a fully covered surface through a voxel reads ~1), to the
-//      voxels under its 3-sigma box, weighted by the Gaussian at the voxel
-//      centres (fixed-point atomicAdd, as in the MPM P2G);
-//   2. init: covered voxels (coverage >= threshold) get distance 0, the rest
-//      `band`;
-//   3. dilate: `band` chamfer passes (3x3x3 min of neighbour + 1, sqrt 2,
-//      sqrt 3), ping-ponging between two buffers;
-//   4. finalize: a 3x3x3 box blur (smooths the voxel staircase so the
-//      gradient makes usable normals) minus the shell half-thickness, so
-//      every surface becomes a slab about 2 * shell voxels thick.
-// Distances are unsigned (scans have no reliable inside), in voxels.
-//
-// sample() evaluates, at a world point: phi (world units, < 0 inside a
-// slab), the world normal (gradient of the trilinear field; zero on a
-// slab's centre line) and the collider velocity from the pose change over
-// the last step (capped like the MPM walls).
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import {
@@ -35,8 +11,8 @@ const {
 
 const quatVec = GpuSplatMath.quatRotate;
 
-// Fixed-point scale of the coverage sums (i32 atomics): one count is 1e-4 of
-// a fully covered voxel
+// One count is 1e-4 of a covered voxel, where a splat adds its alpha integrated
+// over its plane, opacity * 2 pi * s_mid * s_max / voxel^2
 const COVERAGE_SCALE = 1e4;
 // A splat deposits into at most (2 * FOOTPRINT + 1)^3 voxels around its centre
 const FOOTPRINT = 2;
@@ -47,8 +23,7 @@ const BOUNDS_SAMPLES = 100_000;
 const BOUNDS_TAIL = 0.005;
 // phi outside the baked box (world units): no collision
 const FAR = 1e6;
-// Cap on the collider velocity the simulation sees (m/s), so a scan dragged
-// far while paused does not fire the water across the box on the next step
+// m/s, so a scan dragged far while paused does not push the water at a huge speed
 const MAX_COLLIDER_SPEED = 4.0;
 
 export interface SplatColliderSettings {
@@ -69,30 +44,26 @@ export interface SplatColliderBake {
 
 export class SplatCollider {
   renderer: WebGPURenderer;
-  // The object whose matrixWorld places the field, and the ext splats baked
-  // (of a LoD tree, its leaves: interior nodes merge their children and
-  // would count twice)
+  // target places the field, so a move or a uniform scale needs no re-bake;
+  // of a LoD tree, splats are only the leaves, as interior nodes count twice
   target: THREE.Object3D;
   splats: GpuArrays;
-  // Object-space box the field covers before the band margin: the splat
-  // centres with outliers cut
+  // Object-space box of the splat centres without outliers, before the band margin
   robustBounds: THREE.Box3;
   settings: SplatColliderSettings = { minOpacity: 0.05, threshold: 0.5, shell: 1.0, band: 4 };
   lastBake?: SplatColliderBake;
 
   uniforms: {
-    // Bake frame: object-space min corner, voxel size, dims (float xyz) and voxel count
+    // Bake frame in object space, dims as floats
     bakeMin: TslNode; voxelSize: TslNode; dims: TslNode; numVoxels: TslNode;
     minOpacity: TslNode; threshold: TslNode; shell: TslNode; band: TslNode;
-    // Pose: world to object, object to world normals, the uniform world
-    // scale, current world to previous world, and the step it spans (s)
+    // Pose: world to object, object to world normals, and the step in seconds
     invMatrix: TslNode; normalMatrix: TslNode; worldScale: TslNode; prevFromCurrent: TslNode; stepTime: TslNode;
     // 1: collide, 0: sample() reports no collision
     enabled: TslNode;
   };
 
-  // Per-voxel coverage (fixed point), and the distance ping-pong pair; the
-  // final field is `sdf` (distB)
+  // Unsigned distances in voxels, as scans have no reliable inside
   coverage: WgpuBuffer<"sint32">;
   distA: WgpuBuffer<"float32">;
   distB: WgpuBuffer<"float32">;
@@ -106,8 +77,7 @@ export class SplatCollider {
   private prevMatrix = new THREE.Matrix4();
   private hasPrev = false;
 
-  // `data`: the splats on the CPU (for the bounds), `splats` the same on the
-  // GPU, with an extSplats bundle
+  // data gives the bounds on the CPU; splats, the same on the GPU, need an extSplats bundle
   constructor({ renderer, target, data, splats }: { renderer: WebGPURenderer; target: THREE.Object3D; data: ArrayData; splats: GpuArrays }) {
     this.renderer = renderer;
     this.target = target;
@@ -143,13 +113,11 @@ export class SplatCollider {
     return this.distB;
   }
 
-  // Flat index of voxel (i, j, k)
   private voxelIndex(voxel: TslNode): TslNode {
     const dims = ivec3(this.uniforms.dims);
     return voxel.x.mul(dims.y).add(voxel.y).mul(dims.z).add(voxel.z);
   }
 
-  // Voxel (i, j, k) of a flat index
   private voxelOf(index: TslNode): TslNode {
     const dims = ivec3(this.uniforms.dims);
     const flat = int(index);
@@ -187,8 +155,7 @@ export class SplatCollider {
             If(single, () => {
               atomicAdd(coverage.element(this.voxelIndex(cell)), int(amount.add(0.5)));
             }).Else(() => {
-              // Gaussian weight at a voxel centre: the offset in the splat's
-              // frame, in standard deviations
+              // The offset to a voxel centre in the splat's frame, in standard deviations
               const qInv = vec4(q.xyz.negate(), q.w).toVar();
               const weight = (voxel: TslNode) => {
                 const d = quatVec(qInv, vec3(voxel).add(0.5).sub(g).mul(u.voxelSize)).div(s);
@@ -225,9 +192,8 @@ export class SplatCollider {
     });
   }
 
-  // One chamfer pass: min over the 26 neighbours of their distance plus the
-  // step length. Neighbours are clamped to the grid; a clamped neighbour is
-  // the voxel itself or nearer than the step, so it never lowers a distance.
+  // A chamfer pass; a neighbour clamped to the grid is nearer than its step
+  // length, so it never lowers a distance
   private makeDilate(src: WgpuBuffer<"float32">, dst: WgpuBuffer<"float32">) {
     const u = this.uniforms;
     return new WgpuCompute({
@@ -249,7 +215,8 @@ export class SplatCollider {
     });
   }
 
-  // distA -> sdf: 3x3x3 box blur minus the shell half-thickness
+  // A box blur, so the gradient gives usable normals, minus the shell, so each
+  // surface becomes a slab about 2 * shell voxels thick
   private makeFinalize() {
     const { distA, distB } = this;
     const u = this.uniforms;
@@ -269,8 +236,7 @@ export class SplatCollider {
     });
   }
 
-  // Bake the splats with voxels of `voxelSize` (object units), coarsened if
-  // the robust bounds would need more than MAX_VOXELS
+  // voxelSize in object units, coarsened to fit MAX_VOXELS
   async bake(voxelSize: number): Promise<SplatColliderBake> {
     const { renderer, settings } = this;
     const u = this.uniforms;
@@ -317,8 +283,7 @@ export class SplatCollider {
     return this.lastBake;
   }
 
-  // Pick up the target's pose for the next step of `stepTime` seconds: the
-  // world-to-object transform, and the previous pose for the velocity
+  // Pick up the target's pose for the next step of stepTime seconds
   update(stepTime: number) {
     const u = this.uniforms;
     this.target.updateWorldMatrix(true, false);
@@ -335,9 +300,8 @@ export class SplatCollider {
     this.prevMatrix.copy(matrix);
   }
 
-  // The field at world point `world` (TSL vec3): phi in world units (FAR
-  // outside the baked box or when disabled), the world normal (zero where
-  // the gradient vanishes) and the collider velocity in world units/s
+  // phi in world units (FAR outside the box or when disabled), the normal zero
+  // where the gradient vanishes, and velocity in world units/s
   sample(world: TslNode): { phi: TslNode; normal: TslNode; velocity: TslNode } {
     const { sdf } = this;
     const u = this.uniforms;
@@ -401,7 +365,7 @@ function loop3(lo: TslNode, hi: TslNode, body: (voxel: TslNode) => void) {
   );
 }
 
-// The 27 offsets of a 3x3x3 neighbourhood with their lengths, unrolled at build time
+// The 27 offsets with their lengths, unrolled at build time
 function forNeighbours(body: (offset: [number, number, number], length: number) => void) {
   for (let dx = -1; dx <= 1; dx++) {
     for (let dy = -1; dy <= 1; dy++) {
@@ -412,8 +376,7 @@ function forNeighbours(body: (offset: [number, number, number], length: number) 
   }
 }
 
-// Object-space bounds of the splat centres with `tail` cut from both ends
-// of each axis (scans have far floaters), from a strided sample
+// tail is cut from both ends of each axis, as scans have far floaters
 export function robustSplatBounds(data: ArrayData, tail = BOUNDS_TAIL) {
   const { bundle } = Splats.get(data);
   const center = { x: 0, y: 0, z: 0 };

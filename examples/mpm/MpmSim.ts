@@ -1,34 +1,4 @@
-// 3D MLS-MPM water in TSL compute kernels (WebGPU backend only), and the
-// SplatGenerator that draws every particle as a splat straight from the
-// particle buffers (waterSplats).
-//
-// The algorithm is Yuanming Hu's mpm88 (Taichi) taken to 3D, in the units
-// of nialltl's MPM guide: positions in grid cells (dx = 1, cell (i, j, k)
-// spans [i, i + 1)), time in seconds, so velocities are cells/s. Each
-// substep is:
-//   1. (the grid is clear: the previous grid update zeroed it);
-//   2. P2G: every particle scatters weight * (mass * v + affine * dpos) and
-//      weight * mass to its 3x3x3 quadratic B-spline neighbourhood, where
-//      affine = stress * I + mass * C fuses the MLS-MPM force with the APIC
-//      momentum (stress = -dt * 4 * E * vol * (J - 1) is the weakly
-//      compressible fluid of mpm88). The scatter is atomicAdd on fixed-point
-//      i32 cells, as in WebGPU-Ocean, since WGSL has no float atomics;
-//   3. grid update: read and zero the atomic sums, momentum / mass, gravity, slip walls (mpm88's `bound`,
-//      generalized to walls at any position with a velocity: a wall node's
-//      normal velocity is clamped to the wall's, so a wall moving in pushes);
-//   4. G2P: every particle gathers its new velocity and affine matrix C from
-//      the grid, advects, and integrates J *= 1 + dt * trace(C); particles
-//      left outside a wall (it moved past them) get a velocity floor toward
-//      the inside.
-// The walls (`walls`, a world-space box) can be moved at any time; step()
-// glides the kernel walls there at up to MAX_WALL_SPEED. The grid extends BOUND cells beyond the initial walls, so
-// walls can move inward from where they started, not outward. An optional
-// SplatCollider (a baked splat mesh) adds level-set boundaries: grid nodes
-// inside it lose their velocity into it relative to the collider's (Coulomb
-// friction on the tangential part), and particles inside it are pushed out
-// along its normal like the walls push them in. The particle
-// state (position + J, velocity, the rows of C) never leaves the GPU: the
-// splat shader reads it directly.
+// Yuanming Hu's mpm88 (Taichi) taken to 3D, in the units of nialltl's MPM guide
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { GpuSplats, TSL, WgpuBuffer, WgpuCompute, WgpuComputeBatch, type SplatGenerator, type TslNode } from "@sparkjsdev/radix";
@@ -40,52 +10,40 @@ const {
   min, mix, saturate, select, uint, uniform, vec3, vec4, workgroupArray, workgroupBarrier,
 } = TSL;
 
-// mpm88 constants in grid units: a particle is an eighth of a cell of unit
-// density, so a cell filled with 8 particles has mass 1
+// A particle is an eighth of a cell at unit density, as in mpm88
 const VOL = 0.125;
 const RHO = 1.0;
 const MASS = VOL * RHO;
-// Grid padding in cells outside the initial walls: the wall band the grid
-// velocities are clamped in, and where particles are kept so the stencil
-// never leaves the grid
+// Padding cells outside the initial walls, for the wall nodes and the stencils past them
 const BOUND = 3;
-// Particles outside a wall are given at least penetration / PUSH_TIME of
-// inward velocity (seconds): how fast a wall moved past them sweeps them in
+// Seconds: a particle past a wall or inside the collider gets at least
+// penetration / PUSH_TIME of outward velocity
 const PUSH_TIME = 0.1;
-// Top speed of the walls (m/s): a wall moved far (or while paused) glides to
-// its new place at this speed instead of jumping and crushing the water
+// m/s, so a wall moved far glides instead of jumping and crushing the water
 const MAX_WALL_SPEED = 4.0;
-// Safety limits against blow-ups: node and particle speeds are capped at
-// MAX_CFL cells per substep, and the pressure sees J (volume ratio) clamped
-// to [J_MIN, J_MAX], so a hard compression cannot feed back into ever
-// larger pressure. J itself only stays in [J_SAFE_MIN, J_SAFE_MAX] so it
-// keeps tracking the volume (clamping it lost the compression for good).
+// Caps against blow-ups: speed in cells per substep, and the J (volume ratio)
+// the pressure sees. J itself has a wider range so it keeps tracking the volume.
 const MAX_CFL = 0.3;
 const J_MIN = 0.6;
 const J_MAX = 1.2;
 const J_SAFE_MIN = 0.1;
 const J_SAFE_MAX = 10.0;
-// Fixed-point scales of the atomic grid (i32 sums must stay below 2^31).
-// Mass: one count is 1e-7 of a particle (as in WebGPU-Ocean); a cell holds
-// at most a few dozen particles, so ~1e8 counts. Truncation makes a node's
-// mass a little too small, and a coarse mass scale made the low-weight
-// nodes at free surfaces up to twice too fast (momentum / mass), pumping
-// energy into the fluid. Momentum: one count is 1e-5 mass * cells/s, so a
-// cell of mass ~2 overflows at ~10,000 cells/s; truncation here only slows
-// nodes down.
+// Fixed point, as in WebGPU-Ocean, since WGSL has no float atomics. Mass is
+// fine-grained, as truncating it speeds up the light nodes at free surfaces.
+// Truncating momentum only slows nodes, and a cell of mass 2 overflows i32
+// near 10,000 cells/s.
 const MASS_SCALE = 1e7 / MASS;
 const MOMENTUM_SCALE = 1e5;
-// Tiled P2G: threads per workgroup, and grid nodes in its workgroup-memory
-// tile (4 i32 each: 12 KB of the 16 KB WebGPU default). Morton-sorted
-// chunks of 256 particles at ~8 per cell span about 7x7x5 to 11x7x7 nodes.
+// Tiled P2G: 4 i32 per node take 12 KB of WebGPU's default 16 KB of workgroup
+// memory, which usually holds the nodes of 256 Morton-sorted particles
 const TILE_WORKGROUP = 256;
 const TILE_NODES = 768;
 
 export interface MpmSimOptions {
   renderer: WebGPURenderer;
-  // World-space box the walls start at (the water lives inside it)
+  // World-space box the walls start at
   bounds: THREE.Box3;
-  // Cells along the longest axis of the box (cubic cells), excluding padding
+  // Cells along the box's longest axis, without the padding
   grid: number;
   particles: number;
   // Seconds per substep and substeps per step()
@@ -94,18 +52,15 @@ export interface MpmSimOptions {
   // Stiffness (bulk modulus, grid units) and gravity (m/s^2)
   E: number;
   gravity: number;
-  // Static splat mesh to collide with (the kernels sample it every substep)
   collider?: SplatCollider;
 }
 
 export class MpmSim {
   renderer: WebGPURenderer;
-  // The initial walls (world), and the current walls: move these freely
-  // within `bounds`, step() applies them
+  // World space; walls can move freely within bounds, and step() applies them
   bounds: THREE.Box3;
   walls: THREE.Box3;
-  // World position of grid cell (0, 0, 0), grid dimensions in cells, and
-  // the world size of a cell
+  // World corner of cell (0, 0, 0), grid size in cells, and a cell's world size
   gridMin: THREE.Vector3;
   res: THREE.Vector3;
   cellSize: number;
@@ -120,37 +75,32 @@ export class MpmSim {
     wallMin: TslNode; wallMax: TslNode; wallMinVel: TslNode; wallMaxVel: TslNode;
     // Coulomb friction coefficient of the collider (0: slip)
     friction: TslNode;
-    // Fraction per substep by which G2P pulls J toward the grid density's
-    // (0: pure mpm88 J integration)
+    // Fraction per substep by which G2P pulls J toward the grid density's (0: off)
     densityRate: TslNode;
   };
   // Walls (cells) the previous step() applied, for the wall velocity
   private prevWallMin = new THREE.Vector3();
   private prevWallMax = new THREE.Vector3();
 
-  // Particle state: xyz position in cells + J, xyz velocity + the particle's
-  // id (constant through the sort), rows of C
+  // Position in cells and J, velocity in cells/s and the particle's id, rows of C
   pos: WgpuBuffer<"float32x4">;
   vel: WgpuBuffer<"float32x4">;
   c0: WgpuBuffer<"float32x4">;
   c1: WgpuBuffer<"float32x4">;
   c2: WgpuBuffer<"float32x4">;
-  // Grid: fixed-point (momentum xyz, mass) per cell for the P2G scatter, and
-  // the float (velocity xyz, mass) the grid update writes for G2P
+  // Per cell: fixed-point (momentum xyz, mass) from P2G, (velocity xyz, mass) for G2P
   gridAtomic: WgpuBuffer<"sint32">;
   gridVel: WgpuBuffer<"float32x4">;
 
   private p2g: WgpuCompute;
   private p2gTiled: WgpuCompute;
-  // P2G through a workgroup-memory tile (false: straight global atomics)
   tiledP2G = true;
   private gridUpdate: WgpuCompute;
   private g2p: WgpuCompute;
   private batch: WgpuComputeBatch;
   // One compute pass per step() (false: one per dispatch, for GPU timings)
   batched = true;
-  // Re-sort the particles by cell every this many steps, and on reset() (0:
-  // never, the particles stay in reset()'s random order)
+  // Steps between re-sorts of the particles by cell, also run on reset() (0: never)
   sortEvery = 10;
   private sorter: MpmParticleSort;
   private steps = 0;
@@ -162,7 +112,6 @@ export class MpmSim {
     this.walls = bounds.clone();
     const size = bounds.getSize(new THREE.Vector3());
     this.cellSize = Math.max(size.x, size.y, size.z) / grid;
-    // Whole cells inside the walls, plus the padding on both sides
     const inner = new THREE.Vector3(
       Math.max(1, Math.round(size.x / this.cellSize)),
       Math.max(1, Math.round(size.y / this.cellSize)),
@@ -216,15 +165,12 @@ export class MpmSim {
     return this.uniforms.gravity.value * this.cellSize;
   }
 
-  // World point to grid cells
   toCells(world: THREE.Vector3, out: THREE.Vector3) {
     return out.copy(world).sub(this.gridMin).divideScalar(this.cellSize);
   }
 
-  // Move the kernel walls toward `walls` (clamped to the padded grid and at
-  // least a cell apart) by at most MAX_WALL_SPEED over this step's `time`
-  // (seconds); the velocities are exactly that motion, so the grid pushes
-  // the water as far as the walls really moved
+  // Over the given seconds; the velocities are the motion applied, so the grid
+  // pushes the water as far as the walls moved
   private applyWalls(time: number) {
     const u = this.uniforms;
     const limit = this.res.clone().subScalar(BOUND);
@@ -246,8 +192,7 @@ export class MpmSim {
     this.prevWallMax.copy(max);
   }
 
-  // Resize the particle buffers (the kernels read the count from a uniform,
-  // so they are not rebuilt); the particles are garbage until reset()
+  // The particles are undefined until reset()
   setCount(count: number) {
     if (count === this.count) {
       return;
@@ -259,17 +204,13 @@ export class MpmSim {
     }
   }
 
-  // Flat index of cell (i, j, k)
   private cellIndex(cell: TslNode): TslNode {
     const { res } = this;
     return cell.x.mul(int(res.y)).add(cell.y).mul(int(res.z)).add(cell.z);
   }
 
-  // Quadratic B-spline stencil of a position in cells (mpm88): base is the
-  // corner cell, fx in [0.5, 1.5) the offset to it, and the weights of the
-  // 3 cells per axis are w[0..2]. The 27 cells are unrolled at build time
-  // like mpm88's ti.static loop; body gets each cell's index (ivec3), weight
-  // and dpos = cell - position.
+  // mpm88's quadratic B-spline over 3x3x3 cells, unrolled at build time, with
+  // dpos = cell - position
   private stencil(Xp: TslNode, body: (cell: TslNode, weight: TslNode, dpos: TslNode) => void) {
     const base = ivec3(floor(Xp.sub(0.5))).toVar();
     const fx = Xp.sub(vec3(base)).toVar();
@@ -289,8 +230,6 @@ export class MpmSim {
     }
   }
 
-  // One particle's P2G contributions: for each of its 27 stencil cells, the
-  // fixed-point (momentum xyz, mass) sums, handed to `deposit`
   private scatterParticle(index: TslNode, deposit: (cell: TslNode, sums: TslNode[]) => void) {
     const { pos, vel, c0, c1, c2 } = this;
     const u = this.uniforms;
@@ -299,8 +238,7 @@ export class MpmSim {
     const C0 = c0.element(index).xyz.toVar();
     const C1 = c1.element(index).xyz.toVar();
     const C2 = c2.element(index).xyz.toVar();
-    // Weakly compressible fluid, fused with dt and the MLS-MPM
-    // M_p^-1 = 4 / dx^2 factor (mpm88's `stress`)
+    // mpm88's stress: weakly compressible, fused with dt and MLS-MPM's M_p^-1 = 4 / dx^2
     const stress = u.dt.mul(-4 * VOL).mul(u.E).mul(clamp(p.w, J_MIN, J_MAX).sub(1.0)).toVar();
     this.stencil(p.xyz, (cell, weight, dpos) => {
       // affine * dpos with affine = stress * I + mass * C
@@ -315,7 +253,6 @@ export class MpmSim {
     });
   }
 
-  // Global atomicAdd of a cell's fixed-point sums
   private depositGlobal(cell: TslNode, sums: TslNode[]) {
     const slot = this.cellIndex(cell).mul(4).toVar();
     sums.forEach((value, c) => {
@@ -335,23 +272,16 @@ export class MpmSim {
     });
   }
 
-  // P2G through workgroup memory: a workgroup's particles (neighbours after
-  // the sort) first accumulate into a tile covering their stencils' bounding
-  // box with workgroup atomics, then the tile is added to the global grid
-  // with one atomic per non-zero node component. Integer sums are
-  // order-independent, so the grid is bit-identical to the direct kernel's.
-  // When the box does not fit TILE_NODES (unsorted or scattered particles),
-  // the workgroup scatters straight to the global grid instead. Barriers are
-  // outside any branch (all threads reach them, including those past the
-  // particle count): WGSL requires uniform control flow for barriers and TSL
-  // has no workgroupUniformLoad to make the tile decision uniform.
+  // Integer sums are order-independent, so the grid is bit-identical to the
+  // direct kernel's. Barriers sit outside every branch, as WGSL needs uniform
+  // control flow for them and TSL has no workgroupUniformLoad.
   private makeP2GTiled() {
     const { pos } = this;
     const u = this.uniforms;
     const tile = workgroupArray("int", TILE_NODES * 4).toAtomic();
     // min xyz, max xyz of the particles' stencil base cells
     const boundsArray = workgroupArray("int", 6).toAtomic();
-    // (workgroup arrays want node indices)
+    // Workgroup arrays want node indices
     const bounds = { element: (i: number) => boundsArray.element(uint(i)) };
     const BIG = 1 << 30;
     return new WgpuCompute({
@@ -424,7 +354,6 @@ export class MpmSim {
     return v.mul(min(1.0, limit.div(max(length(v), 1e-6))));
   }
 
-  // Grid position (cells, TSL vec3) to world
   private toWorld(cells: TslNode): TslNode {
     const { gridMin, cellSize } = this;
     return vec3(gridMin.x, gridMin.y, gridMin.z).add(cells.mul(cellSize));
@@ -438,8 +367,7 @@ export class MpmSim {
       body: ({ index }) => {
         If(index.lessThan(uint(numCells)), () => {
           const slot = index.mul(uint(4)).toVar();
-          // Read the node and zero it for the next substep's P2G (this is
-          // the only reader, so no separate clear pass is needed)
+          // Zeroed for the next P2G here, the only reader, so no clear pass is needed
           const sums = [0, 1, 2, 3].map((offset) => float(atomicLoad(gridAtomic.element(slot.add(uint(offset))))).toVar());
           for (let offset = 0; offset < 4; offset++) {
             atomicStore(gridAtomic.element(slot.add(uint(offset))), int(0));
@@ -450,8 +378,7 @@ export class MpmSim {
             const v = vec3(sums[0], sums[1], sums[2]).div(MOMENTUM_SCALE).div(mass).toVar();
             v.y.subAssign(u.dt.mul(u.gravity));
             v.assign(this.capSpeed(v));
-            // Slip walls: a node beyond a wall moves into the wall no faster
-            // than the wall itself (a still wall: no velocity into it)
+            // Slip walls: a node past a wall moves into it no faster than the wall
             const i = int(index).div(int(res.y * res.z));
             const j = int(index).div(int(res.z)).mod(int(res.y));
             const k = int(index).mod(int(res.z));
@@ -461,10 +388,8 @@ export class MpmSim {
               If(node[axis].greaterThan(u.wallMax[axis]), () => { v[axis].assign(min(v[axis], u.wallMaxVel[axis])); });
             }
             if (collider) {
-              // Level-set boundary: a node inside the collider keeps no
-              // velocity into it (relative to the collider's) and its
-              // tangential velocity loses friction * |normal velocity|; on a
-              // slab's centre line (no normal) it moves with the collider
+              // Level-set boundary with Coulomb friction, relative to the
+              // collider; a node on a slab's centre line has no normal and moves with it
               const hit = collider.sample(this.toWorld(node));
               If(hit.phi.lessThan(0.0), () => {
                 const vco = hit.velocity.div(cellSize).toVar();
@@ -512,8 +437,6 @@ export class MpmSim {
             C1.addAssign(dpos.mul(gv.y.mul(4.0)));
             C2.addAssign(dpos.mul(gv.z.mul(4.0)));
           });
-          // A particle outside a wall (the wall moved past it) is swept back
-          // in: at least penetration / PUSH_TIME of velocity toward the inside
           for (const axis of ["x", "y", "z"] as const) {
             const under = u.wallMin[axis].sub(p[axis]);
             const over = p[axis].sub(u.wallMax[axis]);
@@ -521,8 +444,6 @@ export class MpmSim {
             If(over.greaterThan(0.0), () => { newV[axis].assign(min(newV[axis], over.div(-PUSH_TIME))); });
           }
           if (collider) {
-            // Likewise out of the collider: at least penetration / PUSH_TIME
-            // along its normal, relative to its velocity
             const hit = collider.sample(this.toWorld(p.xyz));
             If(hit.phi.lessThan(0.0), () => {
               const vco = hit.velocity.div(cellSize);
@@ -532,19 +453,14 @@ export class MpmSim {
           }
           newV.assign(this.capSpeed(newV));
           const x = p.xyz.add(newV.mul(u.dt));
-          // Keep the stencil inside the grid whatever the walls let through
-          // (nialltl's clamp). The walls are soft: a particle only stops
-          // fully once all its stencil nodes are wall nodes (within 1.5
-          // cells of the edge), so the clamp must sit inside that band, not
-          // at the wall, or particles pile up on it and J collapses.
+          // nialltl's clamp keeps the stencil on the grid. The walls are soft, so
+          // it sits where all stencil nodes are wall nodes: at the wall,
+          // particles would pile up and collapse J.
           const clamped = clamp(x, vec3(1.0), vec3(res.x - 2.0, res.y - 2.0, res.z - 2.0));
           const Jint = p.w.mul(float(1.0).add(u.dt.mul(C0.x.add(C1.y).add(C2.z)))).toVar();
-          // Density correction: J integrated from the velocity divergence
-          // misses particles packing below the grid resolution (after hard
-          // compressions they pile up at 10-60x density with J ~ 1), so pull
-          // J toward rest density / grid density when the particles are
-          // denser than J says (never the other way: free-surface nodes are
-          // partly empty, which would read as tension)
+          // Integrated J misses particles packing below the grid resolution, so
+          // it is pulled toward the grid density's, only when denser: partly
+          // empty free-surface nodes would read as tension
           const Jdensity = float(RHO).div(max(density, 1e-3));
           const Jfixed = min(Jint, mix(Jint, Jdensity, u.densityRate));
           const J = clamp(Jfixed, J_SAFE_MIN, J_SAFE_MAX);
@@ -558,9 +474,6 @@ export class MpmSim {
     });
   }
 
-  // Advance by substeps * dt seconds, with the walls where `walls` says.
-  // All substeps go into one compute pass (`batched`), or one pass per
-  // kernel dispatch when not (for per-kernel GPU timings)
   step() {
     this.steps += 1;
     if (this.sortEvery > 0 && this.steps % this.sortEvery === 0) {
@@ -577,11 +490,7 @@ export class MpmSim {
     this.batch.submit({ split: !this.batched });
   }
 
-  // Refill the particles at 8 per cell, randomly placed: by default a ball
-  // of water at the centre of the current walls (its radius follows from
-  // the particle count, capped to fit the walls), or with `drop` a slab
-  // spanning the walls in x/z with its base `drop` cells above the floor
-  // (0: on the floor; its thickness follows from the particle count)
+  // 8 particles per cell, as a ball, or with drop a slab that many cells above the floor
   reset(drop?: number) {
     const { count } = this;
     const min = this.toCells(this.walls.min, new THREE.Vector3());
@@ -610,7 +519,6 @@ export class MpmSim {
       }
     }
     this.pos.upload(data);
-    // At rest, with the particle's id in vel.w (it survives the sort)
     const velocities = new Float32Array(count * 4);
     for (let i = 0; i < count; i++) {
       velocities[i * 4 + 3] = i;
@@ -635,22 +543,10 @@ export class MpmSim {
 
 export const COLOR_MODES = ["speed", "pressure", "both"] as const;
 
-// Draws the particles of a MpmSim as isotropic splats in world space: the
-// generator reads the simulation's position / velocity buffers directly, so
-// nothing is copied, and it follows setCount (the buffers keep their TSL
-// nodes when they grow; the page makes a new collection with the new
-// count). `radius` is the splat standard deviation in metres; every
-// particle's brightness is scaled by a fixed factor in [1 - variation, 1]
-// hashed from its id, so the particles stay distinguishable when the water
-// moves as a block.
-//
-// Colour (`colorMode`, an index into COLOR_MODES):
-//   speed: blue at rest to white at `speedRange` m/s;
-//   pressure: light blue at zero to deep blue at `pressureRange`, with
-//     pressure E (1 - J) shown as metres of water head (the depth of still
-//     water with that pressure at 9.8 m/s^2), so the scale does not change
-//     with E; tension (J > 1) stays light blue;
-//   both: the pressure blue, whitened by speed.
+// Follows setCount, since the buffers keep their TSL nodes when they grow.
+// radius is a standard deviation in metres, variation tells the particles
+// apart when the water moves as a block, and pressure shows as metres of
+// water head so its range holds for any E.
 export function waterSplats(sim: MpmSim) {
   const uniforms = {
     radius: uniform(sim.cellSize * 0.4, "float"),

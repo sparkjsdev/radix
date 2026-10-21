@@ -1,43 +1,27 @@
-// MLS-MPM water: a ball of water dropped in a box, simulated in TSL compute
-// kernels (MpmSim.ts) and drawn with one splat per particle by a generator
-// that reads the particle buffers (waterSplats), sorted with a splat scan in
-// one SplatRenderer. WebGPU only: on the WebGL2 backend the page says so. The
-// camera flies or orbits the box (CameraControls: F switches). The Walls
-// folder moves the box faces live; water outside a moved wall is pushed back
-// in. The box is drawn as fat lines (BoxLines.ts), bright while the walls
-// move and dim otherwise (the Box folder).
-//
-// The scan (a sample on GCS, or any URL) sets the box (its robust extent),
-// is drawn as the first object of the collection (the leaves of its LoD
-// tree when it has one) and is baked on the GPU into a collider
-// (SplatCollider.ts): a narrow-band distance field in the scan's object
-// space that the simulation samples through its transform. The gizmo on the
-// scan (1 translate, 2 rotate, 3 scale; uniform scale only) moves the
-// collider with it; the end of a scale drag re-bakes so a voxel stays about
-// `voxel` sim cells. Query parameters:
-//   ?scene=      a sample: ceramic (default) | butterfly | sutro (SH3); a
-//                splat file URL; or none (?splats= another base for the
-//                samples, ?splatsSh= for Sutro)
-//   ?flip=0      the scan as stored (samples are y-down, so flipped by default)
-//   ?sceneScale= initial uniform scale of the scan
+// MLS-MPM water on WebGPU, drawn as one splat per particle and colliding with a splat scan
+//   ?scene=      ceramic (default) | butterfly | sutro (SH3) | a splat file URL | none
+//   ?splats=     the samples' base URL (default the hosted folder)
+//   ?splatsSh=   Sutro's base URL (default the hosted SH folder)
+//   ?flip=0      the scan as stored (default flipped, as the samples are y-down)
+//   ?sceneScale= uniform scale of the scan (default 1)
 //   ?voxel=      collider voxel size in sim cells (default 1)
-//   ?particles=  (default 200000), ?grid= (cells along the longest axis;
-//                default 192 with a scan's box, else 48)
-//   ?bounds=x,y,z  box size in metres, floor at y = 0 (default the scan's extent)
-//   ?dt=         s per substep, ?substeps=, ?E= (stiffness), ?gravity= (m/s^2)
-//   ?radius=     splat std dev in cells, ?opacity=
-//   ?drop=       start as a slab this many cells above the floor, not a ball
-//   ?controls=orbit | fly (default), ?paused=1
-//   ?timing=1    GPU ms per kernel in the status line from the start (one
-//                pass per kernel; Performance > "GPU timing" switches it)
-//   ?gpu=        webgpu | webgpu-gl (the latter shows the WebGPU notice)
-//
-// `radixMpm` in the console holds the page (`ready` once the scan is
-// loaded and a few frames drew). `await radixMpm.benchmark()` resets the
-// water, warms up, then reports fps, CPU ms per frame, GPU ms per stage
-// (with GPU timing on) and stability stats; `await radixMpm.stats()` gives
-// the stats alone. The Performance folder switches the optimizations live
-// for A/B (one compute pass per step, particle sort interval, tiled P2G).
+//   ?bounds=     x,y,z box size in metres, floor at y = 0 (default the scan's extent, else 2)
+//   ?grid=       cells along the box's longest axis (default 192 with a scan's box, else 48)
+//   ?particles=  particle count (default 200000)
+//   ?dt=         seconds per substep (default 5e-4)
+//   ?substeps=   substeps per frame (default 20)
+//   ?E=          stiffness (default 1e5)
+//   ?gravity=    m/s^2 (default 9.8)
+//   ?radius=     splat standard deviation in cells (default 0.4)
+//   ?opacity=    splat opacity (default 0.05)
+//   ?drop=       start as a slab this many cells above the floor (default a ball)
+//   ?controls=   fly (default) | orbit
+//   ?paused=1    start paused
+//   ?timing=1    GPU ms per kernel in the status line, one pass per kernel
+//   ?gpu=        webgpu | webgpu-gl (default auto); the WebGL2 backend shows a notice
+//   radixMpm     in the console: the page's objects, ready after 5 frames, webgpu false on WebGL2
+//   radixMpm.benchmark({ warmup = 2, seconds = 5 })  fps, CPU and GPU ms and stats() after a reset
+//   radixMpm.stats()  J range, top speed in cells per substep, non-finite count, height percentiles
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
@@ -73,9 +57,7 @@ if (getGpuCaps(renderer).backend !== "webgpu") {
   // Nothing else runs on this backend
   await new Promise(() => {});
 }
-// GPU timestamps per pass: the simulation kernels by their labels (mpmP2G,
-// mpmGrid, mpmG2P, ...), the splats as project, sort and draw. Off unless
-// ?timing=1 or the Performance folder turns them on (they cost frame time).
+// Off unless ?timing=1, since timestamps cost frame time
 const profiler = renderer.inspector instanceof GpuProfiler ? renderer.inspector : undefined;
 if (profiler) {
   profiler.active = params.get("timing") === "1";
@@ -97,15 +79,11 @@ addEventListener("unhandledrejection", (event) => {
   status.textContent = `Error: ${event.reason instanceof Error ? event.reason.message : String(event.reason)}`;
 });
 
-// The box: ?bounds=x,y,z (metres, floor at y = 0, centred on the origin in
-// x/z), else the scan's extent below, else 2 m
 const boundsParam = params.get("bounds")?.split(",").map(Number);
 const boxSize = new THREE.Vector3(boundsParam?.[0] || 2, boundsParam?.[1] || 2, boundsParam?.[2] || 2);
 let bounds = new THREE.Box3(new THREE.Vector3(-boxSize.x / 2, 0, -boxSize.z / 2), new THREE.Vector3(boxSize.x / 2, boxSize.y, boxSize.z / 2));
 
-// The leaves of a LoD tree's splats (nodes without children), copied into
-// plain splats: interior nodes merge their children and would draw and
-// collide twice. Data without a tree as it is.
+// Interior LoD nodes merge their children, so they would draw and collide twice
 function leafSplats(data: ArrayData): ArrayData {
   const tree = Splats.findLodTree(data);
   if (!tree) {
@@ -116,7 +94,6 @@ function leafSplats(data: ArrayData): ArrayData {
   for (let i = 0; i < data.count; i += 1) {
     count += nodes[i * 2] === 0 ? 1 : 0;
   }
-  // Runs of consecutive leaves at a time
   const leaves = Splats.make(count);
   let at = 0;
   for (let start = 0; start < data.count; start += 1) {
@@ -133,10 +110,7 @@ function leafSplats(data: ArrayData): ArrayData {
   return leaves;
 }
 
-// The scan and its collider, placed by `holder` (the gizmo's object). The
-// scan starts at ?sceneScale=, centred on the origin in x/z with its floor
-// at y = 0, and without ?bounds= the box is its extent: the 1st to 99th
-// percentile of the splat centres on each axis.
+// Without ?bounds= the box is the 1st to 99th percentile of the splat centres on each axis
 const sceneName = params.get("scene") ?? "ceramic";
 const holder = new THREE.Object3D();
 scene.add(holder);
@@ -180,8 +154,6 @@ const sim = new MpmSim({
   gravity: numberParam("gravity", 9.8),
   collider,
 });
-// The water starts as a ball at the centre of the box; ?drop= makes it a
-// slab spanning the box in x/z with its base that many cells above the floor
 const drop = params.has("drop") ? numberParam("drop", 0) : undefined;
 if (drop !== undefined) {
   sim.reset(drop);
@@ -192,8 +164,7 @@ const water = waterSplats(sim);
 water.uniforms.radius.value = numberParam("radius", 0.4) * sim.cellSize;
 water.uniforms.opacity.value = numberParam("opacity", 0.05);
 
-// The scan and the water in one sort. The water's object is remade when the
-// particle count changes, the collection when either object changes.
+// Collection objects lock their count, so a new particle count makes a new water object
 const splats = new SplatRenderer({ renderer });
 if (profiler) {
   splats.phase = (name, run) => profiler.phase(name, run);
@@ -232,15 +203,11 @@ if (collider) {
   await rebake();
 }
 
-// The walls, live: the lines fit the box every frame, bright while it
-// changes and dim otherwise
 const boxLines = new BoxLines();
 scene.add(boxLines);
 
-// Transform gizmo on the scan, made before the camera controls so its
-// pointerdown runs first. Scale stays uniform (the distance field is only
-// exact for uniform scale): a per-axis drag applies the changed axis to all
-// three. The end of a scale drag re-bakes.
+// Made before the camera controls so its pointerdown runs first, and kept at
+// uniform scale, the only one the distance field is exact for
 let gizmo: TransformControls | undefined;
 const initialPose = { position: holder.position.clone(), quaternion: holder.quaternion.clone(), scale: holder.scale.x };
 if (scan) {
@@ -277,7 +244,6 @@ if (scan) {
   });
 }
 
-// Around the box centre, starting from the front, slightly above
 const center = bounds.getCenter(new THREE.Vector3());
 const extent = Math.max(size.x, size.y, size.z);
 camera.position.set(center.x, center.y + 0.1 * extent, center.z + 0.1 * extent);
@@ -288,8 +254,7 @@ const controls = new CameraControls({
 });
 controls.lookAt(center);
 
-// GUI: the simulation uniforms are live; the particle count is applied by
-// reset (it resizes the particle buffers); the grid needs a reload
+// The particle count waits for reset, which refills the resized buffers; the grid needs a reload
 const settings = {
   get camera() { return controls.mode; },
   set camera(mode: "orbit" | "fly") { controls.mode = mode; },
@@ -338,12 +303,10 @@ gui.add(settings, "color", [...COLOR_MODES]);
 gui.add(settings, "speedRange", 0.1, 10, 0.1).name("white at (m/s)");
 gui.add(settings, "pressureRange", 0.02, 2, 0.01).name("deep blue at (m head)");
 
-// Performance switches (A/B the optimizations live)
 const perfFolder = gui.addFolder("Performance");
 const batchedControl = perfFolder.add(sim, "batched").name("one pass per step");
 perfFolder.add(sim, "sortEvery", 0, 120, 1).name("sort every (steps)");
 perfFolder.add(sim, "tiledP2G").name("tiled P2G");
-// GPU ms per kernel in the status line: one pass per kernel while on
 if (profiler?.supported) {
   const timing = {
     get gpu() { return profiler.active; },
@@ -356,8 +319,7 @@ if (profiler?.supported) {
   perfFolder.add(timing, "gpu").name("GPU timing (per kernel)");
 }
 
-// Walls: each face slides within the initial box (the grid only extends a
-// little beyond it), kept at least two cells from the opposite face
+// Faces slide within the initial box, as the grid extends only a little beyond it
 const wallsFolder = gui.addFolder("Walls");
 const wallGap = 2 * sim.cellSize;
 for (const axis of ["x", "y", "z"] as const) {
@@ -376,8 +338,6 @@ for (const axis of ["x", "y", "z"] as const) {
 wallsFolder.add({ restore: () => { sim.walls.copy(bounds); wallsFolder.controllers.forEach((c) => c.updateDisplay()); } }, "restore")
   .name("restore box");
 
-// Box lines: pixel width, opacity when idle, fade after the last change
-// (an edit here shows them at full opacity too)
 const boxFolder = gui.addFolder("Box");
 boxFolder.onChange(() => boxLines.touch());
 boxFolder.add(boxLines.settings, "width", 0.5, 8, 0.25).name("width (px)");
@@ -387,8 +347,6 @@ boxFolder.add(boxLines.settings, "fade", 0, 5, 0.05).name("fade (s)");
 boxFolder.add(boxLines.settings, "midlines").name("face midlines");
 boxFolder.add(boxLines, "visible").name("show box");
 
-// Scene: the gizmo mode, the collider switches, and the bake parameters
-// (applied by "rebake")
 const sceneSettings = {
   get gizmo() { return !gizmo?.enabled ? "off" : gizmo.mode; },
   set gizmo(mode: string) {
@@ -438,9 +396,6 @@ if (collider) {
   sceneFolder.add(sceneSettings, "rebake");
 }
 
-// GPU ms per phase, accumulated over the frames the profiler resolved: one
-// accumulator for the status line (drained every STATUS_INTERVAL_MS), one
-// for a running benchmark
 interface GpuAccumulator { sums: Record<string, number>; frames: number }
 const newAccumulator = (): GpuAccumulator => ({ sums: {}, frames: 0 });
 let statusGpu = newAccumulator();
@@ -475,8 +430,6 @@ function averageGpu(accumulator: GpuAccumulator): GpuProfile & { total: number }
   return { gpu, cpu: {}, total, frames: accumulator.frames };
 }
 
-// Particle state summary: J range, fastest particle in cells per substep,
-// non-finite particles, and settled-height percentiles (world y)
 async function stats() {
   const p = await sim.pos.read(0, sim.count);
   const v = await sim.vel.read(0, sim.count);
@@ -502,7 +455,7 @@ async function stats() {
   };
 }
 
-// CPU ms of sim.step() and the splats + render per frame while a benchmark runs
+// CPU ms, summed while a benchmark runs
 let bench: { frames: number; stepMs: number; renderMs: number } | undefined;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function benchmark({ warmup = 2, seconds = 5 }: { warmup?: number; seconds?: number } = {}) {
@@ -535,7 +488,6 @@ async function benchmark({ warmup = 2, seconds = 5 }: { warmup?: number; seconds
   return result;
 }
 
-// For console / Playwright driving, e.g. `await radixMpm.sim.pos.read(0, 8)`
 const handle = {
   ready: false, webgpu: true,
   renderer, scene, camera, controls, sim, water, splats, scan, holder, collider, gizmo, boxLines, settings, profiler,
@@ -543,7 +495,6 @@ const handle = {
 };
 Object.assign(window, { radixMpm: handle });
 
-// Frame loop: controls, one step of substeps, one render
 const STATUS_INTERVAL_MS = 500;
 let frames = 0;
 let drawn = 0;
