@@ -1,5 +1,7 @@
 # Overview
 
+> **Radix is experimental.** Its API may change completely in any version.
+
 Radix draws 3D Gaussian splats with three.js's `WebGPURenderer`, on WebGPU or on its WebGL2 fallback, from one set of TSL shaders. It keeps data in tables of typed arrays (`ArrayData`) that have the same layout on the CPU, in workers, in files, and on the GPU (`GpuArrays`), so a splat takes the same 32 bytes in each of them.
 
 Import it as `@sparkjsdev/radix` (everything) or as `@sparkjsdev/radix/core` (only the CPU code, which doesn't use three.js and so runs in workers and in Node). The code is in `src/`; it imports no other `src/` folder.

@@ -1,5 +1,8 @@
 # @sparkjsdev/radix
 
+> [!CAUTION]
+> ⚠️ **Radix is experimental.** Its API may change completely in any version.
+
 Radix draws 3D Gaussian splats with three.js's `WebGPURenderer`, on WebGPU or WebGL2 from the same TSL shaders. It sorts the splats of all objects together and draws them in one call, on WebGPU entirely on the GPU.
 
 Each splat is made in the projection shader, so it can come from a file, from arrays a GPU simulation writes, or from a formula. In XR, Radix projects and sorts the splats once for both eyes.

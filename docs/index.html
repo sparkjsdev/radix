@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="site.css">
 <style>
 .hero h1 { font-size: clamp(56px, 11vw, 132px); }
+.hero .notice { display: inline-block; margin: 4px 0 0; padding: 7px 16px; border: 1px solid #facc1599; border-radius: 999px; background: #1a160acc; color: var(--yellow); font-size: 15px; }
 .hero .ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 28px; }
 .hero .ctas a { text-decoration: none; padding: 11px 16px; border-radius: 11px; font-weight: 600; font-size: 14px; border: 1px solid #3a4256; background: #121620cc; color: var(--text); }
 .hero .ctas a.primary { background: var(--text); color: #0a0c11; border-color: var(--text); }
@@ -63,6 +64,7 @@
   <canvas id="heroCanvas"></canvas>
   <div class="inner">
     <h1>Radix</h1>
+    <p class="notice"><b>Radix is experimental.</b> Its API may change completely in any version.</p>
     <p class="lead">Radix draws 3D Gaussian splats in three.js, on WebGPU or on WebGL2 from the same shaders. Each frame it projects the splats of all objects in a scene, sorts them together, and draws them in one draw call.</p>
     <p class="small">Several objects in one sort · four projection methods · splats generated in shaders · stereo XR · one table format from files to the GPU</p>
     <div class="ctas">
