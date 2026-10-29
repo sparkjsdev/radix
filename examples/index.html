@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radix • examples</title>
+  <link rel="stylesheet" href="../docs/site.css">
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #ddd;
+      font: 14px/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      margin: 0 auto;
+      max-width: 980px;
+      padding: 24px;
+    }
+
+    a {
+      color: #8cf;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      margin-top: 36px;
+    }
+
+    code {
+      color: #fc9;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .cards a {
+      display: block;
+      padding: 14px 16px;
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #181818;
+      color: #ddd;
+      text-decoration: none;
+    }
+
+    .cards a:hover {
+      border-color: #8cf;
+    }
+
+    .cards b {
+      display: block;
+      color: #8cf;
+      font-size: 17px;
+      margin-bottom: 4px;
+    }
+
+    .example {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid #2a2a2a;
+    }
+
+    .links a {
+      margin-right: 10px;
+    }
+
+    .spark {
+      display: grid;
+      grid-template-columns: 230px 70px 1fr;
+      gap: 2px 12px;
+      align-items: baseline;
+    }
+
+    .spark > div {
+      padding: 3px 0;
+      border-top: 1px solid #222;
+    }
+
+    .muted {
+      color: #888;
+    }
+
+    .partial {
+      color: #fd6;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body data-root="../docs/" data-section="examples">
+  <main>
+  <h1>Radix examples</h1>
+  <p>
+    Pages built on the <code>@sparkjsdev/radix</code> library bundle: static HTML and JavaScript with an import map,
+    no server code needed. Their sources are TypeScript in <code>examples/</code>;
+    <code>npm run build</code> builds the bundle and these pages (types stripped, file by file) into
+    <code>dist/</code> and <code>build/examples/</code>, and <code>npm run serve</code> serves the repo. Each page runs on WebGPU; its WebGL2
+    link starts it on three's WebGL2 backend (<code>?gpu=webgpu-gl</code>), which sorts on the CPU. The MPM water
+    simulation needs WebGPU's compute shaders.
+  </p>
+
+  <div class="cards">
+    <a href="../docs/index.html"><b>Documentation</b>How Radix works, the API reference, recipes, and the comparison with SparkJS.</a>
+    <a href="./spark/index.html"><b>Spark examples</b><span id="sparkCount">The SparkJS 2.3.1 examples</span> ported to Radix as it is, with what Radix lacks for the rest.</a>
+  </div>
+
+  <h2>Examples</h2>
+  <div id="list"></div>
+  <p class="muted">
+    The viewers' samples are single-file RDX files of ext splats: <code>butterfly-ai.rdx</code> and
+    <code>ceramic.rdx</code> without spherical harmonics, and scans with SH3 (<code>extSh</code>, in <code>rdx-sh/</code>):
+    <code>sutro-2m.rdx</code>, and in the splats viewer also <code>grace-interior-10m.rdx</code>,
+    <code>bicycle.rdx</code> and <code>garden.rdx</code>. <code>?url=</code>
+    opens any other file, its spherical harmonics included.
+    The SOG and LCC viewers have samples of their own. The Doom and Quake pages read their levels from the same hosted folder (built by the original Radix
+    repo's tools); <code>?data=&lt;url&gt;</code> reads a copy from elsewhere.
+    The GPU test and benchmark pages (<code>build/test/gpu/index.html</code>, <code>build/test/bench/index.html</code>,
+    from <code>test/</code>) are bundled from the library's sources by <code>npm run build:test</code>: the tests
+    reach into its internals, outside the bundle.
+  </p>
+
+  <h2>Spark examples on Radix</h2>
+  <p>Each line opens the port on WebGPU, or on WebGL2. <a href="./spark/index.html">The full list</a> also has the
+    examples that are not ported and why, Spark's sources, and the shared helpers.</p>
+  <div class="spark" id="spark"></div>
+  <p class="muted" id="blocked"></p>
+
+  </main>
+
+  <script type="module">
+    import { EXAMPLES, pagesOf } from "./spark/js/examples.js";
+
+    // [title, what it shows, [label, path, query, note?]..., { webgpu }?]; each link also gets a WebGL2
+    // one, unless the page needs WebGPU
+    const PAGES = [
+      ["Splat viewer", "One splat file at a time: open, drop or paste a URL of a .ply, .spz, .rad or .rdx file, or pick a sample. A quick bar for the projection method, sort and camera, and a panel for render params, depth of field, a transform gizmo, HDR display, stereo, presets and export to RDX, PLY or SPZ.",
+        [["butterfly", "splats/index.html", ""], ["ceramic cave", "splats/index.html", "scan=ceramic"], ["Sutro", "splats/index.html", "scan=sutro"], ["Grace interior", "splats/index.html", "scan=grace"], ["bicycle", "splats/index.html", "scan=bicycle"], ["garden", "splats/index.html", "scan=garden"]]],
+      ["Multi-splat scenes", "Short uses of collections, renderers, views and modifiers, one scene at a time (the bar switches scenes and the sort live).",
+        [["multi", "scenes/index.html", "scene=multi", "several objects with their own transforms and a TSL generator in one sort"],
+          ["views", "scenes/index.html", "scene=views", "one renderer from two cameras, the second view with its own collection and modifier"],
+          ["modifiers", "scenes/index.html", "scene=modifiers", "depth, normals, height and a wave as modifiers in each space, with thumbnails through views"],
+          ["subset", "scenes/index.html", "scene=subset", "a generator remapped by index lists from a pool, released when no longer drawn"],
+          ["offline", "scenes/index.html", "scene=offline", "a still at a fixed size, sorted exactly for its camera and read back"]]],
+      ["WebXR", "One splat file in an immersive-vr session: WebGPU XR with the GPU sort, or WebGL2 XR with the worker sort through one view for the head. Without a headset the desktop view orbits; stereo previews both eyes side by side.",
+        [["desktop", "xr/index.html", ""], ["stereo preview", "xr/index.html", "stereo=1"]]],
+      ["SPZ reader / writer", "Reads and writes Niantic SPZ files: v2 and v3 (gzip) and SPZ 4 (NGSP header, zstd streams), with spherical harmonics up to degree 4. A panel shows what the reader found: container, version, SH degree, and records such as Adobe's safe orbit. Write the splats as v2, v3 or SPZ 4, download the file, and read it back. Open or drop any splat file to convert it to SPZ. CC0 samples from SharedTestModels.",
+        [["seashell (SPZ 4)", "spz/index.html", ""], ["sparkling water (SPZ 4, SH 4)", "spz/index.html", "sample=sparkling-v4"],
+          ["backpack (v2)", "spz/index.html", "sample=backpack-v2"], ["scarf (v3, SH 4)", "spz/index.html", "sample=scarf-v3"]]],
+      ["SOG viewer + LoD", "PlayCanvas SOG and SOGS files (.sog or .zip bundles, or a meta.json with its WebPs: open, drop a folder or paste a URL) decoded into ext splats, their spherical harmonics as an ext palette (drawn by Radix's built-in SH); and SOG LoD scenes (lod-meta.json) streamed file by file, a level per leaf under a splat budget, drawn as one object per resident file. The splat viewer's bar and panel, plus the SH degree and a LoD panel with level colors.",
+        [["skull", "sogs/index.html", "sample=skull"], ["Sutro (SOGS .zip)", "sogs/index.html", "sample=sutro"], ["bicycle", "sogs/index.html", "sample=bicycle"],
+          ["skatepark (LoD)", "sogs/index.html", "sample=skatepark", "16M splats over 6 levels"], ["roman parish (LoD)", "sogs/index.html", "sample=roman-parish", "69M splats over 7 levels"]]],
+      ["LCC viewer + LoD", "XGRIDS LCC v1 scenes (a grid of cells, each stored at several levels of detail): every cell draws the level its distance asks for under a splat budget, decode workers range-read the chosen blocks into ext splats with Radix's core bundle, and Quality files draw their spherical harmonics. LCC2 scenes (a tree of .sog, .spz or .ply chunk files): the camera picks a cut through the tree, .sog chunks decode on the GPU and .spz / .ply ones on the workers, each file one object drawing its nodes' rows. Scenes with a collision mesh show it as a debug overlay and can be walked (G: a capsule with gravity, steps and jumps). Scene picker, fly, orbit or walk, a LoD panel with level colors and boxes, and export.",
+        [["showroom", "lcc/index.html", ""], ["Unreal sample", "lcc/index.html", "scene=unreal", "3 cells"],
+          ["bicycle (SH)", "lcc/index.html", "scene=bicycle", "converted from the repo's PLY, 35 cells"], ["Sutro Tower (SH)", "lcc/index.html", "scene=sutro"],
+          ["LCC2 street", "lcc/index.html", "scene=street", "XGRIDS' own LCC2, 6 levels"], ["LCC2 bicycle (SH)", "lcc/index.html", "scene=bicycle-sog", "converted, .sog chunks"],
+          ["walk the temple", "lcc/index.html", "scene=unreal&camera=walk", "on its collision mesh"], ["collision overlay", "lcc/index.html", "scene=showroom2&collision=1"]]],
+      ["3D fractals", "Fractals baked into a few million splats on the GPU and lit live: Mandelbulbs, Mandelboxes, IFS, Julias, flames, attractors and a fractal tree, each growing out of the last splat for splat. Opens on three music videos synthesized on the GPU; the gallery has “Surprise me”, palettes, lighting and bloom.",
+        [["demos", "fractals/index.html", ""], ["gallery", "fractals/index.html", "demo=0"], ["Aurora", "fractals/index.html", "demo=aurora"], ["Tidal", "fractals/index.html", "demo=tidal"], ["Lumen", "fractals/index.html", "demo=lumen"]]],
+      ["MPM water", "MLS-MPM water simulated in WebGPU compute kernels, one splat per particle from a generator that reads the particle buffers, sorted together with a splat scan it collides with (a baked distance field that follows the scan's gizmo); movable walls and live simulation knobs.",
+        [["ceramic", "mpm/index.html", ""], ["no scan", "mpm/index.html", "scene=none"], ["GPU timings", "mpm/index.html", "timing=1", "GPU time per kernel"]], { webgpu: true }],
+      ["fx editor", "A node editor for splat effects: JSON graphs of TSL nodes built into Radix modifiers, with values, time, clicks and the camera as uniforms, so editing a value compiles nothing; probes, groups, ELK auto-layout and three themes, on the five sample scans. On WebGL2 the graph runs inside the scan's generator.",
+        [["editor", "fxedit/index.html", ""],
+          ["dissolve", "fxedit/index.html", "graph=dissolve"], ["toybox theme", "fxedit/index.html", "theme=toybox"]]],
+      ["Doom", "The shareware episode on splats, driven by the real game (doomgeneric in WASM, in a worker): the camera follows the player, doors and lifts move, sector lighting (light levels, distance, fullbright, fuzz) runs inside the generators, every thing is one batched sprite-atlas object, and the software frame's menus and status bar are splats drawn by a second renderer; each level's LoD trees are selected on a worker under a splat budget.",
+        [["demo loop", "doom/index.html", ""], ["E1M1", "doom/index.html", "warp=1,1"], ["E1M6", "doom/index.html", "warp=1,6", "the most objects and things"],
+          ["free fly", "doom/index.html", "sim=0&level=e1m8", "no game: fly through one level"], ["GPU timings", "doom/index.html", "warp=1,1&timing=1", "GPU time per phase"]]],
+      ["Quake", "The shareware episode on splats, driven by the real game (quakegeneric in WASM, in a worker): the camera follows the player; lightmaps, light styles, dynamic lights, sky and liquids are lit inside the generators; animated models deform on the GPU; particles and the software HUD are splats too; each map's LoD trees are selected on a worker under a splat budget.",
+        [["demo loop", "quake/index.html", ""], ["E1M1", "quake/index.html", "map=e1m1"], ["start map", "quake/index.html", "map=start"],
+          ["free fly", "quake/index.html", "sim=0&map=e1m1", "no game: fly through one map"], ["GPU timings", "quake/index.html", "map=e1m1&timing=1", "GPU time per phase"]]],
+    ];
+
+    const url = (path, query, gl) => {
+      const params = new URLSearchParams(query);
+      if (gl) {
+        params.set("gpu", "webgpu-gl");
+      }
+      const search = params.toString();
+      return `./${path}${search ? `?${search}` : ""}`;
+    };
+    const list = document.getElementById("list");
+    for (const [title, text, links, { webgpu } = {}] of PAGES) {
+      const row = document.createElement("div");
+      row.className = "example";
+      const gl = (path, query) => webgpu ? '<span class="muted">WebGPU only</span>' : `<a class="muted" href="${url(path, query, true)}">WebGL2</a>`;
+      const items = links.map(([label, path, query, note]) =>
+        `<div class="links"><a href="${url(path, query)}">${label}</a>${gl(path, query)}${note ? `<span class="muted">${note}</span>` : ""}</div>`).join("");
+      row.innerHTML = `<div><b>${title}</b></div><div>${text}${items}</div>`;
+      list.append(row);
+      // The single-file build beside the page (npm run build:single), when there is one
+      const folder = links[0][1].split("/")[0];
+      const single = `./${folder}/${folder}.html`;
+      fetch(single, { method: "HEAD" }).then((response) => {
+        if (response.ok) {
+          row.lastElementChild.insertAdjacentHTML("beforeend", `<div class="links"><a href="${single}">one file</a><span class="muted">${folder}.html: the page and everything it loads in one HTML file</span></div>`);
+        }
+      }, () => {});
+    }
+
+    // Every ported page of the Spark examples, one per line
+    const ported = EXAMPLES.filter((example) => example.status === "ported" || example.status === "partial");
+    document.getElementById("sparkCount").textContent = `${ported.length} of the ${EXAMPLES.length} SparkJS 2.3.1 examples`;
+    const spark = document.getElementById("spark");
+    for (const example of ported) {
+      for (const page of pagesOf(example)) {
+        const query = example.smoke?.replace(/^\?/, "") ?? "";
+        const path = `spark/${page}`;
+        const name = page === `${example.name}/index.html` ? example.title : `${example.title} (${page.split("/").pop().replace(".html", "")})`;
+        spark.insertAdjacentHTML("beforeend", `
+          <div><a href="${url(path, query)}">${name}</a>${example.status === "partial" ? ' <span class="partial">partial</span>' : ""}</div>
+          <div><a class="muted" href="${url(path, query, true)}">WebGL2</a></div>
+          <div class="muted">${example.uses ?? ""}</div>`);
+      }
+    }
+    const blocked = EXAMPLES.filter((example) => example.status === "blocked").map((example) => example.title);
+    document.getElementById("blocked").textContent = `Not ported yet: ${blocked.join(", ")}.`;
+  </script>
+  <script src="../docs/site.js"></script>
+</body>
+
+</html>

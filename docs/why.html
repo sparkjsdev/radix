@@ -129,7 +129,7 @@ td.best { color: var(--worker); font-weight: 600; }
 <section id="ports" data-title="Spark's examples">
   <div class="eyebrow">06 · Spark's examples</div>
   <h2>What porting Spark's examples showed</h2>
-  <p class="lede">31 of the 42 SparkJS 2.3.1 examples run on Radix as it is, as static pages on the library bundle (<a href="../build/examples/spark/index.html">the ports</a>), on both WebGPU and WebGL2. Nothing in Radix was changed for them.</p>
+  <p class="lede">31 of the 42 SparkJS 2.3.1 examples run on Radix as it is, as static pages on the library bundle (<a href="../examples/spark/index.html">the ports</a>), on both WebGPU and WebGL2. Nothing in Radix was changed for them.</p>
   <ul class="reveal">
     <li><b>Missing features were written on the public API</b> in example code: SDF edits as a world-space modifier, Spark's snow and rain as a TSL generator, per-object opacity and tint, and CPU raycasts against the Gaussians. Spherical harmonics began this way too (a table of SPZ SH bytes and a TSL step in the generator) and are now built in, so the ports load and draw SH with no code of their own.</li>
     <li><b>The remaining examples are blocked</b> by level-of-detail selection, paged RAD streaming, the SOG format, or skinning. Radix's own SOG viewer example has since read SOG files and their LoD scenes in example code.</li>

@@ -28,7 +28,7 @@
   // [section, label, page from the docs folder]
   const SECTIONS = [
     ["guide", "Guide", "index.html"],
-    ["examples", "Examples", "../build/examples/index.html"],
+    ["examples", "Examples", "../examples/index.html"],
     ["source", "Source", SOURCE],
     ["reference", "Reference", "ref/overview.html"],
   ];

@@ -36,7 +36,7 @@
 </nav>
 <main class="doc">
 <h1>multi-splat.md</h1>
-<p class="path">docs/multi-splat.md · <a href="multi-splat.md.html">raw</a> · <a href="../build/examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
+<p class="path">docs/multi-splat.md · <a href="multi-splat.md.html">raw</a> · <a href="../examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
 <p class="outline">Headings: <a href="#L1">Multi-splat design</a><a href="#L24">The constraints</a><a href="#L26">1. Splats must be sorted together</a><a href="#L36">2. Each object has its own transform and its own generator</a><a href="#L47">3. Shader compilation is slow, and the same objects are drawn every frame</a><a href="#L56">4. Batching across objects is limited</a><a href="#L60">5. Compute runs before the frame's draws</a><a href="#L64">6. WebGL2 has no compute shaders, so its sort arrives late</a><a href="#L72">7. Several viewpoints</a><a href="#L76">8. Effects that apply to every splat</a><a href="#L80">How the model follows from the constraints</a><a href="#L82">`SplatCollection`: the collection an order is sorted for</a><a href="#L90">`SplatRenderer`: the settings every viewpoint shares</a><a href="#L94">`SplatView`: what one viewpoint changes</a><a href="#L103">`SplatOrder` and versions: using every finished sort</a><a href="#L129">On-demand rendering</a><a href="#L133">Object releases: freeing what an old collection still uses</a><a href="#L166">Modifiers and their spaces</a><a href="#L175">Dropped designs</a><a href="#L191">What this asks of an app</a></p>
 <div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
 <a id="L2" href="#L2">2</a>

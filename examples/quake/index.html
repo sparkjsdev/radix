@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Radix Quake</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        font: 12px/1.4 ui-monospace, monospace;
+        color: #ddd;
+      }
+      html, body, canvas {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
+      }
+      canvas {
+        display: block;
+      }
+      #status {
+        position: fixed;
+        left: 10px;
+        top: 8px;
+        margin: 0;
+        white-space: pre;
+        text-shadow: 0 1px 2px #000;
+        pointer-events: none;
+        z-index: 5;
+      }
+      #status.error {
+        top: 40%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        white-space: pre-wrap;
+        font-size: 14px;
+        color: #fc8;
+      }
+      /* lil-gui: wider, translucent over the view */
+      .lil-gui {
+        --width: min(340px, 85vw);
+        --name-width: 9rem;
+        --title-background-color: rgba(0, 0, 0, 0.5);
+        --background-color: rgba(0, 0, 0, 0.15);
+        --widget-color: rgba(0, 0, 0, 0.3);
+        --hover-color: rgba(0, 0, 0, 0.45);
+        --focus-color: rgba(0, 0, 0, 0.6);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+      .lil-gui.root {
+        top: 0;
+        right: 0;
+        z-index: 6;
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../node_modules/three/build/three.webgpu.js",
+          "three/webgpu": "../../node_modules/three/build/three.webgpu.js",
+          "three/tsl": "../../node_modules/three/build/three.tsl.js",
+          "@sparkjsdev/radix": "../../dist/radix.module.js",
+          "lil-gui": "../../node_modules/lil-gui/dist/lil-gui.esm.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <pre id="status">Loading...</pre>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

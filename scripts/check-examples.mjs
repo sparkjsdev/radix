@@ -10,8 +10,8 @@
 //
 //   npm run build && npm run serve
 //   node scripts/check-examples.mjs [--base http://localhost:8000]
-//     (the static site: npm run build:site && npm run serve:site,
-//     then --base http://localhost:8002)
+//     [--site]        (the static site, its pages in examples/ on
+//                     http://localhost:8002: npm run build:site && npm run serve:site)
 //     [--gpu webgpu | webgpu-gl] [--only hello-world,glsl,splats] [--timeout 180]
 //     [--shots dir]   (a PNG of each page's canvas)
 //     [--single]      (the other pages' single-file builds, <name>/<name>.html:
@@ -31,7 +31,9 @@ const option = (name, fallback) => {
   return index >= 0 ? args[index + 1] : fallback;
 };
 const REPO = "http://localhost:8000";
-const base = option("--base", REPO);
+const site = args.includes("--site");
+const base = option("--base", site ? "http://localhost:8002" : REPO);
+const examples = site ? "examples" : "build/examples";
 const backends = option("--gpu") ? [option("--gpu")] : ["webgpu", "webgpu-gl"];
 const only = option("--only")?.split(",");
 const timeout = Number(option("--timeout", 180)) * 1000;
@@ -140,7 +142,7 @@ try {
     for (const { path, query: search, ready, wait, check } of pages.filter((page) => (!page.backends || page.backends.includes(gpu)))) {
       const query = new URLSearchParams(search);
       query.set("gpu", gpu);
-      const url = `${base}/build/examples/${path}?${query}`;
+      const url = `${base}/${examples}/${path}?${query}`;
       const label = `${path}${search ? `?${search}` : ""}`;
       const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
       const errors = [];
