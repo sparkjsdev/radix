@@ -7,22 +7,84 @@ Radix draws 3D Gaussian splats with three.js r186's `WebGPURenderer`, on WebGPU 
 
 Built by [World Labs](https://www.worldlabs.ai).
 
-## Install
+## Getting Started
 
-From GitHub (npm builds `dist/` on install through the `prepare` script):
+### Copy Code
 
-```sh
-npm install three@0.186 github:sparkjsdev/radix
+Copy the following code into an `index.html` file and serve it over http(s). It draws a butterfly on WebGPU, or on the WebGL2 backend where WebGPU is missing.
+
+```html
+<style> body {margin: 0;} </style>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+      "@sparkjsdev/radix": "https://cdn.jsdelivr.net/npm/@sparkjsdev/radix@0.0.1/dist/radix.module.js"
+    }
+  }
+</script>
+<script type="module">
+  import * as THREE from "three";
+  import { GpuArrays, SplatCollection, SplatRenderer, createRenderer, loadSplats } from "@sparkjsdev/radix";
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
+  const renderer = await createRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const splatURL = "https://storage.googleapis.com/forge-dev-public/asundqui/radix/261009/rdx/butterfly-ai.rdx";
+  const data = await loadSplats(splatURL);
+  const butterfly = new THREE.Object3D();
+  butterfly.rotation.x = Math.PI;
+  butterfly.position.set(0, 0, -3);
+  scene.add(butterfly);
+
+  const collection = new SplatCollection([
+    SplatCollection.arrays(GpuArrays.fromData(renderer, data), { matrixWorld: butterfly.matrixWorld }),
+  ]);
+  scene.add(new SplatRenderer({ renderer, collection }));
+
+  renderer.setAnimationLoop(function animate(time) {
+    renderer.render(scene, camera);
+    butterfly.rotation.y += 0.01;
+  });
+</script>
 ```
 
-From a local checkout:
+### CDN
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+      "@sparkjsdev/radix": "https://cdn.jsdelivr.net/npm/@sparkjsdev/radix@0.0.1/dist/radix.module.js"
+    }
+  }
+</script>
+```
+
+Radix imports `three`, `three/webgpu` and `three/tsl`, so the map names all three. The workers' code is inlined into the bundle, so there is no separate worker file to serve.
+
+### NPM
+
+```sh
+npm install three@0.186 @sparkjsdev/radix
+```
+
+From a local checkout instead (npm builds `dist/` on install through the `prepare` script):
 
 ```sh
 cd radix && npm install          # also builds dist/
 cd ../my-app && npm install three@0.186 ../radix
 ```
-
-Or as a tarball: `npm pack` in the checkout, then `npm install path/to/sparkjsdev-radix-0.0.1.tgz`.
 
 TypeScript apps need TypeScript 5.7 or newer, and the WebGPU types: TypeScript 6's DOM types include them, older versions need `@webgpu/types`.
 
