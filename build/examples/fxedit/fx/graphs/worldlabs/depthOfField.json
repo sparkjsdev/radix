@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "name": "depthOfField",
+  "description": "The viewer's depth of field, as on the blog: a focus distance slider from 2 (near) to 8 (far), default 4, and a blur circle 10 pixels across per unit of |depth - focus| / depth. Each splat is widened by that blur (as a world size) and fades to keep its weight.",
+  "source": { "name": "World Labs threeviewer effects (splatterPreFragment.glsl focus blur; blog: focal_diameter 10, focal_distance 2..8, default 4), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "camera": { "type": "input.camera" },
+    "focus": { "type": "wl.focusBlur", "inputs": {"focus": 4, "diameter": 10}, "note": "blur radius in pixels, as a world size" },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "focus.position" },
+    { "from": "camera.position", "to": "focus.cameraPosition" },
+    { "from": "camera.forward", "to": "focus.cameraForward" },
+    { "from": "camera.pixelSize", "to": "focus.pixelSize" },
+    { "from": "focus.blur", "to": "out.blur" }
+  ],
+  "params": {
+    "Focus distance": "focus.focus",
+    "Diameter (px)": "focus.diameter"
+  }
+}

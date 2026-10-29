@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scenes.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/scenes/scenes.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../doom/data.ts.html">data.ts</a><a href="../doom/game.ts.html">game.ts</a><a href="../doom/hud.ts.html">hud.ts</a><a href="../doom/level.ts.html">level.ts</a><a href="../doom/lighting.ts.html">lighting.ts</a><a href="../doom/main.ts.html">main.ts</a><a href="../doom/simWorker.ts.html">simWorker.ts</a><a href="../doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../film/audioStream.ts.html">audioStream.ts</a><a href="../film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../film/score.ts.html">score.ts</a><a href="../film/scoreSink.ts.html">scoreSink.ts</a><a href="../film/text.ts.html">text.ts</a><a href="../film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../fractals/demo/airScore.ts.html">airScore.ts</a><a href="../fractals/demo/demo.ts.html">demo.ts</a><a href="../fractals/demo/library.ts.html">library.ts</a><a href="../fractals/demo/music.ts.html">music.ts</a><a href="../fractals/demo/tune.ts.html">tune.ts</a><a href="../fractals/demo/video.ts.html">video.ts</a></details><a href="../fractals/attractors.ts.html">attractors.ts</a><a href="../fractals/clouds.ts.html">clouds.ts</a><a href="../fractals/device.ts.html">device.ts</a><a href="../fractals/kind.ts.html">kind.ts</a><a href="../fractals/main.ts.html">main.ts</a><a href="../fractals/morph.ts.html">morph.ts</a><a href="../fractals/motion.ts.html">motion.ts</a><a href="../fractals/palettes.ts.html">palettes.ts</a><a href="../fractals/presets.ts.html">presets.ts</a><a href="../fractals/sample.ts.html">sample.ts</a><a href="../fractals/shade.ts.html">shade.ts</a><a href="../fractals/shots.ts.html">shots.ts</a><a href="../fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../fractals/surfaces.ts.html">surfaces.ts</a><a href="../fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../fxedit/fx/graph.ts.html">graph.ts</a><a href="../fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../fxedit/fx/index.ts.html">index.ts</a><a href="../fxedit/fx/registry.ts.html">registry.ts</a><a href="../fxedit/fx/types.ts.html">types.ts</a></details><a href="../fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../fxedit/GraphView.ts.html">GraphView.ts</a><a href="../fxedit/catalog.ts.html">catalog.ts</a><a href="../fxedit/checks.ts.html">checks.ts</a><a href="../fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../fxedit/editors.ts.html">editors.ts</a><a href="../fxedit/framed.ts.html">framed.ts</a><a href="../fxedit/juice.ts.html">juice.ts</a><a href="../fxedit/layout.ts.html">layout.ts</a><a href="../fxedit/main.ts.html">main.ts</a><a href="../fxedit/palette.ts.html">palette.ts</a><a href="../fxedit/preview.ts.html">preview.ts</a><a href="../fxedit/settings.ts.html">settings.ts</a><a href="../fxedit/sound.ts.html">sound.ts</a><a href="../fxedit/springs.ts.html">springs.ts</a><a href="../fxedit/themes.ts.html">themes.ts</a><a href="../fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../lcc/LccScene.ts.html">LccScene.ts</a><a href="../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../lcc/catalog.ts.html">catalog.ts</a><a href="../lcc/collision.ts.html">collision.ts</a><a href="../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../lcc/gui.ts.html">gui.ts</a><a href="../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../lcc/main.ts.html">main.ts</a><a href="../lcc/quickBar.ts.html">quickBar.ts</a><a href="../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../quake/data.ts.html">data.ts</a><a href="../quake/entities.ts.html">entities.ts</a><a href="../quake/game.ts.html">game.ts</a><a href="../quake/hud.ts.html">hud.ts</a><a href="../quake/lighting.ts.html">lighting.ts</a><a href="../quake/main.ts.html">main.ts</a><a href="../quake/models.ts.html">models.ts</a><a href="../quake/simWorker.ts.html">simWorker.ts</a><a href="../quake/world.ts.html">world.ts</a></details><details open><summary>scenes</summary><a href="main.ts.html">main.ts</a><a href="scenes.ts.html" class="on">scenes.ts</a></details><details><summary>sogs</summary><a href="../sogs/catalog.ts.html">catalog.ts</a><a href="../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../sogs/gui.ts.html">gui.ts</a><a href="../sogs/lod.ts.html">lod.ts</a><a href="../sogs/lodStream.ts.html">lodStream.ts</a><a href="../sogs/main.ts.html">main.ts</a><a href="../sogs/quickBar.ts.html">quickBar.ts</a><a href="../sogs/resident.ts.html">resident.ts</a><a href="../sogs/sh.ts.html">sh.ts</a><a href="../sogs/sog.ts.html">sog.ts</a><a href="../sogs/validate.ts.html">validate.ts</a><a href="../sogs/webp.ts.html">webp.ts</a><a href="../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../spark/js/assets.ts.html">assets.ts</a><a href="../spark/js/construct.ts.html">construct.ts</a><a href="../spark/js/cube.ts.html">cube.ts</a><a href="../spark/js/examples.ts.html">examples.ts</a><a href="../spark/js/files.ts.html">files.ts</a><a href="../spark/js/objects.ts.html">objects.ts</a><a href="../spark/js/page.ts.html">page.ts</a><a href="../spark/js/raycast.ts.html">raycast.ts</a><a href="../spark/js/sdf.ts.html">sdf.ts</a><a href="../spark/js/snow.ts.html">snow.ts</a><a href="../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../spark/lofi/main.ts.html">main.ts</a><a href="../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../splats/catalog.ts.html">catalog.ts</a><a href="../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../splats/gui.ts.html">gui.ts</a><a href="../splats/main.ts.html">main.ts</a><a href="../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../spz/catalog.ts.html">catalog.ts</a><a href="../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../src/core/axes.ts.html">axes.ts</a><a href="../../src/core/bundles.ts.html">bundles.ts</a><a href="../../src/core/compress.ts.html">compress.ts</a><a href="../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../src/core/encoding.ts.html">encoding.ts</a><a href="../../src/core/files.ts.html">files.ts</a><a href="../../src/core/formats.ts.html">formats.ts</a><a href="../../src/core/index.ts.html">index.ts</a><a href="../../src/core/layout.ts.html">layout.ts</a><a href="../../src/core/math.ts.html">math.ts</a><a href="../../src/core/ply.ts.html">ply.ts</a><a href="../../src/core/progress.ts.html">progress.ts</a><a href="../../src/core/rad.ts.html">rad.ts</a><a href="../../src/core/rdx.ts.html">rdx.ts</a><a href="../../src/core/sh.ts.html">sh.ts</a><a href="../../src/core/sort.ts.html">sort.ts</a><a href="../../src/core/splats.ts.html">splats.ts</a><a href="../../src/core/spz.ts.html">spz.ts</a><a href="../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../src/gpu/backend.ts.html">backend.ts</a><a href="../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../src/gpu/index.ts.html">index.ts</a><a href="../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../src/render/index.ts.html">index.ts</a><a href="../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../src/wgpu/index.ts.html">index.ts</a><a href="../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../src/worker/index.ts.html">index.ts</a><a href="../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>scenes.ts</h1>
+<p class="path">examples/scenes/scenes.ts · <a href="scenes.ts">raw</a> · <a href="../../build/examples/scenes/index.html">open the example</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L30">SceneContext</a><a href="#L50">Demo</a><a href="#L426">SCENES</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a></pre><pre class="lang-ts"><code>// The scenes of /build/examples/scenes/index.html, each a short use of collections, renderers,
+// views and modifiers (docs/rendering.md, views.md and
+// generators.md describe the parts; recipes.md has these as recipes):
+//   multi      several objects with their own transforms (one scaled by a
+//              gizmo, non-uniformly too) and a TSL generator, in one sort
+//   views      one SplatRenderer drawn from two cameras side by side; the
+//              right camera's view sets its own collection and a modifier (and,
+//              on the CPU path, each camera's view holds its own order)
+//   modifiers  view-space depth and normals, world height, a wave in a
+//              gizmo's frame, switched live; RGB and depth thumbnails
+//              rendered every frame through views of the app's own keys
+//              without recompiling
+//   subset     a fromSplats generator remapped by an index list recomputed
+//              from the camera (the nearest splats), or by a TSL function;
+//              each object's release returns its index list to a pool once
+//              nothing draws it (the splats stay)
+//   offline    a still at a fixed size from its own renderer, sorted exactly
+//              for its camera, read back and shown over the page until
+//              clicked away
+import * as THREE from "three";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import type { WebGPURenderer } from "three/webgpu";
+import {
+  GpuSplats, SplatGenerator, SplatCollection, SplatRenderer, Splats, TSL,
+  type AnySplatObject, type ArrayData, type CameraControls, type GpuArrays, type SplatNode, type SplatRendererOptions,
+} from <a class="import" href="../../src/index.ts.html" title="src/index.ts">"@sparkjsdev/radix"</a>;
+
+const { abs, clamp, cos, exp, float, length, mix, sin, uint, uniform, vec3, vec4 } = TSL;
+
+export interface SceneContext {
+  renderer: WebGPURenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  controls: CameraControls;
+  // The loaded file, and the matrix that centers it at the origin, about a
+  // unit in radius, upright
+  data: ArrayData;
+  splats: GpuArrays;
+  fit: THREE.Matrix4;
+  webgpu: boolean;
+  // Seconds since the page started (main.ts sets it every frame)
+  time: ReturnType&lt;typeof uniform&gt;;
+  // A splat renderer in the page's sort mode (the sort button switches
+  // them all)
+  splatRenderer(options: Omit&lt;SplatRendererOptions, "renderer"&gt;): SplatRenderer;
+  // A button in the bar; `active` lights it while it returns true
+  button(label: string, onClick: () =&gt; void, active?: () =&gt; boolean): void;
+}
+
+export interface Demo {
+  // Every frame, before the render (seconds)
+  frame?(time: number): void;
+  // Instead of rendering the scene from the camera
+  render?(): void;
+  // A line for the status
+  status?(): string;
+}
+
+// An Object3D at `position` whose child holds the file fitted to it: the
+// splat object's world transform is the child's matrixWorld, the Object3D
+// takes a gizmo
+function place(ctx: SceneContext, position: [number, number, number]) {
+  const object = new THREE.Object3D();
+  object.position.set(...position);
+  const fitted = new THREE.Object3D();
+  fitted.matrixAutoUpdate = false;
+  fitted.matrix.copy(ctx.fit);
+  object.add(fitted);
+  ctx.scene.add(object);
+  return { object, matrixWorld: fitted.matrixWorld };
+}
+
+// A TSL generator as a splat object: 4000 small splats on a turning,
+// rippling ring of radius 1, colored around it, placed by `matrixWorld`
+function ring(ctx: SceneContext, matrixWorld: AnySplatObject["matrixWorld"] = new THREE.Matrix4().makeScale(1.4, 1.4, 1.4)): AnySplatObject {
+  const count = 4000;
+  const time = ctx.time;
+  const generator: SplatGenerator = {
+    generateSplat: (index) =&gt; {
+      const t = float(index).div(count);
+      const angle = t.mul(Math.PI * 2).add(time.mul(0.3));
+      const ripple = sin(t.mul(Math.PI * 24).add(time.mul(2))).mul(0.06);
+      const center = vec3(cos(angle), ripple, sin(angle));
+      const rgb = vec3(t, sin(t.mul(Math.PI)), float(1).sub(t));
+      return GpuSplats.Splat(center, vec3(0.008, 0.008, 0.004), vec4(0, 0, 0, 1), rgb, float(0.9), uint(index));
+    },
+  };
+  return { generator, count, matrixWorld };
+}
+
+// A gizmo that holds the camera controls while it drags
+function gizmoOf(ctx: SceneContext) {
+  const gizmo = new TransformControls(ctx.camera, ctx.renderer.domElement);
+  gizmo.addEventListener("dragging-changed", (event) =&gt; (ctx.controls.enabled = !event.value));
+  ctx.scene.add(gizmo.getHelper());
+  return gizmo;
+}
+
+// A modifier setting the splat's rgb (made once: a program per modifier)
+const tint = (rgb: (s: SplatNode) =&gt; unknown) =&gt; (s: SplatNode): SplatNode =&gt; {
+  const out = s.toVar();
+  out.get("rgb").assign(rgb(s) as never);
+  return out;
+};
+
+function multi(ctx: SceneContext): Demo {
+  const left = place(ctx, [-0.8, 0, 0]);
+  const right = place(ctx, [0.8, 0, 0]);
+  // The ring's matrixWorld is a function, read every render: a bob and a tilt
+  const ringMatrix = new THREE.Matrix4();
+  const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.15);
+  const bob = new THREE.Vector3();
+  const scale = new THREE.Vector3(1.6, 1.6, 1.6);
+  const ringAt = () =&gt; ringMatrix.compose(bob.set(0, Math.sin(ctx.time.value as number) * 0.15, 0), tilt, scale);
+
+  // One collection: two objects of the same arrays (one program) and a
+  // generator, each placed by its own matrixWorld
+  const splatRenderer = ctx.splatRenderer({
+    collection: new SplatCollection([
+      SplatCollection.arrays(ctx.splats, { matrixWorld: left.matrixWorld }),
+      SplatCollection.arrays(ctx.splats, { matrixWorld: right.matrixWorld }),
+      ring(ctx, ringAt),
+    ]),
+  });
+  ctx.scene.add(splatRenderer);
+
+  // A gizmo on the right object: scaling one axis takes the covariance path
+  const gizmo = gizmoOf(ctx);
+  gizmo.attach(right.object);
+  gizmo.setMode("scale");
+  for (const mode of ["translate", "rotate", "scale"] as const) {
+    ctx.button(mode, () =&gt; gizmo.setMode(mode), () =&gt; gizmo.mode === mode);
+  }
+  ctx.button("squash", () =&gt; right.object.scale.set(1, 0.35, 1.6));
+
+  return {
+    frame(seconds) {
+      left.object.rotation.y = seconds * 0.4;
+    },
+    status: () =&gt; `${splatRenderer.collection.objects.length} objects, ${splatRenderer.collection.count.toLocaleString()} splats in one sort`,
+  };
+}
+
+function views(ctx: SceneContext): Demo {
+  const leftObject = SplatCollection.arrays(ctx.splats, { matrixWorld: place(ctx, [-0.6, 0, 0]).matrixWorld });
+  const rightObject = SplatCollection.arrays(ctx.splats, { matrixWorld: place(ctx, [0.6, 0, 0.3]).matrixWorld });
+  const ringObject = ring(ctx, new THREE.Matrix4().makeScale(1.5, 1.5, 1.5));
+
+  // One renderer, rendered from two cameras: each render draws the view of
+  // its camera, or the renderer's own settings when it has none. The
+  // orbiting camera's view sets its own collection (the same splat objects,
+  // without the left one) and a modifier; the method is the renderer's.
+  const splatRenderer = ctx.splatRenderer({ collection: new SplatCollection([leftObject, rightObject, ringObject]) });
+  ctx.scene.add(splatRenderer);
+  const other = new THREE.PerspectiveCamera(60, 1, 0.01, 1000);
+  const otherView = splatRenderer.viewFor(other, {
+    collection: new SplatCollection([rightObject, ringObject]),
+    modifier: tint((s) =&gt; mix(s.get("rgb"), vec3(1, 0.55, 0.15), 0.5)),
+  });
+  for (const method of ["ewa", "3dgut", "htgs"] as const) {
+    ctx.button(method, () =&gt; (splatRenderer.method = method), () =&gt; splatRenderer.method === method);
+  }
+
+  const size = new THREE.Vector2();
+  const half = (x: number, camera: THREE.PerspectiveCamera) =&gt; {
+    camera.aspect = size.x / 2 / size.y;
+    camera.updateProjectionMatrix();
+    ctx.renderer.setViewport(x * size.x / 2, 0, size.x / 2, size.y);
+    ctx.renderer.setScissor(x * size.x / 2, 0, size.x / 2, size.y);
+    ctx.renderer.render(ctx.scene, camera);
+  };
+  const orderOf = (camera: THREE.Camera) =&gt; (splatRenderer.sortMode === "cpu" ? `, order of ${splatRenderer.views.get(camera)?.order?.visible ?? 0}` : "");
+
+  return {
+    frame(seconds) {
+      other.position.set(Math.sin(seconds * 0.3) * 3, 1.2, Math.cos(seconds * 0.3) * 3);
+      other.lookAt(0, 0, 0);
+      other.updateMatrixWorld();
+    },
+    render() {
+      // One clear, then both halves: a background would clear the whole
+      // canvas in each render on WebGPU, scissor or not
+      const renderer = ctx.renderer;
+      const background = ctx.scene.background;
+      renderer.getSize(size);
+      ctx.scene.background = null;
+      renderer.setClearColor(background as THREE.Color);
+      renderer.autoClear = false;
+      renderer.clear();
+      renderer.setScissorTest(true);
+      half(0, ctx.camera);
+      half(1, other);
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, size.x, size.y);
+      renderer.autoClear = true;
+      ctx.scene.background = background;
+    },
+    status: () =&gt; `${splatRenderer.method} | left: your camera, the renderer's collection${orderOf(ctx.camera)} | right: orbiting, its view's collection of ${otherView.collection?.objects.length} objects, tinted${orderOf(other)}`,
+  };
+}
+
+function modifiers(ctx: SceneContext): Demo {
+  const time = ctx.time;
+  const depthRange = uniform(new THREE.Vector2(1, 4));
+  const splatRenderer = ctx.splatRenderer({
+    collection: new SplatCollection([SplatCollection.arrays(ctx.splats, { matrixWorld: place(ctx, [0, 0, 0]).matrixWorld }), ring(ctx)]),
+  });
+  ctx.scene.add(splatRenderer);
+
+  // The frame the wave runs in, moved by a gizmo
+  const frame = new THREE.Object3D();
+  frame.position.set(0, -0.2, 0);
+  ctx.scene.add(frame);
+  const gizmo = gizmoOf(ctx);
+
+  // Made once each: switching among them compiles nothing after the first use
+  const depth = tint((s) =&gt; vec3(float(1).sub(clamp(s.get("center").z.negate().sub(depthRange.x).div(depthRange.y.sub(depthRange.x)), 0, 1))));
+  const choices: [string, SplatRenderer["modifier"], SplatRenderer["modifierSpace"]][] = [
+    ["rgb", undefined, "view"],
+    ["depth (view)", depth, "view"],
+    ["normal (view)", tint((s) =&gt; abs(GpuSplats.normalOf(s))), "view"],
+    ["height (world)", tint((s) =&gt; mix(vec3(0.1, 0.3, 1), vec3(1, 0.3, 0.1), clamp(s.get("center").y.mul(0.8).add(0.5), 0, 1))), "world"],
+    ["wave (gizmo frame)", (s) =&gt; {
+      const out = s.toVar();
+      const c = s.get("center");
+      const d = length(vec3(c.x, 0, c.z));
+      const h = sin(d.mul(14).sub(time.mul(3))).mul(0.05).mul(exp(d.negate()));
+      out.get("center").assign(c.add(vec3(0, h, 0)));
+      out.get("rgb").assign(mix(s.get("rgb"), vec3(0.2, 0.7, 1), clamp(h.mul(12).add(0.3), 0, 1)));
+      return out;
+    }, frame.matrixWorld],
+  ];
+  let chosen = 0;
+  const waving = () =&gt; choices[chosen][2] === frame.matrixWorld;
+  choices.forEach(([label, modifier, space], i) =&gt; ctx.button(label, () =&gt; {
+    chosen = i;
+    splatRenderer.modifier = modifier;
+    splatRenderer.modifierSpace = space;
+    if (waving()) {
+      gizmo.attach(frame);
+    } else {
+      gizmo.detach();
+    }
+  }, () =&gt; chosen === i));
+
+  // Two thumbnails, rendered every frame from the same camera through views
+  // of the app's own keys: plain (no modifier, whatever the renderer's) and
+  // depth. `splatRenderer.view` picks the view for the renders that follow.
+  const thumbs = [
+    splatRenderer.viewFor("thumb rgb", { modifier: null }),
+    splatRenderer.viewFor("thumb depth", { modifier: depth, modifierSpace: "view" }),
+  ];
+  const targets = thumbs.map(() =&gt; new THREE.RenderTarget(384, 216, { type: THREE.HalfFloatType }));
+  const hud = new THREE.Scene();
+  const hudCamera = new THREE.OrthographicCamera(0, 1, 1, 0, -1, 1);
+  const quads = targets.map((target) =&gt; {
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: target.texture }));
+    hud.add(quad);
+    return quad;
+  });
+  const thumbCamera = new THREE.PerspectiveCamera();
+
+  return {
+    frame() {
+      const distance = ctx.camera.position.length();
+      (depthRange.value as THREE.Vector2).set(Math.max(distance - 1.2, 0.01), distance + 1.2);
+    },
+    render() {
+      const renderer = ctx.renderer;
+      gizmo.getHelper().visible = false;
+      thumbCamera.copy(ctx.camera);
+      thumbCamera.aspect = 16 / 9;
+      thumbCamera.updateProjectionMatrix();
+      thumbs.forEach((view, i) =&gt; {
+        splatRenderer.view = view;
+        renderer.setRenderTarget(targets[i]);
+        renderer.render(ctx.scene, thumbCamera);
+      });
+      splatRenderer.view = undefined;
+      renderer.setRenderTarget(null);
+      gizmo.getHelper().visible = waving();
+      renderer.render(ctx.scene, ctx.camera);
+
+      // 16:9 thumbnails a fifth of the width, stacked at the bottom right
+      const [w, h] = [0.2, 0.2 * ctx.camera.aspect * (9 / 16)];
+      quads.forEach((quad, i) =&gt; {
+        quad.scale.set(w, h, 1);
+        quad.position.set(1 - w / 2 - 0.01, 0.07 + h / 2 + i * (h + 0.01), 0);
+      });
+      renderer.autoClear = false;
+      renderer.render(hud, hudCamera);
+      renderer.autoClear = true;
+    },
+    status: () =&gt; `modifier: ${choices[chosen][0]}; thumbnails: rgb (bottom), depth (top), from one camera through two views`,
+  };
+}
+
+function subset(ctx: SceneContext): Demo {
+  const object = place(ctx, [0, 0, 0]);
+  const { data, splats, renderer } = ctx;
+  const n = Math.max(1, Math.floor(splats.count * 0.3));
+
+  // The centers, for the CPU's choice of the nearest
+  const centers = new Float32Array(data.count * 3);
+  const { bundle } = Splats.get(data);
+  const c = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i &lt; data.count; i += 1) {
+    Splats.loadCenter(bundle, i, c);
+    centers.set([c.x, c.y, c.z], i * 3);
+  }
+
+  // One generator for every index list: splat i is the arrays' splat list[i]
+  // (data: { splats, indices }); and a procedural one: every 4th splat
+  const listed = SplatGenerator.fromSplats({ remap: "indices" });
+  const everyFourth = SplatGenerator.fromSplats({ remap: (i) =&gt; i.mul(uint(4)) });
+
+  const splatRenderer = ctx.splatRenderer({});
+  ctx.scene.add(splatRenderer);
+
+  // Index lists come from a pool, and each splat object's release puts its
+  // index list back once nothing draws or sorts that object; the splats stay
+  const pool: GpuArrays[] = [];
+  let made = 0;
+  const inverse = new THREE.Matrix4();
+  const eye = new THREE.Vector3();
+  const chosenAt = new THREE.Vector3(Infinity, 0, 0);
+  const nearest = new Uint32Array(n);
+  let procedural = false;
+
+  function choose() {
+    inverse.copy(object.matrixWorld).invert();
+    eye.copy(ctx.camera.position).applyMatrix4(inverse);
+    const d2 = (i: number) =&gt; (centers[i * 3] - eye.x) ** 2 + (centers[i * 3 + 1] - eye.y) ** 2 + (centers[i * 3 + 2] - eye.z) ** 2;
+    // The n-th nearest distance from a sample, then everything closer
+    const sample = Float32Array.from({ length: 4096 }, () =&gt; d2(Math.floor(Math.random() * data.count))).sort();
+    const threshold = sample[Math.min(4095, Math.floor((n / data.count) * 4096))];
+    let count = 0;
+    for (let i = 0; i &lt; data.count &amp;&amp; count &lt; n; i += 1) {
+      if (d2(i) &lt;= threshold) {
+        nearest[count++] = i;
+      }
+    }
+
+    made += pool.length === 0 ? 1 : 0;
+    const indices = SplatGenerator.indices(renderer, nearest.subarray(0, count), pool.pop());
+    // object() checks the data against the generator's (StoredSplats)
+    splatRenderer.collection = new SplatCollection([SplatCollection.object({ generator: listed, data: { splats, indices }, count, matrixWorld: object.matrixWorld, release: () =&gt; pool.push(indices) })]);
+  }
+
+  ctx.button("nearest 30%", () =&gt; {
+    procedural = false;
+    chosenAt.set(Infinity, 0, 0);
+  }, () =&gt; !procedural);
+  ctx.button("every 4th", () =&gt; {
+    procedural = true;
+    splatRenderer.collection = new SplatCollection([{ generator: everyFourth, data: { splats }, count: Math.floor(splats.count / 4), matrixWorld: object.matrixWorld }]);
+  }, () =&gt; procedural);
+
+  // Re-chosen at most 4 times a second, after the camera moved 5 cm
+  let chosenTime = -Infinity;
+  return {
+    frame(seconds) {
+      object.object.updateMatrixWorld();
+      if (!procedural &amp;&amp; ctx.camera.position.distanceTo(chosenAt) &gt; 0.05 &amp;&amp; seconds - chosenTime &gt; 0.25) {
+        chosenAt.copy(ctx.camera.position);
+        chosenTime = seconds;
+        choose();
+      }
+    },
+    status: () =&gt; procedural ? `every 4th splat: ${splatRenderer.collection.count.toLocaleString()}` : `the nearest ${splatRenderer.collection.count.toLocaleString()} splats; ${made} index lists made, ${pool.length} back in the pool`,
+  };
+}
+
+function offline(ctx: SceneContext): Demo {
+  const collection = new SplatCollection([SplatCollection.arrays(ctx.splats, { matrixWorld: place(ctx, [0, 0, 0]).matrixWorld }), ring(ctx)]);
+  ctx.scene.add(ctx.splatRenderer({ collection }));
+  const preview = document.getElementById("preview") as HTMLImageElement;
+  preview.onclick = () =&gt; (preview.hidden = true);
+
+  // The still: its own renderer of the same collection in its own scene, with an
+  // exact CPU order for its camera (on either backend), at a fixed size
+  async function still(width = 1920, height = 1080) {
+    const renderer = ctx.renderer;
+    const camera = ctx.camera.clone();
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    const stillSplats = new SplatRenderer({ renderer, collection, sortMode: "cpu", autoSort: false, method: "htgs" });
+    const stillScene = new THREE.Scene().add(stillSplats);
+    stillScene.background = ctx.scene.background;
+    const target = new THREE.RenderTarget(width, height, { type: THREE.UnsignedByteType });
+    try {
+      const view = stillSplats.viewFor(camera);
+      view.apply(await view.sort(camera));
+      renderer.setRenderTarget(target);
+      renderer.render(stillScene, camera);
+      renderer.setRenderTarget(null);
+      const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height) as Uint8Array;
+      const image = new ImageData(width, height);
+      for (let y = 0; y &lt; height; y += 1) {
+        // WebGL2 reads rows bottom up
+        const row = ctx.webgpu ? y : height - 1 - y;
+        image.data.set(pixels.subarray(row * width * 4, (row + 1) * width * 4), y * width * 4);
+      }
+      const canvas = Object.assign(document.createElement("canvas"), { width, height });
+      canvas.getContext("2d")!.putImageData(image, 0, 0);
+      preview.src = canvas.toDataURL("image/png");
+      preview.hidden = false;
+    } finally {
+      target.dispose();
+      stillSplats.dispose();
+    }
+  }
+  let rendering = false;
+  ctx.button("render a 1920x1080 still", () =&gt; {
+    if (!rendering) {
+      rendering = true;
+      void still().finally(() =&gt; (rendering = false));
+    }
+  });
+
+  return {
+    status: () =&gt; (rendering ? "rendering the still..." : "the still is sorted for its own camera, then read back"),
+  };
+}
+
+export const SCENES: Record&lt;string, (ctx: SceneContext) =&gt; Demo&gt; = { multi, views, modifiers, subset, offline };</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

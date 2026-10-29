@@ -1,0 +1,75 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: system-ui, sans-serif;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+#example-status {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  max-width: 60vw;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ddd;
+  font: 12px ui-monospace, monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+#example-status:empty {
+  display: none;
+}
+
+#example-status.error {
+  color: #ff8080;
+}
+
+.example-legend {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.example-legend label,
+.example-legend input,
+.example-legend button,
+.example-legend select {
+  pointer-events: auto;
+}
+
+#example-footer {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #bbb;
+  font-size: 12px;
+}
+
+#example-footer a {
+  color: #8cf;
+  margin-left: 6px;
+}
+
+#example-footer span {
+  margin-left: 8px;
+  color: #999;
+}

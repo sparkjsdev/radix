@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encodings · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/encoding.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/encoding.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html" class="on">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="encodings">Encodings<a class="anchor" href="#encodings">#</a></h1>
+<p>The splat layouts store their fields with the codecs below. <code>Encoding</code> and <code>SplatMath</code> (CPU) and their twins <code>GpuEncoding</code> and <code>GpuSplatMath</code> (TSL) are public, so other formats and shaders can reuse them and get the same bits.</p>
+<p>Code: <a href="../../src/core/encoding.ts.html"><code>src/core/encoding.ts</code></a> and <code>math.ts</code>; <a href="../../src/gpu/encoding.tsl.ts.html"><code>src/gpu/encoding.tsl.ts</code></a> and <code>math.tsl.ts</code>. The word maps of each layout are in <a href="splats.html#layouts">Splats</a>.</p>
+<pre class="lang-ts"><code>// A direction in 24 bits
+const code = Encoding.encodeOct24({ x: 0, y: 0, z: 1 });
+
+// Decodes within 0.06 degrees
+const back = Encoding.decodeOct24(code, { x: 0, y: 0, z: 0 });
+
+// The same bits in a shader
+const dir = GpuEncoding.decodeOct24(word.bitAnd(0xffffff));</code></pre>
+<h2 id="the-fields">The fields<a class="anchor" href="#the-fields">#</a></h2>
+<table><thead><tr><th>Field</th><th>Layouts</th><th>Stored as</th><th>Precision</th></tr></thead><tbody><tr><td>center</td><td>ext, cov</td><td>float32 x 3</td><td>exact</td></tr><tr><td>center</td><td>packed</td><td>half float x 3</td><td>11 significant bits (about 0.05% of the distance from the origin)</td></tr><tr><td>scales</td><td>ext</td><td>half(ln s) x 3</td><td>ln s within about 2^-11 of itself, so s within about 2^-11 x |ln s| of itself (0.25% at s = e^-5)</td></tr><tr><td>scales</td><td>packed</td><td>8-bit ln s over <code>[lnScaleMin, lnScaleMax]</code> (0 = a zero scale)</td><td>a step of 21 / 255 ≈ 0.08 in ln s by default: about 8% of the scale per step</td></tr><tr><td>rotation</td><td>ext</td><td><code>QuatOct32</code>: a 10 + 10 bit octahedral axis and a 12-bit angle</td><td>rotations under 2 degrees within 0.03 degrees</td></tr><tr><td>rotation</td><td>packed</td><td><code>QuatOct24</code>: an 8 + 8 bit axis and an 8-bit angle</td><td>an angle step of 0.7 degrees</td></tr><tr><td>covariance</td><td>cov</td><td>half(ln) of the diagonal; half(sign x ln of the abs correlation) for the rest</td><td>relative, about 2^-11</td></tr><tr><td>color</td><td>ext, cov</td><td>three 8-bit magnitudes, three sign bits, and a shared 5-bit exponent</td><td>1 / 255 of the largest channel's power of two; values above 1 and below 0 are kept</td></tr><tr><td>color</td><td>packed</td><td>unorm8 over <code>[rgbMin, rgbMax]</code></td><td>1 / 255 of the range</td></tr><tr><td>opacity</td><td>ext, cov</td><td>one byte, 128 = 1.0</td><td>1 / 128; up to 255 / 128 for merged LoD nodes</td></tr><tr><td>opacity</td><td>packed</td><td>unorm8</td><td>1 / 255; at most 1</td></tr><tr><td>normal</td><td>ext, cov</td><td><code>Oct24</code>: 12 + 12 bits; code 0 = none</td><td>within 0.06 degrees</td></tr><tr><td>roughness, metallic</td><td>ext</td><td>unorm8 each</td><td>1 / 255</td></tr></tbody></table>
+<p>A fresh row (all zero bits) decodes as roughness 0, metallic 0, and no normal until <code>Splats.storePbr</code> writes it.</p>
+<h2 id="octahedral-directions">Octahedral directions<a class="anchor" href="#octahedral-directions">#</a></h2>
+<p>A direction is divided by its L1 norm, which maps it onto an octahedron. The lower half of the octahedron is folded over the upper half, giving a point in a square. Each of the point's two coordinates is rounded to <code>bits</code> bits, and the code is <code>u | v &lt;&lt; bits</code>. Code 0 means no vector. A direction that rounds to 0 gets the all-ones code instead, which decodes to the same direction.</p>
+<p>The error is nearly uniform over the sphere. <code>Oct24</code> (12 bits per axis) is within about 0.06 degrees. The encoder rounds each coordinate and does not search neighboring codes.</p>
+<h2 id="quaternions-as-an-axis-and-an-angle">Quaternions as an axis and an angle<a class="anchor" href="#quaternions-as-an-axis-and-an-angle">#</a></h2>
+<p><code>QuatOct</code> codes store the rotation's axis as an octahedral direction in the low <code>2 x axisBits</code> bits and its angle (0 to pi, for the quaternion with w &gt;= 0) in the <code>angleBits</code> bits above. A zero quaternion encodes as the identity (code 0).</p>
+<p>The angle gets the most bits because many splats are rotated only slightly from the identity. For a small rotation, the axis error is scaled by sin(angle / 2), so the angle's step sets the precision: with 12 bits (a step of pi / 4095), rotations under 2 degrees decode within about 0.03 degrees. A splat aligned with a coordinate axis can also be stored as a small rotation from the identity, with its scales permuted.</p>
+<h2 id="shared-exponent-color">Shared-exponent color<a class="anchor" href="#shared-exponent-color">#</a></h2>
+<p><code>encodeExtRgb</code> finds the largest absolute channel, rounds its log2 up to an exponent <code>e</code> (stored as <code>e + 15</code>, 0 to 31), and stores each channel as an 8-bit magnitude in units of <code>2^e / 255</code>, with its sign in one of three bits. This keeps colors from about 2^-15 to 2^16, including the negative and above-1 values that merged LoD nodes and lighting produce. The <code>ext</code> spherical-harmonics codec stores each SH coefficient (an RGB triple) in one such word; <a href="sh.html#codecs">Spherical harmonics</a> has its layout and the other SH codecs.</p>
+<h2 id="encoding-the-cpu-codecs">Encoding: the CPU codecs<a class="anchor" href="#encoding-the-cpu-codecs">#</a></h2>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>encodeHalf(f)</code>, <code>decodeHalf(h)</code></td><td>half-float bits, rounded to nearest even like the GPU's <code>packHalf2x16</code></td></tr><tr><td><code>encodeUnorm8(v)</code></td><td><code>round(v * 255)</code>, clamped to 0..255</td></tr><tr><td><code>encodeLodOpacity(o)</code>, <code>decodeLodOpacity(byte)</code></td><td>128 = 1.0, up to 255</td></tr><tr><td><code>encodeExtRgb(rgb)</code>, <code>decodeExtRgb(code, out)</code></td><td>the shared-exponent color word</td></tr><tr><td><code>encodeOct(v, bits)</code>, <code>decodeOct(code, bits, out)</code></td><td>an octahedral direction, <code>bits</code> per axis (1 to 16)</td></tr><tr><td><code>encodeQuatOct(q, axisBits, angleBits)</code>, <code>decodeQuatOct(code, axisBits, angleBits, out)</code></td><td>a quaternion as an axis and an angle (at most 32 bits in all)</td></tr><tr><td><code>encodeOct24</code> / <code>decodeOct24</code>, <code>encodeQuatOct32</code> / <code>decodeQuatOct32</code>, <code>encodeQuatOct24</code> / <code>decodeQuatOct24</code></td><td>the fixed-size codecs, each built once with its constants</td></tr><tr><td><code>floatView(u32)</code></td><td>a <code>Float32Array</code> over the same memory (cached per array); ext centers are read through it</td></tr></tbody></table>
+<p>The generic and fixed-size codecs give the same codes (the checks compare them).</p>
+<h2 id="splatmath-quaternions-and-covariances">SplatMath: quaternions and covariances<a class="anchor" href="#splatmath-quaternions-and-covariances">#</a></h2>
+<table><thead><tr><th><code>SplatMath</code> member</th><th>What it does</th></tr></thead><tbody><tr><td><code>normalizeQuat(q, out)</code></td><td>a unit quaternion (the identity for a zero one)</td></tr><tr><td><code>covFromScaleQuat(scales, q, out)</code></td><td>Σ = M Mᵀ with M = R(q) diag(scales)</td></tr><tr><td><code>symEigens(cov)</code></td><td>eigenvalues (descending) and eigenvectors (<code>basis</code>, columns, right-handed) of a symmetric 3x3 matrix, by Jacobi rotations with a relative tolerance</td></tr><tr><td><code>basisToQuat(m, out)</code></td><td>the quaternion (w &gt;= 0) of an orthonormal basis given as columns</td></tr></tbody></table>
+<p>Types: <code>Vec3</code>, <code>Quat</code>, <code>Rgb</code>, and <code>Cov</code> (<code>{ xx, yy, zz, xy, xz, yz }</code>).</p>
+<h2 id="the-shader-twins">The shader twins<a class="anchor" href="#the-shader-twins">#</a></h2>
+<p><code>GpuEncoding</code> has the same codecs on TSL nodes: <code>encodeHalf</code> / <code>decodeHalf</code>, <code>encodeHalf2</code> / <code>decodeHalf2</code> (two halves in one word), <code>encodeUnorm8</code>, <code>encodeLodOpacity</code> / <code>decodeLodOpacity</code>, <code>encodeExtRgb</code> / <code>decodeExtRgb</code>, <code>encodeOct</code> / <code>decodeOct</code>, <code>encodeQuatOct</code> / <code>decodeQuatOct</code>, and the fixed-size <code>encodeOct24</code>, <code>encodeQuatOct32</code>, and <code>encodeQuatOct24</code> with their decoders. Half floats use the GPU's <code>packHalf2x16</code> / <code>unpackHalf2x16</code>.</p>
+<p><code>GpuSplatMath</code> has <code>quatRotate(q, v)</code>, <code>quatMul(a, b)</code>, <code>quatConj(q)</code>, <code>mat3FromMat4(m)</code>, <code>scaleQuatMatrix(scales, q)</code>, <code>covFromScaleQuat(scales, q)</code>, <code>covMatrix(xxyyzz, xyxzyz)</code>, <code>symEigens(xxyyzz, xyxzyz)</code>, and <code>basisToQuat(basis)</code>.</p>
+<h2 id="cpu-and-gpu">CPU and GPU<a class="anchor" href="#cpu-and-gpu">#</a></h2>
+<p>The CPU and TSL codecs produce the same bits for the same inputs, except where float32 math on the GPU lands on the other side of a rounding step from the CPU's float64 math. In that case the code is one step off: under 2% of ext and packed splats, and about 7% of cov splats (those with correlations near 1). The checks require every such code to still decode within the field's budget (<a href="checks.html">Checks</a>).</p>
+<div class="pager"><a class="prev" href="splats.html"><small>Previous</small>Splats</a><a class="next" href="sh.html"><small>Next</small>Spherical harmonics</a></div>
+<p class="source">Source: <a href="../encoding.md.html">docs/encoding.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#the-fields">The fields</a>
+<a class="h2" href="#octahedral-directions">Octahedral directions</a>
+<a class="h2" href="#quaternions-as-an-axis-and-an-angle">Quaternions as an axis and an angle</a>
+<a class="h2" href="#shared-exponent-color">Shared-exponent color</a>
+<a class="h2" href="#encoding-the-cpu-codecs">Encoding: the CPU codecs</a>
+<a class="h2" href="#splatmath-quaternions-and-covariances">SplatMath: quaternions and covariances</a>
+<a class="h2" href="#the-shader-twins">The shader twins</a>
+<a class="h2" href="#cpu-and-gpu">CPU and GPU</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

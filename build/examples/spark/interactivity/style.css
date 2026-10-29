@@ -1,0 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Mea+Culpa&display=swap");
+
+body {
+  margin: 0;
+  background-color: black;
+  font-family: serif;
+}
+
+h1 {
+  font-family: "Mea Culpa", cursive;
+  font-weight: 500;
+  font-size: 5rem;
+}
+
+h2 {
+  font-family: sans-serif;
+  font-weight: normal;
+  font-size: 0.8rem;
+}
+
+h3 {
+  font-family: "Mea Culpa", cursive;
+  margin: 0;
+}
+
+#menu {
+  position: absolute;
+  display: none;
+  background-color: rgba(223, 203, 171, 0.8);
+  padding: 2rem 2rem;
+  margin-top: 4rem;
+  top: 0;
+  text-align: center;
+  font-size: 1.2rem;
+  line-height: 1.7rem;
+  left: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+#menu .border {
+  border: 1.0px solid rgb(92, 92, 92);
+  padding: 1rem 3rem;
+}
+
+#menu > .border {
+  border: 1.5px solid rgb(49, 49, 49);
+  padding: 5px 6px;
+}
+
+#menu a {
+  font-style: italic;
+  display: block;
+  text-decoration: none;
+  color: rgb(30, 13, 140);
+}
+
+#menu a:hover,
+#menu a.active {
+  text-decoration: underline;
+}
+
+#menu a.active {
+  font-weight: 500;
+}
+
+#menu a.active::before {
+  content: "● ";
+  font-weight: 100;
+}
+
+#menu a.active::after {
+  content: " ● ";
+  font-weight: 100;
+}
+
+#menu_list {
+  margin-bottom: 2rem;
+}
+
+#menu h2 a {
+  font-weight: normal;
+  color: black;
+  display: inline;
+}
+
+#mobile_button {
+  text-decoration: none;
+  color: black;
+  padding: 10px 15px;
+  background-color: burlywood;
+  text-align: center;
+  font-family: serif;
+  font-style: italic;
+  font-size: 1.5rem;
+  position: absolute;
+  top: 0;
+  border-radius: 1rem;
+  margin: 1rem;
+  opacity: 0.8;
+  display: none;
+}
+
+.visible {
+  display: block !important;
+}
+
+@media (any-pointer: coarse) {
+  #menu {
+    display: none;
+    top: 4.5rem;
+    left: 0;
+    font-size: 1rem;
+    line-height: 3.2vh;
+    width: 82%;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 4rem;
+  }
+}

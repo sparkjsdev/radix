@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SplatRenderer.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from src/render/SplatRenderer.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../../examples/doom/data.ts.html">data.ts</a><a href="../../examples/doom/game.ts.html">game.ts</a><a href="../../examples/doom/hud.ts.html">hud.ts</a><a href="../../examples/doom/level.ts.html">level.ts</a><a href="../../examples/doom/lighting.ts.html">lighting.ts</a><a href="../../examples/doom/main.ts.html">main.ts</a><a href="../../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../../examples/film/score.ts.html">score.ts</a><a href="../../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../../examples/film/text.ts.html">text.ts</a><a href="../../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../../examples/fractals/demo/library.ts.html">library.ts</a><a href="../../examples/fractals/demo/music.ts.html">music.ts</a><a href="../../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../../examples/fractals/device.ts.html">device.ts</a><a href="../../examples/fractals/kind.ts.html">kind.ts</a><a href="../../examples/fractals/main.ts.html">main.ts</a><a href="../../examples/fractals/morph.ts.html">morph.ts</a><a href="../../examples/fractals/motion.ts.html">motion.ts</a><a href="../../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../../examples/fractals/presets.ts.html">presets.ts</a><a href="../../examples/fractals/sample.ts.html">sample.ts</a><a href="../../examples/fractals/shade.ts.html">shade.ts</a><a href="../../examples/fractals/shots.ts.html">shots.ts</a><a href="../../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../../examples/fxedit/checks.ts.html">checks.ts</a><a href="../../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/fxedit/editors.ts.html">editors.ts</a><a href="../../examples/fxedit/framed.ts.html">framed.ts</a><a href="../../examples/fxedit/juice.ts.html">juice.ts</a><a href="../../examples/fxedit/layout.ts.html">layout.ts</a><a href="../../examples/fxedit/main.ts.html">main.ts</a><a href="../../examples/fxedit/palette.ts.html">palette.ts</a><a href="../../examples/fxedit/preview.ts.html">preview.ts</a><a href="../../examples/fxedit/settings.ts.html">settings.ts</a><a href="../../examples/fxedit/sound.ts.html">sound.ts</a><a href="../../examples/fxedit/springs.ts.html">springs.ts</a><a href="../../examples/fxedit/themes.ts.html">themes.ts</a><a href="../../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../../examples/lcc/collision.ts.html">collision.ts</a><a href="../../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/lcc/gui.ts.html">gui.ts</a><a href="../../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../../examples/lcc/main.ts.html">main.ts</a><a href="../../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../../examples/quake/data.ts.html">data.ts</a><a href="../../examples/quake/entities.ts.html">entities.ts</a><a href="../../examples/quake/game.ts.html">game.ts</a><a href="../../examples/quake/hud.ts.html">hud.ts</a><a href="../../examples/quake/lighting.ts.html">lighting.ts</a><a href="../../examples/quake/main.ts.html">main.ts</a><a href="../../examples/quake/models.ts.html">models.ts</a><a href="../../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../../examples/scenes/main.ts.html">main.ts</a><a href="../../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../../examples/sogs/gui.ts.html">gui.ts</a><a href="../../examples/sogs/lod.ts.html">lod.ts</a><a href="../../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../../examples/sogs/main.ts.html">main.ts</a><a href="../../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../../examples/sogs/resident.ts.html">resident.ts</a><a href="../../examples/sogs/sh.ts.html">sh.ts</a><a href="../../examples/sogs/sog.ts.html">sog.ts</a><a href="../../examples/sogs/validate.ts.html">validate.ts</a><a href="../../examples/sogs/webp.ts.html">webp.ts</a><a href="../../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../../examples/spark/js/assets.ts.html">assets.ts</a><a href="../../examples/spark/js/construct.ts.html">construct.ts</a><a href="../../examples/spark/js/cube.ts.html">cube.ts</a><a href="../../examples/spark/js/examples.ts.html">examples.ts</a><a href="../../examples/spark/js/files.ts.html">files.ts</a><a href="../../examples/spark/js/objects.ts.html">objects.ts</a><a href="../../examples/spark/js/page.ts.html">page.ts</a><a href="../../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../../examples/spark/js/snow.ts.html">snow.ts</a><a href="../../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../../examples/spark/lofi/main.ts.html">main.ts</a><a href="../../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../../examples/splats/catalog.ts.html">catalog.ts</a><a href="../../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/splats/gui.ts.html">gui.ts</a><a href="../../examples/splats/main.ts.html">main.ts</a><a href="../../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../../examples/spz/catalog.ts.html">catalog.ts</a><a href="../../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../../examples/xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details open><summary>src</summary><details><summary>controls</summary><a href="../controls/CameraControls.ts.html">CameraControls.ts</a><a href="../controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../core/ArrayData.ts.html">ArrayData.ts</a><a href="../core/axes.ts.html">axes.ts</a><a href="../core/bundles.ts.html">bundles.ts</a><a href="../core/compress.ts.html">compress.ts</a><a href="../core/compressedPly.ts.html">compressedPly.ts</a><a href="../core/encoding.ts.html">encoding.ts</a><a href="../core/files.ts.html">files.ts</a><a href="../core/formats.ts.html">formats.ts</a><a href="../core/index.ts.html">index.ts</a><a href="../core/layout.ts.html">layout.ts</a><a href="../core/math.ts.html">math.ts</a><a href="../core/ply.ts.html">ply.ts</a><a href="../core/progress.ts.html">progress.ts</a><a href="../core/rad.ts.html">rad.ts</a><a href="../core/rdx.ts.html">rdx.ts</a><a href="../core/sh.ts.html">sh.ts</a><a href="../core/sort.ts.html">sort.ts</a><a href="../core/splats.ts.html">splats.ts</a><a href="../core/spz.ts.html">spz.ts</a><a href="../core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../gpu/backend.ts.html">backend.ts</a><a href="../gpu/baseline.ts.html">baseline.ts</a><a href="../gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../gpu/hdr.ts.html">hdr.ts</a><a href="../gpu/index.ts.html">index.ts</a><a href="../gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../gpu/textureIo.ts.html">textureIo.ts</a><a href="../gpu/tsl.ts.html">tsl.ts</a></details><details open><summary>render</summary><a href="SplatCollection.ts.html">SplatCollection.ts</a><a href="SplatProjection.ts.html">SplatProjection.ts</a><a href="SplatProjector.ts.html">SplatProjector.ts</a><a href="SplatRenderer.ts.html" class="on">SplatRenderer.ts</a><a href="SplatView.ts.html">SplatView.ts</a><a href="index.ts.html">index.ts</a><a href="projection.tsl.ts.html">projection.tsl.ts</a><a href="projections.tsl.ts.html">projections.tsl.ts</a><a href="splatCamera.ts.html">splatCamera.ts</a><a href="splatDraw.ts.html">splatDraw.ts</a><a href="splatParams.ts.html">splatParams.ts</a><a href="splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../wgpu/index.ts.html">index.ts</a><a href="../wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../worker/coreModule.ts.html">coreModule.ts</a><a href="../worker/coreWorker.ts.html">coreWorker.ts</a><a href="../worker/index.ts.html">index.ts</a><a href="../worker/modules.d.ts.html">modules.d.ts</a><a href="../worker/splatFiles.ts.html">splatFiles.ts</a><a href="../worker/splatSort.ts.html">splatSort.ts</a></details><a href="../index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>SplatRenderer.ts</h1>
+<p class="path">src/render/SplatRenderer.ts · <a href="SplatRenderer.ts">raw</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L38">SplatRendererOptions</a><a href="#L95">SplatRenderer</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a></pre><pre class="lang-ts"><code>import * as THREE from "three";
+import { NodeMaterial, type IndirectStorageBufferAttribute, type WebGPURenderer } from "three/webgpu";
+import { ArrayData } from <a class="import" href="../core/ArrayData.ts.html" title="src/core/ArrayData.ts">"../core/ArrayData"</a>;
+import type { SortKeyBits } from <a class="import" href="../core/sort.ts.html" title="src/core/sort.ts">"../core/sort"</a>;
+import { isWebGPUBackend } from <a class="import" href="../gpu/backend.ts.html" title="src/gpu/backend.ts">"../gpu/backend"</a>;
+import { GpuArrayReader } from <a class="import" href="../gpu/GpuArrayReader.ts.html" title="src/gpu/GpuArrayReader.ts">"../gpu/GpuArrayReader"</a>;
+import { GpuArrays } from <a class="import" href="../gpu/GpuArrays.ts.html" title="src/gpu/GpuArrays.ts">"../gpu/GpuArrays"</a>;
+import type { CovSplatModifier, SplatModifier } from <a class="import" href="../gpu/splatGenerator.ts.html" title="src/gpu/splatGenerator.ts">"../gpu/splatGenerator"</a>;
+import { TSL } from <a class="import" href="../gpu/tsl.ts.html" title="src/gpu/tsl.ts">"../gpu/tsl"</a>;
+import { WgpuSplatSorter } from <a class="import" href="../wgpu/WgpuSplatSorter.ts.html" title="src/wgpu/WgpuSplatSorter.ts">"../wgpu/WgpuSplatSorter"</a>;
+import { sortSplatKeys } from <a class="import" href="../worker/splatSort.ts.html" title="src/worker/splatSort.ts">"../worker/splatSort"</a>;
+import { WorkerPool, type WorkerLease } from <a class="import" href="../worker/WorkerPool.ts.html" title="src/worker/WorkerPool.ts">"../worker/WorkerPool"</a>;
+import type { ProjectionMethod } from <a class="import" href="projections.tsl.ts.html" title="src/render/projections.tsl.ts">"./projections.tsl"</a>;
+import { SplatCamera } from <a class="import" href="splatCamera.ts.html" title="src/render/splatCamera.ts">"./splatCamera"</a>;
+import { SplatCollection, type AnySplatObject } from <a class="import" href="SplatCollection.ts.html" title="src/render/SplatCollection.ts">"./SplatCollection"</a>;
+import { makeDrawMaterial, outputIsLinear, quadIndices, setDrawNodes, type DrawOptions } from <a class="import" href="splatDraw.ts.html" title="src/render/splatDraw.ts">"./splatDraw"</a>;
+import { SplatParams, type SplatObjectParams, type SplatViewParams } from <a class="import" href="splatParams.ts.html" title="src/render/splatParams.ts">"./splatParams"</a>;
+import { SplatProjection, type ProjectedSchema } from <a class="import" href="SplatProjection.ts.html" title="src/render/SplatProjection.ts">"./SplatProjection"</a>;
+import { projectCollection } from <a class="import" href="SplatProjector.ts.html" title="src/render/SplatProjector.ts">"./SplatProjector"</a>;
+import type { ModifierSpace } from <a class="import" href="splatTransform.tsl.ts.html" title="src/render/splatTransform.tsl.ts">"./splatTransform.tsl"</a>;
+import { SplatView, type AutoSort, type SplatViewOptions, type ViewSettings } from <a class="import" href="SplatView.ts.html" title="src/render/SplatView.ts">"./SplatView"</a>;
+
+const { uniform } = TSL;
+
+// Splats per instance of the draw, as the sorter's draw arguments count
+const QUADS = WgpuSplatSorter.QUADS_PER_INSTANCE;
+
+// The quads of QUADS splats, the only buffer the draw has (no vertex
+// attributes), shared by every renderer; indexed, so shared corners are
+// shaded once
+const QUAD_INDEX = new THREE.BufferAttribute(quadIndices(QUADS), 1);
+QUAD_INDEX.name = "radix_splatQuadIndex";
+
+// Views made by renders past which a renderer warns (an app making cameras
+// anew each frame would make a view each)
+const MANY_VIEWS = 32;
+
+export interface SplatRendererOptions {
+  renderer: WebGPURenderer;
+  collection?: SplatCollection;
+  method?: ProjectionMethod;
+  sortBits?: SortKeyBits;
+  params?: Partial&lt;SplatViewParams&gt;;
+  objectParams?: Partial&lt;SplatObjectParams&gt;;
+  modifier?: SplatModifier;
+  covModifier?: CovSplatModifier;
+  modifierSpace?: ModifierSpace;
+  sortMode?: "gpu" | "cpu";
+  autoSort?: AutoSort | false;
+  sortWorker?: WorkerPool | WorkerLease;
+  viewKey?: (camera: THREE.Camera) =&gt; unknown;
+  onInvalidate?: (view?: SplatView) =&gt; void;
+}
+
+// A method's words for some eyes and a key per splat: what a renderer
+// projects its collection into, sorts and draws
+interface Projected {
+  projection: SplatProjection;
+  eyes: number;
+  arrays: GpuArrays&lt;ProjectedSchema&gt;;
+}
+
+// What a renderer leaves behind if it is garbage-collected undisposed
+interface RendererToken {
+  ref: WeakRef&lt;SplatRenderer&gt;;
+}
+
+let sharedSortPool: WorkerPool | undefined;
+
+// Draws a collection of splats: add it to the scene and render as usual,
+// from any camera. It holds the settings every viewpoint shares (the
+// collection, the method and params every splat drawn together shares,
+// per-object param defaults, a modifier run on every splat in
+// modifierSpace, the sort); views (viewFor(key)) set some of them over it
+// for one viewpoint.
+//
+// Each render, onBeforeRender projects the collection (every object, one
+// dispatch each) for the render's camera (two eyes for an XR ArrayCamera)
+// into this renderer's projected splats, or prepare(camera) does it before
+// the render; then it orders them: sortMode "gpu" (WebGPU's default) with
+// a WgpuSplatSorter in the same frame (drawn indirectly, nothing read
+// back), "cpu" (the WebGL2 fallback) with the applied order of the
+// render's view, drawing the collection it was sorted for (nothing until
+// one is applied). The view drawn: `view` when set, else the one of
+// viewKey(camera) (default the camera itself), made for each key in cpu
+// mode; in gpu mode no view is needed. Two renderers in one render each
+// keep their own projected splats and sorter, since a frame's compute runs
+// before its draws.
+//
+// An object's release runs once no renderer's live collection holds that
+// object: live are its collection, its views' and, in cpu mode, the
+// collections of their applied orders and of sorts in flight or landed and
+// still appliable. Dispose renderers: one garbage-collected undisposed is
+// warned about.
+export class SplatRenderer extends THREE.Mesh&lt;THREE.InstancedBufferGeometry, NodeMaterial&gt; {
+  // Every undisposed renderer, and the objects with a release that have
+  // been live in one and not released yet
+  private static readonly renderers = new Set&lt;WeakRef&lt;SplatRenderer&gt;&gt;();
+  private static readonly watched = new Set&lt;AnySplatObject&gt;();
+  private static readonly lost = new FinalizationRegistry&lt;RendererToken&gt;((token) =&gt; {
+    console.warn("SplatRenderer: a renderer was garbage-collected without dispose(); its objects are released now");
+    SplatRenderer.renderers.delete(token.ref);
+    SplatRenderer.sweep();
+  });
+
+  // Workers of the shared sort pool: read when the pool is made, at the
+  // first CPU sort of any renderer, so set it before then
+  static sortWorkers = 4;
+
+  // The pool every renderer's CPU sorts share (all their views; renderers
+  // with a sortWorker use that instead), so parallel sorts stay bounded and
+  // never queue behind file loads in WorkerPool.default. Made on first use,
+  // its workers as sorts need them; it lives with the page.
+  static get sortPool(): WorkerPool {
+    return (sharedSortPool ??= new WorkerPool({ size: SplatRenderer.sortWorkers }));
+  }
+
+  readonly renderer: WebGPURenderer;
+  method: ProjectionMethod;
+  sortBits: SortKeyBits;
+  readonly params: SplatViewParams;
+  readonly objectParams: SplatObjectParams;
+  modifier?: SplatModifier;
+  covModifier?: CovSplatModifier;
+  modifierSpace: ModifierSpace;
+  autoSort: AutoSort | false;
+  // Where CPU sorts run: by default SplatRenderer.sortPool, shared by every
+  // renderer; a given pool or lease is the app's
+  sortWorker?: WorkerPool | WorkerLease;
+  // The key of the view a render from `camera` draws when `view` is unset:
+  // the camera itself by default. Map cameras an app makes anew (a clone
+  // per frame, say) to keys of its own, so they share views instead of
+  // each making one in cpu mode.
+  viewKey: (camera: THREE.Camera) =&gt; unknown;
+  // Something this renderer did (an autoSort order applied) or was asked
+  // to do (requestSort) needs a render to show: of `view`, or of every
+  // viewpoint when undefined. For on-demand rendering.
+  onInvalidate?: (view?: SplatView) =&gt; void;
+  // The view every render draws; unset: the one of viewKey(camera)
+  view?: SplatView;
+  // Runs the "project" and "sort" steps (a GpuProfiler's phase, say)
+  phase?: &lt;T&gt;(name: string, run: () =&gt; T) =&gt; T;
+
+  private _collection: SplatCollection;
+  private _sortMode: "gpu" | "cpu" = "gpu";
+  private _views = new Map&lt;unknown, SplatView&gt;();
+  private warnedViews = false;
+  private live = new Set&lt;SplatCollection&gt;();
+  private token: RendererToken;
+  private disposed = false;
+  private projected: Projected;
+  private sorter?: WgpuSplatSorter;
+  // renderer.info.render.calls after the latest prepare()
+  private preparedAt = -1;
+  private orderReader = new GpuArrayReader(ArrayData.INDICES);
+  private orderCount = uniform(0, "uint");
+  private encodeLinear = uniform(0);
+  // What the material draws: the projected arrays (by their reader) and the
+  // order source
+  private drawState!: { for: Projected; projected: GpuArrayReader; sorter?: WgpuSplatSorter };
+
+  constructor({
+    renderer, collection = SplatCollection.EMPTY, method = "ewa", sortBits = 24, params, objectParams, modifier, covModifier, modifierSpace = "view",
+    sortMode, autoSort = { distance: 0, angle: 0 }, sortWorker, viewKey = (camera) =&gt; camera, onInvalidate,
+  }: SplatRendererOptions) {
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.setIndex(QUAD_INDEX);
+    geometry.instanceCount = 0;
+    super(geometry, new NodeMaterial());
+
+    this.renderer = renderer;
+    this._collection = collection;
+    this.method = method;
+    this.sortBits = sortBits;
+    this.params = { ...SplatParams.VIEW, ...params };
+    this.objectParams = { ...SplatParams.OBJECT, ...objectParams };
+    this.modifier = modifier;
+    this.covModifier = covModifier;
+    this.modifierSpace = modifierSpace;
+    this._sortMode = sortMode ?? (isWebGPUBackend(renderer) ? "gpu" : "cpu");
+    this.autoSort = autoSort;
+    this.sortWorker = sortWorker;
+    this.viewKey = viewKey;
+    this.onInvalidate = onInvalidate;
+    this.frustumCulled = false;
+
+    this.token = { ref: new WeakRef(this) };
+    SplatRenderer.renderers.add(this.token.ref);
+    SplatRenderer.lost.register(this, this.token, this);
+    this.updateLive();
+
+    // Three lists the material before onBeforeRender, so there is one from
+    // the start, drawing real (empty) projected arrays
+    this.projected = this.makeProjected(method, 1);
+    this.buildMaterial(undefined);
+  }
+
+  // What every viewpoint draws unless its view sets its own collection
+  get collection(): SplatCollection {
+    return this._collection;
+  }
+
+  set collection(collection: SplatCollection) {
+    this._collection = collection;
+    this.updateLive();
+  }
+
+  // "gpu": the GPU sort every render (WebGPU); "cpu": each view's applied
+  // order of a CPU sort. Switching to gpu drops the orders.
+  get sortMode(): "gpu" | "cpu" {
+    return this._sortMode;
+  }
+
+  set sortMode(mode: "gpu" | "cpu") {
+    this._sortMode = mode;
+    if (mode === "gpu") {
+      this._views.forEach((view) =&gt; view.dropOrders());
+      this.updateLive();
+    }
+  }
+
+  // The views made so far, by key
+  get views(): ReadonlyMap&lt;unknown, SplatView&gt; {
+    return this._views;
+  }
+
+  // The view of `key` (a camera, or any value for a viewpoint of the
+  // app's), made on first use; `options` are set on it
+  viewFor(key: unknown, options: SplatViewOptions = {}): SplatView {
+    if (this.disposed) {
+      throw new Error("SplatRenderer.viewFor: the renderer is disposed");
+    }
+    let view = this._views.get(key);
+    if (!view) {
+      view = new SplatView(this, key);
+      this._views.set(key, view);
+    }
+    const { collection, params, objectParams, ...rest } = options;
+    Object.assign(view.params, params);
+    Object.assign(view.objectParams, objectParams);
+    Object.assign(view, rest);
+    if ("collection" in options) {
+      view.collection = collection;
+    }
+    return view;
+  }
+
+  // Sort every view again at its next render (view.requestSort), and call
+  // onInvalidate for all of them
+  requestSort() {
+    this._views.forEach((view) =&gt; view.wantSort());
+    this.onInvalidate?.();
+  }
+
+  // The GPU sort's visible count of the latest render (a readback)
+  async readSortedCount(): Promise&lt;number&gt; {
+    return this.sorter &amp;&amp; !this.disposed ? this.sorter.readCount() : 0;
+  }
+
+  // A disposed renderer still in the scene draws nothing (projecting would
+  // make GPU resources again)
+  onBeforeRender(_renderer: unknown, _scene: THREE.Scene, camera: THREE.Camera) {
+    if (this.disposed) {
+      this.geometry.instanceCount = 0;
+      return;
+    }
+    if (this.renderer.info.render.calls === this.preparedAt + 1) {
+      // Projected already, for this render: the draw's uniforms are its
+      SplatCamera.set(this.renderer, camera);
+      SplatParams.setView(this.settingsOf(this.viewOf(camera)).params);
+      this.encodeLinear.value = outputIsLinear(this.renderer) ? 1 : 0;
+      return;
+    }
+    this.update(camera);
+  }
+
+  // Project and sort for `camera` now, outside a render (WebGL2 timer
+  // queries do not nest); the next render draws that instead of projecting
+  // again
+  prepare(camera: THREE.Camera) {
+    if (this.disposed) {
+      this.geometry.instanceCount = 0;
+      return;
+    }
+    this.update(camera);
+    this.preparedAt = this.renderer.info.render.calls;
+  }
+
+  dispose() {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    SplatRenderer.lost.unregister(this);
+    [...this._views.values()].forEach((view) =&gt; view.dispose());
+    this.view = undefined;
+    this.live = new Set();
+    SplatRenderer.renderers.delete(this.token.ref);
+    SplatRenderer.sweep();
+    this.projected.arrays.dispose();
+    this.sorter?.dispose();
+    this.sorter = undefined;
+    this.material.dispose();
+    // The shared index stays
+    this.geometry.setIndex(null);
+    this.geometry.instanceCount = 0;
+    this.geometry.dispose();
+    this.visible = false;
+  }
+
+  /** @internal The settings `view` draws with: its own over this renderer's */
+  settingsOf(view?: SplatView): ViewSettings {
+    const own: ViewSettings = {
+      collection: this._collection, method: this.method, sortBits: this.sortBits, params: this.params, objectParams: this.objectParams,
+      modifier: this.modifier, covModifier: this.covModifier, modifierSpace: this.modifierSpace, autoSort: this.autoSort,
+    };
+    if (!view) {
+      return own;
+    }
+    return {
+      collection: view.collection ?? own.collection,
+      method: own.method,
+      sortBits: view.sortBits ?? own.sortBits,
+      params: over(own.params, view.params),
+      objectParams: over(own.objectParams, view.objectParams),
+      modifier: view.modifier === null ? undefined : view.modifier ?? own.modifier,
+      covModifier: view.covModifier === null ? undefined : view.covModifier ?? own.covModifier,
+      modifierSpace: view.modifierSpace ?? own.modifierSpace,
+      autoSort: view.autoSort ?? own.autoSort,
+    };
+  }
+
+  /** @internal Sort keys on the app's sortWorker, else the shared sort pool */
+  async sortKeys(keys: Uint32Array&lt;ArrayBuffer&gt;, bits: SortKeyBits) {
+    if (this.disposed) {
+      throw new Error("SplatRenderer.sortKeys: the renderer is disposed");
+    }
+    return sortSplatKeys(keys, { bits, worker: this.sortWorker ?? SplatRenderer.sortPool });
+  }
+
+  /** @internal A view was disposed */
+  forget(view: SplatView) {
+    if (this._views.get(view.key) === view) {
+      this._views.delete(view.key);
+    }
+    if (this.view === view) {
+      this.view = undefined;
+    }
+    this.updateLive();
+  }
+
+  /** @internal The live collections changed: watch new objects, release retired ones */
+  updateLive() {
+    if (this.disposed) {
+      return;
+    }
+    const next = new Set&lt;SplatCollection&gt;([this._collection]);
+    this._views.forEach((view) =&gt; view.collections().forEach((collection) =&gt; next.add(collection)));
+    const retired = [...this.live].some((collection) =&gt; !next.has(collection));
+    for (const collection of next) {
+      for (const { object } of this.live.has(collection) ? [] : collection.objects) {
+        if (object.release) {
+          SplatRenderer.watched.add(object);
+        }
+      }
+    }
+    this.live = next;
+    if (retired) {
+      SplatRenderer.sweep();
+    }
+  }
+
+  // Release the watched objects no renderer's live collection holds any
+  // longer, after the bookkeeping, so a release may change renderers and
+  // views
+  private static sweep() {
+    if (SplatRenderer.watched.size === 0) {
+      return;
+    }
+    const live = new Set&lt;AnySplatObject&gt;();
+    for (const ref of SplatRenderer.renderers) {
+      for (const collection of ref.deref()?.live ?? []) {
+        collection.objects.forEach(({ object }) =&gt; live.add(object));
+      }
+    }
+    const done = [...SplatRenderer.watched].filter((object) =&gt; !live.has(object));
+    done.forEach((object) =&gt; SplatRenderer.watched.delete(object));
+    done.forEach((object) =&gt; object.release?.());
+  }
+
+  // The view a render from `camera` draws: `view`, else the one of its
+  // view key (made in cpu mode, where each viewpoint needs its own order)
+  private viewOf(camera: THREE.Camera): SplatView | undefined {
+    if (this.view) {
+      if (this.view.splats !== this) {
+        throw new Error("SplatRenderer: its view belongs to another SplatRenderer");
+      }
+      return this.view;
+    }
+    const key = this.viewKey(camera);
+    const view = this._views.get(key);
+    if (view || this._sortMode === "gpu") {
+      return view;
+    }
+    if (this._views.size &gt;= MANY_VIEWS &amp;&amp; !this.warnedViews) {
+      this.warnedViews = true;
+      console.warn(`SplatRenderer: renders have made ${this._views.size} views, one per camera; for cameras made anew, set viewKey (or view)`);
+    }
+    return this.viewFor(key);
+  }
+
+  private update(camera: THREE.Camera) {
+    const gpu = this._sortMode === "gpu";
+    if (gpu &amp;&amp; !isWebGPUBackend(this.renderer)) {
+      throw new Error("SplatRenderer: sortMode \"gpu\" needs WebGPU (use \"cpu\")");
+    }
+    const view = this.viewOf(camera);
+    const settings = this.settingsOf(view);
+    const drawn = gpu ? { collection: settings.collection } : view!.drawn(camera);
+    SplatCamera.set(this.renderer, camera);
+    if (!drawn || drawn.collection.count === 0) {
+      this.geometry.instanceCount = 0;
+      return;
+    }
+
+    const phase = this.phase ?? ((_name, run) =&gt; run());
+    if (this.projected.projection.method !== this.method || this.projected.eyes !== SplatCamera.eyes) {
+      this.projected.arrays.dispose();
+      this.projected = this.makeProjected(this.method, SplatCamera.eyes);
+    }
+    const arrays = this.projected.arrays;
+    phase("project", () =&gt; projectCollection({ renderer: this.renderer, settings, collection: drawn.collection, arrays, pass: "full", cullKeys: gpu }));
+    let sorter: WgpuSplatSorter | undefined;
+    let visible = arrays.count;
+    if (gpu) {
+      sorter = this.sorter ??= new WgpuSplatSorter(this.renderer);
+      phase("sort", () =&gt; sorter!.sort(arrays, arrays.count, settings.sortBits));
+    } else {
+      const order = drawn as { arrays: GpuArrays; visible: number };
+      this.orderReader.bind(order.arrays, "indices");
+      this.orderCount.value = order.visible;
+      visible = Math.min(order.visible, arrays.count);
+    }
+
+    // Point the draw at the projection and the order
+    if (this.drawState.for !== this.projected || this.drawState.sorter !== sorter) {
+      this.buildMaterial(sorter);
+    }
+    this.drawState.projected.bind(arrays, "projected");
+    this.encodeLinear.value = outputIsLinear(this.renderer) ? 1 : 0;
+
+    // Three skips a draw with no instances even when the indirect
+    // arguments hold the actual count
+    this.geometry.setIndirect(sorter ? (sorter.indirect.attribute as IndirectStorageBufferAttribute) : (null as never));
+    this.geometry.instanceCount = Math.ceil(visible / QUADS);
+  }
+
+  private makeProjected(method: ProjectionMethod, eyes: number): Projected {
+    const projection = SplatProjection.get(method);
+    const arrays = new GpuArrays({ renderer: this.renderer, bundles: projection.outputs(eyes), capacity: 1, storage: isWebGPUBackend(this.renderer) });
+    return { projection, eyes, arrays };
+  }
+
+  // The one material, built (or rebuilt in place) for the projected
+  // arrays and the order source
+  private buildMaterial(sorter: WgpuSplatSorter | undefined) {
+    const { projection, eyes, arrays } = this.projected;
+    const projected = projection.reader(eyes).bind(arrays, "projected");
+    const order: DrawOptions["order"] = sorter ? (i) =&gt; sorter.values.element(i) : (i) =&gt; this.orderReader.load("index", i);
+    const count = sorter ? sorter.count : this.orderCount;
+    const options = { projection, eyes, projected, order, count, quads: QUADS, encodeLinear: this.encodeLinear };
+
+    if (this.drawState) {
+      setDrawNodes(this.material, options);
+    } else {
+      this.material.dispose();
+      this.material = makeDrawMaterial(options);
+    }
+    this.drawState = { for: this.projected, projected, sorter };
+  }
+}
+
+// `base` with the fields `top` sets on top
+function over&lt;T extends object&gt;(base: T, top: Partial&lt;T&gt;): T {
+  const out = { ...base };
+  for (const key of Object.keys(top) as (keyof T)[]) {
+    if (top[key] !== undefined) {
+      out[key] = top[key] as T[keyof T];
+    }
+  }
+  return out;
+}</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,2334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>main.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/fxedit/main.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../doom/data.ts.html">data.ts</a><a href="../doom/game.ts.html">game.ts</a><a href="../doom/hud.ts.html">hud.ts</a><a href="../doom/level.ts.html">level.ts</a><a href="../doom/lighting.ts.html">lighting.ts</a><a href="../doom/main.ts.html">main.ts</a><a href="../doom/simWorker.ts.html">simWorker.ts</a><a href="../doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../film/audioStream.ts.html">audioStream.ts</a><a href="../film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../film/score.ts.html">score.ts</a><a href="../film/scoreSink.ts.html">scoreSink.ts</a><a href="../film/text.ts.html">text.ts</a><a href="../film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../fractals/demo/airScore.ts.html">airScore.ts</a><a href="../fractals/demo/demo.ts.html">demo.ts</a><a href="../fractals/demo/library.ts.html">library.ts</a><a href="../fractals/demo/music.ts.html">music.ts</a><a href="../fractals/demo/tune.ts.html">tune.ts</a><a href="../fractals/demo/video.ts.html">video.ts</a></details><a href="../fractals/attractors.ts.html">attractors.ts</a><a href="../fractals/clouds.ts.html">clouds.ts</a><a href="../fractals/device.ts.html">device.ts</a><a href="../fractals/kind.ts.html">kind.ts</a><a href="../fractals/main.ts.html">main.ts</a><a href="../fractals/morph.ts.html">morph.ts</a><a href="../fractals/motion.ts.html">motion.ts</a><a href="../fractals/palettes.ts.html">palettes.ts</a><a href="../fractals/presets.ts.html">presets.ts</a><a href="../fractals/sample.ts.html">sample.ts</a><a href="../fractals/shade.ts.html">shade.ts</a><a href="../fractals/shots.ts.html">shots.ts</a><a href="../fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../fractals/surfaces.ts.html">surfaces.ts</a><a href="../fractals/tree.ts.html">tree.ts</a></details><details open><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="fx/nodes/color.ts.html">color.ts</a><a href="fx/nodes/fields.ts.html">fields.ts</a><a href="fx/nodes/index.ts.html">index.ts</a><a href="fx/nodes/inputs.ts.html">inputs.ts</a><a href="fx/nodes/iq.ts.html">iq.ts</a><a href="fx/nodes/math.ts.html">math.ts</a><a href="fx/nodes/splat.ts.html">splat.ts</a><a href="fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="fx/graph.ts.html">graph.ts</a><a href="fx/graphModifier.ts.html">graphModifier.ts</a><a href="fx/index.ts.html">index.ts</a><a href="fx/registry.ts.html">registry.ts</a><a href="fx/types.ts.html">types.ts</a></details><a href="GraphDoc.ts.html">GraphDoc.ts</a><a href="GraphView.ts.html">GraphView.ts</a><a href="catalog.ts.html">catalog.ts</a><a href="checks.ts.html">checks.ts</a><a href="controlsPane.ts.html">controlsPane.ts</a><a href="editors.ts.html">editors.ts</a><a href="framed.ts.html">framed.ts</a><a href="juice.ts.html">juice.ts</a><a href="layout.ts.html">layout.ts</a><a href="main.ts.html" class="on">main.ts</a><a href="palette.ts.html">palette.ts</a><a href="preview.ts.html">preview.ts</a><a href="settings.ts.html">settings.ts</a><a href="sound.ts.html">sound.ts</a><a href="springs.ts.html">springs.ts</a><a href="themes.ts.html">themes.ts</a><a href="wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../lcc/LccScene.ts.html">LccScene.ts</a><a href="../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../lcc/catalog.ts.html">catalog.ts</a><a href="../lcc/collision.ts.html">collision.ts</a><a href="../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../lcc/gui.ts.html">gui.ts</a><a href="../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../lcc/main.ts.html">main.ts</a><a href="../lcc/quickBar.ts.html">quickBar.ts</a><a href="../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../quake/data.ts.html">data.ts</a><a href="../quake/entities.ts.html">entities.ts</a><a href="../quake/game.ts.html">game.ts</a><a href="../quake/hud.ts.html">hud.ts</a><a href="../quake/lighting.ts.html">lighting.ts</a><a href="../quake/main.ts.html">main.ts</a><a href="../quake/models.ts.html">models.ts</a><a href="../quake/simWorker.ts.html">simWorker.ts</a><a href="../quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../scenes/main.ts.html">main.ts</a><a href="../scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../sogs/catalog.ts.html">catalog.ts</a><a href="../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../sogs/gui.ts.html">gui.ts</a><a href="../sogs/lod.ts.html">lod.ts</a><a href="../sogs/lodStream.ts.html">lodStream.ts</a><a href="../sogs/main.ts.html">main.ts</a><a href="../sogs/quickBar.ts.html">quickBar.ts</a><a href="../sogs/resident.ts.html">resident.ts</a><a href="../sogs/sh.ts.html">sh.ts</a><a href="../sogs/sog.ts.html">sog.ts</a><a href="../sogs/validate.ts.html">validate.ts</a><a href="../sogs/webp.ts.html">webp.ts</a><a href="../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../spark/js/assets.ts.html">assets.ts</a><a href="../spark/js/construct.ts.html">construct.ts</a><a href="../spark/js/cube.ts.html">cube.ts</a><a href="../spark/js/examples.ts.html">examples.ts</a><a href="../spark/js/files.ts.html">files.ts</a><a href="../spark/js/objects.ts.html">objects.ts</a><a href="../spark/js/page.ts.html">page.ts</a><a href="../spark/js/raycast.ts.html">raycast.ts</a><a href="../spark/js/sdf.ts.html">sdf.ts</a><a href="../spark/js/snow.ts.html">snow.ts</a><a href="../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../spark/lofi/main.ts.html">main.ts</a><a href="../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../splats/catalog.ts.html">catalog.ts</a><a href="../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../splats/gui.ts.html">gui.ts</a><a href="../splats/main.ts.html">main.ts</a><a href="../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../spz/catalog.ts.html">catalog.ts</a><a href="../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../src/core/axes.ts.html">axes.ts</a><a href="../../src/core/bundles.ts.html">bundles.ts</a><a href="../../src/core/compress.ts.html">compress.ts</a><a href="../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../src/core/encoding.ts.html">encoding.ts</a><a href="../../src/core/files.ts.html">files.ts</a><a href="../../src/core/formats.ts.html">formats.ts</a><a href="../../src/core/index.ts.html">index.ts</a><a href="../../src/core/layout.ts.html">layout.ts</a><a href="../../src/core/math.ts.html">math.ts</a><a href="../../src/core/ply.ts.html">ply.ts</a><a href="../../src/core/progress.ts.html">progress.ts</a><a href="../../src/core/rad.ts.html">rad.ts</a><a href="../../src/core/rdx.ts.html">rdx.ts</a><a href="../../src/core/sh.ts.html">sh.ts</a><a href="../../src/core/sort.ts.html">sort.ts</a><a href="../../src/core/splats.ts.html">splats.ts</a><a href="../../src/core/spz.ts.html">spz.ts</a><a href="../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../src/gpu/backend.ts.html">backend.ts</a><a href="../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../src/gpu/index.ts.html">index.ts</a><a href="../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../src/render/index.ts.html">index.ts</a><a href="../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../src/wgpu/index.ts.html">index.ts</a><a href="../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../src/worker/index.ts.html">index.ts</a><a href="../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>main.ts</h1>
+<p class="path">examples/fxedit/main.ts · <a href="main.ts">raw</a> · <a href="../../build/examples/fxedit/index.html">open the example</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a>
+<a id="L528" href="#L528">528</a>
+<a id="L529" href="#L529">529</a>
+<a id="L530" href="#L530">530</a>
+<a id="L531" href="#L531">531</a>
+<a id="L532" href="#L532">532</a>
+<a id="L533" href="#L533">533</a>
+<a id="L534" href="#L534">534</a>
+<a id="L535" href="#L535">535</a>
+<a id="L536" href="#L536">536</a>
+<a id="L537" href="#L537">537</a>
+<a id="L538" href="#L538">538</a>
+<a id="L539" href="#L539">539</a>
+<a id="L540" href="#L540">540</a>
+<a id="L541" href="#L541">541</a>
+<a id="L542" href="#L542">542</a>
+<a id="L543" href="#L543">543</a>
+<a id="L544" href="#L544">544</a>
+<a id="L545" href="#L545">545</a>
+<a id="L546" href="#L546">546</a>
+<a id="L547" href="#L547">547</a>
+<a id="L548" href="#L548">548</a>
+<a id="L549" href="#L549">549</a>
+<a id="L550" href="#L550">550</a>
+<a id="L551" href="#L551">551</a>
+<a id="L552" href="#L552">552</a>
+<a id="L553" href="#L553">553</a>
+<a id="L554" href="#L554">554</a>
+<a id="L555" href="#L555">555</a>
+<a id="L556" href="#L556">556</a>
+<a id="L557" href="#L557">557</a>
+<a id="L558" href="#L558">558</a>
+<a id="L559" href="#L559">559</a>
+<a id="L560" href="#L560">560</a>
+<a id="L561" href="#L561">561</a>
+<a id="L562" href="#L562">562</a>
+<a id="L563" href="#L563">563</a>
+<a id="L564" href="#L564">564</a>
+<a id="L565" href="#L565">565</a>
+<a id="L566" href="#L566">566</a>
+<a id="L567" href="#L567">567</a>
+<a id="L568" href="#L568">568</a>
+<a id="L569" href="#L569">569</a>
+<a id="L570" href="#L570">570</a>
+<a id="L571" href="#L571">571</a>
+<a id="L572" href="#L572">572</a>
+<a id="L573" href="#L573">573</a>
+<a id="L574" href="#L574">574</a>
+<a id="L575" href="#L575">575</a>
+<a id="L576" href="#L576">576</a>
+<a id="L577" href="#L577">577</a>
+<a id="L578" href="#L578">578</a>
+<a id="L579" href="#L579">579</a>
+<a id="L580" href="#L580">580</a>
+<a id="L581" href="#L581">581</a>
+<a id="L582" href="#L582">582</a>
+<a id="L583" href="#L583">583</a>
+<a id="L584" href="#L584">584</a>
+<a id="L585" href="#L585">585</a>
+<a id="L586" href="#L586">586</a>
+<a id="L587" href="#L587">587</a>
+<a id="L588" href="#L588">588</a>
+<a id="L589" href="#L589">589</a>
+<a id="L590" href="#L590">590</a>
+<a id="L591" href="#L591">591</a>
+<a id="L592" href="#L592">592</a>
+<a id="L593" href="#L593">593</a>
+<a id="L594" href="#L594">594</a>
+<a id="L595" href="#L595">595</a>
+<a id="L596" href="#L596">596</a>
+<a id="L597" href="#L597">597</a>
+<a id="L598" href="#L598">598</a>
+<a id="L599" href="#L599">599</a>
+<a id="L600" href="#L600">600</a>
+<a id="L601" href="#L601">601</a>
+<a id="L602" href="#L602">602</a>
+<a id="L603" href="#L603">603</a>
+<a id="L604" href="#L604">604</a>
+<a id="L605" href="#L605">605</a>
+<a id="L606" href="#L606">606</a>
+<a id="L607" href="#L607">607</a>
+<a id="L608" href="#L608">608</a>
+<a id="L609" href="#L609">609</a>
+<a id="L610" href="#L610">610</a>
+<a id="L611" href="#L611">611</a>
+<a id="L612" href="#L612">612</a>
+<a id="L613" href="#L613">613</a>
+<a id="L614" href="#L614">614</a>
+<a id="L615" href="#L615">615</a>
+<a id="L616" href="#L616">616</a>
+<a id="L617" href="#L617">617</a>
+<a id="L618" href="#L618">618</a>
+<a id="L619" href="#L619">619</a>
+<a id="L620" href="#L620">620</a>
+<a id="L621" href="#L621">621</a>
+<a id="L622" href="#L622">622</a>
+<a id="L623" href="#L623">623</a>
+<a id="L624" href="#L624">624</a>
+<a id="L625" href="#L625">625</a>
+<a id="L626" href="#L626">626</a>
+<a id="L627" href="#L627">627</a>
+<a id="L628" href="#L628">628</a>
+<a id="L629" href="#L629">629</a>
+<a id="L630" href="#L630">630</a>
+<a id="L631" href="#L631">631</a>
+<a id="L632" href="#L632">632</a>
+<a id="L633" href="#L633">633</a>
+<a id="L634" href="#L634">634</a>
+<a id="L635" href="#L635">635</a>
+<a id="L636" href="#L636">636</a>
+<a id="L637" href="#L637">637</a>
+<a id="L638" href="#L638">638</a>
+<a id="L639" href="#L639">639</a>
+<a id="L640" href="#L640">640</a>
+<a id="L641" href="#L641">641</a>
+<a id="L642" href="#L642">642</a>
+<a id="L643" href="#L643">643</a>
+<a id="L644" href="#L644">644</a>
+<a id="L645" href="#L645">645</a>
+<a id="L646" href="#L646">646</a>
+<a id="L647" href="#L647">647</a>
+<a id="L648" href="#L648">648</a>
+<a id="L649" href="#L649">649</a>
+<a id="L650" href="#L650">650</a>
+<a id="L651" href="#L651">651</a>
+<a id="L652" href="#L652">652</a>
+<a id="L653" href="#L653">653</a>
+<a id="L654" href="#L654">654</a>
+<a id="L655" href="#L655">655</a>
+<a id="L656" href="#L656">656</a>
+<a id="L657" href="#L657">657</a>
+<a id="L658" href="#L658">658</a>
+<a id="L659" href="#L659">659</a>
+<a id="L660" href="#L660">660</a>
+<a id="L661" href="#L661">661</a>
+<a id="L662" href="#L662">662</a>
+<a id="L663" href="#L663">663</a>
+<a id="L664" href="#L664">664</a>
+<a id="L665" href="#L665">665</a>
+<a id="L666" href="#L666">666</a>
+<a id="L667" href="#L667">667</a>
+<a id="L668" href="#L668">668</a>
+<a id="L669" href="#L669">669</a>
+<a id="L670" href="#L670">670</a>
+<a id="L671" href="#L671">671</a>
+<a id="L672" href="#L672">672</a>
+<a id="L673" href="#L673">673</a>
+<a id="L674" href="#L674">674</a>
+<a id="L675" href="#L675">675</a>
+<a id="L676" href="#L676">676</a>
+<a id="L677" href="#L677">677</a>
+<a id="L678" href="#L678">678</a>
+<a id="L679" href="#L679">679</a>
+<a id="L680" href="#L680">680</a>
+<a id="L681" href="#L681">681</a>
+<a id="L682" href="#L682">682</a>
+<a id="L683" href="#L683">683</a>
+<a id="L684" href="#L684">684</a>
+<a id="L685" href="#L685">685</a>
+<a id="L686" href="#L686">686</a>
+<a id="L687" href="#L687">687</a>
+<a id="L688" href="#L688">688</a>
+<a id="L689" href="#L689">689</a>
+<a id="L690" href="#L690">690</a>
+<a id="L691" href="#L691">691</a>
+<a id="L692" href="#L692">692</a>
+<a id="L693" href="#L693">693</a>
+<a id="L694" href="#L694">694</a>
+<a id="L695" href="#L695">695</a>
+<a id="L696" href="#L696">696</a>
+<a id="L697" href="#L697">697</a>
+<a id="L698" href="#L698">698</a>
+<a id="L699" href="#L699">699</a>
+<a id="L700" href="#L700">700</a>
+<a id="L701" href="#L701">701</a>
+<a id="L702" href="#L702">702</a>
+<a id="L703" href="#L703">703</a>
+<a id="L704" href="#L704">704</a>
+<a id="L705" href="#L705">705</a>
+<a id="L706" href="#L706">706</a>
+<a id="L707" href="#L707">707</a>
+<a id="L708" href="#L708">708</a>
+<a id="L709" href="#L709">709</a>
+<a id="L710" href="#L710">710</a>
+<a id="L711" href="#L711">711</a>
+<a id="L712" href="#L712">712</a>
+<a id="L713" href="#L713">713</a>
+<a id="L714" href="#L714">714</a>
+<a id="L715" href="#L715">715</a>
+<a id="L716" href="#L716">716</a>
+<a id="L717" href="#L717">717</a>
+<a id="L718" href="#L718">718</a>
+<a id="L719" href="#L719">719</a>
+<a id="L720" href="#L720">720</a>
+<a id="L721" href="#L721">721</a>
+<a id="L722" href="#L722">722</a>
+<a id="L723" href="#L723">723</a>
+<a id="L724" href="#L724">724</a>
+<a id="L725" href="#L725">725</a>
+<a id="L726" href="#L726">726</a>
+<a id="L727" href="#L727">727</a>
+<a id="L728" href="#L728">728</a>
+<a id="L729" href="#L729">729</a>
+<a id="L730" href="#L730">730</a>
+<a id="L731" href="#L731">731</a>
+<a id="L732" href="#L732">732</a>
+<a id="L733" href="#L733">733</a>
+<a id="L734" href="#L734">734</a>
+<a id="L735" href="#L735">735</a>
+<a id="L736" href="#L736">736</a>
+<a id="L737" href="#L737">737</a>
+<a id="L738" href="#L738">738</a>
+<a id="L739" href="#L739">739</a>
+<a id="L740" href="#L740">740</a>
+<a id="L741" href="#L741">741</a>
+<a id="L742" href="#L742">742</a>
+<a id="L743" href="#L743">743</a>
+<a id="L744" href="#L744">744</a>
+<a id="L745" href="#L745">745</a>
+<a id="L746" href="#L746">746</a>
+<a id="L747" href="#L747">747</a>
+<a id="L748" href="#L748">748</a>
+<a id="L749" href="#L749">749</a>
+<a id="L750" href="#L750">750</a>
+<a id="L751" href="#L751">751</a>
+<a id="L752" href="#L752">752</a>
+<a id="L753" href="#L753">753</a>
+<a id="L754" href="#L754">754</a>
+<a id="L755" href="#L755">755</a>
+<a id="L756" href="#L756">756</a>
+<a id="L757" href="#L757">757</a>
+<a id="L758" href="#L758">758</a>
+<a id="L759" href="#L759">759</a>
+<a id="L760" href="#L760">760</a>
+<a id="L761" href="#L761">761</a>
+<a id="L762" href="#L762">762</a>
+<a id="L763" href="#L763">763</a>
+<a id="L764" href="#L764">764</a>
+<a id="L765" href="#L765">765</a>
+<a id="L766" href="#L766">766</a>
+<a id="L767" href="#L767">767</a>
+<a id="L768" href="#L768">768</a>
+<a id="L769" href="#L769">769</a>
+<a id="L770" href="#L770">770</a>
+<a id="L771" href="#L771">771</a>
+<a id="L772" href="#L772">772</a>
+<a id="L773" href="#L773">773</a>
+<a id="L774" href="#L774">774</a>
+<a id="L775" href="#L775">775</a>
+<a id="L776" href="#L776">776</a>
+<a id="L777" href="#L777">777</a>
+<a id="L778" href="#L778">778</a>
+<a id="L779" href="#L779">779</a>
+<a id="L780" href="#L780">780</a>
+<a id="L781" href="#L781">781</a>
+<a id="L782" href="#L782">782</a>
+<a id="L783" href="#L783">783</a>
+<a id="L784" href="#L784">784</a>
+<a id="L785" href="#L785">785</a>
+<a id="L786" href="#L786">786</a>
+<a id="L787" href="#L787">787</a>
+<a id="L788" href="#L788">788</a>
+<a id="L789" href="#L789">789</a>
+<a id="L790" href="#L790">790</a>
+<a id="L791" href="#L791">791</a>
+<a id="L792" href="#L792">792</a>
+<a id="L793" href="#L793">793</a>
+<a id="L794" href="#L794">794</a>
+<a id="L795" href="#L795">795</a>
+<a id="L796" href="#L796">796</a>
+<a id="L797" href="#L797">797</a>
+<a id="L798" href="#L798">798</a>
+<a id="L799" href="#L799">799</a>
+<a id="L800" href="#L800">800</a>
+<a id="L801" href="#L801">801</a>
+<a id="L802" href="#L802">802</a>
+<a id="L803" href="#L803">803</a>
+<a id="L804" href="#L804">804</a>
+<a id="L805" href="#L805">805</a>
+<a id="L806" href="#L806">806</a>
+<a id="L807" href="#L807">807</a>
+<a id="L808" href="#L808">808</a>
+<a id="L809" href="#L809">809</a>
+<a id="L810" href="#L810">810</a>
+<a id="L811" href="#L811">811</a>
+<a id="L812" href="#L812">812</a>
+<a id="L813" href="#L813">813</a>
+<a id="L814" href="#L814">814</a>
+<a id="L815" href="#L815">815</a>
+<a id="L816" href="#L816">816</a>
+<a id="L817" href="#L817">817</a>
+<a id="L818" href="#L818">818</a>
+<a id="L819" href="#L819">819</a>
+<a id="L820" href="#L820">820</a>
+<a id="L821" href="#L821">821</a>
+<a id="L822" href="#L822">822</a>
+<a id="L823" href="#L823">823</a>
+<a id="L824" href="#L824">824</a>
+<a id="L825" href="#L825">825</a>
+<a id="L826" href="#L826">826</a>
+<a id="L827" href="#L827">827</a>
+<a id="L828" href="#L828">828</a>
+<a id="L829" href="#L829">829</a>
+<a id="L830" href="#L830">830</a>
+<a id="L831" href="#L831">831</a>
+<a id="L832" href="#L832">832</a>
+<a id="L833" href="#L833">833</a>
+<a id="L834" href="#L834">834</a>
+<a id="L835" href="#L835">835</a>
+<a id="L836" href="#L836">836</a>
+<a id="L837" href="#L837">837</a>
+<a id="L838" href="#L838">838</a>
+<a id="L839" href="#L839">839</a>
+<a id="L840" href="#L840">840</a>
+<a id="L841" href="#L841">841</a>
+<a id="L842" href="#L842">842</a>
+<a id="L843" href="#L843">843</a>
+<a id="L844" href="#L844">844</a>
+<a id="L845" href="#L845">845</a>
+<a id="L846" href="#L846">846</a>
+<a id="L847" href="#L847">847</a>
+<a id="L848" href="#L848">848</a>
+<a id="L849" href="#L849">849</a>
+<a id="L850" href="#L850">850</a>
+<a id="L851" href="#L851">851</a>
+<a id="L852" href="#L852">852</a>
+<a id="L853" href="#L853">853</a>
+<a id="L854" href="#L854">854</a>
+<a id="L855" href="#L855">855</a>
+<a id="L856" href="#L856">856</a>
+<a id="L857" href="#L857">857</a>
+<a id="L858" href="#L858">858</a>
+<a id="L859" href="#L859">859</a>
+<a id="L860" href="#L860">860</a>
+<a id="L861" href="#L861">861</a>
+<a id="L862" href="#L862">862</a>
+<a id="L863" href="#L863">863</a>
+<a id="L864" href="#L864">864</a>
+<a id="L865" href="#L865">865</a>
+<a id="L866" href="#L866">866</a>
+<a id="L867" href="#L867">867</a>
+<a id="L868" href="#L868">868</a>
+<a id="L869" href="#L869">869</a>
+<a id="L870" href="#L870">870</a>
+<a id="L871" href="#L871">871</a>
+<a id="L872" href="#L872">872</a>
+<a id="L873" href="#L873">873</a>
+<a id="L874" href="#L874">874</a>
+<a id="L875" href="#L875">875</a>
+<a id="L876" href="#L876">876</a>
+<a id="L877" href="#L877">877</a>
+<a id="L878" href="#L878">878</a>
+<a id="L879" href="#L879">879</a>
+<a id="L880" href="#L880">880</a>
+<a id="L881" href="#L881">881</a>
+<a id="L882" href="#L882">882</a>
+<a id="L883" href="#L883">883</a>
+<a id="L884" href="#L884">884</a>
+<a id="L885" href="#L885">885</a>
+<a id="L886" href="#L886">886</a>
+<a id="L887" href="#L887">887</a>
+<a id="L888" href="#L888">888</a>
+<a id="L889" href="#L889">889</a>
+<a id="L890" href="#L890">890</a>
+<a id="L891" href="#L891">891</a>
+<a id="L892" href="#L892">892</a>
+<a id="L893" href="#L893">893</a>
+<a id="L894" href="#L894">894</a>
+<a id="L895" href="#L895">895</a>
+<a id="L896" href="#L896">896</a>
+<a id="L897" href="#L897">897</a>
+<a id="L898" href="#L898">898</a>
+<a id="L899" href="#L899">899</a>
+<a id="L900" href="#L900">900</a>
+<a id="L901" href="#L901">901</a>
+<a id="L902" href="#L902">902</a>
+<a id="L903" href="#L903">903</a>
+<a id="L904" href="#L904">904</a>
+<a id="L905" href="#L905">905</a>
+<a id="L906" href="#L906">906</a>
+<a id="L907" href="#L907">907</a>
+<a id="L908" href="#L908">908</a>
+<a id="L909" href="#L909">909</a>
+<a id="L910" href="#L910">910</a>
+<a id="L911" href="#L911">911</a>
+<a id="L912" href="#L912">912</a>
+<a id="L913" href="#L913">913</a>
+<a id="L914" href="#L914">914</a>
+<a id="L915" href="#L915">915</a>
+<a id="L916" href="#L916">916</a>
+<a id="L917" href="#L917">917</a>
+<a id="L918" href="#L918">918</a>
+<a id="L919" href="#L919">919</a>
+<a id="L920" href="#L920">920</a>
+<a id="L921" href="#L921">921</a>
+<a id="L922" href="#L922">922</a>
+<a id="L923" href="#L923">923</a>
+<a id="L924" href="#L924">924</a>
+<a id="L925" href="#L925">925</a>
+<a id="L926" href="#L926">926</a>
+<a id="L927" href="#L927">927</a>
+<a id="L928" href="#L928">928</a>
+<a id="L929" href="#L929">929</a>
+<a id="L930" href="#L930">930</a>
+<a id="L931" href="#L931">931</a>
+<a id="L932" href="#L932">932</a>
+<a id="L933" href="#L933">933</a>
+<a id="L934" href="#L934">934</a>
+<a id="L935" href="#L935">935</a>
+<a id="L936" href="#L936">936</a>
+<a id="L937" href="#L937">937</a>
+<a id="L938" href="#L938">938</a>
+<a id="L939" href="#L939">939</a>
+<a id="L940" href="#L940">940</a>
+<a id="L941" href="#L941">941</a>
+<a id="L942" href="#L942">942</a>
+<a id="L943" href="#L943">943</a>
+<a id="L944" href="#L944">944</a>
+<a id="L945" href="#L945">945</a>
+<a id="L946" href="#L946">946</a>
+<a id="L947" href="#L947">947</a>
+<a id="L948" href="#L948">948</a>
+<a id="L949" href="#L949">949</a>
+<a id="L950" href="#L950">950</a>
+<a id="L951" href="#L951">951</a>
+<a id="L952" href="#L952">952</a>
+<a id="L953" href="#L953">953</a>
+<a id="L954" href="#L954">954</a>
+<a id="L955" href="#L955">955</a>
+<a id="L956" href="#L956">956</a>
+<a id="L957" href="#L957">957</a>
+<a id="L958" href="#L958">958</a>
+<a id="L959" href="#L959">959</a>
+<a id="L960" href="#L960">960</a>
+<a id="L961" href="#L961">961</a>
+<a id="L962" href="#L962">962</a>
+<a id="L963" href="#L963">963</a>
+<a id="L964" href="#L964">964</a>
+<a id="L965" href="#L965">965</a>
+<a id="L966" href="#L966">966</a>
+<a id="L967" href="#L967">967</a>
+<a id="L968" href="#L968">968</a>
+<a id="L969" href="#L969">969</a>
+<a id="L970" href="#L970">970</a>
+<a id="L971" href="#L971">971</a>
+<a id="L972" href="#L972">972</a>
+<a id="L973" href="#L973">973</a>
+<a id="L974" href="#L974">974</a>
+<a id="L975" href="#L975">975</a>
+<a id="L976" href="#L976">976</a>
+<a id="L977" href="#L977">977</a>
+<a id="L978" href="#L978">978</a>
+<a id="L979" href="#L979">979</a>
+<a id="L980" href="#L980">980</a>
+<a id="L981" href="#L981">981</a>
+<a id="L982" href="#L982">982</a>
+<a id="L983" href="#L983">983</a>
+<a id="L984" href="#L984">984</a>
+<a id="L985" href="#L985">985</a>
+<a id="L986" href="#L986">986</a>
+<a id="L987" href="#L987">987</a>
+<a id="L988" href="#L988">988</a>
+<a id="L989" href="#L989">989</a>
+<a id="L990" href="#L990">990</a>
+<a id="L991" href="#L991">991</a>
+<a id="L992" href="#L992">992</a>
+<a id="L993" href="#L993">993</a>
+<a id="L994" href="#L994">994</a>
+<a id="L995" href="#L995">995</a>
+<a id="L996" href="#L996">996</a>
+<a id="L997" href="#L997">997</a>
+<a id="L998" href="#L998">998</a>
+<a id="L999" href="#L999">999</a>
+<a id="L1000" href="#L1000">1000</a>
+<a id="L1001" href="#L1001">1001</a>
+<a id="L1002" href="#L1002">1002</a>
+<a id="L1003" href="#L1003">1003</a>
+<a id="L1004" href="#L1004">1004</a>
+<a id="L1005" href="#L1005">1005</a>
+<a id="L1006" href="#L1006">1006</a>
+<a id="L1007" href="#L1007">1007</a>
+<a id="L1008" href="#L1008">1008</a>
+<a id="L1009" href="#L1009">1009</a>
+<a id="L1010" href="#L1010">1010</a>
+<a id="L1011" href="#L1011">1011</a>
+<a id="L1012" href="#L1012">1012</a>
+<a id="L1013" href="#L1013">1013</a>
+<a id="L1014" href="#L1014">1014</a>
+<a id="L1015" href="#L1015">1015</a>
+<a id="L1016" href="#L1016">1016</a>
+<a id="L1017" href="#L1017">1017</a>
+<a id="L1018" href="#L1018">1018</a>
+<a id="L1019" href="#L1019">1019</a>
+<a id="L1020" href="#L1020">1020</a>
+<a id="L1021" href="#L1021">1021</a>
+<a id="L1022" href="#L1022">1022</a>
+<a id="L1023" href="#L1023">1023</a>
+<a id="L1024" href="#L1024">1024</a>
+<a id="L1025" href="#L1025">1025</a>
+<a id="L1026" href="#L1026">1026</a>
+<a id="L1027" href="#L1027">1027</a>
+<a id="L1028" href="#L1028">1028</a>
+<a id="L1029" href="#L1029">1029</a>
+<a id="L1030" href="#L1030">1030</a>
+<a id="L1031" href="#L1031">1031</a>
+<a id="L1032" href="#L1032">1032</a>
+<a id="L1033" href="#L1033">1033</a>
+<a id="L1034" href="#L1034">1034</a>
+<a id="L1035" href="#L1035">1035</a>
+<a id="L1036" href="#L1036">1036</a>
+<a id="L1037" href="#L1037">1037</a>
+<a id="L1038" href="#L1038">1038</a>
+<a id="L1039" href="#L1039">1039</a>
+<a id="L1040" href="#L1040">1040</a>
+<a id="L1041" href="#L1041">1041</a>
+<a id="L1042" href="#L1042">1042</a>
+<a id="L1043" href="#L1043">1043</a>
+<a id="L1044" href="#L1044">1044</a>
+<a id="L1045" href="#L1045">1045</a>
+<a id="L1046" href="#L1046">1046</a>
+<a id="L1047" href="#L1047">1047</a>
+<a id="L1048" href="#L1048">1048</a>
+<a id="L1049" href="#L1049">1049</a>
+<a id="L1050" href="#L1050">1050</a>
+<a id="L1051" href="#L1051">1051</a>
+<a id="L1052" href="#L1052">1052</a>
+<a id="L1053" href="#L1053">1053</a>
+<a id="L1054" href="#L1054">1054</a>
+<a id="L1055" href="#L1055">1055</a>
+<a id="L1056" href="#L1056">1056</a>
+<a id="L1057" href="#L1057">1057</a>
+<a id="L1058" href="#L1058">1058</a>
+<a id="L1059" href="#L1059">1059</a>
+<a id="L1060" href="#L1060">1060</a>
+<a id="L1061" href="#L1061">1061</a>
+<a id="L1062" href="#L1062">1062</a>
+<a id="L1063" href="#L1063">1063</a>
+<a id="L1064" href="#L1064">1064</a>
+<a id="L1065" href="#L1065">1065</a>
+<a id="L1066" href="#L1066">1066</a>
+<a id="L1067" href="#L1067">1067</a>
+<a id="L1068" href="#L1068">1068</a>
+<a id="L1069" href="#L1069">1069</a>
+<a id="L1070" href="#L1070">1070</a>
+<a id="L1071" href="#L1071">1071</a>
+<a id="L1072" href="#L1072">1072</a>
+<a id="L1073" href="#L1073">1073</a>
+<a id="L1074" href="#L1074">1074</a>
+<a id="L1075" href="#L1075">1075</a>
+<a id="L1076" href="#L1076">1076</a>
+<a id="L1077" href="#L1077">1077</a>
+<a id="L1078" href="#L1078">1078</a>
+<a id="L1079" href="#L1079">1079</a>
+<a id="L1080" href="#L1080">1080</a>
+<a id="L1081" href="#L1081">1081</a>
+<a id="L1082" href="#L1082">1082</a>
+<a id="L1083" href="#L1083">1083</a>
+<a id="L1084" href="#L1084">1084</a>
+<a id="L1085" href="#L1085">1085</a>
+<a id="L1086" href="#L1086">1086</a>
+<a id="L1087" href="#L1087">1087</a>
+<a id="L1088" href="#L1088">1088</a>
+<a id="L1089" href="#L1089">1089</a>
+<a id="L1090" href="#L1090">1090</a>
+<a id="L1091" href="#L1091">1091</a>
+<a id="L1092" href="#L1092">1092</a>
+<a id="L1093" href="#L1093">1093</a>
+<a id="L1094" href="#L1094">1094</a>
+<a id="L1095" href="#L1095">1095</a>
+<a id="L1096" href="#L1096">1096</a>
+<a id="L1097" href="#L1097">1097</a>
+<a id="L1098" href="#L1098">1098</a>
+<a id="L1099" href="#L1099">1099</a>
+<a id="L1100" href="#L1100">1100</a>
+<a id="L1101" href="#L1101">1101</a>
+<a id="L1102" href="#L1102">1102</a>
+<a id="L1103" href="#L1103">1103</a>
+<a id="L1104" href="#L1104">1104</a>
+<a id="L1105" href="#L1105">1105</a>
+<a id="L1106" href="#L1106">1106</a>
+<a id="L1107" href="#L1107">1107</a>
+<a id="L1108" href="#L1108">1108</a>
+<a id="L1109" href="#L1109">1109</a>
+<a id="L1110" href="#L1110">1110</a>
+<a id="L1111" href="#L1111">1111</a>
+<a id="L1112" href="#L1112">1112</a>
+<a id="L1113" href="#L1113">1113</a>
+<a id="L1114" href="#L1114">1114</a>
+<a id="L1115" href="#L1115">1115</a>
+<a id="L1116" href="#L1116">1116</a>
+<a id="L1117" href="#L1117">1117</a>
+<a id="L1118" href="#L1118">1118</a>
+<a id="L1119" href="#L1119">1119</a>
+<a id="L1120" href="#L1120">1120</a>
+<a id="L1121" href="#L1121">1121</a>
+<a id="L1122" href="#L1122">1122</a>
+<a id="L1123" href="#L1123">1123</a>
+<a id="L1124" href="#L1124">1124</a>
+<a id="L1125" href="#L1125">1125</a>
+<a id="L1126" href="#L1126">1126</a>
+<a id="L1127" href="#L1127">1127</a>
+<a id="L1128" href="#L1128">1128</a>
+<a id="L1129" href="#L1129">1129</a>
+<a id="L1130" href="#L1130">1130</a>
+<a id="L1131" href="#L1131">1131</a>
+<a id="L1132" href="#L1132">1132</a>
+<a id="L1133" href="#L1133">1133</a>
+<a id="L1134" href="#L1134">1134</a>
+<a id="L1135" href="#L1135">1135</a>
+<a id="L1136" href="#L1136">1136</a>
+<a id="L1137" href="#L1137">1137</a></pre><pre class="lang-ts"><code>// Node editor for fx graphs on Radix: a live splat render beside a graph
+// editor (GraphView over a GraphDoc). The graph is a SplatModifier built
+// once per structure (fx/graphModifier.ts): unlinked inputs are uniforms
+// written live, a structure edit picks another modifier. Scans (catalog.ts)
+// are normalized by their object's matrix (upright, centered, objects 1.6
+// units, scenes 8) under `model`, which the spin turns, so example values
+// fit every scan in both spaces: world runs the graph in world space,
+// object in the normalized scan's frame. On WebGPU the graph is the
+// renderer's modifier ("world", or the live model.matrixWorld as the
+// modifier space); on WebGL2 it runs inside the scan's generator, wrapped
+// in the same frames (framed.ts), since a renderer modifier costs about 6x
+// there. Sorted on the GPU with WebGPU, or by the worker sort (WebGL2, or
+// the bar's cpu switch), re-sorted while a graph animates. Query parameters:
+//   ?graph=    an example (default dissolve): tint | heightGradient | pulse |
+//              wave | reveal | groups | dissolve | sway | radialWarp | ... | blank
+//   ?scan=     butterfly (default) | ceramic | sutro
+//   ?splats=   the samples' base URL (?splatsSh= Sutro's)
+//   ?theme=    neon | toybox | glass
+//   ?space=    world (default) | object
+//   ?gpu=      webgpu | webgpu-gl
+//   ?sort=cpu  the worker sort, also on WebGPU
+//   ?apply=    renderer (WebGPU's default) | generator (WebGL2's): where the graph runs
+//   ?instant=1 (no motion), ?sound=1, ?dpr=1 | 2
+// `radixFxedit` in the console: selfTest(), doc, view, ready.
+import * as THREE from "three";
+import { Pane, type FolderApi } from "tweakpane";
+import {
+  CameraControls, GpuArrays, SplatCollection, SplatGenerator, SplatProjector, SplatRenderer, Splats, createRenderer, getGpuCaps, loadSplats, type ArrayData,
+} from <a class="import" href="../../src/index.ts.html" title="src/index.ts">"@sparkjsdev/radix"</a>;
+import { SCANS, scanRotation, skyTexture, type Scan } from <a class="import" href="catalog.ts.html" title="examples/fxedit/catalog.ts">"./catalog.js"</a>;
+import { VALUE_CHECKS, finite, runGraph } from <a class="import" href="checks.ts.html" title="examples/fxedit/checks.ts">"./checks.js"</a>;
+import { addControlsFolder } from <a class="import" href="controlsPane.ts.html" title="examples/fxedit/controlsPane.ts">"./controlsPane.js"</a>;
+import { inFrame, setFrame } from <a class="import" href="framed.ts.html" title="examples/fxedit/framed.ts">"./framed.js"</a>;
+import {
+  FxInputs, buildGraphModifier, fxNodes, getParam, graphKey, graphParams, setParam as writeParam, validate, type Graph, type GraphModifier, type Value,
+} from <a class="import" href="fx/index.ts.html" title="examples/fxedit/fx/index.ts">"./fx/index.js"</a>;
+import blank from "./fx/graphs/blank.json" with { type: "json" };
+import dissolve from "./fx/graphs/dissolve.json" with { type: "json" };
+import groups from "./fx/graphs/groups.json" with { type: "json" };
+import heightGradient from "./fx/graphs/heightGradient.json" with { type: "json" };
+import pulse from "./fx/graphs/pulse.json" with { type: "json" };
+import reveal from "./fx/graphs/reveal.json" with { type: "json" };
+import sway from "./fx/graphs/sway.json" with { type: "json" };
+import tint from "./fx/graphs/tint.json" with { type: "json" };
+import wave from "./fx/graphs/wave.json" with { type: "json" };
+import colorStripes from "./fx/graphs/spark/colorStripes.json" with { type: "json" };
+import disintegrate from "./fx/graphs/spark/disintegrate.json" with { type: "json" };
+import electronic from "./fx/graphs/spark/electronic.json" with { type: "json" };
+import flare from "./fx/graphs/spark/flare.json" with { type: "json" };
+import grow from "./fx/graphs/spark/grow.json" with { type: "json" };
+import radialWarp from "./fx/graphs/spark/radialWarp.json" with { type: "json" };
+import shockwave from "./fx/graphs/spark/shockwave.json" with { type: "json" };
+import unroll from "./fx/graphs/spark/unroll.json" with { type: "json" };
+import waves from "./fx/graphs/spark/waves.json" with { type: "json" };
+import colorWave from "./fx/graphs/worldlabs/colorWave.json" with { type: "json" };
+import depthMap from "./fx/graphs/worldlabs/depthMap.json" with { type: "json" };
+import depthOfField from "./fx/graphs/worldlabs/depthOfField.json" with { type: "json" };
+import dollyZoom from "./fx/graphs/worldlabs/dollyZoom.json" with { type: "json" };
+import ripple from "./fx/graphs/worldlabs/ripple.json" with { type: "json" };
+import rustle from "./fx/graphs/worldlabs/rustle.json" with { type: "json" };
+import sonar from "./fx/graphs/worldlabs/sonar.json" with { type: "json" };
+import spotlight from "./fx/graphs/worldlabs/spotlight.json" with { type: "json" };
+import wlWaves from "./fx/graphs/worldlabs/waves.json" with { type: "json" };
+import { GraphDoc } from <a class="import" href="GraphDoc.ts.html" title="examples/fxedit/GraphDoc.ts">"./GraphDoc.js"</a>;
+import { GraphView } from <a class="import" href="GraphView.ts.html" title="examples/fxedit/GraphView.ts">"./GraphView.js"</a>;
+import { exposePort, probeGraph } from <a class="import" href="preview.ts.html" title="examples/fxedit/preview.ts">"./preview.js"</a>;
+import { loadSettings, saveSettings } from <a class="import" href="settings.ts.html" title="examples/fxedit/settings.ts">"./settings.js"</a>;
+import { Sound } from <a class="import" href="sound.ts.html" title="examples/fxedit/sound.ts">"./sound.js"</a>;
+import { Animator } from <a class="import" href="springs.ts.html" title="examples/fxedit/springs.ts">"./springs.js"</a>;
+import { THEMES, themeByName, type ThemeName } from <a class="import" href="themes.ts.html" title="examples/fxedit/themes.ts">"./themes.js"</a>;
+
+interface Example {
+  label: string;
+  graph: Graph;
+  group: string;
+}
+
+// JSON imports type positions as number[], not [number, number]
+const asGraph = (json: unknown) =&gt; json as Graph;
+
+const EXAMPLES: Record&lt;string, Example&gt; = {
+  tint: { label: "1 · Tint", graph: asGraph(tint), group: "Learn" },
+  heightGradient: { label: "2 · Height gradient", graph: asGraph(heightGradient), group: "Learn" },
+  pulse: { label: "3 · Pulse", graph: asGraph(pulse), group: "Learn" },
+  wave: { label: "4 · Wave", graph: asGraph(wave), group: "Learn" },
+  reveal: { label: "5 · Reveal", graph: asGraph(reveal), group: "Learn" },
+  groups: { label: "6 · Groups", graph: asGraph(groups), group: "Learn" },
+  dissolve: { label: "Dissolve", graph: asGraph(dissolve), group: "Effects" },
+  sway: { label: "Sway", graph: asGraph(sway), group: "Effects" },
+  radialWarp: { label: "Radial warp", graph: asGraph(radialWarp), group: "From Spark" },
+  colorStripes: { label: "Color stripes", graph: asGraph(colorStripes), group: "From Spark" },
+  waves: { label: "Waves", graph: asGraph(waves), group: "From Spark" },
+  flare: { label: "Flare", graph: asGraph(flare), group: "From Spark" },
+  disintegrate: { label: "Disintegrate", graph: asGraph(disintegrate), group: "From Spark" },
+  electronic: { label: "Electronic", graph: asGraph(electronic), group: "From Spark" },
+  shockwave: { label: "Shockwave (click)", graph: asGraph(shockwave), group: "From Spark" },
+  grow: { label: "Grow (click)", graph: asGraph(grow), group: "From Spark" },
+  unroll: { label: "Unroll (click)", graph: asGraph(unroll), group: "From Spark" },
+  depthMap: { label: "Depth map", graph: asGraph(depthMap), group: "World Labs" },
+  depthOfField: { label: "Depth of field", graph: asGraph(depthOfField), group: "World Labs" },
+  dollyZoom: { label: "Dolly zoom", graph: asGraph(dollyZoom), group: "World Labs" },
+  spotlight: { label: "Spotlight (click)", graph: asGraph(spotlight), group: "World Labs" },
+  sonar: { label: "Sonar (click)", graph: asGraph(sonar), group: "World Labs" },
+  ripple: { label: "Ripple (click)", graph: asGraph(ripple), group: "World Labs" },
+  rustle: { label: "Rustle", graph: asGraph(rustle), group: "World Labs" },
+  wlWaves: { label: "Waves", graph: asGraph(wlWaves), group: "World Labs" },
+  colorWave: { label: "Color wave", graph: asGraph(colorWave), group: "World Labs" },
+  blank: { label: "Blank canvas", graph: asGraph(blank), group: "Build" },
+};
+
+// Normalized extents (middle 94% of the centers): objects about a unit
+// (the examples are tuned for SIZE), scenes several units across
+const SCENE_SIZE = 8;
+const SIZE = 1.6;
+type Placement = "world" | "object";
+
+const params = new URLSearchParams(location.search);
+const $ = &lt;T extends HTMLElement = HTMLElement&gt;(id: string) =&gt; document.getElementById(id) as T;
+
+const settings = loadSettings();
+if (params.get("instant") === "1") {
+  settings.instant = true;
+}
+const sound = new Sound();
+sound.muted = params.get("sound") === "1" ? false : settings.muted;
+sound.volume = settings.volume;
+let theme = themeByName(params.get("theme")) ?? THEMES[settings.theme];
+
+const state = {
+  example: EXAMPLES[params.get("graph") ?? ""] ? params.get("graph")! : "dissolve",
+  scan: SCANS[params.get("scan") ?? ""] ? params.get("scan")! : "butterfly",
+  placement: ((params.get("space") ?? params.get("place")) === "object" ? "object" : "world") as Placement,
+  turntable: false,
+};
+
+// --- Layout of the page ---
+
+const renderPane = $("render-pane");
+const editorPane = $("editor-pane");
+const status = $("status");
+const errorsBox = $("errors");
+
+function applyTheme(name: ThemeName) {
+  theme = THEMES[name];
+  document.body.dataset.theme = name;
+  document.body.classList.toggle("overlay", theme.overlay);
+  settings.theme = name;
+  saveSettings(settings);
+  document.querySelectorAll&lt;HTMLElement&gt;("#themes button").forEach((button) =&gt; button.classList.toggle("on", button.dataset.theme === name));
+  // A ?theme= in the URL would win over the saved choice on reload
+  if (params.has("theme")) {
+    params.set("theme", name);
+    history.replaceState(null, "", `?${params}`);
+  }
+}
+
+// One button per theme, drawn in that theme's own colors
+for (const t of Object.values(THEMES)) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.theme = t.name;
+  button.title = `${t.label} (T cycles)`;
+  button.style.setProperty("--swatch-a", t.colors[0]);
+  button.style.setProperty("--swatch-b", t.colors[1]);
+  button.append(document.createElement("i"), t.label.split(" ")[0]);
+  $("themes").append(button);
+}
+
+function applySplit() {
+  document.body.style.setProperty("--split", String(settings.split));
+}
+
+applyTheme(theme.name);
+applySplit();
+
+// --- Renderer, camera, controls ---
+
+const renderer = await createRenderer();
+const caps = getGpuCaps(renderer);
+const webgpu = caps.backend === "webgpu";
+const applyIn = params.get("apply") === "generator" || (!webgpu &amp;&amp; params.get("apply") !== "renderer") ? "generator" : "renderer";
+renderPane.prepend(renderer.domElement);
+// Saved per kind of scan (scenes default to hi-dpi); ?dpr=1 | 2 overrides
+// both for this page until toggled
+let dprOverride = params.has("dpr") ? Number(params.get("dpr")) &gt; 1 : undefined;
+const hiDpi = () =&gt; dprOverride ?? (SCANS[state.scan]?.scene ? settings.hiDpiScenes : settings.hiDpi);
+
+function applyPixelRatio() {
+  renderer.setPixelRatio(hiDpi() ? Math.min(devicePixelRatio, 2) : 1);
+  $("hidpi").classList.toggle("on", hiDpi());
+}
+applyPixelRatio();
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.02, 100);
+camera.position.set(0, 0.25, 3);
+// Orbit (default) or fly (drag looks, WASD moves, a right drag orbits the
+// splat under the pointer); the render bar switches, no mode key (F fits
+// the graph)
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, storageKey: "radix-fxedit", settings: { mode: "orbit", modeKey: "" } });
+controls.settings.modeKey = "";
+controls.lookAt(new THREE.Vector3(0, 0, 0));
+
+// The spin turns `model`; `normalized`, its child, holds the scan's
+// normalization and is the scan object's transform
+const model = new THREE.Object3D();
+const normalized = new THREE.Object3D();
+model.add(normalized);
+scene.add(model);
+
+// One view for the one camera (the worker sort keeps an order per view)
+const splats = new SplatRenderer({
+  renderer,
+  sortMode: webgpu &amp;&amp; params.get("sort") !== "cpu" &amp;&amp; params.get("sort") !== "worker" ? "gpu" : "cpu",
+  viewKey: () =&gt; "main",
+});
+scene.add(splats);
+
+// With the editor over the render (overlay themes) the view is shifted so
+// the scan centers in the part left uncovered
+let framed = false;
+let visibleShare = 1;
+function updateViewport() {
+  const width = Math.max(1, renderPane.clientWidth);
+  const height = Math.max(1, renderPane.clientHeight);
+  renderer.setSize(width, height);
+  const covered = theme.overlay ? editorPane.getBoundingClientRect().width + 14 : 0;
+  const visible = Math.max(1, width - covered);
+  camera.aspect = width / height;
+  if (covered &gt; 0) {
+    camera.setViewOffset(width, height, covered / 2, 0, width, height);
+  } else {
+    camera.clearViewOffset();
+  }
+  camera.updateProjectionMatrix();
+  visibleShare = Math.min(1, visible / height);
+  if (!framed) {
+    framed = true;
+    frameCamera();
+  }
+}
+
+// The scan's own view, else back far enough to see the whole scan (a
+// scene: most of it) in the part of the render the editor leaves uncovered
+function frameCamera() {
+  const scan = SCANS[state.scan];
+  camera.fov = scan?.view?.fov ?? 45;
+  camera.updateProjectionMatrix();
+  if (scan?.view &amp;&amp; loaded) {
+    camera.position.copy(placedPoint(scan.view.position));
+    controls.lookAt(placedPoint(scan.view.target));
+    return;
+  }
+  const size = scan?.scene ? SCENE_SIZE * 0.55 : SIZE;
+  const fit = (size * 0.62) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / visibleShare;
+  camera.position.set(0, fit * (scan?.scene ? 0.25 : 0.08), fit);
+  controls.lookAt(new THREE.Vector3(0, 0, 0));
+}
+new ResizeObserver(updateViewport).observe(renderPane);
+new ResizeObserver(updateViewport).observe(editorPane);
+
+// Keys and drags go to the pane under the pointer, except that a drag begun
+// on the render (or the locked pointer) keeps steering over the editor
+let overEditor = false;
+let steering = false;
+const syncControls = () =&gt; {
+  controls.enabled = !overEditor || steering || document.pointerLockElement === renderer.domElement;
+};
+editorPane.addEventListener("pointerenter", () =&gt; {
+  overEditor = true;
+  syncControls();
+});
+editorPane.addEventListener("pointerleave", () =&gt; {
+  overEditor = false;
+  syncControls();
+});
+renderer.domElement.addEventListener("pointerdown", () =&gt; {
+  steering = true;
+  syncControls();
+});
+for (const type of ["pointerup", "pointercancel"]) {
+  addEventListener(type, () =&gt; {
+    steering = false;
+    syncControls();
+  });
+}
+document.addEventListener("pointerlockchange", syncControls);
+
+function setCameraMode(mode: "orbit" | "fly") {
+  controls.mode = mode;
+  document.querySelectorAll&lt;HTMLElement&gt;("#camera-mode button").forEach((button) =&gt; button.classList.toggle("on", button.dataset.mode === mode));
+}
+document.querySelectorAll&lt;HTMLElement&gt;("#camera-mode button").forEach((button) =&gt; button.addEventListener("click", () =&gt; setCameraMode(button.dataset.mode as "orbit" | "fly")));
+setCameraMode(controls.mode);
+
+// --- Scans ---
+
+// Rotation upright, then the scale and translation that fit the middle 94%
+// of the visible splats' centers; the sampled centers in that frame, for
+// picking clicks
+function normalization(data: ArrayData, scan: Scan) {
+  const quaternion = scanRotation(scan);
+  const { bundle } = Splats.get(data);
+  const splat = Splats.makeSplat();
+  const p = new THREE.Vector3();
+  const axes: number[][] = [[], [], []];
+  const step = Math.max(1, Math.floor(data.count / 60000));
+  for (let i = 0; i &lt; data.count; i += step) {
+    Splats.load(bundle, i, splat);
+    if (splat.opacity &lt; 0.2) {
+      continue;
+    }
+    p.set(splat.center.x, splat.center.y, splat.center.z).applyQuaternion(quaternion);
+    axes[0].push(p.x);
+    axes[1].push(p.y);
+    axes[2].push(p.z);
+  }
+  // Sorted copies: the axes stay in splat order for the pick points below
+  const ranges = axes.map((values) =&gt; {
+    const sorted = Float64Array.from(values).sort();
+    return [sorted[Math.floor(sorted.length * 0.03)] ?? 0, sorted[Math.floor(sorted.length * 0.97)] ?? 1];
+  });
+  const extent = Math.max(1e-6, ...ranges.map(([lo, hi]) =&gt; hi - lo));
+  const scale = (scan.scene ? SCENE_SIZE : SIZE) / extent;
+  const translate = new THREE.Vector3(...ranges.map(([lo, hi]) =&gt; (lo + hi) / 2)).multiplyScalar(-scale);
+  const points = new Float32Array(axes[0].length * 3);
+  axes[0].forEach((_, i) =&gt; {
+    points[i * 3] = axes[0][i] * scale + translate.x;
+    points[i * 3 + 1] = axes[1][i] * scale + translate.y;
+    points[i * 3 + 2] = axes[2][i] * scale + translate.z;
+  });
+  return { quaternion, scale, translate, points };
+}
+
+interface LoadedScan {
+  arrays: GpuArrays;
+  quaternion: THREE.Quaternion;
+  scale: number;
+  translate: THREE.Vector3;
+  points: Float32Array;
+}
+
+// Each scan's GPU arrays stay loaded once fetched, so switching back is instant
+const scans = new Map&lt;string, Promise&lt;LoadedScan&gt;&gt;();
+let loaded: LoadedScan | undefined;
+
+// A point of the scan's upright frame (before scaling) in the normalized frame
+const placedPoint = (point: [number, number, number]) =&gt; new THREE.Vector3(...point).multiplyScalar(loaded?.scale ?? 1).add(loaded?.translate ?? new THREE.Vector3());
+
+function fetchScan(name: string, scan: Scan) {
+  const task = loadSplats(scan.url, {
+    name: scan.url,
+    worker: true,
+    onProgress: (fraction, stage) =&gt; {
+      if (state.scan === name) {
+        status.textContent = `loading ${scan.label.toLowerCase()}: ${stage} ${Math.round(fraction * 100)}%`;
+      }
+    },
+  }).then((data) =&gt; ({ arrays: GpuArrays.fromData(renderer, data), ...normalization(data, scan) }));
+  task.catch(() =&gt; scans.delete(name));
+  return task;
+}
+
+async function setScan(name: string) {
+  const scan = SCANS[name];
+  if (!scan) {
+    return;
+  }
+  state.scan = name;
+  ($("scan") as HTMLSelectElement).value = name;
+  renderPane.classList.add("loading");
+  status.textContent = `loading ${scan.label.toLowerCase()}…`;
+  if (!scans.has(name)) {
+    scans.set(name, fetchScan(name, scan));
+  }
+  let next: LoadedScan;
+  try {
+    next = await scans.get(name)!;
+  } catch (error) {
+    status.textContent = `${scan.label}: ${error instanceof Error ? error.message : String(error)}`;
+    renderPane.classList.remove("loading");
+    return;
+  }
+  if (state.scan !== name) {
+    return;
+  }
+  loaded = next;
+  normalized.quaternion.copy(next.quaternion);
+  normalized.scale.setScalar(next.scale);
+  normalized.position.copy(next.translate);
+  collections.clear();
+  install();
+  splats.objectParams.blurAmount = scan.preBlur ? 0 : 0.3;
+  splats.objectParams.preBlurAmount = scan.preBlur ? 0.3 : 0;
+  scene.background = scan.sky ? skyTexture() : null;
+  applyPixelRatio();
+  if (framed) {
+    frameCamera();
+  }
+  renderPane.classList.remove("loading");
+  renderPane.classList.remove("pop");
+  void renderPane.offsetWidth;
+  renderPane.classList.add("pop");
+}
+
+// The sampled splat center nearest the camera within a small radius of the
+// ray under (x, y), else (unless `strict`) the one nearest the ray:
+// normalized and world
+function pick(clientX: number, clientY: number, strict = false) {
+  const points = loaded?.points;
+  if (!points || points.length === 0) {
+    return undefined;
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1), camera);
+  const { origin, direction } = raycaster.ray;
+  model.updateMatrixWorld();
+  const p = new THREE.Vector3();
+  const radius2 = 0.02 ** 2;
+  let hit = -1;
+  let hitT = Infinity;
+  let near = -1;
+  let nearD = Infinity;
+  for (let i = 0; i &lt; points.length; i += 3) {
+    p.fromArray(points, i).applyMatrix4(model.matrixWorld).sub(origin);
+    const t = p.dot(direction);
+    if (t &lt;= 0) {
+      continue;
+    }
+    const d2 = p.lengthSq() - t * t;
+    if (d2 &lt; radius2 &amp;&amp; t &lt; hitT) {
+      hit = i;
+      hitT = t;
+    } else if (d2 &lt; nearD) {
+      near = i;
+      nearD = d2;
+    }
+  }
+  const index = hit &gt;= 0 ? hit : strict ? -1 : near;
+  if (index &lt; 0) {
+    return undefined;
+  }
+  const local = new THREE.Vector3().fromArray(points, index);
+  return { local, world: local.clone().applyMatrix4(model.matrixWorld) };
+}
+
+// A right drag in fly mode orbits the splat under the pointer (canvas CSS pixels)
+controls.pick = (x, y) =&gt; {
+  const rect = renderer.domElement.getBoundingClientRect();
+  return Promise.resolve(pick(rect.left + x, rect.top + y, true)?.world);
+};
+
+// --- Graph document, view and modifiers ---
+
+const START = performance.now();
+const clock = () =&gt; (performance.now() - START) / 1000;
+
+const animator = new Animator();
+const doc = new GraphDoc(fxNodes, EXAMPLES[state.example].graph);
+const view = new GraphView($("graph"), doc, { animator, sound, theme, settings });
+let modifier: GraphModifier | undefined;
+let probeModifier: GraphModifier | undefined;
+let valid = true;
+// The installed modifier, the last one a render drew without throwing, and
+// the structures that threw
+let applied: GraphModifier | undefined;
+let working: GraphModifier | undefined;
+const failed = new Map&lt;string, string&gt;();
+// The worker sort cannot see uniforms: sort again at the next render
+let changed = true;
+
+// The generator path: a fromSplats generator per graph modifier, and the
+// loaded scan's collection of each (by generator; none: the plain one)
+const generators = new WeakMap&lt;GraphModifier, ReturnType&lt;typeof SplatGenerator.fromSplats&gt;&gt;();
+const collections = new Map&lt;unknown, SplatCollection&gt;();
+
+function collectionOf(target: GraphModifier | undefined) {
+  if (!target) {
+    return SplatCollection.arrays(loaded!.arrays, { matrixWorld: normalized.matrixWorld });
+  }
+  let generator = generators.get(target);
+  if (!generator) {
+    generator = SplatGenerator.fromSplats({ layout: "extSplats", modifiers: [inFrame(target.modifier)] });
+    generators.set(target, generator);
+  }
+  return SplatCollection.object({ generator, data: { splats: loaded!.arrays }, count: loaded!.arrays.count, matrixWorld: normalized.matrixWorld });
+}
+
+// The active modifier (the probe's while probing) in the placement's space,
+// as the renderer's modifier or inside the scan's generator; a modifier is
+// a program key, so switching compiles only a new structure
+function install() {
+  const active = probeModifier ?? modifier;
+  applied = active &amp;&amp; !failed.has(active.key) ? active : working;
+  const inGenerator = applyIn === "generator";
+  splats.modifier = inGenerator ? undefined : applied?.modifier;
+  splats.modifierSpace = state.placement === "object" ? model.matrixWorld : "world";
+  if (loaded) {
+    const key = inGenerator ? applied : undefined;
+    let collection = collections.get(key);
+    if (!collection) {
+      collection = new SplatCollection([collectionOf(key)]);
+      collections.set(key, collection);
+    }
+    splats.collection = collection;
+  }
+  changed = true;
+}
+
+// The generator path's frame: the normalized scan's (object) or the world
+function updateFrame() {
+  model.updateMatrixWorld();
+  setFrame(state.placement === "object" ? normalized.matrix : normalized.matrixWorld);
+}
+
+function showErrors(errors: string[]) {
+  errorsBox.replaceChildren();
+  errorsBox.hidden = errors.length === 0;
+  if (errors.length &gt; 0) {
+    const head = document.createElement("div");
+    head.className = "fx-errors-head";
+    head.textContent = modifier ? "The render shows the last graph that worked:" : "Nothing to show yet:";
+    errorsBox.append(head);
+    for (const message of errors) {
+      const line = document.createElement("div");
+      line.textContent = message;
+      errorsBox.append(line);
+    }
+  }
+}
+
+// The doc's structure changed: the modifier of its structure (cached, so
+// only values may have changed), its uniforms set to the doc's values
+function rebuild(reason?: string) {
+  const errors = doc.errors();
+  view.setErrors(errors);
+  showErrors(errors);
+  if (errors.length &gt; 0) {
+    if (valid &amp;&amp; reason !== "load") {
+      view.shakeErrors();
+      sound.play("error");
+    }
+    valid = false;
+    return;
+  }
+  modifier = buildGraphModifier(doc.graph);
+  const recovered = !valid &amp;&amp; reason !== "load";
+  valid = true;
+  updateProbe();
+  install();
+  if (failed.has(modifier.key)) {
+    showErrors([failed.get(modifier.key)!]);
+  }
+  if (recovered) {
+    view.celebrate();
+    sound.play("ok");
+  }
+}
+
+// The last click on the scan, for input.click (a point in the modifier's
+// space, so it follows the placement)
+let lastClick: { local: THREE.Vector3; world: THREE.Vector3; time: number } | undefined;
+
+function applyClick() {
+  if (lastClick) {
+    FxInputs.click.point.value.copy(state.placement === "object" ? lastClick.local : lastClick.world);
+    FxInputs.click.time.value = lastClick.time;
+    changed = true;
+  }
+}
+
+let down: { x: number; y: number; time: number } | undefined;
+renderer.domElement.addEventListener("pointerdown", (event) =&gt; {
+  down = event.button === 0 ? { x: event.clientX, y: event.clientY, time: performance.now() } : undefined;
+});
+renderer.domElement.addEventListener("pointerup", (event) =&gt; {
+  if (!down || Math.hypot(event.clientX - down.x, event.clientY - down.y) &gt; 5 || performance.now() - down.time &gt; 500) {
+    return;
+  }
+  const hit = pick(event.clientX, event.clientY);
+  if (!hit) {
+    return;
+  }
+  lastClick = { ...hit, time: clock() };
+  applyClick();
+  const rect = renderPane.getBoundingClientRect();
+  const ping = document.createElement("div");
+  ping.className = "render-ping";
+  ping.style.left = `${event.clientX - rect.left}px`;
+  ping.style.top = `${event.clientY - rect.top}px`;
+  ping.addEventListener("animationend", () =&gt; ping.remove());
+  renderPane.append(ping);
+  sound.play("drop");
+});
+
+// input.camera: the viewing camera in the modifier's space, every frame
+const toModel = new THREE.Matrix4();
+const drawingBuffer = new THREE.Vector2();
+function feedCamera() {
+  const { position, forward, pixelSize } = FxInputs.camera;
+  camera.updateMatrixWorld();
+  camera.getWorldPosition(position.value);
+  camera.getWorldDirection(forward.value);
+  if (state.placement === "object") {
+    model.updateMatrixWorld();
+    toModel.copy(model.matrixWorld).invert();
+    position.value.applyMatrix4(toModel);
+    forward.value.transformDirection(toModel);
+  }
+  // One drawing-buffer pixel at unit depth (the viewer measures blur in those)
+  pixelSize.value = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) / Math.max(1, renderer.getDrawingBufferSize(drawingBuffer).y);
+}
+
+function setParam(name: string, value: Value) {
+  for (const target of [modifier, probeModifier]) {
+    try {
+      if (target) {
+        writeParam(target, name, value);
+      }
+    } catch {
+      // Not a param of this graph (an input of a node the output does not reach)
+    }
+  }
+  changed = true;
+}
+
+function updateProbe() {
+  const port = view.probe;
+  // A port inside a group is wired out to the top first
+  const exposed = port &amp;&amp; valid ? exposePort(doc.graph, fxNodes, doc.path, port) : undefined;
+  const graph = exposed ? probeGraph(exposed.graph, fxNodes, exposed.port) : undefined;
+  if (port &amp;&amp; (!graph || validate(graph, fxNodes).length &gt; 0)) {
+    view.setProbe(undefined);
+  }
+  probeModifier = graph &amp;&amp; view.probe ? buildGraphModifier(graph) : undefined;
+}
+
+doc.on((change) =&gt; {
+  if (change.kind === "structure" &amp;&amp; (change.reason === "enter" || change.reason === "exit")) {
+    // Same graph, another level of it
+    showLesson();
+  } else if (change.kind === "structure") {
+    rebuild(change.reason);
+  } else if (change.kind === "value" &amp;&amp; change.param &amp;&amp; change.value !== undefined) {
+    // Inside a group: every instance of it
+    for (const name of change.params ?? [change.param]) {
+      setParam(name, change.value);
+    }
+  }
+  $("undo").toggleAttribute("disabled", !doc.canUndo);
+  $("redo").toggleAttribute("disabled", !doc.canRedo);
+});
+
+view.onProbe = (port) =&gt; {
+  view.setProbe(port);
+  updateProbe();
+  install();
+  sound.play(port ? "open" : "pick");
+};
+view.onFlow = (on) =&gt; $("flow").classList.toggle("on", on);
+
+function loadExample(name: string) {
+  const example = EXAMPLES[name];
+  if (!example) {
+    return;
+  }
+  state.example = name;
+  ($("example") as HTMLSelectElement).value = name;
+  view.setProbe(undefined);
+  probeModifier = undefined;
+  doc.load(example.graph);
+  showLesson();
+}
+
+// The example's lesson, or inside a group what the group does
+function showLesson() {
+  const example = EXAMPLES[state.example];
+  const group = doc.group;
+  $("lesson-title").textContent = group ? `${group.label ?? doc.groupName} (a group)` : example.label.replace(/^\d+ · /, "").replace(/ \(click\)$/, "");
+  $("lesson-text").textContent = group ? group.description ?? "Nodes folded into one. Its inputs come in on the left, its outputs leave on the right." : example.graph.description ?? "";
+  const source = $&lt;HTMLAnchorElement&gt;("lesson-source");
+  source.hidden = !example.graph.source || Boolean(group);
+  if (example.graph.source) {
+    source.href = example.graph.source.url;
+    source.textContent = `after ${example.graph.source.name} (${example.graph.source.license})`;
+  }
+}
+
+function setPlacement(placement: Placement) {
+  state.placement = placement;
+  document.querySelectorAll&lt;HTMLElement&gt;("#place button").forEach((button) =&gt; button.classList.toggle("on", button.dataset.place === placement));
+  applyClick();
+  install();
+}
+
+function setSortMode(mode: "gpu" | "cpu") {
+  splats.sortMode = webgpu ? mode : "cpu";
+  document.querySelectorAll&lt;HTMLButtonElement&gt;("#sort button").forEach((button) =&gt; {
+    button.classList.toggle("on", button.dataset.sort === splats.sortMode);
+    button.disabled = button.dataset.sort === "gpu" &amp;&amp; !webgpu;
+  });
+}
+
+// --- Toolbar ---
+
+const exampleSelect = $("example") as HTMLSelectElement;
+for (const group of ["Learn", "Effects", "From Spark", "World Labs", "Build"]) {
+  const optgroup = document.createElement("optgroup");
+  optgroup.label = group;
+  for (const [name, example] of Object.entries(EXAMPLES).filter(([, e]) =&gt; e.group === group)) {
+    optgroup.append(new Option(example.label, name));
+  }
+  exampleSelect.append(optgroup);
+}
+exampleSelect.addEventListener("change", () =&gt; loadExample(exampleSelect.value));
+// Choosing the current example again reloads it (fresh values, a new layout
+// for the pane's size): a select only reports changes, so it has no value
+// while open and gets the old one back if nothing was chosen
+exampleSelect.addEventListener("focus", () =&gt; {
+  exampleSelect.dataset.previous = exampleSelect.value;
+  exampleSelect.selectedIndex = -1;
+});
+exampleSelect.addEventListener("blur", () =&gt; {
+  if (exampleSelect.selectedIndex === -1) {
+    exampleSelect.value = exampleSelect.dataset.previous ?? state.example;
+  }
+});
+// Hand the keys back to the editor after a choice
+for (const id of ["example", "scan"]) {
+  $(id).addEventListener("change", () =&gt; $(id).blur());
+}
+
+// Live theme switch, crossfaded where the browser has view transitions
+function switchTheme(name: ThemeName) {
+  if (name === theme.name) {
+    return;
+  }
+  const apply = () =&gt; {
+    applyTheme(name);
+    view.setTheme(theme);
+    buildMotionFolder();
+    updateViewport();
+  };
+  const transition = (document as Document &amp; { startViewTransition?: (update: () =&gt; void) =&gt; unknown }).startViewTransition;
+  if (transition &amp;&amp; !view.instant) {
+    transition.call(document, apply);
+  } else {
+    apply();
+  }
+  sound.play("pick");
+}
+document.querySelectorAll&lt;HTMLElement&gt;("#themes button").forEach((button) =&gt;
+  button.addEventListener("click", () =&gt; switchTheme(button.dataset.theme as ThemeName)));
+const themeNames = Object.keys(THEMES) as ThemeName[];
+document.addEventListener("keydown", (event) =&gt; {
+  const target = event.target as HTMLElement;
+  if (event.key.toLowerCase() !== "t" || event.metaKey || event.ctrlKey || event.altKey || !view.active
+    || view.palette.open || target.closest?.("input, textarea, select")) {
+    return;
+  }
+  switchTheme(themeNames[(themeNames.indexOf(theme.name) + (event.shiftKey ? themeNames.length - 1 : 1)) % themeNames.length]);
+});
+
+const scanSelect = $("scan") as HTMLSelectElement;
+for (const [name, scan] of Object.entries(SCANS)) {
+  scanSelect.append(new Option(scan.label, name));
+}
+scanSelect.addEventListener("change", () =&gt; void setScan(scanSelect.value));
+
+document.querySelectorAll&lt;HTMLElement&gt;("#place button").forEach((button) =&gt; button.addEventListener("click", () =&gt; setPlacement(button.dataset.place as Placement)));
+document.querySelectorAll&lt;HTMLElement&gt;("#sort button").forEach((button) =&gt; button.addEventListener("click", () =&gt; setSortMode(button.dataset.sort as "gpu" | "cpu")));
+$("turntable").addEventListener("click", () =&gt; {
+  state.turntable = !state.turntable;
+  $("turntable").classList.toggle("on", state.turntable);
+});
+$("hidpi").addEventListener("click", () =&gt; {
+  const next = !hiDpi();
+  dprOverride = undefined;
+  if (SCANS[state.scan]?.scene) {
+    settings.hiDpiScenes = next;
+  } else {
+    settings.hiDpi = next;
+  }
+  saveSettings(settings);
+  applyPixelRatio();
+  updateViewport();
+});
+$("undo").addEventListener("click", () =&gt; view.undo());
+$("redo").addEventListener("click", () =&gt; view.redo());
+$("layout").addEventListener("click", () =&gt; void view.layout());
+$("group").addEventListener("click", () =&gt; view.toggleGroup());
+$("fit").addEventListener("click", () =&gt; view.fit());
+$("flow").addEventListener("click", () =&gt; view.setFlow(!view.flow));
+$("add").addEventListener("click", () =&gt; view.openPalette(view.root.clientWidth / 2 - 130, 60));
+$("copy").addEventListener("click", async () =&gt; {
+  await navigator.clipboard?.writeText(JSON.stringify(doc.graph, null, 2)).catch(() =&gt; {});
+  view.juice.toast("graph JSON copied", "ok");
+});
+const soundButton = $("sound");
+const showSound = () =&gt; {
+  soundButton.classList.toggle("on", !sound.muted);
+  soundButton.textContent = sound.muted ? "♪̸" : "♪";
+  soundButton.title = sound.muted ? "Sound off" : "Sound on";
+};
+soundButton.addEventListener("click", () =&gt; {
+  sound.muted = !sound.muted;
+  settings.muted = sound.muted;
+  saveSettings(settings);
+  showSound();
+  sound.play("ok");
+});
+showSound();
+$("lesson-toggle").addEventListener("click", () =&gt; $("lesson").classList.toggle("collapsed"));
+
+// Controls overlay: the keys button or "?" anywhere; Esc, "?" or a click
+// outside the card closes it (capture phase, ahead of the editor's keys)
+const keys = $("keys");
+function showKeys(show: boolean) {
+  keys.hidden = !show;
+  $("keys-button").classList.toggle("on", show);
+  sound.play(show ? "open" : "pick");
+}
+const keysOpen = () =&gt; !keys.hasAttribute("hidden");
+$("keys-button").addEventListener("click", () =&gt; showKeys(!keysOpen()));
+keys.addEventListener("pointerdown", (event) =&gt; {
+  if (!(event.target as HTMLElement).closest(".keys-card")) {
+    showKeys(false);
+  }
+});
+document.addEventListener("keydown", (event) =&gt; {
+  if ((event.target as HTMLElement).closest?.("input, textarea, select")) {
+    return;
+  }
+  if (event.key === "?" || (event.key === "Escape" &amp;&amp; keysOpen())) {
+    showKeys(event.key === "?" &amp;&amp; !keysOpen());
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, true);
+
+// Divider: drag to resize the panes
+const divider = $("divider");
+divider.addEventListener("pointerdown", (event) =&gt; {
+  divider.setPointerCapture(event.pointerId);
+  const move = (e: PointerEvent) =&gt; {
+    settings.split = Math.max(0.25, Math.min(0.8, 1 - e.clientX / innerWidth));
+    applySplit();
+  };
+  const up = () =&gt; {
+    divider.removeEventListener("pointermove", move);
+    saveSettings(settings);
+  };
+  divider.addEventListener("pointermove", move);
+  divider.addEventListener("pointerup", up, { once: true });
+});
+
+// --- Settings pane ---
+
+const pane = new Pane({ container: $("pane"), title: "settings", expanded: false });
+const motionState = { instant: settings.instant };
+let motionFolder: FolderApi | undefined;
+const settingsChanged = () =&gt; {
+  saveSettings(settings);
+  view.refresh();
+};
+
+function buildMotionFolder() {
+  motionFolder?.dispose();
+  motionFolder = pane.addFolder({ title: `motion (${theme.label})`, index: 0 });
+  motionFolder.addBinding(motionState, "instant", { label: "instant" }).on("change", () =&gt; {
+    settings.instant = motionState.instant;
+    settingsChanged();
+  });
+  const motion = settings.motion[theme.name];
+  motionFolder.addBinding(motion, "stiffness", { min: 20, max: 800 }).on("change", settingsChanged);
+  motionFolder.addBinding(motion, "damping", { min: 0.1, max: 1.5 }).on("change", settingsChanged);
+  motionFolder.addBinding(motion, "tilt", { min: 0, max: 0.06 }).on("change", settingsChanged);
+  motionFolder.addBinding(motion, "squash", { min: 0, max: 10 }).on("change", settingsChanged);
+  motionFolder.addBinding(motion, "stagger", { label: "stagger (ms/px)", min: 0, max: 2 }).on("change", settingsChanged);
+  motionFolder.addButton({ title: "theme defaults" }).on("click", () =&gt; {
+    Object.assign(motion, THEMES[theme.name].motion);
+    motionFolder?.refresh();
+    settingsChanged();
+  });
+}
+buildMotionFolder();
+
+const flowFolder = pane.addFolder({ title: "flow and layout", expanded: false });
+flowFolder.addBinding(settings, "flowSpeed", { label: "flow waves/s", min: 0.1, max: 3 }).on("change", settingsChanged);
+flowFolder.addBinding(settings, "layerSpacing", { label: "layer gap", min: 20, max: 240, step: 1 }).on("change", settingsChanged);
+flowFolder.addBinding(settings, "nodeSpacing", { label: "node gap", min: 8, max: 120, step: 1 }).on("change", settingsChanged);
+const soundFolder = pane.addFolder({ title: "sound", expanded: false });
+soundFolder.addBinding(settings, "volume", { min: 0, max: 1 }).on("change", () =&gt; {
+  sound.volume = settings.volume;
+  saveSettings(settings);
+});
+addControlsFolder(pane, controls);
+
+// --- Start ---
+
+setPlacement(state.placement);
+setSortMode(splats.sortMode);
+loadExample(state.example);
+void setScan(state.scan);
+
+let last = performance.now();
+let frames = 0;
+let fpsTime = last;
+let fps = 0;
+// Renders, and the first render of the drawn modifier with the scan loaded
+let renderCount = 0;
+let shownAt = 0;
+let shown: unknown;
+
+function render() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  if (state.turntable) {
+    model.rotation.y += dt * 0.5;
+  }
+  // The settings panel can switch the mode too
+  if (!document.querySelector(`#camera-mode button.on[data-mode="${controls.mode}"]`)) {
+    setCameraMode(controls.mode);
+  }
+  controls.update();
+  FxInputs.time.value = clock();
+  feedCamera();
+  updateFrame();
+
+  // The worker sort re-sorts on camera and matrix moves itself; uniform
+  // changes need a request (one during a sort runs after it, so this keeps
+  // pace with the worker)
+  const active = probeModifier ?? modifier;
+  if (splats.sortMode === "cpu" &amp;&amp; (changed || active?.usesTime)) {
+    splats.requestSort();
+  }
+  changed = false;
+
+  // A graph whose TSL fails to build throws here: show the last one that worked
+  const drawn = applied;
+  try {
+    renderer.render(scene, camera);
+    working = drawn ?? working;
+  } catch (error) {
+    if (!drawn || drawn === working) {
+      throw error;
+    }
+    const message = `${drawn.key}: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(error);
+    failed.set(drawn.key, message);
+    showErrors([message]);
+    install();
+  }
+  renderCount += 1;
+  if (shown !== applied || !loaded) {
+    shown = applied;
+    shownAt = renderCount;
+  }
+
+  frames += 1;
+  if (now - fpsTime &gt; 500) {
+    fps = (frames * 1000) / (now - fpsTime);
+    frames = 0;
+    fpsTime = now;
+    if (!renderPane.classList.contains("loading") &amp;&amp; loaded) {
+      const probing = view.probe ? `  probe ${view.probe}` : "";
+      status.textContent = `${caps.backend}  ${loaded.arrays.count.toLocaleString()} splats  ${fps.toFixed(0)} fps  ${splats.sortMode} sort  ${state.placement} space (${applyIn})${probing}`;
+    }
+  }
+}
+renderer.setAnimationLoop(render);
+
+// --- Checks ---
+
+interface CheckResult {
+  name: string;
+  ok: boolean;
+  detail?: string;
+}
+
+// Resolves after `count` renders from now, each of the current modifier
+// with the scan loaded
+function renders(count = 2) {
+  const start = renderCount;
+  return new Promise&lt;void&gt;((resolve) =&gt; {
+    const wait = () =&gt; {
+      const drawn = loaded !== undefined &amp;&amp; shown === applied &amp;&amp; renderCount - shownAt + 1 &gt;= count;
+      return drawn &amp;&amp; renderCount - start &gt;= count ? resolve() : requestAnimationFrame(wait);
+    };
+    wait();
+  });
+}
+
+// After renders(), with the worker sort an order of the current modifier
+// (and collection), sorted now, applied and drawn, so both of its programs
+// are built
+async function settled() {
+  await renders();
+  if (splats.sortMode === "cpu") {
+    const view = splats.viewFor("main");
+    view.apply(await view.sort(camera));
+    await renders();
+  }
+}
+
+// The GPU value checks, then every example: it renders without a build
+// error, layout keeps the structure key, JSON round-trips, it runs on one
+// splat with finite results, a value edit compiles nothing and reaches its
+// uniform, every probe graph validates, groups work and fold back
+async function selfTest() {
+  const results: CheckResult[] = [];
+  const report = (name: string, detail?: string) =&gt; {
+    results.push({ name, ok: !detail, detail });
+    (detail ? console.error : console.log)(`${detail ? "FAIL" : "ok  "}  ${name}${detail ? `  (${detail})` : ""}`);
+  };
+  for (const [name, graph, check] of VALUE_CHECKS) {
+    const run = await runGraph(renderer, graph).catch((error) =&gt; String(error));
+    report(`value: ${name}`, typeof run === "string" ? run : !run ? "pass did not run" : check(run));
+  }
+
+  const current = state.example;
+  for (const [name, example] of Object.entries(EXAMPLES)) {
+    const key = graphKey(example.graph, fxNodes);
+    loadExample(name);
+    await settled();
+    report(`${name}: renders`, failed.get(`fx:${key}`) ?? (applied === modifier &amp;&amp; working === modifier ? undefined : "not drawn"));
+
+    await view.layout({ animate: false });
+    report(`${name}: layout keeps the structure`, graphKey(doc.graph, fxNodes) === key ? undefined : "key changed");
+    const copy = JSON.parse(JSON.stringify(doc.graph)) as Graph;
+    report(`${name}: JSON round-trip validates`, validate(copy, fxNodes).join("; ") || undefined);
+    if (name !== "blank") {
+      const run = await runGraph(renderer, example.graph).catch((error) =&gt; String(error));
+      report(`${name}: runs on the GPU`, typeof run === "string" ? run : !run ? "pass did not run" : finite(run) ? undefined : "non-finite");
+    }
+
+    const param = graphParams(doc.graph, fxNodes).find((p) =&gt; p.type === "float");
+    if (param &amp;&amp; modifier) {
+      const programs = SplatProjector.programs;
+      const value = (param.value as number) + 0.25;
+      doc.setValue(param.node, param.input, value, "selftest");
+      doc.endGesture();
+      await settled();
+      const ok = SplatProjector.programs === programs &amp;&amp; getParam(modifier, param.name) === value &amp;&amp; modifier.uniforms.get(param.name)?.value === value;
+      report(`${name}: value edit without rebuild (${param.name})`, ok ? undefined : `programs ${programs} -&gt; ${SplatProjector.programs}, value ${String(getParam(modifier, param.name))}`);
+    }
+
+    const outputs = Object.keys(doc.graph.nodes).flatMap((id) =&gt;
+      Object.keys(doc.lookup.get(doc.graph.nodes[id].type)?.outputs ?? {}).map((port) =&gt; `${id}.${port}`));
+    const bad = outputs.filter((port) =&gt; {
+      const probe = probeGraph(doc.graph, fxNodes, port);
+      return probe &amp;&amp; validate(probe, fxNodes).length &gt; 0;
+    });
+    report(`${name}: ${outputs.length} probe graphs validate`, bad.length ? bad.join(", ") : undefined);
+    for (const id of Object.keys(doc.graph.nodes).filter((node) =&gt; doc.isGroupNode(node))) {
+      await checkGroup(name, id, report);
+    }
+    if (name !== "blank") {
+      // Folding every node but the output into a group and back keeps the program
+      const scratch = new GraphDoc(fxNodes, example.graph);
+      const outputId = Object.keys(scratch.graph.nodes).find((node) =&gt; fxNodes.get(scratch.graph.nodes[node].type)?.output);
+      const card = scratch.groupNodes(Object.keys(scratch.graph.nodes).filter((node) =&gt; node !== outputId));
+      const grouped = scratch.errors();
+      const groupedKey = grouped.length ? "" : graphKey(scratch.graph, fxNodes);
+      if (card) {
+        scratch.ungroup(card);
+      }
+      const back = scratch.errors();
+      report(`${name}: group and ungroup`, grouped.join("; ") || back.join("; ") || (card &amp;&amp; graphKey(scratch.graph, fxNodes) !== key ? "program changed" : undefined) || (groupedKey ? undefined : "no key"));
+    }
+  }
+  loadExample(current);
+  const failures = results.filter((r) =&gt; !r.ok).length;
+  console.log(`Radix fxedit selfTest on ${caps.backend} (${splats.sortMode} sort): ${results.length - failures}/${results.length} passed`);
+  return { backend: caps.backend, sortMode: splats.sortMode, passed: results.length - failures, total: results.length, failures: results.filter((r) =&gt; !r.ok) };
+}
+
+// Inside group card `id`: probes of its nodes validate, a value edit reaches
+// the modifier without a rebuild, and back out
+async function checkGroup(name: string, id: string, report: (name: string, detail?: string) =&gt; void) {
+  doc.enter(id);
+  const level = doc.level;
+  const ports = Object.keys(level.nodes).flatMap((node) =&gt; Object.keys(doc.lookup.get(level.nodes[node].type)?.outputs ?? {}).map((port) =&gt; `${node}.${port}`));
+  const bad = ports.filter((port) =&gt; {
+    const exposed = exposePort(doc.graph, fxNodes, doc.path, port);
+    // Types the probe viewer shows (not vec2 / vec4) must validate
+    const probe = exposed &amp;&amp; probeGraph(exposed.graph, fxNodes, exposed.port);
+    return !exposed || (probe &amp;&amp; validate(probe, fxNodes).length &gt; 0);
+  });
+  report(`${name}: ${ports.length} probes inside group ${id}`, bad.length ? bad.join(", ") : undefined);
+  const sources = doc.sources();
+  const target = Object.entries(level.nodes).flatMap(([node, n]) =&gt; Object.entries(doc.lookup.get(n.type)?.inputs ?? {})
+    .filter(([input, def]) =&gt; def.type === "float" &amp;&amp; !def.optional &amp;&amp; !sources.has(`${node}.${input}`)).map(([input]) =&gt; [node, input]))[0];
+  if (target &amp;&amp; modifier) {
+    const [node, input] = target;
+    const programs = SplatProjector.programs;
+    const value = Number(level.nodes[node].inputs?.[input] ?? doc.def(node)!.inputs[input].default) + 0.125;
+    doc.setValue(node, input, value, "selftest-group");
+    doc.endGesture();
+    await settled();
+    const flat = doc.flatParams(`${node}.${input}`);
+    const ok = SplatProjector.programs === programs &amp;&amp; flat.every((param) =&gt; {
+      try {
+        return getParam(modifier!, param) === value;
+      } catch {
+        return true;
+      }
+    });
+    report(`${name}: value edit inside group ${id} (${node}.${input})`, ok ? undefined : "rebuilt or not written");
+  }
+  doc.exit(0);
+}
+
+const handle = {
+  renderer, scene, camera, controls, splats, model, doc, view, settings, sound, examples: EXAMPLES,
+  modifier: () =&gt; probeModifier ?? modifier,
+  applyIn, loadExample, setScan, setPlacement, setSortMode, selfTest,
+  // Camera at a point looking at another, in the scan's upright frame before scaling
+  placedView: (position: [number, number, number], target: [number, number, number]) =&gt; {
+    camera.position.copy(placedPoint(position));
+    controls.lookAt(placedPoint(target));
+  },
+  setTheme: switchTheme,
+  // True once the scan is loaded and drawn with the first graph (with the
+  // worker sort: in its first order)
+  ready: false,
+};
+Object.assign(window, { radixFxedit: handle });
+void renders(1).then(function waitForOrder() {
+  if (splats.sortMode === "gpu" || splats.views.get("main")?.order?.collection === splats.collection) {
+    handle.ready = true;
+  } else {
+    requestAnimationFrame(waitForOrder);
+  }
+});</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

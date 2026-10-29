@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Radix scenes</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        font: 12px/1.4 ui-monospace, monospace;
+        color: #ddd;
+      }
+      canvas {
+        display: block;
+      }
+      #bar {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        max-width: calc(100vw - 16px);
+      }
+      #bar a,
+      #bar button {
+        padding: 3px 8px;
+        color: #ddd;
+        background: rgba(20, 20, 24, 0.8);
+        border: 1px solid #444;
+        border-radius: 4px;
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      #bar a.active,
+      #bar button.active {
+        color: #000;
+        background: #9cf;
+        border-color: #9cf;
+      }
+      #bar .gap {
+        width: 12px;
+      }
+      #status {
+        position: fixed;
+        left: 10px;
+        bottom: 8px;
+        margin: 0;
+        white-space: pre;
+        text-shadow: 0 1px 2px #000;
+        pointer-events: none;
+      }
+      /* The offline still, over the page until clicked */
+      #preview {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        max-width: 90vw;
+        max-height: 90vh;
+        border: 1px solid #555;
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../../node_modules/three/build/three.webgpu.js",
+          "three/webgpu": "../../../node_modules/three/build/three.webgpu.js",
+          "three/tsl": "../../../node_modules/three/build/three.tsl.js",
+          "three/examples/jsm/": "../../../node_modules/three/examples/jsm/",
+          "@sparkjsdev/radix": "../../../dist/radix.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="bar"></div>
+    <pre id="status">Loading...</pre>
+    <img id="preview" alt="offline render" hidden />
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

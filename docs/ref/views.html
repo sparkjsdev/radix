@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Views and CPU orders · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/views.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/views.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html" class="on">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="views-and-cpu-orders">Views and CPU orders<a class="anchor" href="#views-and-cpu-orders">#</a></h1>
+<p>A view (<code>SplatView</code>) is one viewpoint of a renderer, usually one camera. It holds the settings that this viewpoint overrides on its renderer and, on the CPU sort, the viewpoint's draw order. With the GPU sort a renderer needs no views: make one only to draw some viewpoint differently. With the CPU sort the renderer makes one for each camera it renders, because each viewpoint needs its own order.</p>
+<p>Code: <a href="../../src/render/SplatView.ts.html"><code>src/render/SplatView.ts</code></a>.</p>
+<pre class="lang-ts"><code>const mini = splatRenderer.viewFor(minimapCamera, {
+  collection: lodSubsetFor(minimapCamera),
+  objectParams: { blurAmount: 0.5 },
+});
+// This viewpoint draws without the renderer's modifier
+mini.modifier = null;
+
+// The renderer's own settings (or the camera's view)
+renderer.render(scene, camera);
+// With mini's settings
+renderer.render(scene, minimapCamera);</code></pre>
+<h2 id="which-view-a-render-draws">Which view a render draws<a class="anchor" href="#which-view-a-render-draws">#</a></h2>
+<ol>
+<li><code>splatRenderer.view</code>, when set. It is used for every render.</li>
+<li>Otherwise the view of the render's <strong>view key</strong>, <code>splatRenderer.viewKey(camera)</code> (by default the camera itself), if one exists.</li>
+<li>Otherwise, with the GPU sort, no view: the renderer's own settings.</li>
+<li>Otherwise, with the CPU sort, a new view of that key, made by <code>viewFor(key)</code>.</li>
+</ol>
+<p><code>splatRenderer.viewFor(key, options?)</code> makes a view on first use and returns it on later calls with the same key, setting <code>options</code> on it each time. The key can be a camera or any value of the app's.</p>
+<h2 id="how-settings-resolve">How settings resolve<a class="anchor" href="#how-settings-resolve">#</a></h2>
+<p>A view overrides some of its renderer's settings, field by field; unset ones come from the renderer.</p>
+<table><thead><tr><th>View setting</th><th>Unset means</th><th>Notes</th></tr></thead><tbody><tr><td><code>collection</code></td><td>the renderer's</td><td>for example a per-camera LoD subset</td></tr><tr><td><code>params</code></td><td>the renderer's, per field</td><td>a partial <code>SplatViewParams</code></td></tr><tr><td><code>objectParams</code></td><td>the renderer's, per field</td><td>a partial <code>SplatObjectParams</code>; each object's <code>params</code> override both</td></tr><tr><td><code>modifier</code>, <code>covModifier</code></td><td>the renderer's</td><td><code>null</code> draws without the renderer's modifier</td></tr><tr><td><code>modifierSpace</code></td><td>the renderer's</td><td></td></tr><tr><td><code>sortBits</code></td><td>the renderer's</td><td></td></tr><tr><td><code>autoSort</code></td><td>the renderer's</td><td><code>false</code> turns it off for this view</td></tr></tbody></table>
+<p><code>method</code> and <code>sortMode</code> belong to the renderer only. The method decides the projected arrays and the draw material, and the sort mode decides between the renderer's GPU sorter and its views' orders.</p>
+<p><code>SplatViewOptions</code> is the options type of <code>viewFor</code>; it has the fields above.</p>
+<h2 id="view-keys">View keys<a class="anchor" href="#view-keys">#</a></h2>
+<p>If an app creates new camera objects (a clone per frame, a new camera per request), the CPU sort makes a view for each one. Two settings prevent that:</p>
+<pre class="lang-ts"><code>// Every render shares one view
+splatRenderer.viewKey = () =&gt; &quot;main&quot;;
+
+// Or one view per stable id of the app's
+splatRenderer.viewKey = (camera) =&gt; camera.userData.slot;
+
+// Or draw one explicit view for every render
+splatRenderer.view = splatRenderer.viewFor(&quot;main&quot;);</code></pre>
+<p>Once renders have made 32 views, the renderer logs a warning that names these settings (once).</p>
+<p>The explicit <code>view</code> also covers viewpoints that are not one camera object. An XR page renders one head through the desktop camera, a stereo preview, and the XR camera (<code>splatRenderer.view = splatRenderer.viewFor(&quot;head&quot;)</code>). One camera can also be drawn twice with different settings by switching <code>view</code> between renders (an RGB and a depth thumbnail; <a href="recipes.html#thumbnails-with-different-settings">Recipes</a>).</p>
+<h2 id="orders">Orders<a class="anchor" href="#orders">#</a></h2>
+<p>On the CPU sort, a view draws its applied order, and the collection that order was sorted for:</p>
+<pre class="lang-ts"><code>const view = splatRenderer.viewFor(camera);
+// The view's collection as of now: keys on the GPU, sorted on a worker
+const order = await view.sort(camera);
+// Drawn from now on, unless an order of a later sort was applied
+view.apply(order);</code></pre>
+<table><thead><tr><th><code>SplatOrder</code> field</th><th>What it is</th></tr></thead><tbody><tr><td><code>collection</code></td><td>the collection it was sorted for</td></tr><tr><td><code>version</code></td><td>counts the view's sorts, in the order they started</td></tr><tr><td><code>ordering</code></td><td>splat indices back to front (a <code>Uint32Array</code>)</td></tr><tr><td><code>visible</code></td><td>the number of them with valid keys; the rest are not drawn</td></tr><tr><td><code>keysMs</code>, <code>sortMs</code></td><td>wall milliseconds of the key pass and readback, and of the worker sort</td></tr></tbody></table>
+<p>The rules for which order is shown:</p>
+<ul>
+<li><strong>The newest finished sort is shown</strong>, even when the collection has changed since. Each sort shows what was current when it started, so the display advances by one sort at a time while the scene keeps changing.</li>
+<li><strong>Newer means started later.</strong> Sorts can finish out of order (on a pool of several workers, a smaller collection finishes first). Once an order of a later sort lands or is applied, an earlier one can no longer be applied: <code>apply</code> returns <code>false</code>, and the order is dropped with its collection. At most one finished order waits.</li>
+<li><code>apply</code> works in cpu mode only. Switching the renderer to <code>&quot;gpu&quot;</code> drops every view's orders.</li>
+<li>Hand-made <code>SplatOrder</code> objects are refused: an order must come from this view's <code>sort</code>.</li>
+</ul>
+<p>Until a view's first order is applied, it draws nothing.</p>
+<h2 id="autosort">autoSort<a class="anchor" href="#autosort">#</a></h2>
+<p><code>autoSort</code> runs that loop for each view, so most apps never call <code>sort</code> or <code>apply</code>. It keeps one sort in flight per view and applies each order as it lands. It starts a sort at a render when:</p>
+<ul>
+<li>the view has no order yet, or its collection or <code>sortBits</code> changed;</li>
+<li>the camera moved more than <code>distance</code> (world units) since the last sort started;</li>
+<li>with a <code>sortGuard</code> set, the camera turned more than <code>angle</code> (radians) or its lens changed;</li>
+<li>an object's world transform (<code>matrixWorld</code>) changed;</li>
+<li>a sort was requested.</li>
+</ul>
+<p><code>AutoSort</code> is <code>{ distance, angle }</code>; the default <code>{ distance: 0, angle: 0 }</code> re-sorts on any change. <code>false</code> turns the loop off; then the view sorts only when asked (<code>requestSort</code>) or when the app calls <code>sort</code> itself. A view can set its own <code>autoSort</code> over the renderer's.</p>
+<p>Sort keys are distances from the head, not depths along the view direction, so an order stays valid while the camera only turns. That is why turning re-sorts only with a <code>sortGuard</code>, whose band follows the view direction (<a href="sorting.html#sortguard">Sorting</a>).</p>
+<h2 id="requestsort">requestSort<a class="anchor" href="#requestsort">#</a></h2>
+<p><code>view.requestSort()</code> starts a new sort at the view's next render, for changes <code>autoSort</code> cannot see: a generator whose splats moved through a uniform, a uniform of the generator that changed which splats are visible. <code>splatRenderer.requestSort()</code> asks every view. Both also work with <code>autoSort: false</code>, where the view then sorts only when asked. <code>splatRenderer.requestSort()</code> only reaches views that already exist, so with <code>autoSort: false</code> request a view's first sort through <code>splatRenderer.viewFor(key).requestSort()</code>; a view made later, such as one made by its first render, never sorts until asked.</p>
+<p>If a sort is in flight, the requested sort starts after it finishes, because the running sort may have read its keys before the change. <code>requestSort</code> calls <code>onInvalidate(view)</code> unless a sort in flight will call it when its order lands.</p>
+<h2 id="splatview-members">SplatView members<a class="anchor" href="#splatview-members">#</a></h2>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>key</code></td><td>the view's key</td></tr><tr><td><code>splats</code></td><td>its <code>SplatRenderer</code></td></tr><tr><td><code>collection</code>, <code>params</code>, <code>objectParams</code>, <code>modifier</code>, <code>covModifier</code>, <code>modifierSpace</code>, <code>sortBits</code>, <code>autoSort</code></td><td>the settings above</td></tr><tr><td><code>sort(camera)</code></td><td>a <code>SplatOrder</code> of the view's collection from <code>camera</code>. In gpu mode, only with the renderer's <code>sortWorker</code>, and its orders cannot be applied</td></tr><tr><td><code>apply(order)</code></td><td>draws <code>order</code> from now on (cpu mode); whether it was applied</td></tr><tr><td><code>order</code></td><td>the applied order</td></tr><tr><td><code>requestSort()</code></td><td>sort again at the next render</td></tr><tr><td><code>dispose()</code></td><td>frees the view's arrays and takes it off its renderer; its orders no longer hold their objects</td></tr></tbody></table>
+<p>Views are held by their renderer until <code>view.dispose()</code> or <code>splatRenderer.dispose()</code>. Dispose the views of cameras or keys the app no longer uses.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Do not make a view per frame: use a stable key, <code>viewKey</code>, or the explicit <code>view</code>.</li>
+<li>A view of another renderer set as <code>view</code> throws at the render.</li>
+<li>The promise of a sort in flight rejects when its view or renderer is disposed.</li>
+</ul>
+<div class="pager"><a class="prev" href="generators.html"><small>Previous</small>Generators and modifiers</a><a class="next" href="sorting.html"><small>Next</small>Sorting</a></div>
+<p class="source">Source: <a href="../views.md.html">docs/views.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#which-view-a-render-draws">Which view a render draws</a>
+<a class="h2" href="#how-settings-resolve">How settings resolve</a>
+<a class="h2" href="#view-keys">View keys</a>
+<a class="h2" href="#orders">Orders</a>
+<a class="h2" href="#autosort">autoSort</a>
+<a class="h2" href="#requestsort">requestSort</a>
+<a class="h2" href="#splatview-members">SplatView members</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

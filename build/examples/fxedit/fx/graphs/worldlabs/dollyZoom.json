@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "dollyZoom",
+  "description": "The blog's dolly zoom: its slider moves the camera from z = 1 (wide) to 2.5 (narrow) toward a subject at z = 4 while the field of view widens as 2 atan(3 / (4 - z) tan 45deg), so the subject keeps its size. Here the move is a warp of the splats about the view axis, swept by a slow ping-pong (the blog's slider starts at 1.5).",
+  "source": { "name": "World Labs threeviewer effects (blog dolly zoom widget: minZ 1, maxZ 2.5, subjectZ 4), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "camera": { "type": "input.camera" },
+    "time": { "type": "input.time" },
+    "speed": { "type": "math.mul", "inputs": {"b": 0.12} },
+    "sweep": { "type": "math.pingPong" },
+    "slider": { "type": "math.remap", "inputs": {"outLow": 1, "outHigh": 2.5}, "note": "The blog's slider: wide 1 .. narrow 2.5" },
+    "dolly": { "type": "wl.dollyZoom", "inputs": {"minZ": 1, "subjectZ": 4}, "note": "Move in, widen the view: the subject keeps its size" },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "time.seconds", "to": "speed.a" },
+    { "from": "speed.value", "to": "sweep.x" },
+    { "from": "sweep.value", "to": "slider.x" },
+    { "from": "center.value", "to": "dolly.position" },
+    { "from": "camera.position", "to": "dolly.cameraPosition" },
+    { "from": "camera.forward", "to": "dolly.cameraForward" },
+    { "from": "slider.value", "to": "dolly.dolly" },
+    { "from": "dolly.value", "to": "out.center" },
+    { "from": "dolly.keep", "to": "out.keep" }
+  ],
+  "params": {
+    "Speed": "speed.b",
+    "Wide": "slider.outLow",
+    "Narrow": "slider.outHigh",
+    "Subject": "dolly.subject"
+  }
+}

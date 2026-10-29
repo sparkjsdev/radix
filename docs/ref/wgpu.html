@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGPU compute · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/wgpu.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/wgpu.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html" class="on">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="webgpu-compute">WebGPU compute<a class="anchor" href="#webgpu-compute">#</a></h1>
+<p>The <code>Wgpu*</code> classes provide the features only WebGPU has: compute kernels, storage buffers, compute writers and scattered stores into tables, and the GPU radix sort and compaction that <code>SplatRenderer</code> sorts with. Everything here needs the WebGPU backend and throws on WebGL2 (check <code>getGpuCaps(renderer).compute</code>).</p>
+<p>Code: <code>src/wgpu/</code>. Kernels are TSL functions, like everything in <code>gpu/</code>, which three compiles to WGSL compute shaders (<a href="shaders.html">Shaders</a>).</p>
+<pre class="lang-ts"><code>const { If, uint } = TSL;
+
+const counts = new WgpuBuffer({ renderer, format: &quot;uint32&quot;, count: n });
+const double = new WgpuCompute({
+  body: ({ index }) =&gt; {
+    If(index.lessThan(uint(n)), () =&gt; {
+      counts.element(index).assign(index.mul(2));
+    });
+  },
+});
+
+// n threads, in workgroups of 64
+double.dispatch(renderer, n);
+
+// A Uint32Array
+const values = await counts.read();</code></pre>
+<h2 id="storage-arrays">Storage arrays<a class="anchor" href="#storage-arrays">#</a></h2>
+<p><code>GpuArrays</code> made with <code>storage: true</code> can be written from compute. They also support everything other arrays do: uploads, readbacks, copies, swaps, readers, and fragment writers.</p>
+<pre class="lang-ts"><code>// Both are typed GpuArrays&lt;S, true&gt;
+const arrays = new GpuArrays({
+  renderer,
+  bundles: { extSplats: Splats.EXT },
+  capacity,
+  storage: true,
+});
+const copy = GpuArrays.fromData(renderer, data, { storage: true });</code></pre>
+<ul>
+<li>The type records the setting: <code>WgpuArrayWriter</code> and <code>WgpuArrayStore.bind</code> accept only <code>GpuArrays&lt;S, true&gt;</code>, so passing other arrays is a compile error. <code>arrays.hasStorage()</code> narrows arrays made with a <code>boolean</code>.</li>
+<li>Only some formats can be written this way (<code>channel.storage</code> tells which): 32-bit formats with 1, 2, or 4 components, and <code>rgba8unorm</code>, <code>rgba8snorm</code>, and <code>rgba16float</code> texels. That covers every splat bundle. Other channels stay read-only from compute.</li>
+<li><code>swap</code> requires both arrays to have the same storage setting.</li>
+</ul>
+<h2 id="wgpuarraywriter">WgpuArrayWriter<a class="anchor" href="#wgpuarraywriter">#</a></h2>
+<p><code>WgpuArrayWriter</code> is the compute version of <code>GpuArrayWriter</code>. It takes the same constructor arguments, runs through the same <code>arrays.write</code> / <code>writeBatch</code>, and gives the same texels for the same indices. Both kinds can be mixed in one batch.</p>
+<pre class="lang-ts"><code>const writer = new WgpuArrayWriter({
+  outputs: { extSplats: Splats.EXT },
+  write: (index, out) =&gt; {
+    const splat = reader.loadSplat(index);
+    const pbr = reader.loadPbr(index);
+    GpuSplats.storeExt(out.extSplats, splat, pbr);
+  },
+});
+
+arrays.write(writer, { at: 0, count: n, first: 0 });
+
+// A compute and a fragment writer in one batch
+arrays.writeBatch([
+  { writer, at: 0, count: 1000 },
+  { writer: fragmentWriter, at: 4096, count: 500 },
+]);</code></pre>
+<table><thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>outputs</code></td><td></td><td>the bundles written (names to definitions)</td></tr><tr><td><code>write(index, out)</code></td><td></td><td>assigns one texel per output channel</td></tr><tr><td><code>workgroupSize</code></td><td>64</td><td>threads per workgroup</td></tr><tr><td><code>label</code></td><td>from the channels</td><td>the kernel's name in GPU profilers</td></tr></tbody></table>
+<ul>
+<li>Each range runs as one dispatch with one thread per texel, across every layer.</li>
+<li>Limits: at most 4 output channels (<code>WgpuArrayWriter.MAX_CHANNELS</code>, from <code>maxStorageTexturesPerShaderStage</code>), one packing, storable formats only, and storage arrays only. There is no limit on bytes per texel.</li>
+<li><code>write</code> must not read the arrays it writes: a texture cannot be sampled and written in the same dispatch. Read from other arrays, then <code>swap</code>.</li>
+<li><code>writer.kernel</code> is its <code>WgpuCompute</code>.</li>
+</ul>
+<h2 id="wgpuarraystore">WgpuArrayStore<a class="anchor" href="#wgpuarraystore">#</a></h2>
+<p><code>WgpuArrayStore</code> writes elements at any index from a kernel. It is the writing counterpart of <code>GpuArrayReader</code>.</p>
+<pre class="lang-ts"><code>const store = new WgpuArrayStore(Splats.EXT).bind(arrays, &quot;extSplats&quot;);
+const scatter = new WgpuCompute({
+  body: ({ index }) =&gt; {
+    If(index.lessThan(n), () =&gt; {
+      // One element at any index (packing 1)
+      store.store(&quot;extA&quot;, target(index), value(index));
+    });
+  },
+});
+
+scatter.dispatch(renderer, count);
+arrays.count = count;</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WgpuArrayStore(def)</code></td><td>a store of one bundle definition; the shader code is built from it alone</td></tr><tr><td><code>bind(arrays, name)</code></td><td>write bundle <code>name</code> of storage arrays from now on; bind again after the arrays are resized or swapped</td></tr><tr><td><code>store(channel, index, value)</code></td><td>writes one element of an unpacked bundle</td></tr><tr><td><code>storeTexel(channel, texel, value)</code></td><td>writes a whole texel (of a packed bundle)</td></tr></tbody></table>
+<p>The kernel must set <code>arrays.count</code> itself.</p>
+<h2 id="wgpucompute-and-wgpucomputebatch">WgpuCompute and WgpuComputeBatch<a class="anchor" href="#wgpucompute-and-wgpucomputebatch">#</a></h2>
+<pre class="lang-ts"><code>const kernel = new WgpuCompute({
+  workgroupSize: [64],
+  label: &quot;myKernel&quot;,
+  body: ({ index, globalId, localId, workgroupId, numWorkgroups }) =&gt; {
+    // ...
+  },
+});
+
+// A thread count, [x, y, z] workgroups, or an indirect buffer
+kernel.dispatch(renderer, threads);
+
+// Two kernels in one compute pass
+const batch = new WgpuComputeBatch(renderer);
+batch.add(a, n);
+batch.add(b, n);
+batch.submit();</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WgpuCompute({ body, workgroupSize?, label? })</code></td><td>a kernel built once from a TSL body. <code>workgroupSize</code> is 1 to 3 numbers (default <code>[64]</code>)</td></tr><tr><td><code>dispatch(renderer, size)</code></td><td>runs it now. <code>size</code> (<code>DispatchSize</code>): a thread count (rounded up to whole workgroups), workgroups per dimension, or an <code>IndirectStorageBufferAttribute</code> the GPU wrote (3 x uint32)</td></tr><tr><td><code>dispose()</code></td><td>frees the kernel</td></tr><tr><td><code>ComputeIds</code></td><td>the body's argument: <code>globalId</code>, <code>localId</code>, <code>workgroupId</code>, <code>numWorkgroups</code>, and <code>index</code> (the linear thread index)</td></tr><tr><td><code>new WgpuComputeBatch(renderer)</code>, <code>add(kernel, size)</code>, <code>submit({ split? })</code></td><td>dispatches recorded into as few compute passes as possible; <code>split: true</code> dispatches one by one, so profilers time each kernel</td></tr></tbody></table>
+<ul>
+<li>A body must check its own bounds: a thread count is rounded up to whole workgroups. When a dispatch needs more than 65535 workgroups, three splits it into a 2D grid, and <code>index</code> stays linear.</li>
+<li>In a batch, each dispatch sees the storage writes of the dispatches before it. A kernel queued again with a different size starts a new pass.</li>
+<li>A uniform holds one value for a whole pass: set uniforms before <code>add</code>, and leave them until <code>submit</code>.</li>
+</ul>
+<p><strong>Workgroup scans</strong> for your own kernels are static methods of <code>WgpuCompute</code>: <code>scanTier(renderer, tier?)</code> (<code>&quot;subgroup&quot;</code> where the device has subgroups, else <code>&quot;portable&quot;</code>: a <code>ScanTier</code>), <code>threadRank(tier, localId)</code> (each thread's rank in scan order), and <code>workgroupExclusiveScan(tier, scratch, rank, value)</code> (an exclusive prefix sum of one <code>uint</code> per thread, plus the total), over <code>SCAN_WORKGROUP</code> (256) threads.</p>
+<h2 id="wgpubuffer">WgpuBuffer<a class="anchor" href="#wgpubuffer">#</a></h2>
+<p><code>WgpuBuffer</code> is a typed, resizable storage buffer of a 32-bit format with 1, 2, or 4 components.</p>
+<pre class="lang-ts"><code>const buffer = new WgpuBuffer({
+  renderer,
+  format: &quot;uint32&quot;,
+  count,
+  atomic: false,
+  indirect: false,
+});
+
+// In TSL
+buffer.element(i);
+
+// From JavaScript
+buffer.upload(values);
+await buffer.read();
+buffer.clear();
+buffer.copyFrom(other);
+buffer.ensureCapacity(n, { keep: true });</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WgpuBuffer({ renderer, format, count, atomic?, indirect?, label? })</code></td><td><code>atomic</code>: the elements are <code>atomic&lt;u32&gt;</code> or <code>atomic&lt;i32&gt;</code>; <code>indirect</code>: dispatch or draw arguments; <code>label</code>: the GPU buffer's name in WebGPU errors and debuggers</td></tr><tr><td><code>element(i)</code></td><td>element <code>i</code> in TSL</td></tr><tr><td><code>upload(data, offset?)</code>, <code>read(offset?, count?)</code>, <code>clear(offset?, count?)</code></td><td>CPU writes, readbacks, and zeroing</td></tr><tr><td><code>copyFrom(src, { srcStart?, dstStart?, count? })</code></td><td>a GPU copy from a buffer of the same format</td></tr><tr><td><code>setCapacity(n, { keep? })</code>, <code>ensureCapacity(n, { keep? })</code></td><td>resize; <code>keep</code> copies the contents. <code>ensureCapacity</code> doubles, but never past the binding limit</td></tr><tr><td><code>swap(other)</code></td><td>trades GPU buffers (and their labels) with a buffer of the same format and kind</td></tr><tr><td><code>node</code>, <code>attribute</code>, <code>capacity</code>, <code>byteLength</code>, <code>components</code>, <code>gpuBuffer()</code></td><td>the TSL node, three's attribute, the size, and the <code>GPUBuffer</code></td></tr><tr><td><code>dispose()</code></td><td>frees the buffer</td></tr></tbody></table>
+<ul>
+<li>Growing or swapping keeps the same TSL node, so shaders built on the buffer keep working.</li>
+<li>Shaders bind a whole buffer, so a size larger than the device's <code>maxStorageBufferBindingSize</code> throws an error naming the limit. Radix requests 256 MiB by default, which 98% of devices support (64M uint32s); <code>createRenderer({ limits: { maxStorageBufferBindingSize: &quot;adapter&quot; } })</code> asks for all the adapter has.</li>
+</ul>
+<h2 id="wgpuradixsort-and-wgpucompact">WgpuRadixSort and WgpuCompact<a class="anchor" href="#wgpuradixsort-and-wgpucompact">#</a></h2>
+<p>These are general building blocks: the sort takes any uint32 keys and values, and the compaction takes any TSL function that returns a key.</p>
+<pre class="lang-ts"><code>// keys and values are WgpuBuffer&lt;&quot;uint32&quot;&gt;, sorted in place
+const sort = new WgpuRadixSort({ renderer, keys, values });
+
+// Or sortIndirect(countBuffer, { bits })
+sort.sort(count, { bits: 24 });
+
+const compact = new WgpuCompact({ renderer, key: (i) =&gt; keyOf(i) });
+
+// Keys equal to this are dropped
+compact.invalid.value = 0xffffff;
+
+// Outputs compact.keys, compact.values (indices) and compact.count (element 0)
+compact.compact(n);</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WgpuRadixSort({ renderer, keys, values, tier?, keysPerThread? })</code></td><td>a stable LSD sort with 8-bit digits. <code>tier</code>: <code>&quot;auto&quot;</code> (default), <code>&quot;portable&quot;</code>, or <code>&quot;subgroup&quot;</code>. <code>keysPerThread</code>: 8 (default) or 16 (<code>RadixKeysPerThread</code>)</td></tr><tr><td><code>sort(count, { bits? })</code></td><td>sorts the first <code>count</code> keys and their values; <code>bits</code> is 16, 24, or 32 (default 32): 2, 3, or 4 passes</td></tr><tr><td><code>sortIndirect(countBuffer, { bits? })</code></td><td>the count from a buffer the GPU wrote (after compaction); every dispatch is sized on the GPU</td></tr><tr><td><code>new WgpuCompact({ renderer, key, tier? })</code></td><td>stream compaction of <code>key(i)</code> for the first <code>n</code> indices</td></tr><tr><td><code>compact(n)</code>, <code>invalid</code>, <code>keys</code>, <code>values</code>, <code>count</code></td><td>run it; the dropped key (a <code>uint</code> uniform, default all ones); the outputs</td></tr><tr><td><code>dispose()</code></td><td>frees the kernels and buffers</td></tr></tbody></table>
+<ul>
+<li>Each radix pass is a histogram, a block scan, and a scatter (reduce, then scan, with no forward-progress assumptions), one kernel per pass, so a whole sort fits in one <code>WgpuComputeBatch</code>. It gives the same order as the CPU's <code>SortKeys.sort</code>.</li>
+<li>Scans use subgroup operations where the device has them and workgroup memory otherwise. Both tiers give the same results.</li>
+<li>16 keys per thread need about 19 KB of workgroup memory and measured 10-25% slower on an Apple M3, so 8 is the default.</li>
+<li>With an odd number of passes (24-bit keys), the sort ends by swapping the buffers with its scratch buffers (<code>WgpuBuffer.swap</code>) instead of copying back.</li>
+<li><code>WgpuCompact</code> uses a deterministic block scan, no atomics, and keeps the input order, so a stable sort after compaction gives the same order as sorting every element.</li>
+</ul>
+<h2 id="wgpusplatsorter">WgpuSplatSorter<a class="anchor" href="#wgpusplatsorter">#</a></h2>
+<p><code>SplatRenderer</code> sorts with this class in <code>sortMode: &quot;gpu&quot;</code>. Compaction drops the invalid keys of a projection's <code>sortKeys</code> bundle, <code>sortIndirect</code> orders the rest back to front, and a one-thread kernel writes the <code>drawIndexedIndirect</code> arguments. Nothing is read back.</p>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WgpuSplatSorter(renderer)</code></td><td>the sorter's kernels and buffers</td></tr><tr><td><code>sort(projected, count, bits)</code></td><td>sorts the first <code>count</code> splats of arrays with a <code>sortKeys</code> bundle (<code>SortKeys.KEYS</code>)</td></tr><tr><td><code>values</code></td><td>the sorted splat indices: <code>values.element(i)</code> is the i-th splat drawn</td></tr><tr><td><code>count</code></td><td>the visible count, as a TSL node</td></tr><tr><td><code>indirect</code></td><td>the draw arguments: <code>[6 x 1024, ceil(visible / 1024), 0, 0, 0]</code></td></tr><tr><td><code>readCount()</code></td><td>the visible count, read back</td></tr><tr><td><code>WgpuSplatSorter.QUADS_PER_INSTANCE</code></td><td>1024: splats per instance of the draw</td></tr><tr><td><code>dispose()</code></td><td>frees it</td></tr></tbody></table>
+<p>More on how the renderer uses it: <a href="sorting.html#the-gpu-sort">Sorting</a>.</p>
+<div class="pager"><a class="prev" href="shaders.html"><small>Previous</small>Shaders</a><a class="next" href="projection.html"><small>Next</small>Projection</a></div>
+<p class="source">Source: <a href="../wgpu.md.html">docs/wgpu.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#storage-arrays">Storage arrays</a>
+<a class="h2" href="#wgpuarraywriter">WgpuArrayWriter</a>
+<a class="h2" href="#wgpuarraystore">WgpuArrayStore</a>
+<a class="h2" href="#wgpucompute-and-wgpucomputebatch">WgpuCompute and WgpuComputeBatch</a>
+<a class="h2" href="#wgpubuffer">WgpuBuffer</a>
+<a class="h2" href="#wgpuradixsort-and-wgpucompact">WgpuRadixSort and WgpuCompact</a>
+<a class="h2" href="#wgpusplatsorter">WgpuSplatSorter</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

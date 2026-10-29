@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spark Radix fractals</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body, canvas {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        color: #eee;
+        font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      body.bare .ui {
+        display: none !important;
+      }
+
+      /* The preset's name, over the lower left */
+      #title {
+        position: fixed;
+        left: 28px;
+        bottom: 92px;
+        pointer-events: none;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+        transition: opacity 1.2s ease;
+      }
+      #title.faded {
+        opacity: 0.18;
+      }
+      #title .name {
+        font: 300 42px/1.05 ui-serif, Georgia, "Times New Roman", serif;
+        letter-spacing: 0.02em;
+      }
+      #title .sub {
+        margin-top: 6px;
+        font-size: 12px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        opacity: 0.75;
+      }
+      #status {
+        position: fixed;
+        left: 28px;
+        top: 14px;
+        margin: 0;
+        font: 11px/1.5 ui-monospace, monospace;
+        white-space: pre;
+        opacity: 0.7;
+        text-shadow: 0 1px 2px #000;
+        pointer-events: none;
+      }
+      #progress {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 2px;
+        width: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85));
+        transition: opacity 0.6s ease;
+        pointer-events: none;
+      }
+
+      /* The gallery: a chip per preset, colored by its palette */
+      #gallery {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        gap: 8px;
+        padding: 14px 20px 18px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        background: linear-gradient(0deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+      }
+      #gallery button {
+        flex: none;
+        min-width: 112px;
+        height: 46px;
+        padding: 0 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
+        color: #fff;
+        font: 500 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+        text-align: left;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        cursor: pointer;
+        opacity: 0.72;
+        transition: opacity 0.2s, transform 0.2s, border-color 0.2s;
+      }
+      #gallery button small {
+        display: block;
+        font-weight: 400;
+        font-size: 10px;
+        opacity: 0.8;
+      }
+      #gallery button:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+      }
+      #gallery button.active {
+        opacity: 1;
+        border-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+      }
+
+      #help {
+        position: fixed;
+        right: 14px;
+        bottom: 84px;
+        font-size: 11px;
+        opacity: 0.55;
+        text-align: right;
+        pointer-events: none;
+        text-shadow: 0 1px 2px #000;
+      }
+
+      @media (pointer: coarse) {
+        #help {
+          display: none;
+        }
+        #title .name {
+          font-size: 30px;
+        }
+      }
+
+      /* Surprise me and back to the demo menu, top left (the panel takes the
+         top right), the status under them */
+      #top {
+        position: fixed;
+        left: 14px;
+        top: max(12px, env(safe-area-inset-top));
+        display: flex;
+        gap: 8px;
+      }
+      #top button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 16px 9px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        background: linear-gradient(120deg, rgba(29, 43, 100, 0.85), rgba(122, 42, 138, 0.85), rgba(255, 106, 154, 0.85));
+        color: #fff;
+        font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        transition: transform 0.15s, box-shadow 0.2s;
+      }
+      #top button:hover {
+        transform: translateY(1px) scale(1.04);
+        box-shadow: 0 6px 30px rgba(255, 106, 154, 0.35);
+      }
+      #top button:active {
+        transform: scale(0.96);
+      }
+      #top #surprise {
+        background: linear-gradient(120deg, rgba(122, 42, 138, 0.9), rgba(226, 84, 107, 0.9), rgba(249, 162, 108, 0.9), rgba(45, 226, 230, 0.85));
+      }
+      #top small {
+        font: 10px ui-monospace, monospace;
+        letter-spacing: 0.1em;
+        opacity: 0.85;
+      }
+      #status {
+        left: 16px;
+        top: calc(max(12px, env(safe-area-inset-top)) + 46px);
+      }
+      /* Narrow screens: the buttons stacked */
+      @media (max-width: 700px) {
+        #top {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        #top button {
+          padding: 8px 12px;
+        }
+        #status {
+          top: calc(max(12px, env(safe-area-inset-top)) + 90px);
+        }
+        .lil-gui.root,
+        .lil-gui.lil-root {
+          --width: min(310px, 40vw);
+        }
+      }
+
+      .lil-gui {
+        --width: min(310px, 80vw);
+        --name-width: 42%;
+        --background-color: rgba(10, 10, 14, 0.42);
+        --title-background-color: rgba(0, 0, 0, 0.45);
+        --widget-color: rgba(255, 255, 255, 0.1);
+        --hover-color: rgba(255, 255, 255, 0.18);
+        --focus-color: rgba(255, 255, 255, 0.24);
+        --number-color: #ffd9a0;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+      .lil-gui.root,
+      .lil-gui.lil-root {
+        top: 0;
+        right: 0;
+        max-height: calc(100vh - 96px);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+      }
+
+      #needs-webgpu {
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        width: min(32rem, 85vw);
+        height: fit-content;
+        padding: 16px 20px;
+        font: 15px/1.5 system-ui, sans-serif;
+        background: #1a1a20;
+        border: 1px solid #555;
+        border-radius: 6px;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../../node_modules/three/build/three.webgpu.js",
+          "three/webgpu": "../../../node_modules/three/build/three.webgpu.js",
+          "three/tsl": "../../../node_modules/three/build/three.tsl.js",
+          "three/examples/jsm/": "../../../node_modules/three/examples/jsm/",
+          "@sparkjsdev/radix": "../../../dist/radix.module.js",
+          "lil-gui": "../../../node_modules/lil-gui/dist/lil-gui.esm.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="progress" class="ui"></div>
+    <pre id="status" class="ui">Loading...</pre>
+    <div id="title" class="ui"><div class="name"></div><div class="sub"></div></div>
+    <div id="help" class="ui">Drag to orbit, scroll to zoom, F to fly.<br />Space surprise, N / P next / previous, T tour, R reseed, D demos, H hide, S save PNG</div>
+    <div id="gallery" class="ui"></div>
+    <div id="top" class="ui">
+      <button id="surprise">&#10022; Surprise me <small></small></button>
+      <button id="demos">&#9654; Demo videos</button>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

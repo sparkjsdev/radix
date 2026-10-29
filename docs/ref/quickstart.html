@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quickstart · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/quickstart.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/quickstart.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html" class="on">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="quickstart">Quickstart<a class="anchor" href="#quickstart">#</a></h1>
+<p>The code below is a complete page that loads a splat file and draws it with orbit controls. After it come the first things most apps change. It assumes three.js and a bundler; the imports come from <code>@sparkjsdev/radix</code>.</p>
+<h2 id="a-page-that-draws-a-file">A page that draws a file<a class="anchor" href="#a-page-that-draws-a-file">#</a></h2>
+<pre class="lang-ts"><code>import * as THREE from &quot;three&quot;;
+import {
+  CameraControls,
+  GpuArrays,
+  SplatCollection,
+  SplatRenderer,
+  createRenderer,
+  loadSplats,
+} from &quot;@sparkjsdev/radix&quot;;
+
+// 1. The renderer: WebGPU, or the WebGL2 backend where WebGPU is missing
+const renderer = await createRenderer();
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+document.body.append(renderer.domElement);
+
+// 2. A scene, a camera, and controls
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 1000);
+camera.position.set(0, 0.5, 3);
+const controls = new CameraControls({
+  canvas: renderer.domElement,
+  object: camera,
+  storageKey: &quot;my-page&quot;,
+  settings: { mode: &quot;orbit&quot; },
+});
+controls.lookAt(new THREE.Vector3(0, 0, 0));
+
+// 3. Load the file on a worker, then upload it
+const data = await loadSplats(&quot;scene.spz&quot;, {
+  onProgress: (fraction, stage) =&gt; console.log(stage, fraction),
+});
+const splats = GpuArrays.fromData(renderer, data);
+
+// 4. Place it, and draw it
+const model = new THREE.Object3D();
+// Most captures are stored upside down (y down)
+model.rotation.x = Math.PI;
+scene.add(model);
+const collection = new SplatCollection([
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+// 5. Render every frame
+renderer.setAnimationLoop(() =&gt; {
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+addEventListener(&quot;resize&quot;, () =&gt; {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});</code></pre>
+<h2 id="what-each-step-does">What each step does<a class="anchor" href="#what-each-step-does">#</a></h2>
+<ol>
+<li><strong><code>createRenderer()</code></strong> returns an initialized <code>WebGPURenderer</code>. It picks WebGPU when the browser has it and the WebGL2 backend otherwise, and asks the device for the limits that about 95% of devices support. URL parameters can override its options: <code>?gpu=webgpu-gl</code> forces WebGL2, <code>?profile=1</code> turns on GPU timing (<a href="renderer.html">The renderer</a>).</li>
+<li><strong><code>CameraControls</code></strong> moves the camera from the pointer, touch, keyboard, and gamepads. <code>update()</code> applies the input once per frame. Press F to switch between orbit and fly (<a href="controls.html">Camera controls</a>).</li>
+<li><strong><code>loadSplats(url)</code></strong> downloads and decodes PLY, SPZ, RAD, or RDX on a worker and returns an <code>ArrayData</code>: a table with one row per splat, here in the <code>extSplats</code> layout (32 bytes per splat). <strong><code>GpuArrays.fromData</code></strong> uploads the table into textures, so row <code>i</code> on the CPU is row <code>i</code> on the GPU (<a href="files.html">Splat files</a>, <a href="gpu-arrays.html">GPU arrays</a>).</li>
+<li><strong><code>SplatCollection</code></strong> lists what to draw: here one object, the uploaded splats placed in the world by <code>model.matrixWorld</code>. <strong><code>SplatRenderer</code></strong> is a <code>THREE.Mesh</code> that draws a collection. The matrix is read on every render, so moving <code>model</code> moves the splats (<a href="rendering.html">Rendering</a>).</li>
+<li><strong>Each render</strong> projects every splat for the camera, sorts them back to front, and draws them in one draw call. The app needs no other per-frame calls and no views.</li>
+</ol>
+<h2 id="test-the-webgl2-fallback">Test the WebGL2 fallback<a class="anchor" href="#test-the-webgl2-fallback">#</a></h2>
+<p>Open the page with <code>?gpu=webgpu-gl</code>. The page works unchanged, with two visible differences:</p>
+<ul>
+<li>The sort runs on a worker. The first frames draw nothing until the first order arrives, and while the camera moves the order lags a few frames behind it.</li>
+<li>The splats appear a moment after loading, and a new collection replaces the old one a few frames after it is set.</li>
+</ul>
+<p><a href="sorting.html">Sorting</a> explains why, and <a href="views.html">Views and CPU orders</a> shows how to control it.</p>
+<h2 id="change-the-look">Change the look<a class="anchor" href="#change-the-look">#</a></h2>
+<pre class="lang-ts"><code>// &quot;ewa&quot; (default), &quot;3dgut&quot;, &quot;htgs&quot;, or &quot;raygs&quot;
+splatRenderer.method = &quot;raygs&quot;;
+// Less anti-aliasing blur
+splatRenderer.objectParams.blurAmount = 0.1;
+// Draw each Gaussian a little farther out
+splatRenderer.params.maxStdDev = 3;</code></pre>
+<p>The four methods are four ways to rasterize a splat. <code>ewa</code> is classic 3D Gaussian splatting and the cheapest. The ray methods evaluate each splat along the pixel's ray, which is exact for large and close splats (<a href="projection.html">Projection</a>). Changing a param recompiles nothing, so params can change every frame (<a href="params.html">Params</a>).</p>
+<h2 id="load-another-layout">Load another layout<a class="anchor" href="#load-another-layout">#</a></h2>
+<pre class="lang-ts"><code>// 16 bytes per splat: half the memory
+const data = await loadSplats(url, { layout: &quot;packedSplats&quot; });</code></pre>
+<p><code>packedSplats</code> keeps colors, scales, and rotations in 8 bits each. Use it for very large files or low-memory devices (<a href="splats.html">Splats</a>).</p>
+<h2 id="spherical-harmonics">Spherical harmonics<a class="anchor" href="#spherical-harmonics">#</a></h2>
+<p>Spherical harmonics load (into <code>extSh</code>, 64 bytes per splat at degree 3) and draw by default; no extra code is needed. To save memory or skip them:</p>
+<pre class="lang-ts"><code>// 48 bytes per splat, near-lossless
+const smaller = await loadSplats(url, { sh: &quot;packed&quot; });
+
+// Base colors only
+const plain = await loadSplats(url, { sh: false });
+
+// Or keep them and draw fewer bands (0: none). Nothing recompiles
+splatRenderer.objectParams.maxShDegree = 1;</code></pre>
+<p><a href="sh.html">Spherical harmonics</a> covers the codecs, palettes, and drawing SH in your own generator.</p>
+<h2 id="clean-up">Clean up<a class="anchor" href="#clean-up">#</a></h2>
+<pre class="lang-ts"><code>splatRenderer.collection = new SplatCollection([
+  SplatCollection.arrays(splats, {
+    matrixWorld: model.matrixWorld,
+    release: () =&gt; splats.dispose(),
+  }),
+]);
+
+// Later: dispose runs the release, which frees the textures
+scene.remove(splatRenderer);
+splatRenderer.dispose();</code></pre>
+<p><code>release</code> runs once nothing draws the object any more. Radix doesn't free an app's data; it calls <code>release</code> when freeing it is safe (<a href="lifetimes.html">Lifetimes</a>).</p>
+<h2 id="next">Next<a class="anchor" href="#next">#</a></h2>
+<ul>
+<li><a href="recipes.html">Recipes</a>: several files, generated splats, subsets, effects, split screens, and stills.</li>
+<li><a href="concepts.html">Concepts</a>: definitions of the terms the other pages use.</li>
+<li>The example pages in this repo: <code>/build/examples/splats/index.html</code> (a full viewer: <code>examples/splats/</code>), <code>/build/examples/scenes/index.html</code> (short usage examples: <a href="../../examples/scenes/scenes.ts.html"><code>examples/scenes/scenes.ts</code></a>), and <code>/build/examples/xr/index.html</code> (WebXR: <a href="../../examples/xr/main.ts.html"><code>examples/xr/main.ts</code></a>). The same pages run as static pages on the library bundle (<code>npm run build</code>, <code>npm run serve</code>, then <code>http://localhost:8000/build/examples/index.html</code>), with the ports of Spark's examples and larger examples, each self-contained in its folder of <code>examples/</code>: SOG and LCC viewers with level of detail (<code>sogs/</code>, <code>lcc/</code>), 3D fractals (<code>fractals/</code>), MLS-MPM water (<code>mpm/</code>, WebGPU), an effect-graph editor (<code>fxedit/</code>), and the Doom and Quake shareware episodes (<code>doom/</code>, <code>quake/</code>). <code>npm run build:single</code> also builds each of these pages as one HTML file (<code>build/examples/&lt;name&gt;/&lt;name&gt;.html</code>).</li>
+</ul>
+<div class="pager"><a class="prev" href="overview.html"><small>Previous</small>Overview</a><a class="next" href="concepts.html"><small>Next</small>Concepts</a></div>
+<p class="source">Source: <a href="../quickstart.md.html">docs/quickstart.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#a-page-that-draws-a-file">A page that draws a file</a>
+<a class="h2" href="#what-each-step-does">What each step does</a>
+<a class="h2" href="#test-the-webgl2-fallback">Test the WebGL2 fallback</a>
+<a class="h2" href="#change-the-look">Change the look</a>
+<a class="h2" href="#load-another-layout">Load another layout</a>
+<a class="h2" href="#spherical-harmonics">Spherical harmonics</a>
+<a class="h2" href="#clean-up">Clean up</a>
+<a class="h2" href="#next">Next</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

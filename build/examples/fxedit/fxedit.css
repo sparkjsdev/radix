@@ -1,0 +1,1974 @@
+/* fx editor: shared layout and behavior, then one block per theme
+   (body[data-theme]). Nodes are positioned by an inline transform, so
+   effects animate the independent translate / scale / rotate properties. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font: 12px/1.3 var(--font);
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 1fr 6px calc(var(--split, 0.56) * 100vw);
+  height: 100vh;
+}
+
+/* --- Render pane --- */
+
+#render-pane {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--render-bg, #000);
+}
+
+#render-pane canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  /* Shown when a screenshot hides everything but canvases (body > :not(canvas)) */
+  visibility: visible;
+}
+
+#render-pane.pop canvas {
+  animation: fx-reveal 0.7s ease-out;
+}
+
+@keyframes fx-reveal {
+  from {
+    opacity: 0;
+    filter: blur(12px) saturate(0);
+  }
+}
+
+#veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#render-pane.loading #veil {
+  opacity: 1;
+}
+
+.spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--accent2);
+  animation: fx-spin 0.8s linear infinite;
+}
+
+@keyframes fx-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  z-index: 4;
+}
+
+#render-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+#render-bar > * {
+  pointer-events: auto;
+}
+
+.brand {
+  font: 700 15px var(--title-font);
+  letter-spacing: 0.02em;
+  margin-right: 6px;
+  color: var(--ink);
+}
+
+.brand b {
+  color: var(--accent);
+}
+
+.bar button,
+.bar select {
+  height: 28px;
+  padding: 0 10px;
+  border: var(--button-border);
+  border-radius: var(--button-radius);
+  background: var(--button-bg);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, translate 0.1s;
+}
+
+.bar button:hover,
+.bar select:hover {
+  background: var(--button-hover);
+}
+
+.bar button:active {
+  translate: 0 1px;
+}
+
+.bar button.on {
+  background: var(--button-on);
+  color: var(--button-on-ink);
+  box-shadow: var(--button-on-shadow);
+}
+
+.bar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.seg {
+  display: flex;
+}
+
+.seg button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.seg button:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+#pane {
+  position: absolute;
+  left: 10px;
+  top: 48px;
+  width: 270px;
+  z-index: 5;
+}
+
+#status {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: pre;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+#divider {
+  cursor: col-resize;
+  background: var(--divider);
+  z-index: 6;
+}
+
+#divider:hover {
+  background: var(--accent);
+}
+
+/* --- Editor pane --- */
+
+#editor-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--editor-bg);
+  overflow: hidden;
+}
+
+#editor-bar {
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  background: var(--bar-bg);
+}
+
+.bar .spacer {
+  flex: 1;
+}
+
+#example {
+  font-weight: 600;
+  min-width: 150px;
+}
+
+#editor-bar {
+  gap: 4px;
+}
+
+#editor-bar button {
+  padding: 0 8px;
+}
+
+#themes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+}
+
+#themes button i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--swatch-a) 45%, var(--swatch-b) 55%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transition: scale 0.2s;
+}
+
+#themes button:hover i,
+#themes button.on i {
+  scale: 1.25;
+}
+
+#hints b {
+  color: var(--accent);
+}
+
+/* Controls overlay */
+#keys {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fx-fade 0.2s ease-out;
+}
+
+#keys[hidden] {
+  display: none;
+}
+
+@keyframes fx-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.keys-card {
+  width: min(980px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 18px 22px 20px;
+  border-radius: calc(var(--radius) + 4px);
+  background: var(--palette-bg);
+  border: var(--node-border);
+  box-shadow: var(--node-shadow-lift);
+  color: var(--ink);
+  animation: fx-palette-in 0.3s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.keys-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 700 18px var(--title-font);
+  margin-bottom: 10px;
+}
+
+.keys-title span {
+  font: 11px var(--font);
+  color: var(--muted);
+}
+
+.keys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 6px 26px;
+}
+
+.keys-grid h3 {
+  margin: 10px 0 5px;
+  font: 700 11px var(--font);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.keys-grid dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 12px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.keys-grid dt {
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.keys-grid dd {
+  margin: 0;
+  color: var(--label-ink);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  margin: 0 1px;
+  border-radius: 4px;
+  border: var(--edit-border);
+  background: var(--edit-bg);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  font: 600 10.5px var(--font);
+  text-align: center;
+}
+
+/* Theme switches crossfade (document.startViewTransition) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+  animation-timing-function: ease-in-out;
+}
+
+#lesson {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--lesson-bg);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+#lesson.collapsed .lesson-body {
+  display: none;
+}
+
+#lesson-toggle {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--button-bg);
+  cursor: pointer;
+  padding: 0;
+}
+
+#lesson-title {
+  color: var(--accent);
+  margin-right: 4px;
+}
+
+#lesson-source {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Where the scan was clicked (input.click) */
+.render-ping {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  pointer-events: none;
+  animation: fx-ripple 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+#graph {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+#errors {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 34px;
+  max-height: 30%;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  color: var(--ink);
+  font-size: 11.5px;
+  z-index: 3;
+  animation: fx-rise 0.25s ease-out;
+}
+
+.fx-errors-head {
+  color: var(--error);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+#hints {
+  padding: 5px 12px 7px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: var(--bar-bg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes fx-rise {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* --- Graph canvas --- */
+
+.fx-graph {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  outline: none;
+  cursor: default;
+  background-color: var(--graph-bg);
+  background-image: var(--grid);
+  background-size: calc(var(--grid-size, 24px) * var(--zoom, 1)) calc(var(--grid-size, 24px) * var(--zoom, 1));
+  background-position: var(--cam-x, 0) var(--cam-y, 0);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fx-graph.panning,
+.fx-graph.space {
+  cursor: grab;
+}
+
+.fx-graph.panning {
+  cursor: grabbing;
+}
+
+.fx-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.fx-wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.fx-nodes,
+.fx-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.fx-fx {
+  pointer-events: none;
+  z-index: 100000;
+}
+
+.fx-marquee {
+  position: absolute;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+  border-radius: 3px;
+}
+
+/* --- Nodes --- */
+
+.fx-node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 196px;
+  border-radius: var(--radius);
+  background: var(--node-bg);
+  border: var(--node-border);
+  box-shadow: var(--node-shadow);
+  will-change: transform;
+  transition: box-shadow 0.2s, opacity 0.25s, filter 0.25s;
+  cursor: grab;
+  --cat: var(--cat-math);
+}
+
+.fx-node.cat-input {
+  --cat: var(--cat-input);
+}
+
+.fx-node.cat-field {
+  --cat: var(--cat-field);
+}
+
+.fx-node.cat-color {
+  --cat: var(--cat-color);
+}
+
+.fx-node.cat-splat {
+  --cat: var(--cat-splat);
+}
+
+.fx-node.cat-effect {
+  --cat: var(--cat-effect);
+}
+
+.fx-node.cat-group {
+  --cat: var(--cat-group);
+}
+
+/* --- Groups: cards standing for nodes inside, boundaries, the trail --- */
+
+/* Two sheets peek out behind a group card: there is more inside */
+.fx-node.group-node {
+  width: 216px;
+  --sheets: 6px 6px 0 -1px color-mix(in srgb, var(--cat) 45%, transparent), 12px 12px 0 -2px color-mix(in srgb, var(--cat) 25%, transparent);
+  box-shadow: var(--sheets), var(--node-shadow);
+}
+
+.fx-node.group-node:hover {
+  --sheets: 8px 9px 0 -1px color-mix(in srgb, var(--cat) 55%, transparent), 16px 18px 0 -2px color-mix(in srgb, var(--cat) 30%, transparent);
+}
+
+.fx-node.group-node.selected,
+body[data-theme] .fx-node.group-node.selected {
+  box-shadow: var(--sheets), var(--node-shadow-selected);
+}
+
+.fx-node.group-node .fx-head {
+  background: color-mix(in srgb, var(--cat) 30%, var(--head-bg));
+}
+
+.fx-open {
+  margin-left: 4px;
+  padding: 1px 7px;
+  border: 1px solid color-mix(in srgb, var(--cat) 60%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cat) 18%, transparent);
+  color: inherit;
+  font: 600 10px var(--font);
+  cursor: pointer;
+  transition: background 0.15s, scale 0.15s;
+}
+
+.fx-open:hover {
+  background: color-mix(in srgb, var(--cat) 40%, transparent);
+  scale: 1.08;
+}
+
+.fx-group-meta {
+  padding: 4px 12px 0;
+  font-size: 10.5px;
+  color: var(--note-ink);
+}
+
+.fx-group-meta::before {
+  content: "▦ ";
+  color: var(--cat);
+}
+
+.fx-node.boundary {
+  width: 170px;
+  border-style: dashed;
+}
+
+.fx-node.boundary .fx-head {
+  background: color-mix(in srgb, var(--cat) 22%, var(--head-bg));
+}
+
+.fx-node.boundary-in {
+  border-left: 4px solid var(--cat);
+}
+
+.fx-node.boundary-out {
+  border-right: 4px solid var(--cat);
+}
+
+.fx-row.new-port .fx-label {
+  font-size: 10px;
+  font-style: italic;
+  opacity: 0.55;
+}
+
+.fx-port.new {
+  background: transparent;
+  border: 1.5px dashed var(--muted);
+}
+
+.wiring .fx-port.new.compatible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  --c: var(--accent);
+}
+
+.fx-row.out .fx-port-remove {
+  margin-right: auto;
+}
+
+.fx-crumbs {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--bar-bg);
+  border: 1px solid var(--line);
+  box-shadow: var(--node-shadow);
+  font-size: 12px;
+  z-index: 30;
+  animation: fx-rise 0.25s ease-out;
+}
+
+.fx-crumbs button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 2px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fx-crumbs button:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.fx-crumb-back {
+  font-weight: 700;
+}
+
+.fx-crumb-sep {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.fx-crumb.current {
+  color: var(--accent);
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  outline: none;
+  cursor: text;
+}
+
+.fx-crumb.current[contenteditable="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Inside a group the canvas gets a faint frame of the group's color */
+.fx-graph.in-group {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cat-group) 35%, transparent), inset 0 0 60px color-mix(in srgb, var(--cat-group) 10%, transparent);
+}
+
+/* A still copy of the level being left, zooming away */
+.fx-world.fx-ghost {
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.fx-ghost .fx-node {
+  transition: none;
+}
+
+.fx-node.zoom-card {
+  box-shadow: 0 0 0 2px var(--cat), 0 0 40px color-mix(in srgb, var(--cat) 60%, transparent);
+  transition: none;
+}
+
+/* The opening card turns into a window onto its inside */
+.fx-node.zoom-card > * {
+  opacity: max(0, 1 - var(--open, 0) * 4);
+}
+
+.fx-graph.level-moving {
+  pointer-events: none;
+}
+
+.fx-graph.level-moving .fx-world:not(.fx-ghost) {
+  will-change: transform, opacity;
+}
+
+.fx-node.dragging {
+  cursor: grabbing;
+  box-shadow: var(--node-shadow-lift);
+}
+
+.fx-node.selected {
+  box-shadow: var(--node-shadow-selected);
+}
+
+.fx-head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 12px 6px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--head-bg);
+  color: var(--head-ink);
+}
+
+.fx-title {
+  font: var(--title-weight, 700) 12.5px var(--title-font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: left center;
+  transition: transform 0.2s;
+}
+
+.fx-id {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.fx-note {
+  padding: 5px 12px 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--note-ink);
+  font-style: italic;
+}
+
+.fx-rows {
+  padding: 5px 0 7px;
+}
+
+.fx-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 1px 12px;
+}
+
+.fx-row.out {
+  justify-content: flex-end;
+}
+
+.fx-row.opt {
+  opacity: 0.85;
+}
+
+.fx-row.opt .fx-label::before {
+  content: "⚙ ";
+  opacity: 0.6;
+}
+
+.fx-label {
+  color: var(--label-ink);
+  white-space: nowrap;
+}
+
+.fx-row.in .fx-label {
+  min-width: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fx-row.in > .fx-edit:not(.fx-clear) {
+  margin-left: auto;
+}
+
+.fx-row.linked .fx-label {
+  color: var(--ink);
+}
+
+.fx-row.absent .fx-label {
+  opacity: 0.5;
+}
+
+.fx-label.param {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fx-label.param::before {
+  content: "◆ ";
+  font-size: 8px;
+  vertical-align: 1px;
+}
+
+/* --- Ports --- */
+
+.fx-port {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--c);
+  border: var(--port-border);
+  cursor: crosshair;
+  transition: scale 0.15s, opacity 0.15s, box-shadow 0.15s;
+  z-index: 2;
+}
+
+.fx-port::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+
+.fx-port.in {
+  left: -6px;
+}
+
+.fx-port.out {
+  right: -6px;
+}
+
+.fx-port:hover {
+  scale: 1.35;
+}
+
+.wiring .fx-port.incompatible {
+  opacity: 0.18;
+}
+
+.wiring .fx-port.compatible {
+  scale: 1.35;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent), 0 0 12px var(--c);
+  animation: fx-breathe 0.9s ease-in-out infinite;
+}
+
+.wiring .fx-port.hover {
+  scale: 1.9;
+  animation: none;
+}
+
+@keyframes fx-breathe {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 15%, transparent), 0 0 18px var(--c);
+  }
+}
+
+.type-float {
+  --c: var(--t-float);
+}
+
+.type-vec2 {
+  --c: var(--t-vec2);
+}
+
+.type-vec3 {
+  --c: var(--t-vec3);
+}
+
+.type-vec4 {
+  --c: var(--t-vec4);
+}
+
+.type-color {
+  --c: var(--t-color);
+}
+
+.type-bool {
+  --c: var(--t-bool);
+}
+
+.fx-eye {
+  width: 18px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.35;
+  position: relative;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.fx-eye::before {
+  content: "";
+  position: absolute;
+  inset: 3px 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50% / 60%;
+}
+
+.fx-eye::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.fx-node:hover .fx-eye {
+  opacity: 0.7;
+}
+
+.fx-eye:hover {
+  opacity: 1 !important;
+}
+
+.fx-eye.on {
+  opacity: 1;
+  background: var(--accent);
+}
+
+.fx-eye.on::before {
+  border-color: var(--bg);
+}
+
+.fx-eye.on::after {
+  background: var(--bg);
+}
+
+/* --- Editors --- */
+
+.fx-scrub {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 54px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--edit-radius);
+  background: var(--edit-bg);
+  border: var(--edit-border);
+  overflow: hidden;
+  cursor: ew-resize;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.fx-scrub:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
+.fx-scrub.scrubbing {
+  background: var(--edit-active);
+}
+
+.fx-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--edit-fill);
+  pointer-events: none;
+}
+
+.fx-num,
+.fx-axis {
+  position: relative;
+  pointer-events: none;
+}
+
+.fx-axis {
+  opacity: 0.45;
+  font-size: 9.5px;
+}
+
+.fx-scrub.typing .fx-num,
+.fx-scrub.typing .fx-fill,
+.fx-scrub.typing .fx-axis {
+  visibility: hidden;
+}
+
+.fx-type {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: var(--edit-active);
+  text-align: center;
+  font-size: 11px;
+  padding: 0 4px;
+}
+
+.fx-vec {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.fx-vec .fx-scrub {
+  min-width: 0;
+  width: 44px;
+  padding: 0 3px;
+}
+
+.fx-row.in:has(.fx-vec) {
+  flex-wrap: wrap;
+}
+
+.fx-color {
+  position: relative;
+  width: 38px;
+  height: 16px;
+  border-radius: var(--edit-radius);
+  background: var(--swatch);
+  border: var(--edit-border);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.fx-color.hdr {
+  box-shadow: 0 0 0 2px #fff, 0 0 8px var(--swatch);
+}
+
+.fx-color input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.fx-toggle,
+.fx-set,
+.fx-clear,
+.fx-choice {
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--edit-radius);
+  background: var(--edit-bg);
+  border: var(--edit-border);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fx-toggle[aria-pressed="true"] {
+  background: var(--t-bool);
+  color: var(--bg);
+}
+
+.fx-clear {
+  padding: 0 4px;
+  opacity: 0.5;
+}
+
+.fx-set {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+/* Far out: no editors or notes (hidden in place, so ports stay put) */
+.zoom-mid .fx-edit,
+.zoom-mid .fx-note,
+.zoom-mid .fx-eye {
+  visibility: hidden;
+}
+
+.zoom-far .fx-rows .fx-label,
+.zoom-far .fx-id {
+  visibility: hidden;
+}
+
+.zoom-far .fx-title {
+  transform: scale(1.7);
+}
+
+/* --- Wires --- */
+
+.fx-wire-path {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: var(--wire-width);
+  stroke-linecap: round;
+  transition: opacity 0.25s, stroke-width 0.2s;
+}
+
+.fx-flow {
+  fill: none;
+  stroke: var(--flow-ink);
+  stroke-width: var(--flow-width);
+  stroke-linecap: round;
+  stroke-dasharray: var(--flow-dash);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.fx-wire.fresh .fx-wire-path {
+  stroke-dasharray: 2400;
+  animation: fx-draw 0.5s ease-out;
+}
+
+@keyframes fx-draw {
+  from {
+    stroke-dashoffset: 2400;
+  }
+}
+
+.fx-wire.temp path {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: var(--wire-width);
+  stroke-dasharray: 6 6;
+  stroke-linecap: round;
+  animation: fx-march 0.5s linear infinite;
+}
+
+@keyframes fx-march {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+/* --- Flow preview --- */
+
+.flow-on .fx-flow {
+  opacity: 1;
+  animation: fx-flow calc(var(--flow-period) / 2) linear infinite;
+  animation-delay: calc(-1 * var(--flow-delay, 0s));
+}
+
+@keyframes fx-flow {
+  to {
+    stroke-dashoffset: var(--flow-step);
+  }
+}
+
+.flow-on .fx-node:not(.unreached) {
+  animation: var(--wave-animation) var(--flow-period) ease-in-out infinite;
+  animation-delay: var(--flow-delay, 0s);
+}
+
+.flow-on .fx-node.unreached,
+.flow-on .fx-wire.unreached {
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
+.flow-on .fx-node.timed .fx-head::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent2);
+  animation: fx-tick 1s ease-in-out infinite;
+}
+
+@keyframes fx-tick {
+  50% {
+    scale: 1.6;
+    opacity: 0.4;
+  }
+}
+
+/* --- Probe --- */
+
+.probing .fx-node:not(.probe-chain) {
+  opacity: 0.3;
+  filter: saturate(0.3);
+}
+
+.probing .fx-wire:not(.probe-chain) {
+  opacity: 0.15;
+}
+
+.probing .fx-wire.probe-chain .fx-wire-path {
+  stroke-width: calc(var(--wire-width) * 1.5);
+}
+
+.fx-node.probed {
+  box-shadow: var(--node-shadow-probed);
+}
+
+/* --- Errors --- */
+
+.fx-node.has-error {
+  box-shadow: 0 0 0 2px var(--error), 0 0 20px color-mix(in srgb, var(--error) 50%, transparent);
+}
+
+.fx-node.has-error .fx-head::before {
+  content: "!";
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--error);
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.fx-node.has-error:hover .fx-head[data-error]:not([data-error=""])::after {
+  content: attr(data-error);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  width: 260px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--error);
+  color: #fff;
+  font: 11px var(--font);
+  white-space: pre-wrap;
+  z-index: 10;
+}
+
+/* --- One-shot effects --- */
+
+/* A freshly loaded graph: nodes wait for their layout, wires fade in last */
+.fx-node.pending {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fx-wires {
+  transition: opacity 0.35s;
+}
+
+.appearing .fx-wires {
+  opacity: 0;
+  transition: none;
+}
+
+.fx-node.leaving {
+  animation: fx-leave 0.3s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes fx-leave {
+  to {
+    opacity: 0;
+    scale: 0.4;
+    filter: blur(6px);
+  }
+}
+
+.fx-shake {
+  animation: fx-shake 0.45s ease-out;
+}
+
+@keyframes fx-shake {
+  20% {
+    translate: -8px 0;
+  }
+  40% {
+    translate: 7px 0;
+  }
+  60% {
+    translate: -5px 0;
+  }
+  80% {
+    translate: 3px 0;
+  }
+}
+
+.fx-glitch {
+  animation: fx-glitch 0.45s steps(2) ;
+}
+
+@keyframes fx-glitch {
+  20% {
+    translate: -6px 2px;
+    filter: drop-shadow(4px 0 0 #ff2a6d) drop-shadow(-4px 0 0 #05d9e8);
+  }
+  40% {
+    translate: 5px -2px;
+    filter: drop-shadow(-5px 0 0 #ff2a6d) drop-shadow(5px 0 0 #05d9e8) hue-rotate(90deg);
+  }
+  60% {
+    translate: -3px 0;
+    clip-path: inset(20% 0 30% 0);
+  }
+  80% {
+    translate: 2px 1px;
+  }
+}
+
+.fx-pop {
+  animation: fx-pop 0.5s ease-out;
+}
+
+@keyframes fx-pop {
+  30% {
+    scale: 1.12;
+  }
+}
+
+.fx-particle {
+  position: absolute;
+  pointer-events: none;
+  animation-delay: var(--delay, 0s);
+  animation-fill-mode: both;
+}
+
+.fx-particle.sparks {
+  width: 16px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--color);
+  box-shadow: 0 0 6px var(--color), 0 0 12px var(--color);
+  transform-origin: 0 50%;
+  rotate: var(--angle);
+  animation-name: fx-spark;
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+
+@keyframes fx-spark {
+  from {
+    translate: 0 0;
+    scale: 1 1;
+    opacity: 1;
+  }
+  to {
+    translate: var(--dx) var(--dy);
+    scale: 0.1 1;
+    opacity: 0;
+  }
+}
+
+.fx-particle.confetti {
+  width: 9px;
+  height: 6px;
+  margin: -3px 0 0 -4px;
+  border-radius: 2px;
+  background: var(--color);
+  border: 1.5px solid rgba(43, 33, 64, 0.8);
+  animation-name: fx-confetti;
+  animation-duration: 1.1s;
+  animation-timing-function: linear;
+}
+
+@keyframes fx-confetti {
+  0% {
+    translate: 0 0;
+    rotate: 0deg;
+    opacity: 1;
+  }
+  30% {
+    translate: calc(var(--dx) * 0.7) var(--dy);
+  }
+  100% {
+    translate: var(--dx) calc(var(--dy) + 170px);
+    rotate: var(--rot);
+    opacity: 0;
+  }
+}
+
+.fx-particle.ripple {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color);
+  box-shadow: 0 0 10px var(--color);
+  animation-name: fx-ripple;
+  animation-duration: 0.9s;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes fx-ripple {
+  from {
+    scale: 0.5;
+    opacity: 0.9;
+  }
+  to {
+    scale: 9;
+    opacity: 0;
+  }
+}
+
+/* --- HUD, palette --- */
+
+.fx-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.fx-toast {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--toast-bg);
+  color: var(--toast-ink);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: fx-toast-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+  transition: opacity 0.4s, translate 0.4s;
+  white-space: nowrap;
+}
+
+.fx-toast.error {
+  background: var(--error);
+  color: #fff;
+}
+
+.fx-toast.leaving {
+  opacity: 0;
+  translate: 0 10px;
+}
+
+@keyframes fx-toast-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+    scale: 0.8;
+  }
+}
+
+.fx-palette {
+  position: absolute;
+  width: 270px;
+  max-height: 330px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  background: var(--palette-bg);
+  border: var(--node-border);
+  box-shadow: var(--node-shadow-lift);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.fx-palette[hidden] {
+  display: none;
+}
+
+.fx-palette.popping {
+  animation: fx-palette-in 0.28s cubic-bezier(0.2, 1.3, 0.4, 1);
+  transform-origin: top left;
+}
+
+@keyframes fx-palette-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+
+.fx-palette-title {
+  padding: 7px 10px 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.fx-palette input {
+  margin: 6px 8px;
+  padding: 6px 8px;
+  border-radius: var(--edit-radius);
+  border: var(--edit-border);
+  background: var(--edit-bg);
+  outline: none;
+}
+
+.fx-palette-list {
+  overflow: auto;
+  padding: 0 4px 6px;
+}
+
+.fx-palette-group {
+  padding: 6px 8px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat);
+}
+
+.fx-palette-group.cat-input,
+.fx-palette-item.cat-input {
+  --cat: var(--cat-input);
+}
+
+.fx-palette-group.cat-field,
+.fx-palette-item.cat-field {
+  --cat: var(--cat-field);
+}
+
+.fx-palette-group.cat-math,
+.fx-palette-item.cat-math {
+  --cat: var(--cat-math);
+}
+
+.fx-palette-group.cat-color,
+.fx-palette-item.cat-color {
+  --cat: var(--cat-color);
+}
+
+.fx-palette-group.cat-splat,
+.fx-palette-item.cat-splat {
+  --cat: var(--cat-splat);
+}
+
+.fx-palette-group.cat-effect,
+.fx-palette-item.cat-effect {
+  --cat: var(--cat-effect);
+}
+
+.fx-palette-group.cat-group,
+.fx-palette-item.cat-group {
+  --cat: var(--cat-group);
+}
+
+.fx-palette-item {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 8px 5px 12px;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  border-left: 3px solid var(--cat);
+  margin: 1px 0;
+}
+
+.fx-palette-item.selected {
+  background: var(--palette-hover);
+}
+
+.fx-palette-label {
+  font-weight: 700;
+}
+
+.fx-palette-desc {
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fx-palette-empty {
+  padding: 10px;
+  color: var(--muted);
+}
+
+/* ============ Neon Circuit ============ */
+
+body[data-theme="neon"] {
+  --bg: #07060d;
+  --ink: #dbe4ff;
+  --muted: #7d86ad;
+  --accent: #39f3ff;
+  --accent2: #ff3df2;
+  --line: rgba(120, 110, 255, 0.18);
+  --font: "SF Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+  --title-font: "SF Mono", Menlo, ui-monospace, monospace;
+  --radius: 5px;
+  --render-bg: #000;
+  --editor-bg: #07060d;
+  --bar-bg: rgba(14, 11, 28, 0.95);
+  --lesson-bg: linear-gradient(90deg, rgba(57, 243, 255, 0.07), rgba(255, 61, 242, 0.05));
+  --graph-bg: #07060d;
+  --grid: radial-gradient(circle, rgba(120, 140, 255, 0.22) 1px, transparent 1.4px);
+  --grid-size: 22px;
+  --divider: #16122c;
+  --button-bg: rgba(40, 30, 80, 0.55);
+  --button-hover: rgba(70, 50, 140, 0.7);
+  --button-border: 1px solid rgba(120, 110, 255, 0.35);
+  --button-radius: 4px;
+  --button-on: #39f3ff;
+  --button-on-ink: #07060d;
+  --button-on-shadow: 0 0 14px #39f3ff;
+  --node-bg: linear-gradient(180deg, rgba(30, 24, 58, 0.96), rgba(12, 9, 26, 0.96));
+  --node-border: 1px solid rgba(130, 120, 255, 0.35);
+  --node-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 22px -8px var(--cat);
+  --node-shadow-lift: 0 22px 50px rgba(0, 0, 0, 0.7), 0 0 30px -4px var(--cat);
+  --node-shadow-selected: 0 0 0 1px var(--accent), 0 0 26px var(--accent), 0 10px 30px rgba(0, 0, 0, 0.6);
+  --node-shadow-probed: 0 0 0 2px var(--accent2), 0 0 34px var(--accent2);
+  --head-bg: linear-gradient(90deg, color-mix(in srgb, var(--cat) 30%, transparent), transparent 80%);
+  --head-ink: #fff;
+  --note-ink: #9fa8d8;
+  --label-ink: #8f98c4;
+  --port-border: 2px solid #07060d;
+  --edit-bg: rgba(0, 0, 0, 0.45);
+  --edit-border: 1px solid rgba(120, 110, 255, 0.25);
+  --edit-radius: 3px;
+  --edit-fill: linear-gradient(90deg, rgba(57, 243, 255, 0.12), rgba(57, 243, 255, 0.35));
+  --edit-active: rgba(57, 243, 255, 0.18);
+  --wire-width: 2.2px;
+  --flow-ink: #fff;
+  --flow-width: 3.5px;
+  --flow-dash: 0.1 16;
+  --flow-step: -16.1;
+  --wave-animation: fx-wave-neon;
+  --palette-bg: rgba(14, 10, 30, 0.97);
+  --palette-hover: rgba(57, 243, 255, 0.12);
+  --toast-bg: #1d1640;
+  --toast-ink: #dbe4ff;
+  --error: #ff3366;
+  --error-bg: rgba(60, 8, 24, 0.9);
+  --t-float: #39f3ff;
+  --t-vec2: #ff9a3d;
+  --t-vec3: #ffe53d;
+  --t-vec4: #9a7dff;
+  --t-color: #ff3df2;
+  --t-bool: #b8ff3d;
+  --cat-input: #39f3ff;
+  --cat-field: #b8ff3d;
+  --cat-math: #9a7dff;
+  --cat-color: #ff3df2;
+  --cat-splat: #ffe53d;
+  --cat-effect: #ff8a3d;
+  --cat-group: #b18cff;
+}
+
+body[data-theme="neon"] .fx-graph::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+}
+
+body[data-theme="neon"] .fx-wire-path {
+  filter: drop-shadow(0 0 3px var(--c));
+}
+
+body[data-theme="neon"] .fx-flow {
+  filter: drop-shadow(0 0 4px var(--c)) drop-shadow(0 0 2px #fff);
+}
+
+body[data-theme="neon"] .fx-title {
+  text-shadow: 0 0 8px var(--cat);
+  letter-spacing: 0.02em;
+}
+
+body[data-theme="neon"] .fx-port {
+  box-shadow: 0 0 8px var(--c);
+}
+
+@keyframes fx-wave-neon {
+  0%,
+  100% {
+    box-shadow: var(--node-shadow);
+  }
+  12% {
+    box-shadow: 0 0 0 1px var(--cat), 0 0 38px var(--cat), 0 10px 30px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ============ Toybox ============ */
+
+body[data-theme="toybox"] {
+  --bg: #fff3dc;
+  --ink: #2b2140;
+  --muted: #8a7a6a;
+  --accent: #ff5d73;
+  --accent2: #4d96ff;
+  --line: rgba(43, 33, 64, 0.15);
+  --font: "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif;
+  --title-font: "Arial Rounded MT Bold", "Avenir Next", "Nunito", system-ui, sans-serif;
+  --radius: 16px;
+  --render-bg: #fbe7c6;
+  --editor-bg: #fff3dc;
+  --bar-bg: #ffe9c2;
+  --lesson-bg: #fff8ea;
+  --graph-bg: #fff3dc;
+  --grid: radial-gradient(circle, rgba(43, 33, 64, 0.16) 2px, transparent 2.5px);
+  --grid-size: 30px;
+  --divider: #2b2140;
+  --button-bg: #fff;
+  --button-hover: #fff6e6;
+  --button-border: 2.5px solid #2b2140;
+  --button-radius: 10px;
+  --button-on: #ffd93d;
+  --button-on-ink: #2b2140;
+  --button-on-shadow: 3px 3px 0 #2b2140;
+  --node-bg: #fff;
+  --node-border: 3px solid #2b2140;
+  --node-shadow: 5px 6px 0 #2b2140;
+  --node-shadow-lift: 12px 16px 0 rgba(43, 33, 64, 0.85);
+  --node-shadow-selected: 5px 6px 0 #2b2140, 0 0 0 5px #ffd93d;
+  --node-shadow-probed: 5px 6px 0 #2b2140, 0 0 0 5px #4d96ff;
+  --head-bg: var(--cat);
+  --head-ink: #2b2140;
+  --note-ink: #6b5a78;
+  --label-ink: #5a4b6a;
+  --port-border: 3px solid #2b2140;
+  --edit-bg: #fff6e6;
+  --edit-border: 2px solid #2b2140;
+  --edit-radius: 8px;
+  --edit-fill: #ffd93d;
+  --edit-active: #ffeaa0;
+  --wire-width: 5px;
+  --flow-ink: #fff;
+  --flow-width: 8px;
+  --flow-dash: 0.1 22;
+  --flow-step: -22.1;
+  --wave-animation: fx-wave-toybox;
+  --palette-bg: #fff;
+  --palette-hover: #fff1c9;
+  --toast-bg: #2b2140;
+  --toast-ink: #fff;
+  --error: #ff4d5e;
+  --error-bg: #ffe3e6;
+  --t-float: #4d96ff;
+  --t-vec2: #ff9f43;
+  --t-vec3: #ffb400;
+  --t-vec4: #a66cff;
+  --t-color: #ff5d9e;
+  --t-bool: #3ecf6e;
+  --cat-input: #9fd8ff;
+  --cat-field: #b8f2a0;
+  --cat-math: #d9c6ff;
+  --cat-color: #ffc2d9;
+  --cat-splat: #ffe08a;
+  --cat-effect: #ffb38a;
+  --cat-group: #a77bff;
+}
+
+body[data-theme="toybox"] .fx-head {
+  border-bottom: 3px solid #2b2140;
+  border-radius: 12px 12px 0 0;
+}
+
+body[data-theme="toybox"] .fx-title {
+  font-size: 13.5px;
+}
+
+body[data-theme="toybox"] .fx-wire-path {
+  filter: drop-shadow(2px 3px 0 rgba(43, 33, 64, 0.85));
+}
+
+body[data-theme="toybox"] .fx-flow {
+  filter: drop-shadow(0 0 0 #2b2140) drop-shadow(1px 1px 0 #2b2140);
+}
+
+body[data-theme="toybox"] .fx-node.selected {
+  outline: 3px dashed #ff5d73;
+  outline-offset: 7px;
+}
+
+body[data-theme="toybox"] .brand {
+  font-size: 17px;
+}
+
+body[data-theme="toybox"] #status {
+  color: #5a4b6a;
+  text-shadow: none;
+}
+
+@keyframes fx-wave-toybox {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  8% {
+    translate: 0 -9px;
+  }
+  16% {
+    translate: 0 0;
+  }
+  20% {
+    translate: 0 -3px;
+  }
+  24% {
+    translate: 0 0;
+  }
+}
+
+/* ============ Lab Glass ============ */
+
+body[data-theme="glass"] {
+  --bg: #0b0f16;
+  --ink: rgba(245, 248, 255, 0.92);
+  --muted: rgba(220, 230, 255, 0.55);
+  --accent: #9fd8ff;
+  --accent2: #d3b8ff;
+  --line: rgba(255, 255, 255, 0.1);
+  --font: -apple-system, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --title-font: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+  --title-weight: 500;
+  --radius: 14px;
+  --render-bg: #05070b;
+  --editor-bg: rgba(14, 18, 28, 0.42);
+  --bar-bg: rgba(255, 255, 255, 0.04);
+  --lesson-bg: rgba(255, 255, 255, 0.03);
+  --graph-bg: transparent;
+  --grid: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  --grid-size: 40px;
+  --divider: transparent;
+  --button-bg: rgba(255, 255, 255, 0.06);
+  --button-hover: rgba(255, 255, 255, 0.14);
+  --button-border: 1px solid rgba(255, 255, 255, 0.14);
+  --button-radius: 999px;
+  --button-on: rgba(159, 216, 255, 0.9);
+  --button-on-ink: #0b0f16;
+  --button-on-shadow: 0 0 20px rgba(159, 216, 255, 0.5);
+  --node-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.05));
+  --node-border: 1px solid rgba(255, 255, 255, 0.2);
+  --node-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --node-shadow-lift: 0 26px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --node-shadow-selected: 0 0 0 1.5px rgba(159, 216, 255, 0.9), 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 30px rgba(159, 216, 255, 0.25);
+  --node-shadow-probed: 0 0 0 1.5px var(--accent2), 0 0 40px rgba(211, 184, 255, 0.45);
+  --head-bg: transparent;
+  --head-ink: rgba(255, 255, 255, 0.95);
+  --note-ink: rgba(220, 230, 255, 0.6);
+  --label-ink: rgba(220, 230, 255, 0.62);
+  --port-border: 1.5px solid rgba(255, 255, 255, 0.85);
+  --edit-bg: rgba(0, 0, 0, 0.22);
+  --edit-border: 1px solid rgba(255, 255, 255, 0.1);
+  --edit-radius: 999px;
+  --edit-fill: linear-gradient(90deg, rgba(159, 216, 255, 0.1), rgba(211, 184, 255, 0.35));
+  --edit-active: rgba(159, 216, 255, 0.2);
+  --wire-width: 1.6px;
+  --flow-ink: rgba(255, 255, 255, 0.95);
+  --flow-width: 2.5px;
+  --flow-dash: 26 60;
+  --flow-step: -86;
+  --wave-animation: fx-wave-glass;
+  --palette-bg: rgba(20, 26, 40, 0.8);
+  --palette-hover: rgba(255, 255, 255, 0.08);
+  --toast-bg: rgba(255, 255, 255, 0.14);
+  --toast-ink: #fff;
+  --error: #ff7a90;
+  --error-bg: rgba(60, 10, 25, 0.55);
+  --t-float: #9fd8ff;
+  --t-vec2: #ffd29f;
+  --t-vec3: #fff0a8;
+  --t-vec4: #c9b8ff;
+  --t-color: #ffb8e1;
+  --t-bool: #b8ffe4;
+  --cat-input: #9fd8ff;
+  --cat-field: #b8ffe4;
+  --cat-math: #c9b8ff;
+  --cat-color: #ffb8e1;
+  --cat-splat: #fff0a8;
+  --cat-effect: #ffc9a8;
+  --cat-group: #cdb8ff;
+}
+
+body.overlay #render-pane {
+  position: fixed;
+  inset: 0;
+}
+
+body.overlay #divider {
+  position: fixed;
+  top: 14px;
+  bottom: 14px;
+  right: calc(var(--split) * 100vw - 3px);
+  width: 6px;
+  border-radius: 3px;
+  background: transparent;
+}
+
+body.overlay #editor-pane {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: calc(var(--split) * 100vw - 28px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+body[data-theme="glass"] .fx-head {
+  padding-top: 9px;
+}
+
+body[data-theme="glass"] .fx-head::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cat);
+  box-shadow: 0 0 8px var(--cat);
+  align-self: center;
+}
+
+body[data-theme="glass"] .fx-node.has-error .fx-head::before {
+  width: 18px;
+  height: 18px;
+  box-shadow: none;
+}
+
+body[data-theme="glass"] .fx-flow {
+  filter: drop-shadow(0 0 6px var(--c));
+}
+
+body[data-theme="glass"] #render-bar {
+  right: auto;
+  margin: 12px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(14, 18, 28, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+body[data-theme="glass"] #pane {
+  top: 70px;
+  left: 14px;
+}
+
+@keyframes fx-wave-glass {
+  0%,
+  100% {
+    box-shadow: var(--node-shadow);
+  }
+  14% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--cat) 70%, transparent), 0 0 36px color-mix(in srgb, var(--cat) 45%, transparent), var(--node-shadow);
+  }
+}

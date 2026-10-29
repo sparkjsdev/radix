@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorting · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/sorting.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/sorting.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html" class="on">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="sorting">Sorting<a class="anchor" href="#sorting">#</a></h1>
+<p>Gaussian splats are semi-transparent and must be blended back to front, so every render needs them in order. Radix computes a sort key per splat in the projection, then sorts the keys either on the GPU in the same frame (WebGPU) or on a worker a few frames later (the WebGL2 path). Everything one renderer draws is sorted together, so overlapping objects blend correctly.</p>
+<p>Code: <a href="../../src/core/sort.ts.html"><code>src/core/sort.ts</code></a> (<code>SortKeys</code>), <a href="../../src/gpu/sortKey.tsl.ts.html"><code>src/gpu/sortKey.tsl.ts</code></a> (<code>GpuSortKeys</code>), <a href="../../src/wgpu/WgpuSplatSorter.ts.html"><code>src/wgpu/WgpuSplatSorter.ts</code></a>, <code>WgpuRadixSort.ts</code>, <code>WgpuCompact.ts</code>, <a href="../../src/worker/splatSort.ts.html"><code>src/worker/splatSort.ts</code></a> (<code>sortSplatKeys</code>), and <a href="../../src/render/SplatView.ts.html"><code>src/render/SplatView.ts</code></a>.</p>
+<pre class="lang-ts"><code>// The WebGL2 path, also on WebGPU (to compare)
+splatRenderer.sortMode = &quot;cpu&quot;;
+// The exact float order (a 4th GPU pass)
+splatRenderer.sortBits = 32;
+// The CPU sort drops splats well outside the view
+splatRenderer.objectParams.sortGuard = 0.5;</code></pre>
+<h2 id="sort-keys">Sort keys<a class="anchor" href="#sort-keys">#</a></h2>
+<p>Each splat's key is its distance from the head as bits, arranged so that ascending keys run back to front. Distances are measured from the head, not along the view direction, so one order stays valid for every view direction from the same position, and both eyes of an XR pair share one sort.</p>
+<table><thead><tr><th><code>sortBits</code></th><th>GPU radix passes</th><th>CPU sort</th><th>Orders splats apart by</th><th>Use it for</th></tr></thead><tbody><tr><td>16</td><td>2</td><td>one counting pass</td><td>about 0.1% of their distance; a clamped window of 6 exponent bits (2^-32 to 2^32) and 10 mantissa bits</td><td>the cheapest sort: 35-55% faster than 24 bits</td></tr><tr><td>24 (default)</td><td>3</td><td>two passes of 11 and 13 bits</td><td>about 0.0015% of their distance</td><td>a balance of quality and speed</td></tr><tr><td>32</td><td>4</td><td>two passes of 16 bits</td><td>the exact float32 order</td><td>exact references</td></tr></tbody></table>
+<ul>
+<li>The key width is a uniform, so changing <code>sortBits</code> rebuilds nothing.</li>
+<li>32-bit keys keep the float32 distance's 31 bits (its sign is always 0); 24-bit keys keep <code>f &gt;&gt; 7</code>.</li>
+<li>The <strong>invalid key</strong> is all ones (<code>SortKeys.invalid(bits)</code>). Splats that are not drawn get it, sort last, and are dropped. Non-finite distances give it too.</li>
+<li><code>SortKeys.compute</code> (CPU) and <code>GpuSortKeys.compute</code> (TSL) give the same key bit for bit.</li>
+<li>Keys are stored as the 4 bytes of an RGBA8 texel (the <code>sortKeys</code> bundle, <code>SortKeys.KEYS</code>), read back as a <code>Uint32Array</code>.</li>
+</ul>
+<h2 id="the-gpu-sort">The GPU sort<a class="anchor" href="#the-gpu-sort">#</a></h2>
+<p>With <code>sortMode: &quot;gpu&quot;</code> (WebGPU's default), each render runs, after the projection, in one compute pass:</p>
+<ol>
+<li><strong>Compaction</strong> (<code>WgpuCompact</code>): drops invalid keys and keeps the rest in input order. With the GPU sort, splats culled in every eye get the invalid key, so they are neither sorted nor drawn.</li>
+<li><strong>Radix sort</strong> (<code>WgpuRadixSort.sortIndirect</code>): a stable LSD sort with 8-bit digits, sized on the GPU from the compacted count.</li>
+<li><strong>Draw arguments</strong>: a one-thread kernel writes <code>[6 × 1024, ceil(visible / 1024), 0, 0, 0]</code> for the indexed indirect draw.</li>
+</ol>
+<p>Nothing is read back, so each frame is drawn in order for the current camera, with any number of cameras. <code>WgpuSplatSorter</code> combines the three (<a href="wgpu.html#wgpusplatsorter">WebGPU compute</a>); <code>splatRenderer.readSortedCount()</code> reads the visible count back for stats.</p>
+<p>Sorting more keys than the device's storage binding limit allows (by default 256 MiB, or 64M keys) throws an error naming the limit; <code>createRenderer({ limits: { maxStorageBufferBindingSize: &quot;adapter&quot; } })</code> asks for all the adapter has (<a href="renderer.html#device-baselines">The renderer</a>).</p>
+<h2 id="the-cpu-sort">The CPU sort<a class="anchor" href="#the-cpu-sort">#</a></h2>
+<p>WebGL2 has no compute shaders. With <code>sortMode: &quot;cpu&quot;</code>:</p>
+<ol>
+<li>A <strong>keys pass</strong> (a cached program that writes only sort keys: a fragment pass on WebGL2, compute on WebGPU) computes each splat's key for the view's collection and camera.</li>
+<li>The keys are <strong>read back</strong> asynchronously.</li>
+<li>A worker <strong>sorts</strong> them (<code>sortSplatKeys</code>, running <code>SortKeys.sort</code>).</li>
+<li>The view <strong>applies</strong> the order, and its renders draw it until a newer one is applied.</li>
+</ol>
+<p>The order arrives a few frames late. It still draws correctly, because a late order indexes the same splats of the same collection: while the camera moves, the blend order is only slightly out of date. A new collection shows once a sort of it has landed. <code>autoSort</code> runs this loop for each view (<a href="views.html#autosort">Views and CPU orders</a>).</p>
+<ul>
+<li>With the CPU sort, keys of splats outside the view stay valid (only invisible splats and splats outside <code>sortGuard</code> are dropped), so a late order still includes splats that come into view; the draw culls per eye.</li>
+<li>Sorts run on <code>SplatRenderer.sortPool</code>, one pool shared by every renderer and view: up to <code>SplatRenderer.sortWorkers</code> sorts (4 by default; set it before the first CPU sort) run at once, the rest wait in turn, and a worker serves whichever view sorts next. It is separate from <code>WorkerPool.default</code>, so sorts never wait behind file loads. The pool is made on the first CPU sort, starts workers as sorts need them, and lives with the page. <code>sortWorker</code> points a renderer at a pool or lease of the app's instead. A renderer in gpu mode sorts on no worker; <code>view.sort()</code> in gpu mode needs a <code>sortWorker</code>.</li>
+<li>Sorting never runs on the main thread: a sort of millions of keys takes tens of milliseconds.</li>
+</ul>
+<p><code>sortSplatKeys(keys, { bits, ordering?, worker? })</code> is the worker sort on its own (<a href="workers.html#sortsplatkeys">Workers</a>). <code>SortKeys.sort({ keys, count, bits, ordering? })</code> is the sort itself, on the current thread: stable, invalid keys last, returning <code>{ ordering, visible }</code>.</p>
+<h2 id="sortguard">sortGuard<a class="anchor" href="#sortguard">#</a></h2>
+<p>The CPU sort's order lags the camera, so its keys cannot cull by the view: a splat off screen now may be on screen when the order is drawn. <code>objectParams.sortGuard</code> adds a guard band: splats farther outside the head's view than this (in NDC beyond the edges, plus each splat's extent) get the invalid key, so fewer splats are sorted and drawn.</p>
+<ul>
+<li>0 (the default) keeps every splat. 0.5 reduced the WebGL2 draw by 24-68% on full turns in the benchmarks, with identical still frames. Both pages default to 0: set it from the guard band slider in <code>/build/examples/splats/index.html</code>, or with <code>?guard=0.5</code> on <code>/build/examples/xr/index.html</code>.</li>
+<li>With a guard set, re-sort when the view turns, not only when it moves: <code>autoSort</code> does, using its <code>angle</code>.</li>
+<li>The GPU sort culls against the current view every frame and ignores <code>sortGuard</code>.</li>
+</ul>
+<h2 id="sortkeys">SortKeys<a class="anchor" href="#sortkeys">#</a></h2>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>SortKeys.compute(distance, bits)</code></td><td>the key of a distance (&gt;= 0)</td></tr><tr><td><code>SortKeys.invalid(bits)</code>, <code>SortKeys.validMax(bits)</code></td><td>the invalid key (all ones), and the largest valid key</td></tr><tr><td><code>SortKeys.sort({ keys, count, bits, ordering? })</code></td><td>stable ascending sort into <code>ordering</code> (default: a new array of a whole capacity); returns <code>{ ordering, visible }</code></td></tr><tr><td><code>SortKeys.KEYS</code></td><td>the <code>sortKeys</code> bundle: <code>{ key: &quot;unorm8x4&quot; }</code>, not serialized</td></tr><tr><td><code>SortKeys.KEY16_LO</code>, <code>KEY16_HI</code></td><td>the float bit range 16-bit keys keep</td></tr></tbody></table>
+<p><code>SortKeyBits</code> is <code>16 | 24 | 32</code>. Draw orders are <code>ArrayData.INDICES</code> lists.</p>
+<h2 id="costs">Costs<a class="anchor" href="#costs">#</a></h2>
+<p>At 10M splats on an Apple M3 Max, the GPU radix sort takes about 3, 4.7, and 7 ms at 16, 24, and 32 bits; compaction under 1 ms. The CPU path's readback and worker sort take tens of milliseconds at millions of splats, but they run asynchronously while frames keep rendering (<a href="performance.html">Performance</a>).</p>
+<div class="pager"><a class="prev" href="views.html"><small>Previous</small>Views and CPU orders</a><a class="next" href="lifetimes.html"><small>Next</small>Lifetimes</a></div>
+<p class="source">Source: <a href="../sorting.md.html">docs/sorting.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#sort-keys">Sort keys</a>
+<a class="h2" href="#the-gpu-sort">The GPU sort</a>
+<a class="h2" href="#the-cpu-sort">The CPU sort</a>
+<a class="h2" href="#sortguard">sortGuard</a>
+<a class="h2" href="#sortkeys">SortKeys</a>
+<a class="h2" href="#costs">Costs</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

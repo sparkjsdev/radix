@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>performance.md · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from docs/performance.md by scripts/build-site.mjs -->
+<body data-root="" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details open><summary>docs</summary><a href="api.md.html">api.md</a><a href="arraydata.md.html">arraydata.md</a><a href="checks.md.html">checks.md</a><a href="concepts.md.html">concepts.md</a><a href="controls.md.html">controls.md</a><a href="encoding.md.html">encoding.md</a><a href="files.md.html">files.md</a><a href="generators.md.html">generators.md</a><a href="gpu-arrays.md.html">gpu-arrays.md</a><a href="lifetimes.md.html">lifetimes.md</a><a href="multi-splat.md.html">multi-splat.md</a><a href="overview.md.html">overview.md</a><a href="params.md.html">params.md</a><a href="performance.md.html" class="on">performance.md</a><a href="projection.md.html">projection.md</a><a href="quickstart.md.html">quickstart.md</a><a href="rdx.md.html">rdx.md</a><a href="recipes.md.html">recipes.md</a><a href="renderer.md.html">renderer.md</a><a href="rendering.md.html">rendering.md</a><a href="sh.md.html">sh.md</a><a href="shaders.md.html">shaders.md</a><a href="site.js.html">site.js</a><a href="sorting.md.html">sorting.md</a><a href="splats.md.html">splats.md</a><a href="views.md.html">views.md</a><a href="wgpu.md.html">wgpu.md</a><a href="workers.md.html">workers.md</a><a href="xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../examples/doom/data.ts.html">data.ts</a><a href="../examples/doom/game.ts.html">game.ts</a><a href="../examples/doom/hud.ts.html">hud.ts</a><a href="../examples/doom/level.ts.html">level.ts</a><a href="../examples/doom/lighting.ts.html">lighting.ts</a><a href="../examples/doom/main.ts.html">main.ts</a><a href="../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../examples/film/score.ts.html">score.ts</a><a href="../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../examples/film/text.ts.html">text.ts</a><a href="../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../examples/fractals/demo/library.ts.html">library.ts</a><a href="../examples/fractals/demo/music.ts.html">music.ts</a><a href="../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../examples/fractals/device.ts.html">device.ts</a><a href="../examples/fractals/kind.ts.html">kind.ts</a><a href="../examples/fractals/main.ts.html">main.ts</a><a href="../examples/fractals/morph.ts.html">morph.ts</a><a href="../examples/fractals/motion.ts.html">motion.ts</a><a href="../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../examples/fractals/presets.ts.html">presets.ts</a><a href="../examples/fractals/sample.ts.html">sample.ts</a><a href="../examples/fractals/shade.ts.html">shade.ts</a><a href="../examples/fractals/shots.ts.html">shots.ts</a><a href="../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../examples/fxedit/checks.ts.html">checks.ts</a><a href="../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/fxedit/editors.ts.html">editors.ts</a><a href="../examples/fxedit/framed.ts.html">framed.ts</a><a href="../examples/fxedit/juice.ts.html">juice.ts</a><a href="../examples/fxedit/layout.ts.html">layout.ts</a><a href="../examples/fxedit/main.ts.html">main.ts</a><a href="../examples/fxedit/palette.ts.html">palette.ts</a><a href="../examples/fxedit/preview.ts.html">preview.ts</a><a href="../examples/fxedit/settings.ts.html">settings.ts</a><a href="../examples/fxedit/sound.ts.html">sound.ts</a><a href="../examples/fxedit/springs.ts.html">springs.ts</a><a href="../examples/fxedit/themes.ts.html">themes.ts</a><a href="../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../examples/lcc/collision.ts.html">collision.ts</a><a href="../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/lcc/gui.ts.html">gui.ts</a><a href="../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../examples/lcc/main.ts.html">main.ts</a><a href="../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../examples/quake/data.ts.html">data.ts</a><a href="../examples/quake/entities.ts.html">entities.ts</a><a href="../examples/quake/game.ts.html">game.ts</a><a href="../examples/quake/hud.ts.html">hud.ts</a><a href="../examples/quake/lighting.ts.html">lighting.ts</a><a href="../examples/quake/main.ts.html">main.ts</a><a href="../examples/quake/models.ts.html">models.ts</a><a href="../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../examples/scenes/main.ts.html">main.ts</a><a href="../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../examples/sogs/gui.ts.html">gui.ts</a><a href="../examples/sogs/lod.ts.html">lod.ts</a><a href="../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../examples/sogs/main.ts.html">main.ts</a><a href="../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../examples/sogs/resident.ts.html">resident.ts</a><a href="../examples/sogs/sh.ts.html">sh.ts</a><a href="../examples/sogs/sog.ts.html">sog.ts</a><a href="../examples/sogs/validate.ts.html">validate.ts</a><a href="../examples/sogs/webp.ts.html">webp.ts</a><a href="../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../examples/spark/js/assets.ts.html">assets.ts</a><a href="../examples/spark/js/construct.ts.html">construct.ts</a><a href="../examples/spark/js/cube.ts.html">cube.ts</a><a href="../examples/spark/js/examples.ts.html">examples.ts</a><a href="../examples/spark/js/files.ts.html">files.ts</a><a href="../examples/spark/js/objects.ts.html">objects.ts</a><a href="../examples/spark/js/page.ts.html">page.ts</a><a href="../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../examples/spark/js/snow.ts.html">snow.ts</a><a href="../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../examples/spark/lofi/main.ts.html">main.ts</a><a href="../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../examples/splats/catalog.ts.html">catalog.ts</a><a href="../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/splats/gui.ts.html">gui.ts</a><a href="../examples/splats/main.ts.html">main.ts</a><a href="../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../examples/spz/catalog.ts.html">catalog.ts</a><a href="../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../examples/xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../scripts/check-core.ts.html">check-core.ts</a><a href="../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../scripts/check-test.mjs.html">check-test.mjs</a><a href="../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../src/core/axes.ts.html">axes.ts</a><a href="../src/core/bundles.ts.html">bundles.ts</a><a href="../src/core/compress.ts.html">compress.ts</a><a href="../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../src/core/encoding.ts.html">encoding.ts</a><a href="../src/core/files.ts.html">files.ts</a><a href="../src/core/formats.ts.html">formats.ts</a><a href="../src/core/index.ts.html">index.ts</a><a href="../src/core/layout.ts.html">layout.ts</a><a href="../src/core/math.ts.html">math.ts</a><a href="../src/core/ply.ts.html">ply.ts</a><a href="../src/core/progress.ts.html">progress.ts</a><a href="../src/core/rad.ts.html">rad.ts</a><a href="../src/core/rdx.ts.html">rdx.ts</a><a href="../src/core/sh.ts.html">sh.ts</a><a href="../src/core/sort.ts.html">sort.ts</a><a href="../src/core/splats.ts.html">splats.ts</a><a href="../src/core/spz.ts.html">spz.ts</a><a href="../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../src/gpu/backend.ts.html">backend.ts</a><a href="../src/gpu/baseline.ts.html">baseline.ts</a><a href="../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../src/gpu/hdr.ts.html">hdr.ts</a><a href="../src/gpu/index.ts.html">index.ts</a><a href="../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../src/render/SplatView.ts.html">SplatView.ts</a><a href="../src/render/index.ts.html">index.ts</a><a href="../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../src/render/splatParams.ts.html">splatParams.ts</a><a href="../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../src/wgpu/index.ts.html">index.ts</a><a href="../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../src/worker/index.ts.html">index.ts</a><a href="../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>performance.md</h1>
+<p class="path">docs/performance.md · <a href="performance.md.html">raw</a> · <a href="../build/examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
+<p class="outline">Headings: <a href="#L1">Performance</a><a href="#L5">Where the time goes</a><a href="#L22">Settings that change it</a><a href="#L36">Against SparkJS and PlayCanvas</a><a href="#L47">Large scenes</a><a href="#L53">Measuring</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a></pre><pre><code># Performance
+
+This page shows where a frame's time goes and which settings change it. The numbers here come from benchmarks of Radix alone and of Radix against SparkJS and PlayCanvas on the same scenes, both measured on an Apple M3 Max in Chrome at 1920x1080. Treat them as relative: GPU times drift by up to 1.5x from run to run.
+
+## Where the time goes
+
+GPU milliseconds per frame on WebGPU (`ewa`, 24-bit keys, turning):
+
+| Scene | Splats | Project | Compact | Radix sort | Draw | Total |
+|---|---:|---:|---:|---:|---:|---:|
+| butterfly | 0.5M | 0.09 | 0.06 | 0.28 | 2.36 | 2.8 |
+| ceramic (inside) | 2M | 0.33 | 0.16 | 0.27 | 4.29 | 5.0 |
+| sutro | 2M | 0.30 | 0.15 | 0.31 | 1.27 | 2.0 |
+| bicycle | 6.1M | 0.94 | 0.46 | 0.80 | 4.53 | 6.7 |
+| grace (inside) | 10M | 1.55 | 0.78 | 0.96 | 4.86 | 8.2 |
+
+- **The draw** takes 60-85% of the frame. Inside a scene its cost is fill: pixel ratio 2 (4x the pixels) made the ceramic cave's draw 2.6x slower. With many small splats the cost is per splat.
+- **Projection** is 2-5% of the frame. Packed splats (16 B) project about 30% faster than ext (32 B).
+- **The GPU sort** is cheap: at 10M splats it takes about 3, 4.7, and 7 ms at 16, 24, and 32 bits.
+- **The WebGL2 path** reads keys back and sorts them on a worker, outside the frame. That takes tens of milliseconds at millions of splats, but it is not part of the frame time. The order's upload and the keys pass do run inside frames, and they show up as stalls while it re-sorts.
+
+## Settings that change it
+
+| Setting | Effect | Trade-off |
+|---|---|---|
+| `method` | `ewa` is the cheapest; `raygs` within 10%; `3dgut` and `htgs` within 25% from outside an object but 4-25x slower inside a scene, where splats around the camera cover the screen | the ray methods are exact for large and close splats |
+| `objectParams.minContribution` (`ewa`) and `minPixelRadius` | cull faint and tiny splats before the sort; `minContribution: 0.75` and `minPixelRadius: 1`, with `params.minAlpha: 1/255`, `blurAmount: 0`, and `preBlurAmount: 0.075` (PlayCanvas's defaults), made Radix 1.26x as fast over the benchmark scenes (1.07-1.30x; 1.85x on the 6M-splat bicycle, drawn by default with `preBlurAmount: 0.3`) | faint splats are dropped: a slight loss of soft detail |
+| `params.minAlpha` | culls splats and fragments below an alpha | as above |
+| `sortBits` | 16 bits saves 35-55% of either sort; 32 bits costs about 5% of the frame on WebGPU | 16 bits ties splats within 0.1% of their distance |
+| `objectParams.sortGuard` (CPU sort) | 0.5 cut the WebGL2 draw by 24-68% on full turns | re-sort on turns as well as moves (`autoSort` does) |
+| layout | `packedSplats` halves memory and projects about 30% faster | 8-bit colors, scales, and rotations within its encoding's ranges |
+| spherical harmonics | SH3 adds 0.28 (packed) to 0.46 ms (ext) per 2M splats to WebGPU's projection, 0.12-0.41 ms through a palette; a lower `objectParams.maxShDegree` reduces it without recompiling; `sh: false` skips SH on load ([sh.md](sh.md#costs)) | view-dependent color; 48 to 64 bytes per splat |
+| pixel ratio | the draw is fill-bound inside scenes: ratio 1 instead of 2 draws a quarter of the pixels | resolution |
+| `params.maxStdDev` | smaller quads | slightly harder edges |
+
+## Against SparkJS and PlayCanvas
+
+From the comparison of Oct 9, 2026: five scenes from 0.5M to 10M splats, timed one frame at a time (5 rounds) and in a vsync loop on a 120 Hz display (3 rounds). In the two interiors the camera moves while it turns, so distance sorts must re-sort. The bicycle is drawn with `blurAmount: 0, preBlurAmount: 0.3`, as it was trained. Results: the [benchmarks page](bench.html) and the [full report](bench-report.html).
+
+- **Same culling:** Radix on WebGPU was 1.03x slower than PlayCanvas 2.23.1 on WebGPU (7% at most). By default PlayCanvas also culls splats under a 1-pixel radius and, on WebGPU, under 0.75 px² of opacity × area; at defaults it was 1.30x as fast. Those culls remove visible detail (most of the bicycle's wheel spokes on WebGPU), and its fixed 0.075 px² dilation, a quarter of the 0.3 px² of standard 3DGS training, draws splats smaller than trained, so its defaults do less work than a like-for-like render.
+- **SparkJS 2.3.1** culls like Radix and has no WebGPU path. Radix on WebGPU was 1.37x as fast; at 10M splats (Grace Cathedral, inside), 9.2 ms against 16.5 ms.
+- **WebGL2**, where all three sort on a worker: at defaults Spark was 1.09x as fast as Radix and PlayCanvas 1.47x. Radix stalls in the frames that upload a new order, and a moving camera makes it re-sort all the time: on Grace its turning frames took 16 ms, against 10 ms turning in place. This is the main weakness of Radix's WebGL2 path.
+- **Vsync:** with culling matched, Radix on WebGPU held 120 fps on four scenes and 118 on Grace (108 at defaults); PlayCanvas on WebGPU held 120 on all. On Grace the WebGL2 worker sorts drop frames: Radix 81 fps and Spark 73, with 23% and 27% of frames late and p99 frames of 50 and 59 ms. Timed, Spark showed almost no stalls. PlayCanvas on WebGL2 held 116 fps.
+- **Level of detail** helps most with very large scenes: Spark can build a LoD tree on load and draw a budget of splats chosen for the view. Radix loads and saves LoD trees but does not yet choose LoD subsets itself; the Doom, Quake, SOG and LCC examples choose them in example code (Doom's and Quake's on a worker under a splat budget, `examples/doom/lod/`).
+- **Loading** a PLY to the first frame took Radix 0.3-2.2 s, Spark 0.1-1.6 s, and PlayCanvas 0.3-5.0 s.
+
+## Large scenes
+
+- 39M splats (packed) loaded in 3.2 s and drew at 149 ms of GPU per frame on WebGPU; the per-splat draw cost is the limit.
+- 92M splats exceed the 256 MiB storage binding baseline, and the sorter throws an error that names the limit. With `createRenderer({ limits: { maxStorageBufferBindingSize: "adapter" } })` they drew at 357 ms per frame on the M3. On WebGL2 the projection textures of 92M splats are not renderable, so its limit is somewhere between 39M and 92M splats.
+- Headset GPUs (Quest 3's Adreno 7xx) mostly offer 128 MiB storage bindings: 32M keys.
+
+## Measuring
+
+- `createRenderer({ profile: true })` (or `?profile=1`) installs a `GpuProfiler`; set `splatRenderer.phase = (name, run) =&gt; profiler.phase(name, run)` for separate "project" and "sort" rows ([renderer.md](renderer.md#gpuprofiler)).
+- `splatRenderer.readSortedCount()` reads the GPU sort's visible count; `SplatProjector.programs` counts compiled programs (it should stop growing after the first frames).
+- `node scripts/bench.mjs --matrix &lt;name&gt;` runs `/build/test/bench/index.html` in headless Chrome: files x modes x methods x bits, with GPU time per phase and screenshots ([checks.md](checks.md#benchmarks)).
+- Measure with the GPU otherwise idle: an emulator tab or another page rendering distorts the results.</code></pre></div>
+</main>
+</div>
+<script src="site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

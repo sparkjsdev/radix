@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>library.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/fractals/demo/library.ts by scripts/build-site.mjs -->
+<body data-root="../../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../../docs/api.md.html">api.md</a><a href="../../../docs/arraydata.md.html">arraydata.md</a><a href="../../../docs/checks.md.html">checks.md</a><a href="../../../docs/concepts.md.html">concepts.md</a><a href="../../../docs/controls.md.html">controls.md</a><a href="../../../docs/encoding.md.html">encoding.md</a><a href="../../../docs/files.md.html">files.md</a><a href="../../../docs/generators.md.html">generators.md</a><a href="../../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../../docs/overview.md.html">overview.md</a><a href="../../../docs/params.md.html">params.md</a><a href="../../../docs/performance.md.html">performance.md</a><a href="../../../docs/projection.md.html">projection.md</a><a href="../../../docs/quickstart.md.html">quickstart.md</a><a href="../../../docs/rdx.md.html">rdx.md</a><a href="../../../docs/recipes.md.html">recipes.md</a><a href="../../../docs/renderer.md.html">renderer.md</a><a href="../../../docs/rendering.md.html">rendering.md</a><a href="../../../docs/sh.md.html">sh.md</a><a href="../../../docs/shaders.md.html">shaders.md</a><a href="../../../docs/site.js.html">site.js</a><a href="../../../docs/sorting.md.html">sorting.md</a><a href="../../../docs/splats.md.html">splats.md</a><a href="../../../docs/views.md.html">views.md</a><a href="../../../docs/wgpu.md.html">wgpu.md</a><a href="../../../docs/workers.md.html">workers.md</a><a href="../../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../../doom/data.ts.html">data.ts</a><a href="../../doom/game.ts.html">game.ts</a><a href="../../doom/hud.ts.html">hud.ts</a><a href="../../doom/level.ts.html">level.ts</a><a href="../../doom/lighting.ts.html">lighting.ts</a><a href="../../doom/main.ts.html">main.ts</a><a href="../../doom/simWorker.ts.html">simWorker.ts</a><a href="../../doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../../film/audioStream.ts.html">audioStream.ts</a><a href="../../film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../../film/score.ts.html">score.ts</a><a href="../../film/scoreSink.ts.html">scoreSink.ts</a><a href="../../film/text.ts.html">text.ts</a><a href="../../film/timeline.ts.html">timeline.ts</a></details><details open><summary>fractals</summary><details open><summary>demo</summary><details><summary>tunes</summary><a href="tunes/aurora.ts.html">aurora.ts</a><a href="tunes/lumen.ts.html">lumen.ts</a><a href="tunes/tidal.ts.html">tidal.ts</a></details><a href="airScore.ts.html">airScore.ts</a><a href="demo.ts.html">demo.ts</a><a href="library.ts.html" class="on">library.ts</a><a href="music.ts.html">music.ts</a><a href="tune.ts.html">tune.ts</a><a href="video.ts.html">video.ts</a></details><a href="../attractors.ts.html">attractors.ts</a><a href="../clouds.ts.html">clouds.ts</a><a href="../device.ts.html">device.ts</a><a href="../kind.ts.html">kind.ts</a><a href="../main.ts.html">main.ts</a><a href="../morph.ts.html">morph.ts</a><a href="../motion.ts.html">motion.ts</a><a href="../palettes.ts.html">palettes.ts</a><a href="../presets.ts.html">presets.ts</a><a href="../sample.ts.html">sample.ts</a><a href="../shade.ts.html">shade.ts</a><a href="../shots.ts.html">shots.ts</a><a href="../sortWorker.ts.html">sortWorker.ts</a><a href="../surfaces.ts.html">surfaces.ts</a><a href="../tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../../fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../../fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../../fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../../fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../../fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../../fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../../fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../../fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../../fxedit/fx/graph.ts.html">graph.ts</a><a href="../../fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../../fxedit/fx/index.ts.html">index.ts</a><a href="../../fxedit/fx/registry.ts.html">registry.ts</a><a href="../../fxedit/fx/types.ts.html">types.ts</a></details><a href="../../fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../../fxedit/GraphView.ts.html">GraphView.ts</a><a href="../../fxedit/catalog.ts.html">catalog.ts</a><a href="../../fxedit/checks.ts.html">checks.ts</a><a href="../../fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../../fxedit/editors.ts.html">editors.ts</a><a href="../../fxedit/framed.ts.html">framed.ts</a><a href="../../fxedit/juice.ts.html">juice.ts</a><a href="../../fxedit/layout.ts.html">layout.ts</a><a href="../../fxedit/main.ts.html">main.ts</a><a href="../../fxedit/palette.ts.html">palette.ts</a><a href="../../fxedit/preview.ts.html">preview.ts</a><a href="../../fxedit/settings.ts.html">settings.ts</a><a href="../../fxedit/sound.ts.html">sound.ts</a><a href="../../fxedit/springs.ts.html">springs.ts</a><a href="../../fxedit/themes.ts.html">themes.ts</a><a href="../../fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../../lcc/LccScene.ts.html">LccScene.ts</a><a href="../../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../../lcc/catalog.ts.html">catalog.ts</a><a href="../../lcc/collision.ts.html">collision.ts</a><a href="../../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../../lcc/gui.ts.html">gui.ts</a><a href="../../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../../lcc/main.ts.html">main.ts</a><a href="../../lcc/quickBar.ts.html">quickBar.ts</a><a href="../../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../../quake/data.ts.html">data.ts</a><a href="../../quake/entities.ts.html">entities.ts</a><a href="../../quake/game.ts.html">game.ts</a><a href="../../quake/hud.ts.html">hud.ts</a><a href="../../quake/lighting.ts.html">lighting.ts</a><a href="../../quake/main.ts.html">main.ts</a><a href="../../quake/models.ts.html">models.ts</a><a href="../../quake/simWorker.ts.html">simWorker.ts</a><a href="../../quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../../scenes/main.ts.html">main.ts</a><a href="../../scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../../sogs/catalog.ts.html">catalog.ts</a><a href="../../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../../sogs/gui.ts.html">gui.ts</a><a href="../../sogs/lod.ts.html">lod.ts</a><a href="../../sogs/lodStream.ts.html">lodStream.ts</a><a href="../../sogs/main.ts.html">main.ts</a><a href="../../sogs/quickBar.ts.html">quickBar.ts</a><a href="../../sogs/resident.ts.html">resident.ts</a><a href="../../sogs/sh.ts.html">sh.ts</a><a href="../../sogs/sog.ts.html">sog.ts</a><a href="../../sogs/validate.ts.html">validate.ts</a><a href="../../sogs/webp.ts.html">webp.ts</a><a href="../../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../../spark/js/assets.ts.html">assets.ts</a><a href="../../spark/js/construct.ts.html">construct.ts</a><a href="../../spark/js/cube.ts.html">cube.ts</a><a href="../../spark/js/examples.ts.html">examples.ts</a><a href="../../spark/js/files.ts.html">files.ts</a><a href="../../spark/js/objects.ts.html">objects.ts</a><a href="../../spark/js/page.ts.html">page.ts</a><a href="../../spark/js/raycast.ts.html">raycast.ts</a><a href="../../spark/js/sdf.ts.html">sdf.ts</a><a href="../../spark/js/snow.ts.html">snow.ts</a><a href="../../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../../spark/lofi/main.ts.html">main.ts</a><a href="../../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../../splats/catalog.ts.html">catalog.ts</a><a href="../../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../../splats/gui.ts.html">gui.ts</a><a href="../../splats/main.ts.html">main.ts</a><a href="../../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../../spz/catalog.ts.html">catalog.ts</a><a href="../../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../../scripts/check-core.ts.html">check-core.ts</a><a href="../../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../../src/core/axes.ts.html">axes.ts</a><a href="../../../src/core/bundles.ts.html">bundles.ts</a><a href="../../../src/core/compress.ts.html">compress.ts</a><a href="../../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../../src/core/encoding.ts.html">encoding.ts</a><a href="../../../src/core/files.ts.html">files.ts</a><a href="../../../src/core/formats.ts.html">formats.ts</a><a href="../../../src/core/index.ts.html">index.ts</a><a href="../../../src/core/layout.ts.html">layout.ts</a><a href="../../../src/core/math.ts.html">math.ts</a><a href="../../../src/core/ply.ts.html">ply.ts</a><a href="../../../src/core/progress.ts.html">progress.ts</a><a href="../../../src/core/rad.ts.html">rad.ts</a><a href="../../../src/core/rdx.ts.html">rdx.ts</a><a href="../../../src/core/sh.ts.html">sh.ts</a><a href="../../../src/core/sort.ts.html">sort.ts</a><a href="../../../src/core/splats.ts.html">splats.ts</a><a href="../../../src/core/spz.ts.html">spz.ts</a><a href="../../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../../src/gpu/backend.ts.html">backend.ts</a><a href="../../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../../src/gpu/index.ts.html">index.ts</a><a href="../../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../../src/render/index.ts.html">index.ts</a><a href="../../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../../src/wgpu/index.ts.html">index.ts</a><a href="../../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../../src/worker/index.ts.html">index.ts</a><a href="../../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>library.ts</h1>
+<p class="path">examples/fractals/demo/library.ts · <a href="library.ts">raw</a> · <a href="../../../build/examples/fractals/index.html">open the example</a> · <a href="../../../build/examples/index.html">all examples</a> · <a href="../../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L30">Fractal</a><a href="#L53">Library</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a></pre><pre class="lang-ts"><code>// A demo's fractals, baked just in time. Every cue shows a preset; a preset
+// is resident in one table of a pool (sized to the device's memory) once
+// its bake starts, with the orders its transitions pair by (morph.ts's
+// TableSorter, on a pool of workers). Bakes run in the order the video
+// needs them, a chunk at a time between frames (before the start as fast
+// as the GPU goes, then within each frame's slack). A table is freed for
+// a new bake from the preset needed furthest ahead (never one drawn or
+// needed sooner), so a preset shown twice may bake twice, with the same
+// seed and the same samples. `fits` says whether what is left can bake
+// during playback before each preset's cue.
+//
+// With `stash` (phones, whose GPU memory is tight: a small pool, and the
+// whole demo baked before it starts): once the pool is full, the bakes
+// before the start go to one spare table (released at the start) and are
+// read back into CPU memory, which is plentiful and not capped; a table
+// freed during playback is read back too when its preset comes again; a
+// preset kept on the CPU is uploaded into a table when its turn comes
+// (milliseconds) instead of baked again (seconds).
+import * as THREE from "three";
+import type { WebGPURenderer } from "three/webgpu";
+import { GpuArrays, type ArrayData } from <a class="import" href="../../../src/index.ts.html" title="src/index.ts">"@sparkjsdev/radix"</a>;
+import type { BakeUniforms, Kind } from <a class="import" href="../kind.ts.html" title="examples/fractals/kind.ts">"../kind.js"</a>;
+import { TRANSITIONS, TableSorter, type Ordered, type Pairing } from <a class="import" href="../morph.ts.html" title="examples/fractals/morph.ts">"../morph.js"</a>;
+import { PRESETS, type Preset } from <a class="import" href="../presets.ts.html" title="examples/fractals/presets.ts">"../presets.js"</a>;
+import { SAMPLES } from <a class="import" href="../sample.ts.html" title="examples/fractals/sample.ts">"../sample.js"</a>;
+import { LOOK_DEFAULTS, STYLES, type Look } from <a class="import" href="../shade.ts.html" title="examples/fractals/shade.ts">"../shade.js"</a>;
+import type { Cue } from <a class="import" href="tune.ts.html" title="examples/fractals/demo/tune.ts">"./tune.js"</a>;
+
+// What the video needs of a preset besides its samples
+export interface Fractal {
+  preset: Preset;
+  kind: Kind;
+  // The look the gallery gives it: the kind's, the style's, the preset's
+  look: Look;
+}
+
+interface Resident {
+  preset: string;
+  arrays: GpuArrays;
+  done: number;
+  orders: Map&lt;Pairing, Ordered&gt;;
+  sorting: Set&lt;Pairing&gt;;
+  // Objects drawing it
+  users: number;
+}
+
+const lightDirection = (azimuth: number, elevation: number) =&gt; {
+  const az = THREE.MathUtils.degToRad(azimuth);
+  const el = THREE.MathUtils.degToRad(elevation);
+  return new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
+};
+
+export class Library {
+  readonly fractals = new Map&lt;string, Fractal&gt;();
+  readonly count: number;
+  readonly sorter: TableSorter;
+  // Seconds each cue's transition starts and ends
+  readonly starts: number[];
+  readonly ends: number[];
+  private readonly renderer: WebGPURenderer;
+  private readonly cues: Cue[];
+  private readonly bakeU: BakeUniforms;
+  private readonly maxTables: number;
+  private readonly seeds = new Map&lt;string, number&gt;();
+  private readonly residents = new Map&lt;string, Resident&gt;();
+  private free: GpuArrays[] = [];
+  private tables = 0;
+  private scratch?: GpuArrays;
+  // Presets kept in CPU memory, the spare table bakes before the start go to
+  // once the pool is full, and whether it is being read back
+  private readonly stash = new Map&lt;string, ArrayData&gt;();
+  private spare?: Resident;
+  private spareReading = false;
+  // A spare released while it was read back
+  private spareDispose?: GpuArrays;
+  private readonly stashing: boolean;
+  private disposed = false;
+
+  constructor(renderer: WebGPURenderer, kinds: Kind[], bakeU: BakeUniforms, cues: Cue[], times: { starts: number[]; ends: number[] }, count: number, maxTables: number, { stash = false } = {}) {
+    this.stashing = stash;
+    this.renderer = renderer;
+    this.cues = cues;
+    this.bakeU = bakeU;
+    this.count = count;
+    this.starts = times.starts;
+    this.ends = times.ends;
+    const names = [...new Set(cues.map((cue) =&gt; cue.preset))];
+    this.maxTables = Math.max(3, Math.min(maxTables, names.length));
+    const kindById = new Map(kinds.map((kind) =&gt; [kind.id, kind]));
+    names.forEach((name, n) =&gt; {
+      const preset = PRESETS.find((each) =&gt; each.name === name);
+      if (!preset) {
+        throw new Error(`no preset ${name}`);
+      }
+      const kind = kindById.get(preset.kind)!;
+      this.fractals.set(name, { preset, kind, look: { ...LOOK_DEFAULTS, ...kind.look, ...STYLES[preset.style], ...preset.look } });
+      // The seeds the teaser videos were rendered with
+      this.seeds.set(name, 101 + n * 7);
+    });
+    this.sorter = new TableSorter(renderer, count, Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1)));
+  }
+
+  get presets() {
+    return [...this.fractals.keys()];
+  }
+
+  pairing(cue: number) {
+    return TRANSITIONS[this.cues[cue].style].pairing;
+  }
+
+  // The cue under film time t (its transition included)
+  cueAt(t: number) {
+    let i = 0;
+    while (i + 1 &lt; this.cues.length &amp;&amp; t &gt;= this.starts[i + 1]) {
+      i += 1;
+    }
+    return i;
+  }
+
+  private baked(name: string) {
+    const r = this.residents.get(name);
+    return r &amp;&amp; r.done &gt;= this.count ? r : undefined;
+  }
+
+  // Whether cue i can be drawn: its transition (from the last cue's
+  // preset, both ordered by its pairing), or the preset at rest
+  ready(i: number, moving: boolean) {
+    const to = this.baked(this.cues[i].preset);
+    if (!to) {
+      return false;
+    }
+    if (!moving) {
+      return true;
+    }
+    const p = this.pairing(i);
+    if (!to.orders.has(p)) {
+      return false;
+    }
+    if (i === 0) {
+      return true;
+    }
+    return Boolean(this.baked(this.cues[i - 1].preset)?.orders.has(p));
+  }
+
+  // Whether film time t can be drawn
+  canShow(t: number) {
+    const i = this.cueAt(t);
+    return this.ready(i, t &lt; this.ends[i]);
+  }
+
+  // Whether every moment of [from, to] can be drawn
+  canShowThrough(from: number, to: number) {
+    for (let i = this.cueAt(from); i &lt; this.cues.length &amp;&amp; this.starts[i] &lt;= to; i += 1) {
+      if (!this.ready(i, this.ends[i] &gt; from)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Rows a second the next bake needs to be ready a second before its cue
+  // (0 when nothing is left)
+  needed(t: number) {
+    for (let i = this.cueAt(t); i &lt; this.cues.length; i += 1) {
+      const name = this.cues[i].preset;
+      if (!this.baked(name)) {
+        return (this.count - (this.residents.get(name)?.done ?? 0)) / Math.max(this.starts[i] - t - 1, 0.25);
+      }
+    }
+    return 0;
+  }
+
+  // Hands a baked preset's samples over (to the gallery, as the demo
+  // leaves); the library forgets them and bakes them again if needed
+  take(name: string) {
+    const r = this.baked(name);
+    if (!r) {
+      return undefined;
+    }
+    this.residents.delete(name);
+    r.orders.forEach((ordered) =&gt; ordered.order.dispose());
+    return r.arrays;
+  }
+
+  arrays(name: string) {
+    return this.baked(name)!.arrays;
+  }
+
+  order(name: string, pairing: Pairing) {
+    return this.baked(name)!.orders.get(pairing)!;
+  }
+
+  // Marks presets drawn until the returned release is called
+  use(...names: string[]) {
+    const used = names.map((name) =&gt; this.residents.get(name)!);
+    used.forEach((r) =&gt; (r.users += 1));
+    return () =&gt; used.forEach((r) =&gt; (r.users -= 1));
+  }
+
+  // When a preset is next needed after t (its cue's transition starts), or
+  // Infinity; one still drawn at t is needed now
+  private nextUse(name: string, t: number) {
+    for (let i = 0; i &lt; this.cues.length; i += 1) {
+      const leaves = this.ends[i + 1] ?? Infinity;
+      if (this.cues[i].preset === name &amp;&amp; leaves &gt; t) {
+        return this.starts[i];
+      }
+    }
+    return Infinity;
+  }
+
+  // A table for a bake needed at `needAt`: a free one, a new one, or the one
+  // of the preset needed furthest after it
+  private claim(needAt: number, t: number) {
+    const reused = this.free.pop();
+    if (reused) {
+      return reused;
+    }
+    if (this.tables &lt; this.maxTables) {
+      this.tables += 1;
+      return new GpuArrays({ renderer: this.renderer, bundles: { samples: SAMPLES }, capacity: this.count });
+    }
+    let victim: Resident | undefined;
+    let latest = needAt;
+    for (const r of this.residents.values()) {
+      const next = this.nextUse(r.preset, t);
+      if (r.users === 0 &amp;&amp; r.sorting.size === 0 &amp;&amp; r.done &gt;= this.count &amp;&amp; next &gt; latest) {
+        victim = r;
+        latest = next;
+      }
+    }
+    if (!victim) {
+      return undefined;
+    }
+    this.evict(victim, t);
+    return this.free.pop();
+  }
+
+  // A resident's table freed: read back first when it is stashing and the
+  // preset comes again (the table is free once the readback is done)
+  private evict(r: Resident, t: number) {
+    this.residents.delete(r.preset);
+    r.orders.forEach((ordered) =&gt; ordered.order.dispose());
+    if (this.stashing &amp;&amp; !this.stash.has(r.preset) &amp;&amp; this.nextUse(r.preset, t) &lt; Infinity) {
+      void r.arrays.read({ start: 0, count: this.count }).then((data) =&gt; {
+        if (!this.disposed) {
+          this.stash.set(r.preset, data);
+        }
+      }).finally(() =&gt; (this.disposed ? r.arrays.dispose() : this.free.push(r.arrays)));
+      return;
+    }
+    this.free.push(r.arrays);
+  }
+
+  // The resident the next bake goes to: the first preset from cue `from`
+  // on that is not baked
+  // (`ahead`: before the start, when a full pool bakes into the spare table
+  // for the CPU). A stashed preset that gets a table is uploaded, not baked
+  private job(t: number, ahead: boolean) {
+    for (let i = this.cueAt(t); i &lt; this.cues.length; i += 1) {
+      const name = this.cues[i].preset;
+      const r = this.residents.get(name);
+      if (r &amp;&amp; r.done &gt;= this.count) {
+        continue;
+      }
+      if (r) {
+        return r;
+      }
+      const stashed = this.stash.get(name);
+      if (ahead &amp;&amp; stashed) {
+        continue;
+      }
+      const arrays = this.claim(this.starts[i], t);
+      if (arrays) {
+        const resident: Resident = { preset: name, arrays, done: 0, orders: new Map(), sorting: new Set(), users: 0 };
+        this.residents.set(name, resident);
+        if (!stashed) {
+          return resident;
+        }
+        arrays.upload(stashed, { srcStart: 0, dstStart: 0, count: this.count });
+        resident.done = this.count;
+        continue;
+      }
+      if (!ahead || !this.stashing || this.spareReading) {
+        return undefined;
+      }
+      if (this.spare?.preset !== name) {
+        this.spare ??= { preset: name, arrays: new GpuArrays({ renderer: this.renderer, bundles: { samples: SAMPLES }, capacity: this.count }), done: 0, orders: new Map(), sorting: new Set(), users: 0 };
+        this.spare.preset = name;
+        this.spare.done = 0;
+      }
+      return this.spare;
+    }
+    return undefined;
+  }
+
+  // Every preset baked or on the CPU (what a phone waits for before it
+  // starts)
+  stocked() {
+    return this.presets.every((name) =&gt; this.baked(name) || this.stash.has(name));
+  }
+
+  // The start: the spare table goes (once its readback is done)
+  endPrep() {
+    const spare = this.spare;
+    this.spare = undefined;
+    if (spare &amp;&amp; !this.spareReading) {
+      spare.arrays.dispose();
+    } else if (spare) {
+      this.spareDispose = spare.arrays;
+    }
+  }
+
+  // Baked or stashed rows over all presets, 0..1
+  stockProgress() {
+    const names = this.presets;
+    const rows = (name: string) =&gt; (this.stash.has(name) ? this.count : Math.min(this.count, this.residents.get(name)?.done ?? (this.spare?.preset === name ? this.spare.done : 0)));
+    return names.reduce((sum, name) =&gt; sum + rows(name), 0) / (names.length * this.count);
+  }
+
+  // Whether a bake is waiting for a table or anything is left to bake
+  pending(t: number) {
+    for (let i = this.cueAt(t); i &lt; this.cues.length; i += 1) {
+      if (!this.baked(this.cues[i].preset)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Bakes up to `rows` rows of the next bake; the rows baked (0: nothing to
+  // do, or no table free yet)
+  bake(rows: number, t: number, ahead = false) {
+    const r = this.job(t, ahead);
+    if (!r) {
+      return 0;
+    }
+    const f = this.fractals.get(r.preset)!;
+    const { kind, preset } = f;
+    const values = { ...Object.fromEntries(Object.entries(kind.params).map(([key, param]) =&gt; [key, param.value])), ...preset.params };
+    for (const [key, uniform] of Object.entries(kind.uniforms)) {
+      uniform.value = values[key];
+    }
+    kind.prepare?.(values);
+    const u = this.bakeU;
+    u.seed.value = this.seeds.get(r.preset)!;
+    u.count.value = this.count;
+    u.coverage.value = 1;
+    u.fromCamera.value = 0;
+    u.lightDir.value.copy(lightDirection(preset.light?.azimuth ?? 35, preset.light?.elevation ?? 45));
+    const n = Math.min(Math.floor(rows), this.count - r.done);
+    r.arrays.write(kind.writer(), { at: r.done, count: n, first: r.done });
+    r.done += n;
+    if (r === this.spare &amp;&amp; r.done &gt;= this.count) {
+      // Done: to the CPU, then the spare takes the next
+      this.spareReading = true;
+      const name = r.preset;
+      void r.arrays.read({ start: 0, count: this.count }).then((data) =&gt; {
+        if (!this.disposed) {
+          this.stash.set(name, data);
+        }
+      }).finally(() =&gt; {
+        this.spareReading = false;
+        r.preset = "";
+        this.spareDispose?.dispose();
+        this.spareDispose = undefined;
+      });
+    }
+    return n;
+  }
+
+  // The kinds the cues use, in the order they are first needed
+  kinds() {
+    return [...new Set(this.cues.map((cue) =&gt; this.fractals.get(cue.preset)!.kind))];
+  }
+
+  // Compiles a kind's bake program (a few rows into a scratch table), so no
+  // bake during playback stalls a frame on a compile
+  warmKind(kind: Kind) {
+    this.scratch ??= new GpuArrays({ renderer: this.renderer, bundles: { samples: SAMPLES }, capacity: 4096 });
+    this.scratch.write(kind.writer(), { at: 0, count: 4 });
+  }
+
+  warm() {
+    this.kinds().forEach((kind) =&gt; this.warmKind(kind));
+  }
+
+  // How far the bakes are toward a start that leaves the rest to playback
+  // at `rate` rows a second (with `margin` seconds to spare): 0..1, 1 just
+  // when `fits` turns true (0 before a rate is known)
+  startProgress(rate: number, margin: number) {
+    if (rate &lt;= 0) {
+      return 0;
+    }
+    let total = 0;
+    let done = 0;
+    let need = this.count;
+    const seen = new Set&lt;string&gt;();
+    for (let i = 0; i &lt; this.cues.length; i += 1) {
+      const name = this.cues[i].preset;
+      if (seen.has(name)) {
+        continue;
+      }
+      seen.add(name);
+      total += this.count;
+      done += Math.min(this.count, this.residents.get(name)?.done ?? 0);
+      need = Math.max(need, total - rate * Math.max(0, this.starts[i] - margin - 0.3 * seen.size));
+    }
+    return Math.min(1, done / need);
+  }
+
+  // Starts the sorts the cues from t on need (both sides of every
+  // transition), a few at a time
+  sort(t: number) {
+    for (let i = this.cueAt(t); i &lt; this.cues.length &amp;&amp; this.sorter.busy &lt; 6; i += 1) {
+      const p = this.pairing(i);
+      for (const name of i &gt; 0 ? [this.cues[i - 1].preset, this.cues[i].preset] : [this.cues[i].preset]) {
+        const r = this.baked(name);
+        if (r &amp;&amp; !r.orders.has(p) &amp;&amp; !r.sorting.has(p)) {
+          r.sorting.add(p);
+          void this.sorter.sort(r.arrays, this.count, p).then((ordered) =&gt; {
+            r.sorting.delete(p);
+            if (this.disposed || this.residents.get(name) !== r) {
+              ordered.order.dispose();
+            } else {
+              r.orders.set(p, ordered);
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // Whether everything left from cue 0 bakes before it is needed, at
+  // `rate` rows a second from the start, with `margin` seconds to spare
+  // (each sort counted as a fixed cost)
+  fits(rate: number, margin: number) {
+    let clock = 0;
+    const seen = new Set&lt;string&gt;();
+    for (let i = 0; i &lt; this.cues.length; i += 1) {
+      const name = this.cues[i].preset;
+      if (seen.has(name)) {
+        continue;
+      }
+      seen.add(name);
+      const done = this.residents.get(name)?.done ?? 0;
+      if (done &gt;= this.count) {
+        continue;
+      }
+      clock += (this.count - done) / Math.max(rate, 1) + 0.3;
+      if (clock &gt; this.starts[i] - margin) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Baked rows over all presets, 0..1
+  progress() {
+    const names = this.presets;
+    return names.reduce((sum, name) =&gt; sum + Math.min(this.count, this.residents.get(name)?.done ?? 0), 0) / (names.length * this.count);
+  }
+
+  // Every preset baked and every order sorted
+  complete() {
+    return this.cues.every((_, i) =&gt; this.ready(i, true));
+  }
+
+  dispose() {
+    this.disposed = true;
+    for (const r of this.residents.values()) {
+      r.orders.forEach((ordered) =&gt; ordered.order.dispose());
+      r.arrays.dispose();
+    }
+    this.free.forEach((arrays) =&gt; arrays.dispose());
+    this.scratch?.dispose();
+    this.spare?.arrays.dispose();
+    this.stash.clear();
+    this.residents.clear();
+    this.free = [];
+    this.sorter.dispose();
+  }
+}</code></pre></div>
+</main>
+</div>
+<script src="../../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

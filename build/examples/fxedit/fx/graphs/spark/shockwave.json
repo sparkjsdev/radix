@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "name": "shockwave",
+  "description": "Click the scan: a ring wave runs out from the hit point. Three groups: Ring wave (a sine of time since the click minus distance, fading), Growing front (the wave only exists inside a circle that grows) and Push and flash (what the wave does to a splat).",
+  "source": { "name": "Spark examples: interactive-ripples", "url": "https://github.com/sparkjsdev/spark/tree/main/examples/interactive-ripples", "license": "MIT" },
+  "nodes": {
+    "click": { "type": "input.click" },
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "away": { "type": "field.distance", "note": "Distance and direction from the click" },
+    "ring": { "type": "math.mul" },
+    "out": { "type": "splat.write" },
+    "wave": { "type": "group.wave", "inputs": {"speed": 10, "spacing": 14, "fade": 0.7} },
+    "front": { "type": "group.front", "inputs": {"speed": 0.8} },
+    "push": { "type": "group.push", "inputs": {"push": 0.07, "flash": 4} }
+  },
+  "links": [
+    { "from": "center.value", "to": "away.position" },
+    { "from": "click.point", "to": "away.point" },
+    { "from": "click.age", "to": "wave.age" },
+    { "from": "away.value", "to": "wave.distance" },
+    { "from": "wave.wave", "to": "ring.a" },
+    { "from": "click.age", "to": "front.age" },
+    { "from": "away.value", "to": "front.distance" },
+    { "from": "front.inside", "to": "ring.b" },
+    { "from": "ring.value", "to": "push.ring" },
+    { "from": "away.direction", "to": "push.direction" },
+    { "from": "push.offset", "to": "out.offset" },
+    { "from": "rgb.value", "to": "push.rgb" },
+    { "from": "push.rgb", "to": "out.rgb" }
+  ],
+  "params": {
+    "Wave speed": "wave.speed",
+    "Ring spacing": "wave.spacing",
+    "Spread speed": "front.speed",
+    "Push": "push.push",
+    "Flash": "push.flash",
+    "Fade": "wave.fade"
+  },
+  "groups": {
+    "wave": {
+      "label": "Ring wave",
+      "description": "sin(10 t - 14 d) fading with time: rings moving outward from the click.",
+      "inputs": {
+        "age": { "type": "float", "default": 1 },
+        "distance": { "type": "float", "default": 1 },
+        "speed": { "type": "float", "default": 10 },
+        "spacing": { "type": "float", "default": 14 },
+        "fade": { "type": "float", "default": 0.7, "min": 0, "max": 10 }
+      },
+      "outputs": { "wave": "float" },
+      "nodes": {
+        "timeWave": { "type": "math.mul", "inputs": {"b": 10} },
+        "spaceWave": { "type": "math.mul", "inputs": {"b": 14} },
+        "phase": { "type": "math.sub", "note": "10 t - 14 d: rings moving outward" },
+        "wave": { "type": "math.sine", "inputs": {"frequency": 0.159, "amplitude": 1} },
+        "fade": { "type": "math.decay", "inputs": {"rate": 0.7}, "note": "Dies down over time" },
+        "faded": { "type": "math.mul" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.age", "to": "timeWave.a" },
+        { "from": "inputs.distance", "to": "spaceWave.a" },
+        { "from": "timeWave.value", "to": "phase.a" },
+        { "from": "spaceWave.value", "to": "phase.b" },
+        { "from": "phase.value", "to": "wave.x" },
+        { "from": "inputs.age", "to": "fade.x" },
+        { "from": "wave.value", "to": "faded.a" },
+        { "from": "fade.value", "to": "faded.b" },
+        { "from": "faded.value", "to": "outputs.wave" },
+        { "from": "inputs.speed", "to": "timeWave.b" },
+        { "from": "inputs.spacing", "to": "spaceWave.b" },
+        { "from": "inputs.fade", "to": "fade.rate" }
+      ]
+    },
+    "front": {
+      "label": "Growing front",
+      "description": "1 inside a circle whose radius grows with time since the click, with a soft edge.",
+      "inputs": {
+        "age": { "type": "float", "default": 1 },
+        "distance": { "type": "float", "default": 0 },
+        "speed": { "type": "float", "default": 0.8 }
+      },
+      "outputs": { "inside": "float" },
+      "nodes": {
+        "reach": { "type": "math.mul", "inputs": {"b": 0.8}, "note": "How far the wave has got" },
+        "frontStart": { "type": "math.sub", "inputs": {"b": 0.25} },
+        "front": { "type": "math.smoothstep", "note": "0 inside the front, 1 beyond it" },
+        "inside": { "type": "math.oneMinus" },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.age", "to": "reach.a" },
+        { "from": "inputs.distance", "to": "front.x" },
+        { "from": "reach.value", "to": "front.high" },
+        { "from": "reach.value", "to": "frontStart.a" },
+        { "from": "frontStart.value", "to": "front.low" },
+        { "from": "front.value", "to": "inside.x" },
+        { "from": "inside.value", "to": "outputs.inside" },
+        { "from": "inputs.speed", "to": "reach.b" }
+      ]
+    },
+    "push": {
+      "label": "Push and flash",
+      "description": "The wave pushes splats away from the click and lights up its crests.",
+      "inputs": {
+        "ring": { "type": "float", "default": 1 },
+        "direction": { "type": "vec3", "default": [0, 1, 0], "min": -1, "max": 1 },
+        "rgb": { "type": "color", "default": [1, 1, 1] },
+        "push": { "type": "float", "default": 0.07 },
+        "flash": { "type": "float", "default": 4 }
+      },
+      "outputs": { "offset": "vec3", "rgb": "color" },
+      "nodes": {
+        "push": { "type": "math.mul", "inputs": {"b": 0.07} },
+        "offset": { "type": "math.vec3Scale" },
+        "crest": { "type": "math.pow", "inputs": {"e": 2} },
+        "bright": { "type": "math.mul", "inputs": {"b": 4} },
+        "flash": { "type": "color.blend", "options": {"mode": "add"} },
+        "inputs": { "type": "group.input" },
+        "outputs": { "type": "group.output" }
+      },
+      "links": [
+        { "from": "inputs.ring", "to": "push.a" },
+        { "from": "inputs.direction", "to": "offset.v" },
+        { "from": "push.value", "to": "offset.s" },
+        { "from": "offset.value", "to": "outputs.offset" },
+        { "from": "inputs.ring", "to": "crest.x" },
+        { "from": "crest.value", "to": "bright.a" },
+        { "from": "inputs.rgb", "to": "flash.base" },
+        { "from": "bright.value", "to": "flash.color" },
+        { "from": "flash.value", "to": "outputs.rgb" },
+        { "from": "inputs.push", "to": "push.b" },
+        { "from": "inputs.flash", "to": "bright.b" }
+      ]
+    }
+  }
+}

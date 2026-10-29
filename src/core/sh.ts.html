@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sh.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from src/core/sh.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../../examples/doom/data.ts.html">data.ts</a><a href="../../examples/doom/game.ts.html">game.ts</a><a href="../../examples/doom/hud.ts.html">hud.ts</a><a href="../../examples/doom/level.ts.html">level.ts</a><a href="../../examples/doom/lighting.ts.html">lighting.ts</a><a href="../../examples/doom/main.ts.html">main.ts</a><a href="../../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../../examples/film/score.ts.html">score.ts</a><a href="../../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../../examples/film/text.ts.html">text.ts</a><a href="../../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../../examples/fractals/demo/library.ts.html">library.ts</a><a href="../../examples/fractals/demo/music.ts.html">music.ts</a><a href="../../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../../examples/fractals/device.ts.html">device.ts</a><a href="../../examples/fractals/kind.ts.html">kind.ts</a><a href="../../examples/fractals/main.ts.html">main.ts</a><a href="../../examples/fractals/morph.ts.html">morph.ts</a><a href="../../examples/fractals/motion.ts.html">motion.ts</a><a href="../../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../../examples/fractals/presets.ts.html">presets.ts</a><a href="../../examples/fractals/sample.ts.html">sample.ts</a><a href="../../examples/fractals/shade.ts.html">shade.ts</a><a href="../../examples/fractals/shots.ts.html">shots.ts</a><a href="../../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../../examples/fxedit/checks.ts.html">checks.ts</a><a href="../../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/fxedit/editors.ts.html">editors.ts</a><a href="../../examples/fxedit/framed.ts.html">framed.ts</a><a href="../../examples/fxedit/juice.ts.html">juice.ts</a><a href="../../examples/fxedit/layout.ts.html">layout.ts</a><a href="../../examples/fxedit/main.ts.html">main.ts</a><a href="../../examples/fxedit/palette.ts.html">palette.ts</a><a href="../../examples/fxedit/preview.ts.html">preview.ts</a><a href="../../examples/fxedit/settings.ts.html">settings.ts</a><a href="../../examples/fxedit/sound.ts.html">sound.ts</a><a href="../../examples/fxedit/springs.ts.html">springs.ts</a><a href="../../examples/fxedit/themes.ts.html">themes.ts</a><a href="../../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../../examples/lcc/collision.ts.html">collision.ts</a><a href="../../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/lcc/gui.ts.html">gui.ts</a><a href="../../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../../examples/lcc/main.ts.html">main.ts</a><a href="../../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../../examples/quake/data.ts.html">data.ts</a><a href="../../examples/quake/entities.ts.html">entities.ts</a><a href="../../examples/quake/game.ts.html">game.ts</a><a href="../../examples/quake/hud.ts.html">hud.ts</a><a href="../../examples/quake/lighting.ts.html">lighting.ts</a><a href="../../examples/quake/main.ts.html">main.ts</a><a href="../../examples/quake/models.ts.html">models.ts</a><a href="../../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../../examples/scenes/main.ts.html">main.ts</a><a href="../../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../../examples/sogs/gui.ts.html">gui.ts</a><a href="../../examples/sogs/lod.ts.html">lod.ts</a><a href="../../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../../examples/sogs/main.ts.html">main.ts</a><a href="../../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../../examples/sogs/resident.ts.html">resident.ts</a><a href="../../examples/sogs/sh.ts.html">sh.ts</a><a href="../../examples/sogs/sog.ts.html">sog.ts</a><a href="../../examples/sogs/validate.ts.html">validate.ts</a><a href="../../examples/sogs/webp.ts.html">webp.ts</a><a href="../../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../../examples/spark/js/assets.ts.html">assets.ts</a><a href="../../examples/spark/js/construct.ts.html">construct.ts</a><a href="../../examples/spark/js/cube.ts.html">cube.ts</a><a href="../../examples/spark/js/examples.ts.html">examples.ts</a><a href="../../examples/spark/js/files.ts.html">files.ts</a><a href="../../examples/spark/js/objects.ts.html">objects.ts</a><a href="../../examples/spark/js/page.ts.html">page.ts</a><a href="../../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../../examples/spark/js/snow.ts.html">snow.ts</a><a href="../../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../../examples/spark/lofi/main.ts.html">main.ts</a><a href="../../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../../examples/splats/catalog.ts.html">catalog.ts</a><a href="../../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../../examples/splats/gui.ts.html">gui.ts</a><a href="../../examples/splats/main.ts.html">main.ts</a><a href="../../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../../examples/spz/catalog.ts.html">catalog.ts</a><a href="../../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../../examples/xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details open><summary>src</summary><details><summary>controls</summary><a href="../controls/CameraControls.ts.html">CameraControls.ts</a><a href="../controls/index.ts.html">index.ts</a></details><details open><summary>core</summary><a href="ArrayData.ts.html">ArrayData.ts</a><a href="axes.ts.html">axes.ts</a><a href="bundles.ts.html">bundles.ts</a><a href="compress.ts.html">compress.ts</a><a href="compressedPly.ts.html">compressedPly.ts</a><a href="encoding.ts.html">encoding.ts</a><a href="files.ts.html">files.ts</a><a href="formats.ts.html">formats.ts</a><a href="index.ts.html">index.ts</a><a href="layout.ts.html">layout.ts</a><a href="math.ts.html">math.ts</a><a href="ply.ts.html">ply.ts</a><a href="progress.ts.html">progress.ts</a><a href="rad.ts.html">rad.ts</a><a href="rdx.ts.html">rdx.ts</a><a href="sh.ts.html" class="on">sh.ts</a><a href="sort.ts.html">sort.ts</a><a href="splats.ts.html">splats.ts</a><a href="spz.ts.html">spz.ts</a><a href="zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../gpu/backend.ts.html">backend.ts</a><a href="../gpu/baseline.ts.html">baseline.ts</a><a href="../gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../gpu/hdr.ts.html">hdr.ts</a><a href="../gpu/index.ts.html">index.ts</a><a href="../gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../gpu/textureIo.ts.html">textureIo.ts</a><a href="../gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../render/SplatView.ts.html">SplatView.ts</a><a href="../render/index.ts.html">index.ts</a><a href="../render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../render/splatCamera.ts.html">splatCamera.ts</a><a href="../render/splatDraw.ts.html">splatDraw.ts</a><a href="../render/splatParams.ts.html">splatParams.ts</a><a href="../render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../wgpu/index.ts.html">index.ts</a><a href="../wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../worker/coreModule.ts.html">coreModule.ts</a><a href="../worker/coreWorker.ts.html">coreWorker.ts</a><a href="../worker/index.ts.html">index.ts</a><a href="../worker/modules.d.ts.html">modules.d.ts</a><a href="../worker/splatFiles.ts.html">splatFiles.ts</a><a href="../worker/splatSort.ts.html">splatSort.ts</a></details><a href="../index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>sh.ts</h1>
+<p class="path">src/core/sh.ts · <a href="sh.ts">raw</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L28">ShDegree</a><a href="#L30">ShCodecName</a><a href="#L35">ShTarget</a><a href="#L38">ShCodec</a><a href="#L53">FoundSh</a><a href="#L71">encodeShScale</a><a href="#L82">decodeShScale</a><a href="#L203">Sh</a><a href="#L432">ShPalette</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a></pre><pre class="lang-ts"><code>import { ArrayData, type ArrayBundle } from <a class="import" href="ArrayData.ts.html" title="src/core/ArrayData.ts">"./ArrayData"</a>;
+import { defineBundle, type BundleDef } from <a class="import" href="bundles.ts.html" title="src/core/bundles.ts">"./bundles"</a>;
+import { Encoding } from <a class="import" href="encoding.ts.html" title="src/core/encoding.ts">"./encoding"</a>;
+import type { TypedArray } from <a class="import" href="formats.ts.html" title="src/core/formats.ts">"./formats"</a>;
+import type { BundleLike } from <a class="import" href="splats.ts.html" title="src/core/splats.ts">"./splats"</a>;
+
+// Spherical harmonics, bands 1-4 (the DC band is the splat's base color):
+// 3 + 5 + 7 + 9 RGB coefficients in the 3DGS basis, coefficient-major RGB
+// (value 3k + c is coefficient k's channel c). A codec turns an entry's
+// coefficients into a stream of uint32 words with the bands in order, so a
+// lower degree reads a prefix of a higher-degree entry; the stream is cut into
+// uint32x4 texels. Storage:
+//   per splat  bundle &lt;codec&gt;Sh beside the splat bundle, one uint32x4
+//              channel per texel (&lt;codec&gt;ShA, &lt;codec&gt;ShB, ...);
+//              meta { codec, degree }
+//   palette    ShPalette: one table of entries, each `stride` texels side by
+//              side in channel shEntries, and bundle shLabel (uint16) in the
+//              splat table picking an entry per splat
+// Built-in codecs (bytes and texels for degree 1 / 2 / 3 / 4):
+//   ext        one Encoding.encodeExtRgb word per coefficient: 12 / 32 /
+//              60 / 96 B, 1 / 2 / 4 / 6 texels
+//   packed     per band a log scale byte (0: all zero, else the band's max
+//              is 2^((code - 192) / 16), rounded up) then its sint8 codes
+//              (value = code / 127 * max): 10 / 26 / 48 / 76 B, 1 / 2 / 3 /
+//              5 texels
+// The set is fixed, so a codec's name means the same on every thread.
+
+export type ShDegree = 1 | 2 | 3 | 4;
+
+export type ShCodecName = "ext" | "packed";
+
+// What file readers do with SH: the codec to store it in, or false to skip
+// it (meta.ignoredShDegree records the degree skipped). Readers default to
+// "ext".
+export type ShTarget = ShCodecName | false;
+
+// A built-in codec (Sh.codec)
+export interface ShCodec {
+  // Names the per-splat bundle (&lt;name&gt;Sh) and its channels
+  readonly name: ShCodecName;
+  words(degree: ShDegree): number;
+  // Channel suffixes of the per-splat bundle, one per texel
+  channels(degree: ShDegree): string[];
+  // Writes words(degree) words of `coeffs` (Sh.COEFFICIENTS[degree] * 3
+  // values) at out[at]
+  encode(coeffs: ArrayLike&lt;number&gt;, degree: ShDegree, out: Uint32Array, at: number): void;
+  // Fills Sh.COEFFICIENTS[degree] * 3 values of `out` (Sh.VALUES fits every
+  // degree)
+  decode(words: Uint32Array, at: number, degree: ShDegree, out: Float32Array): Float32Array;
+}
+
+// What Sh.find found: a per-splat SH bundle
+export interface FoundSh {
+  name: string;
+  codec: ShCodecName;
+  degree: ShDegree;
+}
+
+const COEFFICIENTS = [0, 3, 8, 15, 24] as const;
+const MAX_DEGREE = 4;
+const VALUES = COEFFICIENTS[MAX_DEGREE] * 3;
+const PACKED_BAND_BYTES = [10, 16, 22, 28];
+const PACKED_BYTES = [0, 10, 26, 48, 76];
+const EXT_CHANNELS: Record&lt;ShDegree, string[]&gt; = { 1: ["A"], 2: ["A", "B"], 3: ["A", "B", "C", "D"], 4: ["A", "B", "C", "D", "E", "F"] };
+const PACKED_CHANNELS: Record&lt;ShDegree, string[]&gt; = { 1: ["A"], 2: ["A", "B"], 3: ["A", "B", "C"], 4: ["A", "B", "C", "D", "E"] };
+
+const SCALE_BIAS = 192;
+const SCALE_STEPS = 16;
+
+// The packed scale byte of a band whose largest |value| is `max`, and back
+export function encodeShScale(max: number) {
+  if (!(max &gt; 0)) {
+    return 0;
+  }
+  let code = Math.max(1, Math.min(255, Math.ceil(Math.log2(max) * SCALE_STEPS) + SCALE_BIAS));
+  while (code &lt; 255 &amp;&amp; decodeShScale(code) &lt; max) {
+    code += 1;
+  }
+  return code;
+}
+
+export function decodeShScale(code: number) {
+  return code === 0 ? 0 : 2 ** ((code - SCALE_BIAS) / SCALE_STEPS);
+}
+
+const getByte = (words: Uint32Array, at: number, b: number) =&gt; (words[at + (b &gt;&gt; 2)] &gt;&gt;&gt; ((b &amp; 3) * 8)) &amp; 0xff;
+
+// Bytes written in order into whole words (the last one zero-padded):
+// startBytes, putByte per byte, endBytes
+const bytes: { out: Uint32Array; at: number; word: number; shift: number } = { out: new Uint32Array(0), at: 0, word: 0, shift: 0 };
+const startBytes = (out: Uint32Array, at: number) =&gt; {
+  bytes.out = out;
+  bytes.at = at;
+  bytes.word = 0;
+  bytes.shift = 0;
+};
+const putByte = (value: number) =&gt; {
+  bytes.word |= (value &amp; 0xff) &lt;&lt; bytes.shift;
+  bytes.shift += 8;
+  if (bytes.shift === 32) {
+    bytes.out[bytes.at++] = bytes.word &gt;&gt;&gt; 0;
+    bytes.word = 0;
+    bytes.shift = 0;
+  }
+};
+const endBytes = () =&gt; {
+  if (bytes.shift &gt; 0) {
+    bytes.out[bytes.at++] = bytes.word &gt;&gt;&gt; 0;
+  }
+};
+
+const rgb = { r: 0, g: 0, b: 0 };
+
+const ext: ShCodec = {
+  name: "ext",
+  words: (degree) =&gt; COEFFICIENTS[degree],
+  channels: (degree) =&gt; EXT_CHANNELS[degree],
+  encode(coeffs, degree, out, at) {
+    for (let k = 0; k &lt; COEFFICIENTS[degree]; k += 1) {
+      rgb.r = coeffs[k * 3];
+      rgb.g = coeffs[k * 3 + 1];
+      rgb.b = coeffs[k * 3 + 2];
+      out[at + k] = Encoding.encodeExtRgb(rgb);
+    }
+  },
+  decode(words, at, degree, out) {
+    for (let k = 0; k &lt; COEFFICIENTS[degree]; k += 1) {
+      Encoding.decodeExtRgb(words[at + k], rgb);
+      out[k * 3] = rgb.r;
+      out[k * 3 + 1] = rgb.g;
+      out[k * 3 + 2] = rgb.b;
+    }
+    return out;
+  },
+};
+
+const packed: ShCodec = {
+  name: "packed",
+  words: (degree) =&gt; Math.ceil(PACKED_BYTES[degree] / 4),
+  channels: (degree) =&gt; PACKED_CHANNELS[degree],
+  // Bands are contiguous (each its scale byte and values), so the bytes
+  // go out in order
+  encode(coeffs, degree, out, at) {
+    startBytes(out, at);
+    for (let band = 0; band &lt; degree; band += 1) {
+      const first = COEFFICIENTS[band] * 3;
+      const end = COEFFICIENTS[band + 1] * 3;
+      let max = 0;
+      for (let v = first; v &lt; end; v += 1) {
+        max = Math.max(max, Math.abs(coeffs[v]));
+      }
+      const code = encodeShScale(max);
+      const scale = decodeShScale(code);
+      putByte(code);
+      for (let v = first; v &lt; end; v += 1) {
+        putByte(scale &gt; 0 ? Math.max(-127, Math.min(127, Math.round((coeffs[v] / scale) * 127))) : 0);
+      }
+    }
+    endBytes();
+  },
+  decode(words, at, degree, out) {
+    let byte = 0;
+    for (let band = 0; band &lt; degree; band += 1) {
+      const first = COEFFICIENTS[band] * 3;
+      const end = COEFFICIENTS[band + 1] * 3;
+      const scale = decodeShScale(getByte(words, at, byte)) / 127;
+      for (let v = first; v &lt; end; v += 1) {
+        out[v] = ((getByte(words, at, byte + 1 + v - first) &lt;&lt; 24) &gt;&gt; 24) * scale;
+      }
+      byte += PACKED_BAND_BYTES[band];
+    }
+    return out;
+  },
+};
+
+const CODECS: Record&lt;ShCodecName, ShCodec&gt; = { ext, packed };
+
+// For Sh.find: each channel label's codec and the degrees whose bundle has
+// it (bit d), and each codec's channel count per degree
+const channelLookup = new Map&lt;string, { codec: ShCodecName; degrees: number }&gt;();
+const channelCounts = {} as Record&lt;ShCodecName, number[]&gt;;
+for (const codec of Object.values(CODECS)) {
+  channelCounts[codec.name] = [0, 0, 0, 0, 0];
+  for (const degree of [1, 2, 3, 4] as const) {
+    const suffixes = codec.channels(degree);
+    channelCounts[codec.name][degree] = suffixes.length;
+    for (const suffix of suffixes) {
+      const label = `${codec.name}Sh${suffix}`;
+      const entry = channelLookup.get(label);
+      if (entry) {
+        entry.degrees |= 1 &lt;&lt; degree;
+      } else {
+        channelLookup.set(label, { codec: codec.name, degrees: 1 &lt;&lt; degree });
+      }
+    }
+  }
+}
+
+const shDegreeOf = (n: number): ShDegree | undefined =&gt; (n === 1 || n === 2 || n === 3 || n === 4 ? n : undefined);
+
+// Spherical harmonics: codecs, per-splat bundles and the CPU evaluator.
+// GpuSh is the TSL twin.
+export class Sh {
+  // RGB coefficients per degree, the DC band excluded
+  static readonly COEFFICIENTS = COEFFICIENTS;
+  static readonly MAX_DEGREE = MAX_DEGREE;
+  // Values of the highest degree's entry: a coefficient array that fits
+  // any degree
+  static readonly VALUES = VALUES;
+  static readonly LABEL = defineBundle({ label: "uint16" });
+
+  // A codec by name (a string from meta is checked)
+  static codec(name: string): ShCodec {
+    const codec = CODECS[name as ShCodecName];
+    if (!codec) {
+      throw new Error(`Unknown SH codec ${name}`);
+    }
+    return codec;
+  }
+
+  static texels(codec: ShCodecName, degree: ShDegree) {
+    return Math.ceil(Sh.codec(codec).words(degree) / 4);
+  }
+
+  // The degree of `coefficients` RGB coefficients past DC (3, 8, 15, 24), else
+  // undefined
+  static degreeOf(coefficients: number): ShDegree | undefined {
+    return shDegreeOf(COEFFICIENTS.indexOf(coefficients as never));
+  }
+
+  static bundleName(codec: ShCodecName) {
+    return `${Sh.codec(codec).name}Sh`;
+  }
+
+  static bundle(codec: ShCodecName, degree: ShDegree): BundleDef {
+    return defineBundle(Object.fromEntries(Sh.codec(codec).channels(degree).map((suffix) =&gt; [`${codec}Sh${suffix}`, "uint32x4" as const])));
+  }
+
+  // Adds an empty per-splat SH bundle to `data`
+  static add(data: ArrayData, codec: ShCodecName, degree: ShDegree): ArrayBundle {
+    data.addBundle(Sh.bundleName(codec), Sh.bundle(codec, degree), { meta: { codec, degree } });
+    return data.bundles[Sh.bundleName(codec)];
+  }
+
+  // The per-splat SH bundle among `bundles` (of an ArrayData or GpuArrays):
+  // a bundle whose channels are exactly a codec's for some degree.
+  // Renderers call it per object per frame, so it allocates only the result.
+  static find(bundles: Record&lt;string, BundleLike &amp; { meta?: Record&lt;string, unknown&gt; }&gt;): FoundSh | undefined {
+    for (const name in bundles) {
+      const bundle = bundles[name];
+      let codec: ShCodecName | undefined;
+      let degrees = 0b11110;
+      let count = 0;
+      for (const label in bundle.channels) {
+        const entry = channelLookup.get(label);
+        if (!entry || bundle.channels[label]?.format !== "uint32x4" || (codec !== undefined &amp;&amp; entry.codec !== codec)) {
+          codec = undefined;
+          break;
+        }
+        codec = entry.codec;
+        degrees &amp;= entry.degrees;
+        count += 1;
+      }
+      if (codec === undefined) {
+        continue;
+      }
+      const counts = channelCounts[codec];
+      for (let degree = MAX_DEGREE; degree &gt;= 1; degree -= 1) {
+        if ((degrees &amp; (1 &lt;&lt; degree)) !== 0 &amp;&amp; counts[degree] === count) {
+          return { name, codec, degree: degree as ShDegree };
+        }
+      }
+    }
+    return undefined;
+  }
+
+  // For file readers: a bundle for a file's `degree` (0..4) of SH in
+  // `target` (default ext) and its encoder, or undefined when there is none
+  // or it is skipped (then meta.ignoredShDegree is the degree)
+  static prepare(data: ArrayData, degree: number, target: ShTarget = "ext"): ((i: number, coeffs: ArrayLike&lt;number&gt;) =&gt; void) | undefined {
+    const d = shDegreeOf(degree);
+    data.meta.ignoredShDegree = d &amp;&amp; target === false ? d : 0;
+    if (!d || target === false) {
+      return undefined;
+    }
+    Sh.add(data, target, d);
+    return Sh.encoder(data);
+  }
+
+  // The encoder of a per-splat bundle: (i, coeffs) writes splat i
+  static encoder(data: ArrayData, found = Sh.find(data.bundles)): (i: number, coeffs: ArrayLike&lt;number&gt;) =&gt; void {
+    if (!found) {
+      throw new Error("No SH bundle");
+    }
+    const { degree } = found;
+    const codec = Sh.codec(found.codec);
+    const channels = channelArrays(data.bundles[found.name]);
+    const words = new Uint32Array(channels.length * 4);
+    return (i, coeffs) =&gt; {
+      codec.encode(coeffs, degree, words, 0);
+      const at = i * 4;
+      for (let t = 0; t &lt; channels.length; t += 1) {
+        const channel = channels[t];
+        const w = t * 4;
+        channel[at] = words[w];
+        channel[at + 1] = words[w + 1];
+        channel[at + 2] = words[w + 2];
+        channel[at + 3] = words[w + 3];
+      }
+    };
+  }
+
+  // The decoder of a per-splat bundle: (i, out) fills out with splat i's
+  // coefficients (out holds at least COEFFICIENTS[degree] * 3 values)
+  static decoder(data: ArrayData, found = Sh.find(data.bundles)): (i: number, out: Float32Array) =&gt; Float32Array {
+    if (!found) {
+      throw new Error("No SH bundle");
+    }
+    const { degree } = found;
+    const codec = Sh.codec(found.codec);
+    const channels = channelArrays(data.bundles[found.name]);
+    const words = new Uint32Array(channels.length * 4);
+    return (i, out) =&gt; {
+      const at = i * 4;
+      for (let t = 0; t &lt; channels.length; t += 1) {
+        const channel = channels[t];
+        const w = t * 4;
+        words[w] = channel[at];
+        words[w + 1] = channel[at + 1];
+        words[w + 2] = channel[at + 2];
+        words[w + 3] = channel[at + 3];
+      }
+      return codec.decode(words, 0, degree, out);
+    };
+  }
+
+  // `data` with its SH in `codec` (at most `degree`): `data` itself when it
+  // already is, else a new ArrayData sharing every other bundle's arrays
+  static convert(data: ArrayData, codec: ShCodecName, { degree }: { degree?: ShDegree } = {}): ArrayData {
+    const found = Sh.find(data.bundles);
+    if (!found) {
+      return data;
+    }
+    const to = Math.min(degree ?? found.degree, found.degree) as ShDegree;
+    if (found.codec === codec &amp;&amp; to === found.degree) {
+      return data;
+    }
+
+    const out = shareBundles(data, found.name);
+    Sh.add(out, codec, to);
+    const decode = Sh.decoder(data, found);
+    const encode = Sh.encoder(out);
+    const coeffs = new Float32Array(VALUES);
+    for (let i = 0; i &lt; data.count; i += 1) {
+      encode(i, decode(i, coeffs));
+    }
+    return out;
+  }
+
+  // The SH color of `coeffs` along unit `dir` (object space, from the view
+  // to the splat) through `degree`, added to the base color by the caller
+  static evaluate(coeffs: ArrayLike&lt;number&gt;, dir: { x: number; y: number; z: number }, degree: number, out = [0, 0, 0]) {
+    Sh.basis(dir, basis);
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    for (let k = 0; k &lt; COEFFICIENTS[Math.max(0, Math.min(MAX_DEGREE, degree))]; k += 1) {
+      out[0] += coeffs[k * 3] * basis[k];
+      out[1] += coeffs[k * 3 + 1] * basis[k];
+      out[2] += coeffs[k * 3 + 2] * basis[k];
+    }
+    return out;
+  }
+
+  // The 24 basis functions of bands 1-4 along unit `dir` (3DGS signs)
+  static basis&lt;T extends Float64Array | Float32Array | number[] = Float64Array&gt;(dir: { x: number; y: number; z: number }, out: T = new Float64Array(COEFFICIENTS[MAX_DEGREE]) as T): T {
+    const { x, y, z } = dir;
+    const xx = x * x;
+    const yy = y * y;
+    const zz = z * z;
+    out[0] = -0.4886025 * y;
+    out[1] = 0.4886025 * z;
+    out[2] = -0.4886025 * x;
+    out[3] = 1.0925484 * x * y;
+    out[4] = -1.0925484 * y * z;
+    out[5] = 0.3153916 * (2 * zz - xx - yy);
+    out[6] = -1.0925484 * x * z;
+    out[7] = 0.5462742 * (xx - yy);
+    out[8] = -0.5900436 * y * (3 * xx - yy);
+    out[9] = 2.8906114 * x * y * z;
+    out[10] = -0.4570458 * y * (4 * zz - xx - yy);
+    out[11] = 0.3731763 * z * (2 * zz - 3 * xx - 3 * yy);
+    out[12] = -0.4570458 * x * (4 * zz - xx - yy);
+    out[13] = 1.4453057 * z * (xx - yy);
+    out[14] = -0.5900436 * x * (xx - 3 * yy);
+    // Band 4 uses xx + yy + zz = 1: `dir` must be unit
+    out[15] = 2.5033429 * x * y * (xx - yy);
+    out[16] = -1.7701308 * y * z * (3 * xx - yy);
+    out[17] = 0.9461747 * x * y * (7 * zz - 1);
+    out[18] = -0.6690465 * y * z * (7 * zz - 3);
+    out[19] = 0.1057855 * (zz * (35 * zz - 30) + 3);
+    out[20] = -0.6690465 * x * z * (7 * zz - 3);
+    out[21] = 0.4730873 * (xx - yy) * (7 * zz - 1);
+    out[22] = -1.7701308 * x * z * (xx - 3 * yy);
+    out[23] = 0.6258357 * (xx * (xx - 3 * yy) - yy * (3 * xx - yy));
+    return out;
+  }
+}
+
+const basis = new Float64Array(COEFFICIENTS[MAX_DEGREE]);
+
+const channelArrays = (bundle: ArrayBundle) =&gt; Object.values(bundle.channels).map((channel) =&gt; channel.data as Uint32Array);
+const channelRecord = (bundle: ArrayBundle) =&gt; Object.fromEntries(Object.entries(bundle.channels).map(([label, channel]) =&gt; [label, channel.data])) as Record&lt;string, TypedArray&gt;;
+
+// A new ArrayData sharing every bundle of `data` but `without`
+function shareBundles(data: ArrayData, without: string) {
+  const out = new ArrayData({ count: data.count, capacity: data.capacity, meta: { ...data.meta } });
+  for (const [name, bundle] of Object.entries(data.bundles)) {
+    if (name !== without) {
+      out.addBundle(name, bundle.def, { data: channelRecord(bundle), meta: bundle.meta });
+    }
+  }
+  return out;
+}
+
+const PALETTE = defineBundle({ shEntries: "uint32x4" });
+
+// A table of SH entries that splats pick by label (bundle shLabel in the
+// splat table): entry n is `stride` texels, elements n * stride .. in
+// channel shEntries, side by side in a texture row. The stride is the
+// codec's texels rounded up to a power of two, unless given.
+export class ShPalette {
+  static readonly BUNDLE = PALETTE;
+  readonly data: ArrayData&lt;{ shPalette: typeof PALETTE }&gt;;
+
+  constructor(data: ArrayData) {
+    if (data.bundles.shPalette?.channels.shEntries?.format !== "uint32x4") {
+      throw new Error("Not an SH palette: no shPalette.shEntries channel");
+    }
+    this.data = data as ArrayData&lt;{ shPalette: typeof PALETTE }&gt;;
+  }
+
+  // The default stride of a codec's entries: its texels rounded up to a
+  // power of two (1 / 2 / 4 / 8 for degree 1 / 2 / 3 / 4)
+  static strideOf(codec: ShCodecName, degree: ShDegree) {
+    return 2 ** Math.ceil(Math.log2(Sh.texels(codec, degree)));
+  }
+
+  static create({ codec, degree, size, stride }: {
+    codec: ShCodecName;
+    degree: ShDegree;
+    size: number;
+    stride?: number;
+  }): ShPalette {
+    const s = stride ?? ShPalette.strideOf(codec, degree);
+    if (s &lt; Sh.texels(codec, degree)) {
+      throw new Error(`Palette stride ${s} below the codec's ${Sh.texels(codec, degree)} texels`);
+    }
+    const data = new ArrayData({ count: size * s, meta: {} });
+    data.addBundle("shPalette", PALETTE, { meta: { codec, degree, size, stride: s } });
+    return new ShPalette(data);
+  }
+
+  get meta() {
+    return this.data.bundles.shPalette.meta;
+  }
+
+  get codec(): ShCodecName {
+    return Sh.codec(this.meta.codec as string).name;
+  }
+
+  get degree(): ShDegree {
+    return this.meta.degree as ShDegree;
+  }
+
+  get size(): number {
+    return this.meta.size as number;
+  }
+
+  get stride(): number {
+    return this.meta.stride as number;
+  }
+
+  private get words() {
+    return this.data.bundles.shPalette.channels.shEntries.data;
+  }
+
+  set(n: number, coeffs: ArrayLike&lt;number&gt;) {
+    Sh.codec(this.codec).encode(coeffs, this.degree, this.words, n * this.stride * 4);
+  }
+
+  get(n: number, out: Float32Array = new Float32Array(VALUES)): Float32Array {
+    return Sh.codec(this.codec).decode(this.words, n * this.stride * 4, this.degree, out);
+  }
+
+  // The same entries in another codec
+  convert(codec: ShCodecName, { stride }: { stride?: number } = {}): ShPalette {
+    const out = ShPalette.create({ codec, degree: this.degree, size: this.size, stride });
+    const coeffs = new Float32Array(VALUES);
+    for (let n = 0; n &lt; this.size; n += 1) {
+      out.set(n, this.get(n, coeffs));
+    }
+    return out;
+  }
+
+  // Per-splat SH in `codec` for `labels` (one per splat), added to `data`
+  expand(data: ArrayData, labels: ArrayLike&lt;number&gt;, codec: ShCodecName = this.codec) {
+    Sh.add(data, codec, this.degree);
+    const encode = Sh.encoder(data);
+    const coeffs = new Float32Array(VALUES);
+    for (let i = 0; i &lt; labels.length; i += 1) {
+      encode(i, this.get(labels[i], coeffs));
+    }
+    return data;
+  }
+
+  // `data` with per-splat SH in place of its shLabel bundle: a new
+  // ArrayData sharing every other bundle's arrays (`data` itself when it
+  // has no labels)
+  expanded(data: ArrayData, codec: ShCodecName = this.codec): ArrayData {
+    const labels = data.bundles.shLabel?.channels.label?.data;
+    if (!labels) {
+      return data;
+    }
+    return this.expand(shareBundles(data, "shLabel"), labels.subarray(0, data.count), codec);
+  }
+}</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

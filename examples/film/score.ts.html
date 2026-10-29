@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>score.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/film/score.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../doom/data.ts.html">data.ts</a><a href="../doom/game.ts.html">game.ts</a><a href="../doom/hud.ts.html">hud.ts</a><a href="../doom/level.ts.html">level.ts</a><a href="../doom/lighting.ts.html">lighting.ts</a><a href="../doom/main.ts.html">main.ts</a><a href="../doom/simWorker.ts.html">simWorker.ts</a><a href="../doom/things.ts.html">things.ts</a></details><details open><summary>film</summary><a href="audioStream.ts.html">audioStream.ts</a><a href="gpuAudio.ts.html">gpuAudio.ts</a><a href="score.ts.html" class="on">score.ts</a><a href="scoreSink.ts.html">scoreSink.ts</a><a href="text.ts.html">text.ts</a><a href="timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../fractals/demo/airScore.ts.html">airScore.ts</a><a href="../fractals/demo/demo.ts.html">demo.ts</a><a href="../fractals/demo/library.ts.html">library.ts</a><a href="../fractals/demo/music.ts.html">music.ts</a><a href="../fractals/demo/tune.ts.html">tune.ts</a><a href="../fractals/demo/video.ts.html">video.ts</a></details><a href="../fractals/attractors.ts.html">attractors.ts</a><a href="../fractals/clouds.ts.html">clouds.ts</a><a href="../fractals/device.ts.html">device.ts</a><a href="../fractals/kind.ts.html">kind.ts</a><a href="../fractals/main.ts.html">main.ts</a><a href="../fractals/morph.ts.html">morph.ts</a><a href="../fractals/motion.ts.html">motion.ts</a><a href="../fractals/palettes.ts.html">palettes.ts</a><a href="../fractals/presets.ts.html">presets.ts</a><a href="../fractals/sample.ts.html">sample.ts</a><a href="../fractals/shade.ts.html">shade.ts</a><a href="../fractals/shots.ts.html">shots.ts</a><a href="../fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../fractals/surfaces.ts.html">surfaces.ts</a><a href="../fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../fxedit/fx/graph.ts.html">graph.ts</a><a href="../fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../fxedit/fx/index.ts.html">index.ts</a><a href="../fxedit/fx/registry.ts.html">registry.ts</a><a href="../fxedit/fx/types.ts.html">types.ts</a></details><a href="../fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../fxedit/GraphView.ts.html">GraphView.ts</a><a href="../fxedit/catalog.ts.html">catalog.ts</a><a href="../fxedit/checks.ts.html">checks.ts</a><a href="../fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../fxedit/editors.ts.html">editors.ts</a><a href="../fxedit/framed.ts.html">framed.ts</a><a href="../fxedit/juice.ts.html">juice.ts</a><a href="../fxedit/layout.ts.html">layout.ts</a><a href="../fxedit/main.ts.html">main.ts</a><a href="../fxedit/palette.ts.html">palette.ts</a><a href="../fxedit/preview.ts.html">preview.ts</a><a href="../fxedit/settings.ts.html">settings.ts</a><a href="../fxedit/sound.ts.html">sound.ts</a><a href="../fxedit/springs.ts.html">springs.ts</a><a href="../fxedit/themes.ts.html">themes.ts</a><a href="../fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../lcc/LccScene.ts.html">LccScene.ts</a><a href="../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../lcc/catalog.ts.html">catalog.ts</a><a href="../lcc/collision.ts.html">collision.ts</a><a href="../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../lcc/gui.ts.html">gui.ts</a><a href="../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../lcc/main.ts.html">main.ts</a><a href="../lcc/quickBar.ts.html">quickBar.ts</a><a href="../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../quake/data.ts.html">data.ts</a><a href="../quake/entities.ts.html">entities.ts</a><a href="../quake/game.ts.html">game.ts</a><a href="../quake/hud.ts.html">hud.ts</a><a href="../quake/lighting.ts.html">lighting.ts</a><a href="../quake/main.ts.html">main.ts</a><a href="../quake/models.ts.html">models.ts</a><a href="../quake/simWorker.ts.html">simWorker.ts</a><a href="../quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../scenes/main.ts.html">main.ts</a><a href="../scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../sogs/catalog.ts.html">catalog.ts</a><a href="../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../sogs/gui.ts.html">gui.ts</a><a href="../sogs/lod.ts.html">lod.ts</a><a href="../sogs/lodStream.ts.html">lodStream.ts</a><a href="../sogs/main.ts.html">main.ts</a><a href="../sogs/quickBar.ts.html">quickBar.ts</a><a href="../sogs/resident.ts.html">resident.ts</a><a href="../sogs/sh.ts.html">sh.ts</a><a href="../sogs/sog.ts.html">sog.ts</a><a href="../sogs/validate.ts.html">validate.ts</a><a href="../sogs/webp.ts.html">webp.ts</a><a href="../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../spark/js/assets.ts.html">assets.ts</a><a href="../spark/js/construct.ts.html">construct.ts</a><a href="../spark/js/cube.ts.html">cube.ts</a><a href="../spark/js/examples.ts.html">examples.ts</a><a href="../spark/js/files.ts.html">files.ts</a><a href="../spark/js/objects.ts.html">objects.ts</a><a href="../spark/js/page.ts.html">page.ts</a><a href="../spark/js/raycast.ts.html">raycast.ts</a><a href="../spark/js/sdf.ts.html">sdf.ts</a><a href="../spark/js/snow.ts.html">snow.ts</a><a href="../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../spark/lofi/main.ts.html">main.ts</a><a href="../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../splats/catalog.ts.html">catalog.ts</a><a href="../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../splats/gui.ts.html">gui.ts</a><a href="../splats/main.ts.html">main.ts</a><a href="../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../spz/catalog.ts.html">catalog.ts</a><a href="../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../src/core/axes.ts.html">axes.ts</a><a href="../../src/core/bundles.ts.html">bundles.ts</a><a href="../../src/core/compress.ts.html">compress.ts</a><a href="../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../src/core/encoding.ts.html">encoding.ts</a><a href="../../src/core/files.ts.html">files.ts</a><a href="../../src/core/formats.ts.html">formats.ts</a><a href="../../src/core/index.ts.html">index.ts</a><a href="../../src/core/layout.ts.html">layout.ts</a><a href="../../src/core/math.ts.html">math.ts</a><a href="../../src/core/ply.ts.html">ply.ts</a><a href="../../src/core/progress.ts.html">progress.ts</a><a href="../../src/core/rad.ts.html">rad.ts</a><a href="../../src/core/rdx.ts.html">rdx.ts</a><a href="../../src/core/sh.ts.html">sh.ts</a><a href="../../src/core/sort.ts.html">sort.ts</a><a href="../../src/core/splats.ts.html">splats.ts</a><a href="../../src/core/spz.ts.html">spz.ts</a><a href="../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../src/gpu/backend.ts.html">backend.ts</a><a href="../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../src/gpu/index.ts.html">index.ts</a><a href="../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../src/render/index.ts.html">index.ts</a><a href="../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../src/wgpu/index.ts.html">index.ts</a><a href="../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../src/worker/index.ts.html">index.ts</a><a href="../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>score.ts</h1>
+<p class="path">examples/film/score.ts · <a href="score.ts">raw</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L19">RATE</a><a href="#L20">midi</a><a href="#L23">VOICE</a><a href="#L60">Point</a><a href="#L61">Curve</a><a href="#L65">Osc</a><a href="#L72">Voice</a><a href="#L104">env</a><a href="#L109">Score</a><a href="#L472">ScoreData</a><a href="#L486">ScoreMix</a><a href="#L517">buildScore</a><a href="#L551">toWav</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a>
+<a id="L528" href="#L528">528</a>
+<a id="L529" href="#L529">529</a>
+<a id="L530" href="#L530">530</a>
+<a id="L531" href="#L531">531</a>
+<a id="L532" href="#L532">532</a>
+<a id="L533" href="#L533">533</a>
+<a id="L534" href="#L534">534</a>
+<a id="L535" href="#L535">535</a>
+<a id="L536" href="#L536">536</a>
+<a id="L537" href="#L537">537</a>
+<a id="L538" href="#L538">538</a>
+<a id="L539" href="#L539">539</a>
+<a id="L540" href="#L540">540</a>
+<a id="L541" href="#L541">541</a>
+<a id="L542" href="#L542">542</a>
+<a id="L543" href="#L543">543</a>
+<a id="L544" href="#L544">544</a>
+<a id="L545" href="#L545">545</a>
+<a id="L546" href="#L546">546</a>
+<a id="L547" href="#L547">547</a>
+<a id="L548" href="#L548">548</a>
+<a id="L549" href="#L549">549</a>
+<a id="L550" href="#L550">550</a>
+<a id="L551" href="#L551">551</a>
+<a id="L552" href="#L552">552</a>
+<a id="L553" href="#L553">553</a>
+<a id="L554" href="#L554">554</a>
+<a id="L555" href="#L555">555</a>
+<a id="L556" href="#L556">556</a>
+<a id="L557" href="#L557">557</a>
+<a id="L558" href="#L558">558</a>
+<a id="L559" href="#L559">559</a>
+<a id="L560" href="#L560">560</a>
+<a id="L561" href="#L561">561</a>
+<a id="L562" href="#L562">562</a>
+<a id="L563" href="#L563">563</a>
+<a id="L564" href="#L564">564</a>
+<a id="L565" href="#L565">565</a>
+<a id="L566" href="#L566">566</a>
+<a id="L567" href="#L567">567</a>
+<a id="L568" href="#L568">568</a>
+<a id="L569" href="#L569">569</a>
+<a id="L570" href="#L570">570</a>
+<a id="L571" href="#L571">571</a>
+<a id="L572" href="#L572">572</a>
+<a id="L573" href="#L573">573</a>
+<a id="L574" href="#L574">574</a></pre><pre class="lang-ts"><code>// The score as data for the GPU synthesizer (gpuAudio.ts): the music of the
+// film (compose, on the bars of timeline.ts: 100 BPM, D minor) played by
+// instruments that each add voices to a table rather than build Web Audio
+// nodes. A voice is up to three oscillators and stereo noise, through one
+// biquad filter, a waveshaper and a gain, with automation curves for the
+// gain, the first oscillator's pitch, the filter's cutoff and an FM index,
+// then panned and sent to the buses (dry or sidechain-ducked, reverb, the
+// ping-pong delay). Sections follow the shots:
+//   0-2    a drone and one bell: one Gaussian
+//   2-4    a pluck on every doubling of the splat count, faster and faster
+//   4-8.5  pads as the galaxy condenses into the capture
+//   8.5    a shutter, then a clock ticking in the silence (the photograph)
+//   9.3    a riser into the drop at bar 10: the title, half-time drums
+//   13-34  the groove under the features (arps from 15, zaps on the
+//          modifier wipes, hits on the numbers, an 8-bit bass for Doom)
+//   34-36  hits on the montage words; 36-38 the breakdown; 38 the end chord
+import { BAR, BEAT, bars, beats } from <a class="import" href="timeline.ts.html" title="examples/film/timeline.ts">"./timeline.js"</a>;
+
+export const RATE = 48000;
+export const midi = (n: number) =&gt; 440 * 2 ** ((n - 69) / 12);
+
+// The voice table: VOICE.stride floats per voice
+export const VOICE = {
+  stride: 96,
+  start: 0,
+  stop: 1,
+  // Pan matrix (Web Audio's StereoPannerNode for a mono or stereo input):
+  // left = inL * ll + inR * rl, right = inR * rr + inL * lr
+  ll: 2,
+  rl: 3,
+  rr: 4,
+  lr: 5,
+  dry: 6,
+  ducked: 7,
+  reverb: 8,
+  delay: 9,
+  // 0 none, 1 lowpass, 2 highpass, 3 bandpass; Q in dB for the first two,
+  // linear for bandpass (as Web Audio's BiquadFilterNode)
+  filterType: 10,
+  filterQ: 11,
+  shaper: 12,
+  noiseGain: 13,
+  noiseFiltered: 14,
+  fmRatio: 15,
+  // Three oscillators of 5 floats: wave (0 none, 1 sine, 2 saw, 3 square,
+  // 4 triangle), frequency, detune ratio, gain, filtered
+  osc: 16,
+  oscStride: 5,
+  // Four curves of 16 floats: point count, initial value, 2 unused, then 4
+  // points of (time, value, ramp: 0 set, 1 linear, 2 exponential)
+  gain: 32,
+  pitch: 48,
+  filter: 64,
+  fm: 80,
+} as const;
+
+const WAVES = { sine: 1, saw: 2, square: 3, triangle: 4 } as const;
+const FILTERS = { lowpass: 1, highpass: 2, bandpass: 3 } as const;
+
+export type Point = [time: number, value: number, ramp: "set" | "linear" | "exp"];
+export interface Curve {
+  initial: number;
+  points?: Point[];
+}
+export interface Osc {
+  wave: keyof typeof WAVES;
+  freq: number;
+  cents?: number;
+  gain?: number;
+  filtered?: boolean;
+}
+export interface Voice {
+  start: number;
+  stop: number;
+  oscs?: Osc[];
+  noise?: { gain: number; filtered?: boolean };
+  filter?: { type: keyof typeof FILTERS; q?: number; freq: Curve };
+  gain: Curve;
+  pitch?: Curve;
+  fm?: { ratio: number; index: Curve };
+  shaper?: boolean;
+  pan?: number;
+  dry?: number;
+  ducked?: boolean;
+  reverb?: number;
+  delay?: number;
+}
+
+// D minor: a chord per bar of the groove (bass root, then voicing)
+const D2 = 38;
+const CHORDS: Record&lt;string, { root: number; notes: number[] }&gt; = {
+  Dm9: { root: D2, notes: [53, 57, 60, 64, 69] },
+  Bbmaj7: { root: D2 - 4, notes: [50, 53, 57, 60, 65] },
+  Fmaj7: { root: D2 - 5 + 12, notes: [53, 57, 60, 64, 67] },
+  Cadd9: { root: D2 - 2, notes: [52, 55, 60, 62, 67] },
+  Gm9: { root: D2 + 5, notes: [53, 57, 58, 62, 65] },
+  Dmaj9: { root: D2, notes: [54, 57, 61, 64, 69, 76] },
+};
+const PROGRESSION = ["Dm9", "Bbmaj7", "Fmaj7", "Cadd9"];
+const chordAt = (bar: number) =&gt; CHORDS[PROGRESSION[((Math.floor(bar) % 4) + 4) % 4]];
+
+// Web Audio's GainNode envelope of the old score: 0, a linear attack to
+// peak, a hold, an exponential release to 1e-4
+export const env = (at: number, attack: number, hold: number, release: number, peak: number): Curve =&gt; ({
+  initial: 0,
+  points: [[at, 0, "set"], [at + attack, peak, "linear"], [at + attack + hold, peak, "set"], [at + attack + hold + release, 1e-4, "exp"]],
+});
+
+export class Score {
+  voices: Voice[] = [];
+  kicks: number[] = [];
+
+  add(voice: Voice) {
+    this.voices.push(voice);
+  }
+
+  pad(at: number, length: number, notes: number[], level = 0.05, bright = 1400) {
+    notes.forEach((note, i) =&gt; this.add({
+      start: at,
+      stop: at + length + 3,
+      oscs: [
+        { wave: "saw", freq: midi(note), cents: -9, filtered: true },
+        { wave: "saw", freq: midi(note), cents: 7, filtered: true },
+        { wave: "triangle", freq: midi(note - 12), filtered: true },
+      ],
+      filter: { type: "lowpass", q: 0.5, freq: { initial: bright * 0.5, points: [[at, bright * 0.4, "set"], [at + length * 0.5, bright, "linear"], [at + length + 1.5, bright * 0.6, "linear"]] } },
+      gain: env(at, Math.min(1.2, length * 0.4), Math.max(0, length - 1.2), 2.2, level),
+      dry: 0.8,
+      reverb: 0.6,
+      pan: (i / Math.max(1, notes.length - 1) - 0.5) * 0.8,
+      ducked: true,
+    }));
+  }
+
+  pluck(at: number, note: number, level = 0.1, { delay = 0.35, pan = 0, decay = 0.45 } = {}) {
+    this.add({
+      start: at,
+      stop: at + decay + 0.1,
+      oscs: [{ wave: "triangle", freq: midi(note), filtered: true }, { wave: "square", freq: midi(note), cents: 5, gain: 0.3, filtered: true }],
+      filter: { type: "lowpass", q: 2, freq: { initial: 5000, points: [[at, 6000, "set"], [at + decay, 700, "exp"]] } },
+      gain: env(at, 0.003, 0, decay, level),
+      reverb: 0.35,
+      delay,
+      pan,
+    });
+  }
+
+  bell(at: number, note: number, level = 0.12, decay = 4) {
+    this.add({
+      start: at,
+      stop: at + decay,
+      oscs: [{ wave: "sine", freq: midi(note) }],
+      fm: { ratio: 3.5, index: { initial: midi(note) * 2.2, points: [[at, midi(note) * 2.2, "set"], [at + decay * 0.6, 1, "exp"]] } },
+      gain: env(at, 0.004, 0, decay, level),
+      reverb: 0.8,
+      delay: 0.25,
+    });
+  }
+
+  drone(at: number, until: number, note: number, level = 0.12) {
+    this.add({
+      start: at,
+      stop: until,
+      oscs: [
+        { wave: "sine", freq: midi(note) },
+        { wave: "saw", freq: midi(note), cents: -6, gain: 0.35, filtered: true },
+        { wave: "saw", freq: midi(note), cents: 6, gain: 0.35, filtered: true },
+      ],
+      filter: { type: "lowpass", q: 0.8, freq: { initial: 300, points: [[at, 140, "set"], [(at + until) / 2, 420, "linear"], [until, 200, "linear"]] } },
+      gain: { initial: 1, points: [[at, 0, "set"], [at + 2.5, level, "linear"], [until - 1.5, level, "set"], [until, 0, "linear"]] },
+      reverb: 0.4,
+    });
+  }
+
+  kick(at: number, level = 0.5) {
+    this.add({
+      start: at,
+      stop: at + 0.6,
+      oscs: [{ wave: "sine", freq: 150 }],
+      pitch: { initial: 150, points: [[at, 160, "set"], [at + 0.12, 44, "exp"]] },
+      gain: env(at, 0.002, 0.03, 0.42, level),
+    });
+    this.add({
+      start: at,
+      stop: at + 0.02,
+      noise: { gain: 1, filtered: true },
+      filter: { type: "highpass", q: 0.7, freq: { initial: 2500 } },
+      gain: env(at, 0.001, 0, 0.015, level * 0.3),
+    });
+    // Ducks the pads and bass under it (the ducked bus)
+    this.kicks.push(at);
+  }
+
+  snare(at: number, level = 0.22) {
+    this.add({
+      start: at,
+      stop: at + 0.3,
+      noise: { gain: 1, filtered: true },
+      filter: { type: "bandpass", q: 0.8, freq: { initial: 2200 } },
+      gain: env(at, 0.001, 0.01, 0.2, level),
+      reverb: 0.35,
+    });
+    this.add({
+      start: at,
+      stop: at + 0.2,
+      oscs: [{ wave: "triangle", freq: 190 }],
+      pitch: { initial: 190, points: [[at, 190, "set"], [at + 0.1, 140, "exp"]] },
+      gain: env(at, 0.001, 0, 0.1, level * 0.6),
+      reverb: 0.2,
+    });
+  }
+
+  hat(at: number, level = 0.05, open = false, pan = 0.2) {
+    this.add({
+      start: at,
+      stop: at + (open ? 0.4 : 0.08),
+      noise: { gain: 1, filtered: true },
+      filter: { type: "highpass", q: 0.7, freq: { initial: 7500 } },
+      gain: env(at, 0.001, 0, open ? 0.28 : 0.04, level),
+      pan,
+      reverb: 0.1,
+    });
+  }
+
+  bass(at: number, note: number, length: number, level = 0.16, cutoff = 700) {
+    this.add({
+      start: at,
+      stop: at + length + 0.1,
+      oscs: [{ wave: "saw", freq: midi(note), filtered: true }, { wave: "sine", freq: midi(note - 12), gain: 0.8, filtered: true }],
+      filter: { type: "lowpass", q: 3, freq: { initial: cutoff, points: [[at, cutoff * 2.2, "set"], [at + length, cutoff * 0.6, "exp"]] } },
+      gain: env(at, 0.005, length * 0.5, length * 0.5, level),
+      ducked: true,
+    });
+  }
+
+  // A square wave through a stepped curve: 8 bits for Doom
+  chip(at: number, note: number, length: number, level = 0.07) {
+    this.add({
+      start: at,
+      stop: at + length + 0.05,
+      oscs: [{ wave: "square", freq: midi(note) }],
+      shaper: true,
+      gain: env(at, 0.002, length * 0.7, length * 0.3, level),
+      reverb: 0.1,
+      delay: 0.1,
+    });
+  }
+
+  impact(at: number, level = 0.6) {
+    this.add({
+      start: at,
+      stop: at + 3,
+      oscs: [{ wave: "sine", freq: 60 }],
+      pitch: { initial: 60, points: [[at, 70, "set"], [at + 1.8, 28, "exp"]] },
+      gain: env(at, 0.005, 0.1, 2.2, level * 0.8),
+    });
+    this.add({
+      start: at,
+      stop: at + 3,
+      noise: { gain: 1, filtered: true },
+      filter: { type: "lowpass", q: 0.5, freq: { initial: 8000, points: [[at, 9000, "set"], [at + 1.5, 300, "exp"]] } },
+      gain: env(at, 0.002, 0.05, 1.6, level * 0.5),
+      reverb: 0.9,
+    });
+  }
+
+  riser(at: number, until: number, level = 0.12) {
+    this.add({
+      start: at,
+      stop: until + 0.05,
+      noise: { gain: 1, filtered: true },
+      filter: { type: "bandpass", q: 2, freq: { initial: 300, points: [[at, 250, "set"], [until, 9000, "exp"]] } },
+      gain: { initial: 1, points: [[at, 1e-4, "set"], [until - 0.02, level, "exp"], [until, 0, "linear"]] },
+      reverb: 0.4,
+    });
+  }
+
+  whoosh(at: number, level = 0.08, length = 0.5) {
+    const from = at - length * 0.7;
+    this.add({
+      start: from,
+      stop: at + length * 0.5,
+      noise: { gain: 1, filtered: true },
+      filter: { type: "bandpass", q: 1.2, freq: { initial: 600, points: [[from, 400, "set"], [at, 5000, "exp"], [at + length * 0.5, 800, "exp"]] } },
+      gain: { initial: 1, points: [[from, 1e-4, "set"], [at, level, "exp"], [at + length * 0.5, 1e-4, "exp"]] },
+      reverb: 0.3,
+      pan: -0.2,
+    });
+  }
+
+  zap(at: number, level = 0.06) {
+    this.add({
+      start: at,
+      stop: at + 0.2,
+      oscs: [{ wave: "square", freq: 1800, filtered: true }],
+      pitch: { initial: 1800, points: [[at, 2400, "set"], [at + 0.15, 180, "exp"]] },
+      filter: { type: "lowpass", q: 0.7, freq: { initial: 4000 } },
+      gain: env(at, 0.001, 0, 0.14, level),
+      delay: 0.4,
+      pan: 0.3,
+    });
+  }
+
+  shutter(at: number, level = 0.35) {
+    for (const [offset, freq] of [[0, 3000], [0.07, 1800]] as const) {
+      this.add({
+        start: at + offset,
+        stop: at + offset + 0.05,
+        noise: { gain: 1, filtered: true },
+        filter: { type: "bandpass", q: 1.5, freq: { initial: freq } },
+        gain: env(at + offset, 0.001, 0, 0.035, level),
+        reverb: 0.15,
+      });
+    }
+  }
+
+  tick(at: number, level = 0.08, high = true) {
+    this.add({
+      start: at,
+      stop: at + 0.06,
+      oscs: [{ wave: "sine", freq: high ? 2100 : 1600 }],
+      gain: env(at, 0.001, 0, 0.04, level),
+      reverb: 0.25,
+      pan: high ? 0.25 : -0.25,
+    });
+  }
+}
+
+// Times of the doublings in shots/genesis.ts: grow runs from -23.5 to 0 as
+// 1 - (1 - g)^1.6 over bars 2-4, and the count doubles at each integer
+function doublings() {
+  const times: number[] = [];
+  for (let n = -23; n &lt;= 0; n += 1) {
+    const g = 1 - (-n / 23.5) ** 0.625;
+    times.push(bars(2) + g * bars(2));
+  }
+  return times;
+}
+
+function compose(s: Score) {
+  // --- Act one ---
+  s.drone(0, bars(4.3), D2 - 12, 0.28);
+  s.drone(0.4, bars(4.3), D2 - 5, 0.11);
+  s.bell(bars(0.5), 74, 0.22, 5);
+  s.bell(bars(1.25), 81, 0.11, 4);
+  const arp = [50, 53, 57, 60, 64];
+  doublings().forEach((at, i) =&gt; s.pluck(at, arp[i % 5] + 12 * Math.floor(i / 5), 0.11 + i * 0.007, { delay: 0.3, pan: ((i % 4) - 1.5) * 0.3, decay: 0.5 }));
+  s.riser(bars(3.2), bars(4), 0.14);
+
+  s.pad(bars(4), BAR, CHORDS.Dm9.notes, 0.06, 1100);
+  s.pad(bars(5), BAR, CHORDS.Bbmaj7.notes, 0.06, 1300);
+  s.pad(bars(6), BAR, CHORDS.Fmaj7.notes, 0.06, 1500);
+  s.pad(bars(7), BAR, CHORDS.Cadd9.notes, 0.058, 1300);
+  s.pad(bars(8), beats(2), CHORDS.Dm9.notes, 0.055, 1000);
+  s.bell(bars(5.4), 76, 0.16, 4);
+  s.bell(bars(7.1), 72, 0.12, 4);
+  [69, 67, 65, 64].forEach((note, i) =&gt; s.pluck(bars(7.5) + beats(i), note, 0.11, { delay: 0.4, decay: 0.9 }));
+
+  // The photograph: a shutter, then only the clock
+  s.shutter(bars(8.5), 0.45);
+  for (let i = 0; i &lt; 4; i += 1) {
+    s.tick(bars(8.5) + beats(1 + i * 0.7), 0.085, i % 2 === 0);
+  }
+  s.riser(bars(9.3), bars(10), 0.2);
+  s.pad(bars(9.3), beats(2.8), [62, 65, 69], 0.028, 2600);
+
+  // --- The drop: half time under the title ---
+  s.impact(bars(10), 0.7);
+  for (let bar = 10; bar &lt; 13; bar += 1) {
+    const chord = chordAt(bar);
+    s.pad(bars(bar), BAR, chord.notes, 0.032, 1800);
+    s.bass(bars(bar), chord.root, BAR - 0.05, 0.14, 500);
+    s.kick(bars(bar), 0.55);
+    s.kick(bars(bar) + beats(2.5), 0.35);
+    s.snare(bars(bar) + beats(2), 0.24);
+    for (let b = 0; b &lt; 4; b += 1) {
+      s.hat(bars(bar) + beats(b + 0.5), 0.035);
+    }
+  }
+  s.bell(bars(10.25), 74, 0.09, 5);
+  s.bell(bars(11), 81, 0.06, 5);
+
+  // --- The groove: bars 13-34 ---
+  for (let bar = 13; bar &lt; 34; bar += 1) {
+    const chord = chordAt(bar);
+    const intense = bar &gt;= 29 &amp;&amp; bar &lt; 32;
+    const games = bar &gt;= 32;
+    s.pad(bars(bar), BAR, chord.notes, intense ? 0.03 : 0.026, intense ? 2600 : 1700);
+    for (let b = 0; b &lt; 4; b += 1) {
+      const at = bars(bar) + beats(b);
+      s.kick(at, 0.5);
+      if (b === 1 || b === 3) {
+        s.snare(at, 0.2);
+      }
+      s.hat(at + beats(0.5), 0.045, intense &amp;&amp; b % 2 === 1);
+      if (intense || bar &gt;= 24) {
+        s.hat(at + beats(0.25), 0.018, false, -0.3);
+        s.hat(at + beats(0.75), 0.018, false, -0.3);
+      }
+      // Eighths of bass: root, root, octave, root
+      for (let e = 0; e &lt; 2; e += 1) {
+        const note = chord.root + (e === 1 &amp;&amp; b % 2 === 1 ? 12 : 0);
+        if (games) {
+          s.chip(at + beats(e / 2), note + 12, beats(0.45), 0.05);
+        } else {
+          s.bass(at + beats(e / 2), note, beats(0.45), 0.12, intense ? 1100 : 750);
+        }
+      }
+    }
+    // Arps from the generators on: sixteenths over the chord
+    if (bar &gt;= 15) {
+      for (let i = 0; i &lt; 16; i += 1) {
+        const notes = chord.notes;
+        const note = notes[[0, 2, 4, 2, 1, 3, 4, 3][i % 8] % notes.length] + (i &gt;= 8 ? 12 : 0);
+        s.pluck(bars(bar) + beats(i / 4), note, games ? 0.025 : 0.035, { delay: 0.3, pan: i % 2 ? 0.35 : -0.35, decay: 0.22 });
+      }
+    }
+  }
+  // Each feature arrives with a whoosh
+  for (const bar of [13, 15, 18, 21, 24, 27, 29, 32]) {
+    s.whoosh(bars(bar), 0.09);
+  }
+  // A crash of sorts on the section starts
+  for (const bar of [15, 21, 29]) {
+    s.hat(bars(bar), 0.08, true, 0);
+    s.bell(bars(bar), 81, 0.04, 3);
+  }
+  // Zaps on the modifier wipes
+  for (let k = 1; k &lt;= 5; k += 1) {
+    s.zap(bars(21) + beats(2 * k));
+  }
+  // The numbers
+  s.impact(bars(29.25), 0.35);
+  s.impact(bars(30.2), 0.4);
+  s.tick(bars(31.05), 0.05);
+  // Doom, then Quake
+  s.impact(bars(32), 0.3);
+  s.impact(bars(33), 0.45);
+
+  // --- The montage: a hit per word ---
+  for (const [i, bar] of [34, 34.5, 35, 35.5].entries()) {
+    s.impact(bars(bar), 0.45 + i * 0.05);
+    s.pad(bars(bar), beats(2), CHORDS[["Dm9", "Bbmaj7", "Fmaj7", "Cadd9"][i]].notes, 0.04, 3000);
+    for (let b = 0; b &lt; 2; b += 1) {
+      s.kick(bars(bar) + beats(b), 0.5);
+      s.hat(bars(bar) + beats(b + 0.5), 0.05);
+      s.bass(bars(bar) + beats(b), CHORDS[["Dm9", "Bbmaj7", "Fmaj7", "Cadd9"][i]].root, beats(0.9), 0.13, 1200);
+    }
+    s.snare(bars(bar) + beats(1), 0.22);
+  }
+  s.riser(bars(35.5), bars(36), 0.1);
+
+  // --- The breakdown under the last line ---
+  s.pad(bars(36), BAR, CHORDS.Bbmaj7.notes, 0.04, 1200);
+  s.pad(bars(37), beats(2), CHORDS.Gm9.notes, 0.04, 1200);
+  s.pad(bars(37.5), beats(2), CHORDS.Cadd9.notes, 0.04, 1400);
+  s.drone(bars(36), bars(38.2), D2 - 4 - 12, 0.08);
+  [69, 67, 65, 64, 65, 67, 69, 72].forEach((note, i) =&gt; s.pluck(bars(36) + beats(i), note, 0.055, { delay: 0.45, decay: 1.4 }));
+  s.riser(bars(37.4), bars(38), 0.08);
+
+  // --- The end: D major, and a long tail ---
+  s.impact(bars(38), 0.5);
+  s.pad(bars(38), bars(3.2), CHORDS.Dmaj9.notes, 0.04, 2000);
+  s.drone(bars(38), bars(42), D2 - 12, 0.1);
+  s.bell(bars(38), 74, 0.1, 6);
+  s.bell(bars(38.5), 78, 0.07, 6);
+  s.bell(bars(39), 81, 0.06, 6);
+  s.bell(bars(40.2), 85, 0.04, 6);
+  s.bell(bars(40.8), 86, 0.035, 6);
+}
+
+export interface ScoreData {
+  // VOICE.stride floats per voice, sorted by start
+  table: Float32Array&lt;ArrayBuffer&gt;;
+  count: number;
+  starts: Float32Array&lt;ArrayBuffer&gt;;
+  stops: Float32Array&lt;ArrayBuffer&gt;;
+  // Kick times, ascending (the sidechain)
+  kicks: Float32Array&lt;ArrayBuffer&gt;;
+  mix: Required&lt;ScoreMix&gt;;
+}
+
+// The effects' settings a score chooses: the ping-pong delay's time (more
+// than a chunk, 0.2 s, and under 1.3 s) and feedback, the reverb's level in
+// the master, and a gain into the limiter
+export interface ScoreMix {
+  delay?: number;
+  feedback?: number;
+  reverb?: number;
+  output?: number;
+}
+
+const RAMPS = { set: 0, linear: 1, exp: 2 } as const;
+
+function writeCurve(table: Float32Array, at: number, curve: Curve) {
+  const points = curve.points ?? [];
+  if (points.length &gt; 4) {
+    throw new Error("a curve has at most 4 points");
+  }
+  table[at] = points.length;
+  table[at + 1] = curve.initial;
+  points.forEach(([time, value, ramp], i) =&gt; table.set([time, value, RAMPS[ramp]], at + 4 + i * 3));
+}
+
+// StereoPannerNode: equal-power gains of a mono input, or the stereo law
+function panMatrix(pan: number, stereo: boolean) {
+  if (!stereo) {
+    const x = ((pan + 1) / 2) * (Math.PI / 2);
+    return { ll: Math.cos(x), rl: 0, rr: Math.sin(x), lr: 0 };
+  }
+  const x = (pan &lt;= 0 ? pan + 1 : pan) * (Math.PI / 2);
+  return pan &lt;= 0 ? { ll: 1, rl: Math.cos(x), rr: Math.sin(x), lr: 0 } : { ll: Math.cos(x), rl: 0, rr: 1, lr: Math.sin(x) };
+}
+
+// The film's score, or any other written for these instruments (on a Score
+// or a subclass with more of them)
+export function buildScore&lt;S extends Score = Score&gt;(write: (score: S) =&gt; void = compose as (score: S) =&gt; void, mix: ScoreMix = {}, score: S = new Score() as S): ScoreData {
+  write(score);
+  const voices = [...score.voices].sort((a, b) =&gt; a.start - b.start);
+  const table = new Float32Array(voices.length * VOICE.stride);
+  voices.forEach((v, i) =&gt; {
+    const at = i * VOICE.stride;
+    const pan = panMatrix(v.pan ?? 0, Boolean(v.noise));
+    table.set([v.start, v.stop, pan.ll, pan.rl, pan.rr, pan.lr, v.dry ?? 1, v.ducked ? 1 : 0, v.reverb ?? 0, v.delay ?? 0], at);
+    table[at + VOICE.filterType] = v.filter ? FILTERS[v.filter.type] : 0;
+    table[at + VOICE.filterQ] = v.filter?.q ?? 0.7;
+    table[at + VOICE.shaper] = v.shaper ? 1 : 0;
+    table[at + VOICE.noiseGain] = v.noise?.gain ?? 0;
+    table[at + VOICE.noiseFiltered] = v.noise?.filtered ? 1 : 0;
+    table[at + VOICE.fmRatio] = v.fm?.ratio ?? 0;
+    (v.oscs ?? []).forEach((osc, k) =&gt; table.set(
+      [WAVES[osc.wave], osc.freq, 2 ** ((osc.cents ?? 0) / 1200), osc.gain ?? 1, osc.filtered ? 1 : 0],
+      at + VOICE.osc + k * VOICE.oscStride,
+    ));
+    writeCurve(table, at + VOICE.gain, v.gain);
+    writeCurve(table, at + VOICE.pitch, v.pitch ?? { initial: v.oscs?.[0]?.freq ?? 0 });
+    writeCurve(table, at + VOICE.filter, v.filter?.freq ?? { initial: 1000 });
+    writeCurve(table, at + VOICE.fm, v.fm?.index ?? { initial: 0 });
+  });
+  return {
+    table,
+    count: voices.length,
+    starts: Float32Array.from(voices, (v) =&gt; v.start),
+    stops: Float32Array.from(voices, (v) =&gt; v.stop),
+    kicks: Float32Array.from([...score.kicks].sort((a, b) =&gt; a - b)),
+    mix: { delay: BEAT * 0.75, feedback: 0.42, reverb: 0.36, output: 1, ...mix },
+  };
+}
+
+// 16-bit PCM WAV of interleaved stereo samples
+export function toWav(samples: Float32Array, rate = RATE) {
+  const channels = 2;
+  const frames = samples.length / channels;
+  const out = new ArrayBuffer(44 + frames * channels * 2);
+  const view = new DataView(out);
+  const text = (at: number, s: string) =&gt; [...s].forEach((c, i) =&gt; view.setUint8(at + i, c.charCodeAt(0)));
+  text(0, "RIFF");
+  view.setUint32(4, 36 + frames * channels * 2, true);
+  text(8, "WAVE");
+  text(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channels, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * channels * 2, true);
+  view.setUint16(32, channels * 2, true);
+  view.setUint16(34, 16, true);
+  text(36, "data");
+  view.setUint32(40, frames * channels * 2, true);
+  for (let i = 0; i &lt; samples.length; i += 1) {
+    view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 32767, true);
+  }
+  return out;
+}</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "tint",
+  "description": "Hello, color. Every splat's color goes through one node that turns its hue and boosts saturation, then back out. Drag the numbers on the middle node.",
+  "nodes": {
+    "rgb": { "type": "input.rgb", "note": "Each splat's own color comes in here" },
+    "adjust": { "type": "color.hsvAdjust", "inputs": { "hue": 0.3, "saturation": 1.4, "value": 1.1 }, "note": "Drag hue: the whole scan changes color" },
+    "out": { "type": "splat.write", "note": "Whatever reaches rgb becomes the new color" }
+  },
+  "links": [
+    { "from": "rgb.value", "to": "adjust.rgb" },
+    { "from": "adjust.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Hue": "adjust.hue",
+    "Saturation": "adjust.saturation",
+    "Brightness": "adjust.value"
+  }
+}

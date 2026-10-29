@@ -1,0 +1,3310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>main.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/fractals/main.ts by scripts/build-site.mjs -->
+<body data-root="../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../docs/api.md.html">api.md</a><a href="../../docs/arraydata.md.html">arraydata.md</a><a href="../../docs/checks.md.html">checks.md</a><a href="../../docs/concepts.md.html">concepts.md</a><a href="../../docs/controls.md.html">controls.md</a><a href="../../docs/encoding.md.html">encoding.md</a><a href="../../docs/files.md.html">files.md</a><a href="../../docs/generators.md.html">generators.md</a><a href="../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../docs/overview.md.html">overview.md</a><a href="../../docs/params.md.html">params.md</a><a href="../../docs/performance.md.html">performance.md</a><a href="../../docs/projection.md.html">projection.md</a><a href="../../docs/quickstart.md.html">quickstart.md</a><a href="../../docs/rdx.md.html">rdx.md</a><a href="../../docs/recipes.md.html">recipes.md</a><a href="../../docs/renderer.md.html">renderer.md</a><a href="../../docs/rendering.md.html">rendering.md</a><a href="../../docs/sh.md.html">sh.md</a><a href="../../docs/shaders.md.html">shaders.md</a><a href="../../docs/site.js.html">site.js</a><a href="../../docs/sorting.md.html">sorting.md</a><a href="../../docs/splats.md.html">splats.md</a><a href="../../docs/views.md.html">views.md</a><a href="../../docs/wgpu.md.html">wgpu.md</a><a href="../../docs/workers.md.html">workers.md</a><a href="../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../doom/data.ts.html">data.ts</a><a href="../doom/game.ts.html">game.ts</a><a href="../doom/hud.ts.html">hud.ts</a><a href="../doom/level.ts.html">level.ts</a><a href="../doom/lighting.ts.html">lighting.ts</a><a href="../doom/main.ts.html">main.ts</a><a href="../doom/simWorker.ts.html">simWorker.ts</a><a href="../doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../film/audioStream.ts.html">audioStream.ts</a><a href="../film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../film/score.ts.html">score.ts</a><a href="../film/scoreSink.ts.html">scoreSink.ts</a><a href="../film/text.ts.html">text.ts</a><a href="../film/timeline.ts.html">timeline.ts</a></details><details open><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="demo/tunes/aurora.ts.html">aurora.ts</a><a href="demo/tunes/lumen.ts.html">lumen.ts</a><a href="demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="demo/airScore.ts.html">airScore.ts</a><a href="demo/demo.ts.html">demo.ts</a><a href="demo/library.ts.html">library.ts</a><a href="demo/music.ts.html">music.ts</a><a href="demo/tune.ts.html">tune.ts</a><a href="demo/video.ts.html">video.ts</a></details><a href="attractors.ts.html">attractors.ts</a><a href="clouds.ts.html">clouds.ts</a><a href="device.ts.html">device.ts</a><a href="kind.ts.html">kind.ts</a><a href="main.ts.html" class="on">main.ts</a><a href="morph.ts.html">morph.ts</a><a href="motion.ts.html">motion.ts</a><a href="palettes.ts.html">palettes.ts</a><a href="presets.ts.html">presets.ts</a><a href="sample.ts.html">sample.ts</a><a href="shade.ts.html">shade.ts</a><a href="shots.ts.html">shots.ts</a><a href="sortWorker.ts.html">sortWorker.ts</a><a href="surfaces.ts.html">surfaces.ts</a><a href="tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../fxedit/fx/graph.ts.html">graph.ts</a><a href="../fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../fxedit/fx/index.ts.html">index.ts</a><a href="../fxedit/fx/registry.ts.html">registry.ts</a><a href="../fxedit/fx/types.ts.html">types.ts</a></details><a href="../fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../fxedit/GraphView.ts.html">GraphView.ts</a><a href="../fxedit/catalog.ts.html">catalog.ts</a><a href="../fxedit/checks.ts.html">checks.ts</a><a href="../fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../fxedit/editors.ts.html">editors.ts</a><a href="../fxedit/framed.ts.html">framed.ts</a><a href="../fxedit/juice.ts.html">juice.ts</a><a href="../fxedit/layout.ts.html">layout.ts</a><a href="../fxedit/main.ts.html">main.ts</a><a href="../fxedit/palette.ts.html">palette.ts</a><a href="../fxedit/preview.ts.html">preview.ts</a><a href="../fxedit/settings.ts.html">settings.ts</a><a href="../fxedit/sound.ts.html">sound.ts</a><a href="../fxedit/springs.ts.html">springs.ts</a><a href="../fxedit/themes.ts.html">themes.ts</a><a href="../fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../lcc/LccScene.ts.html">LccScene.ts</a><a href="../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../lcc/catalog.ts.html">catalog.ts</a><a href="../lcc/collision.ts.html">collision.ts</a><a href="../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../lcc/gui.ts.html">gui.ts</a><a href="../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../lcc/main.ts.html">main.ts</a><a href="../lcc/quickBar.ts.html">quickBar.ts</a><a href="../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../quake/data.ts.html">data.ts</a><a href="../quake/entities.ts.html">entities.ts</a><a href="../quake/game.ts.html">game.ts</a><a href="../quake/hud.ts.html">hud.ts</a><a href="../quake/lighting.ts.html">lighting.ts</a><a href="../quake/main.ts.html">main.ts</a><a href="../quake/models.ts.html">models.ts</a><a href="../quake/simWorker.ts.html">simWorker.ts</a><a href="../quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../scenes/main.ts.html">main.ts</a><a href="../scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../sogs/catalog.ts.html">catalog.ts</a><a href="../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../sogs/gui.ts.html">gui.ts</a><a href="../sogs/lod.ts.html">lod.ts</a><a href="../sogs/lodStream.ts.html">lodStream.ts</a><a href="../sogs/main.ts.html">main.ts</a><a href="../sogs/quickBar.ts.html">quickBar.ts</a><a href="../sogs/resident.ts.html">resident.ts</a><a href="../sogs/sh.ts.html">sh.ts</a><a href="../sogs/sog.ts.html">sog.ts</a><a href="../sogs/validate.ts.html">validate.ts</a><a href="../sogs/webp.ts.html">webp.ts</a><a href="../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../spark/js/assets.ts.html">assets.ts</a><a href="../spark/js/construct.ts.html">construct.ts</a><a href="../spark/js/cube.ts.html">cube.ts</a><a href="../spark/js/examples.ts.html">examples.ts</a><a href="../spark/js/files.ts.html">files.ts</a><a href="../spark/js/objects.ts.html">objects.ts</a><a href="../spark/js/page.ts.html">page.ts</a><a href="../spark/js/raycast.ts.html">raycast.ts</a><a href="../spark/js/sdf.ts.html">sdf.ts</a><a href="../spark/js/snow.ts.html">snow.ts</a><a href="../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../spark/lofi/main.ts.html">main.ts</a><a href="../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../splats/catalog.ts.html">catalog.ts</a><a href="../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../splats/gui.ts.html">gui.ts</a><a href="../splats/main.ts.html">main.ts</a><a href="../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../spz/catalog.ts.html">catalog.ts</a><a href="../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../scripts/check-core.ts.html">check-core.ts</a><a href="../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../src/core/axes.ts.html">axes.ts</a><a href="../../src/core/bundles.ts.html">bundles.ts</a><a href="../../src/core/compress.ts.html">compress.ts</a><a href="../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../src/core/encoding.ts.html">encoding.ts</a><a href="../../src/core/files.ts.html">files.ts</a><a href="../../src/core/formats.ts.html">formats.ts</a><a href="../../src/core/index.ts.html">index.ts</a><a href="../../src/core/layout.ts.html">layout.ts</a><a href="../../src/core/math.ts.html">math.ts</a><a href="../../src/core/ply.ts.html">ply.ts</a><a href="../../src/core/progress.ts.html">progress.ts</a><a href="../../src/core/rad.ts.html">rad.ts</a><a href="../../src/core/rdx.ts.html">rdx.ts</a><a href="../../src/core/sh.ts.html">sh.ts</a><a href="../../src/core/sort.ts.html">sort.ts</a><a href="../../src/core/splats.ts.html">splats.ts</a><a href="../../src/core/spz.ts.html">spz.ts</a><a href="../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../src/gpu/backend.ts.html">backend.ts</a><a href="../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../src/gpu/index.ts.html">index.ts</a><a href="../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../src/render/index.ts.html">index.ts</a><a href="../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../src/wgpu/index.ts.html">index.ts</a><a href="../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../src/worker/index.ts.html">index.ts</a><a href="../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>main.ts</h1>
+<p class="path">examples/fractals/main.ts · <a href="main.ts">raw</a> · <a href="../../build/examples/fractals/index.html">open the example</a> · <a href="../../build/examples/index.html">all examples</a> · <a href="../../index.html">site home</a></p>
+
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a>
+<a id="L528" href="#L528">528</a>
+<a id="L529" href="#L529">529</a>
+<a id="L530" href="#L530">530</a>
+<a id="L531" href="#L531">531</a>
+<a id="L532" href="#L532">532</a>
+<a id="L533" href="#L533">533</a>
+<a id="L534" href="#L534">534</a>
+<a id="L535" href="#L535">535</a>
+<a id="L536" href="#L536">536</a>
+<a id="L537" href="#L537">537</a>
+<a id="L538" href="#L538">538</a>
+<a id="L539" href="#L539">539</a>
+<a id="L540" href="#L540">540</a>
+<a id="L541" href="#L541">541</a>
+<a id="L542" href="#L542">542</a>
+<a id="L543" href="#L543">543</a>
+<a id="L544" href="#L544">544</a>
+<a id="L545" href="#L545">545</a>
+<a id="L546" href="#L546">546</a>
+<a id="L547" href="#L547">547</a>
+<a id="L548" href="#L548">548</a>
+<a id="L549" href="#L549">549</a>
+<a id="L550" href="#L550">550</a>
+<a id="L551" href="#L551">551</a>
+<a id="L552" href="#L552">552</a>
+<a id="L553" href="#L553">553</a>
+<a id="L554" href="#L554">554</a>
+<a id="L555" href="#L555">555</a>
+<a id="L556" href="#L556">556</a>
+<a id="L557" href="#L557">557</a>
+<a id="L558" href="#L558">558</a>
+<a id="L559" href="#L559">559</a>
+<a id="L560" href="#L560">560</a>
+<a id="L561" href="#L561">561</a>
+<a id="L562" href="#L562">562</a>
+<a id="L563" href="#L563">563</a>
+<a id="L564" href="#L564">564</a>
+<a id="L565" href="#L565">565</a>
+<a id="L566" href="#L566">566</a>
+<a id="L567" href="#L567">567</a>
+<a id="L568" href="#L568">568</a>
+<a id="L569" href="#L569">569</a>
+<a id="L570" href="#L570">570</a>
+<a id="L571" href="#L571">571</a>
+<a id="L572" href="#L572">572</a>
+<a id="L573" href="#L573">573</a>
+<a id="L574" href="#L574">574</a>
+<a id="L575" href="#L575">575</a>
+<a id="L576" href="#L576">576</a>
+<a id="L577" href="#L577">577</a>
+<a id="L578" href="#L578">578</a>
+<a id="L579" href="#L579">579</a>
+<a id="L580" href="#L580">580</a>
+<a id="L581" href="#L581">581</a>
+<a id="L582" href="#L582">582</a>
+<a id="L583" href="#L583">583</a>
+<a id="L584" href="#L584">584</a>
+<a id="L585" href="#L585">585</a>
+<a id="L586" href="#L586">586</a>
+<a id="L587" href="#L587">587</a>
+<a id="L588" href="#L588">588</a>
+<a id="L589" href="#L589">589</a>
+<a id="L590" href="#L590">590</a>
+<a id="L591" href="#L591">591</a>
+<a id="L592" href="#L592">592</a>
+<a id="L593" href="#L593">593</a>
+<a id="L594" href="#L594">594</a>
+<a id="L595" href="#L595">595</a>
+<a id="L596" href="#L596">596</a>
+<a id="L597" href="#L597">597</a>
+<a id="L598" href="#L598">598</a>
+<a id="L599" href="#L599">599</a>
+<a id="L600" href="#L600">600</a>
+<a id="L601" href="#L601">601</a>
+<a id="L602" href="#L602">602</a>
+<a id="L603" href="#L603">603</a>
+<a id="L604" href="#L604">604</a>
+<a id="L605" href="#L605">605</a>
+<a id="L606" href="#L606">606</a>
+<a id="L607" href="#L607">607</a>
+<a id="L608" href="#L608">608</a>
+<a id="L609" href="#L609">609</a>
+<a id="L610" href="#L610">610</a>
+<a id="L611" href="#L611">611</a>
+<a id="L612" href="#L612">612</a>
+<a id="L613" href="#L613">613</a>
+<a id="L614" href="#L614">614</a>
+<a id="L615" href="#L615">615</a>
+<a id="L616" href="#L616">616</a>
+<a id="L617" href="#L617">617</a>
+<a id="L618" href="#L618">618</a>
+<a id="L619" href="#L619">619</a>
+<a id="L620" href="#L620">620</a>
+<a id="L621" href="#L621">621</a>
+<a id="L622" href="#L622">622</a>
+<a id="L623" href="#L623">623</a>
+<a id="L624" href="#L624">624</a>
+<a id="L625" href="#L625">625</a>
+<a id="L626" href="#L626">626</a>
+<a id="L627" href="#L627">627</a>
+<a id="L628" href="#L628">628</a>
+<a id="L629" href="#L629">629</a>
+<a id="L630" href="#L630">630</a>
+<a id="L631" href="#L631">631</a>
+<a id="L632" href="#L632">632</a>
+<a id="L633" href="#L633">633</a>
+<a id="L634" href="#L634">634</a>
+<a id="L635" href="#L635">635</a>
+<a id="L636" href="#L636">636</a>
+<a id="L637" href="#L637">637</a>
+<a id="L638" href="#L638">638</a>
+<a id="L639" href="#L639">639</a>
+<a id="L640" href="#L640">640</a>
+<a id="L641" href="#L641">641</a>
+<a id="L642" href="#L642">642</a>
+<a id="L643" href="#L643">643</a>
+<a id="L644" href="#L644">644</a>
+<a id="L645" href="#L645">645</a>
+<a id="L646" href="#L646">646</a>
+<a id="L647" href="#L647">647</a>
+<a id="L648" href="#L648">648</a>
+<a id="L649" href="#L649">649</a>
+<a id="L650" href="#L650">650</a>
+<a id="L651" href="#L651">651</a>
+<a id="L652" href="#L652">652</a>
+<a id="L653" href="#L653">653</a>
+<a id="L654" href="#L654">654</a>
+<a id="L655" href="#L655">655</a>
+<a id="L656" href="#L656">656</a>
+<a id="L657" href="#L657">657</a>
+<a id="L658" href="#L658">658</a>
+<a id="L659" href="#L659">659</a>
+<a id="L660" href="#L660">660</a>
+<a id="L661" href="#L661">661</a>
+<a id="L662" href="#L662">662</a>
+<a id="L663" href="#L663">663</a>
+<a id="L664" href="#L664">664</a>
+<a id="L665" href="#L665">665</a>
+<a id="L666" href="#L666">666</a>
+<a id="L667" href="#L667">667</a>
+<a id="L668" href="#L668">668</a>
+<a id="L669" href="#L669">669</a>
+<a id="L670" href="#L670">670</a>
+<a id="L671" href="#L671">671</a>
+<a id="L672" href="#L672">672</a>
+<a id="L673" href="#L673">673</a>
+<a id="L674" href="#L674">674</a>
+<a id="L675" href="#L675">675</a>
+<a id="L676" href="#L676">676</a>
+<a id="L677" href="#L677">677</a>
+<a id="L678" href="#L678">678</a>
+<a id="L679" href="#L679">679</a>
+<a id="L680" href="#L680">680</a>
+<a id="L681" href="#L681">681</a>
+<a id="L682" href="#L682">682</a>
+<a id="L683" href="#L683">683</a>
+<a id="L684" href="#L684">684</a>
+<a id="L685" href="#L685">685</a>
+<a id="L686" href="#L686">686</a>
+<a id="L687" href="#L687">687</a>
+<a id="L688" href="#L688">688</a>
+<a id="L689" href="#L689">689</a>
+<a id="L690" href="#L690">690</a>
+<a id="L691" href="#L691">691</a>
+<a id="L692" href="#L692">692</a>
+<a id="L693" href="#L693">693</a>
+<a id="L694" href="#L694">694</a>
+<a id="L695" href="#L695">695</a>
+<a id="L696" href="#L696">696</a>
+<a id="L697" href="#L697">697</a>
+<a id="L698" href="#L698">698</a>
+<a id="L699" href="#L699">699</a>
+<a id="L700" href="#L700">700</a>
+<a id="L701" href="#L701">701</a>
+<a id="L702" href="#L702">702</a>
+<a id="L703" href="#L703">703</a>
+<a id="L704" href="#L704">704</a>
+<a id="L705" href="#L705">705</a>
+<a id="L706" href="#L706">706</a>
+<a id="L707" href="#L707">707</a>
+<a id="L708" href="#L708">708</a>
+<a id="L709" href="#L709">709</a>
+<a id="L710" href="#L710">710</a>
+<a id="L711" href="#L711">711</a>
+<a id="L712" href="#L712">712</a>
+<a id="L713" href="#L713">713</a>
+<a id="L714" href="#L714">714</a>
+<a id="L715" href="#L715">715</a>
+<a id="L716" href="#L716">716</a>
+<a id="L717" href="#L717">717</a>
+<a id="L718" href="#L718">718</a>
+<a id="L719" href="#L719">719</a>
+<a id="L720" href="#L720">720</a>
+<a id="L721" href="#L721">721</a>
+<a id="L722" href="#L722">722</a>
+<a id="L723" href="#L723">723</a>
+<a id="L724" href="#L724">724</a>
+<a id="L725" href="#L725">725</a>
+<a id="L726" href="#L726">726</a>
+<a id="L727" href="#L727">727</a>
+<a id="L728" href="#L728">728</a>
+<a id="L729" href="#L729">729</a>
+<a id="L730" href="#L730">730</a>
+<a id="L731" href="#L731">731</a>
+<a id="L732" href="#L732">732</a>
+<a id="L733" href="#L733">733</a>
+<a id="L734" href="#L734">734</a>
+<a id="L735" href="#L735">735</a>
+<a id="L736" href="#L736">736</a>
+<a id="L737" href="#L737">737</a>
+<a id="L738" href="#L738">738</a>
+<a id="L739" href="#L739">739</a>
+<a id="L740" href="#L740">740</a>
+<a id="L741" href="#L741">741</a>
+<a id="L742" href="#L742">742</a>
+<a id="L743" href="#L743">743</a>
+<a id="L744" href="#L744">744</a>
+<a id="L745" href="#L745">745</a>
+<a id="L746" href="#L746">746</a>
+<a id="L747" href="#L747">747</a>
+<a id="L748" href="#L748">748</a>
+<a id="L749" href="#L749">749</a>
+<a id="L750" href="#L750">750</a>
+<a id="L751" href="#L751">751</a>
+<a id="L752" href="#L752">752</a>
+<a id="L753" href="#L753">753</a>
+<a id="L754" href="#L754">754</a>
+<a id="L755" href="#L755">755</a>
+<a id="L756" href="#L756">756</a>
+<a id="L757" href="#L757">757</a>
+<a id="L758" href="#L758">758</a>
+<a id="L759" href="#L759">759</a>
+<a id="L760" href="#L760">760</a>
+<a id="L761" href="#L761">761</a>
+<a id="L762" href="#L762">762</a>
+<a id="L763" href="#L763">763</a>
+<a id="L764" href="#L764">764</a>
+<a id="L765" href="#L765">765</a>
+<a id="L766" href="#L766">766</a>
+<a id="L767" href="#L767">767</a>
+<a id="L768" href="#L768">768</a>
+<a id="L769" href="#L769">769</a>
+<a id="L770" href="#L770">770</a>
+<a id="L771" href="#L771">771</a>
+<a id="L772" href="#L772">772</a>
+<a id="L773" href="#L773">773</a>
+<a id="L774" href="#L774">774</a>
+<a id="L775" href="#L775">775</a>
+<a id="L776" href="#L776">776</a>
+<a id="L777" href="#L777">777</a>
+<a id="L778" href="#L778">778</a>
+<a id="L779" href="#L779">779</a>
+<a id="L780" href="#L780">780</a>
+<a id="L781" href="#L781">781</a>
+<a id="L782" href="#L782">782</a>
+<a id="L783" href="#L783">783</a>
+<a id="L784" href="#L784">784</a>
+<a id="L785" href="#L785">785</a>
+<a id="L786" href="#L786">786</a>
+<a id="L787" href="#L787">787</a>
+<a id="L788" href="#L788">788</a>
+<a id="L789" href="#L789">789</a>
+<a id="L790" href="#L790">790</a>
+<a id="L791" href="#L791">791</a>
+<a id="L792" href="#L792">792</a>
+<a id="L793" href="#L793">793</a>
+<a id="L794" href="#L794">794</a>
+<a id="L795" href="#L795">795</a>
+<a id="L796" href="#L796">796</a>
+<a id="L797" href="#L797">797</a>
+<a id="L798" href="#L798">798</a>
+<a id="L799" href="#L799">799</a>
+<a id="L800" href="#L800">800</a>
+<a id="L801" href="#L801">801</a>
+<a id="L802" href="#L802">802</a>
+<a id="L803" href="#L803">803</a>
+<a id="L804" href="#L804">804</a>
+<a id="L805" href="#L805">805</a>
+<a id="L806" href="#L806">806</a>
+<a id="L807" href="#L807">807</a>
+<a id="L808" href="#L808">808</a>
+<a id="L809" href="#L809">809</a>
+<a id="L810" href="#L810">810</a>
+<a id="L811" href="#L811">811</a>
+<a id="L812" href="#L812">812</a>
+<a id="L813" href="#L813">813</a>
+<a id="L814" href="#L814">814</a>
+<a id="L815" href="#L815">815</a>
+<a id="L816" href="#L816">816</a>
+<a id="L817" href="#L817">817</a>
+<a id="L818" href="#L818">818</a>
+<a id="L819" href="#L819">819</a>
+<a id="L820" href="#L820">820</a>
+<a id="L821" href="#L821">821</a>
+<a id="L822" href="#L822">822</a>
+<a id="L823" href="#L823">823</a>
+<a id="L824" href="#L824">824</a>
+<a id="L825" href="#L825">825</a>
+<a id="L826" href="#L826">826</a>
+<a id="L827" href="#L827">827</a>
+<a id="L828" href="#L828">828</a>
+<a id="L829" href="#L829">829</a>
+<a id="L830" href="#L830">830</a>
+<a id="L831" href="#L831">831</a>
+<a id="L832" href="#L832">832</a>
+<a id="L833" href="#L833">833</a>
+<a id="L834" href="#L834">834</a>
+<a id="L835" href="#L835">835</a>
+<a id="L836" href="#L836">836</a>
+<a id="L837" href="#L837">837</a>
+<a id="L838" href="#L838">838</a>
+<a id="L839" href="#L839">839</a>
+<a id="L840" href="#L840">840</a>
+<a id="L841" href="#L841">841</a>
+<a id="L842" href="#L842">842</a>
+<a id="L843" href="#L843">843</a>
+<a id="L844" href="#L844">844</a>
+<a id="L845" href="#L845">845</a>
+<a id="L846" href="#L846">846</a>
+<a id="L847" href="#L847">847</a>
+<a id="L848" href="#L848">848</a>
+<a id="L849" href="#L849">849</a>
+<a id="L850" href="#L850">850</a>
+<a id="L851" href="#L851">851</a>
+<a id="L852" href="#L852">852</a>
+<a id="L853" href="#L853">853</a>
+<a id="L854" href="#L854">854</a>
+<a id="L855" href="#L855">855</a>
+<a id="L856" href="#L856">856</a>
+<a id="L857" href="#L857">857</a>
+<a id="L858" href="#L858">858</a>
+<a id="L859" href="#L859">859</a>
+<a id="L860" href="#L860">860</a>
+<a id="L861" href="#L861">861</a>
+<a id="L862" href="#L862">862</a>
+<a id="L863" href="#L863">863</a>
+<a id="L864" href="#L864">864</a>
+<a id="L865" href="#L865">865</a>
+<a id="L866" href="#L866">866</a>
+<a id="L867" href="#L867">867</a>
+<a id="L868" href="#L868">868</a>
+<a id="L869" href="#L869">869</a>
+<a id="L870" href="#L870">870</a>
+<a id="L871" href="#L871">871</a>
+<a id="L872" href="#L872">872</a>
+<a id="L873" href="#L873">873</a>
+<a id="L874" href="#L874">874</a>
+<a id="L875" href="#L875">875</a>
+<a id="L876" href="#L876">876</a>
+<a id="L877" href="#L877">877</a>
+<a id="L878" href="#L878">878</a>
+<a id="L879" href="#L879">879</a>
+<a id="L880" href="#L880">880</a>
+<a id="L881" href="#L881">881</a>
+<a id="L882" href="#L882">882</a>
+<a id="L883" href="#L883">883</a>
+<a id="L884" href="#L884">884</a>
+<a id="L885" href="#L885">885</a>
+<a id="L886" href="#L886">886</a>
+<a id="L887" href="#L887">887</a>
+<a id="L888" href="#L888">888</a>
+<a id="L889" href="#L889">889</a>
+<a id="L890" href="#L890">890</a>
+<a id="L891" href="#L891">891</a>
+<a id="L892" href="#L892">892</a>
+<a id="L893" href="#L893">893</a>
+<a id="L894" href="#L894">894</a>
+<a id="L895" href="#L895">895</a>
+<a id="L896" href="#L896">896</a>
+<a id="L897" href="#L897">897</a>
+<a id="L898" href="#L898">898</a>
+<a id="L899" href="#L899">899</a>
+<a id="L900" href="#L900">900</a>
+<a id="L901" href="#L901">901</a>
+<a id="L902" href="#L902">902</a>
+<a id="L903" href="#L903">903</a>
+<a id="L904" href="#L904">904</a>
+<a id="L905" href="#L905">905</a>
+<a id="L906" href="#L906">906</a>
+<a id="L907" href="#L907">907</a>
+<a id="L908" href="#L908">908</a>
+<a id="L909" href="#L909">909</a>
+<a id="L910" href="#L910">910</a>
+<a id="L911" href="#L911">911</a>
+<a id="L912" href="#L912">912</a>
+<a id="L913" href="#L913">913</a>
+<a id="L914" href="#L914">914</a>
+<a id="L915" href="#L915">915</a>
+<a id="L916" href="#L916">916</a>
+<a id="L917" href="#L917">917</a>
+<a id="L918" href="#L918">918</a>
+<a id="L919" href="#L919">919</a>
+<a id="L920" href="#L920">920</a>
+<a id="L921" href="#L921">921</a>
+<a id="L922" href="#L922">922</a>
+<a id="L923" href="#L923">923</a>
+<a id="L924" href="#L924">924</a>
+<a id="L925" href="#L925">925</a>
+<a id="L926" href="#L926">926</a>
+<a id="L927" href="#L927">927</a>
+<a id="L928" href="#L928">928</a>
+<a id="L929" href="#L929">929</a>
+<a id="L930" href="#L930">930</a>
+<a id="L931" href="#L931">931</a>
+<a id="L932" href="#L932">932</a>
+<a id="L933" href="#L933">933</a>
+<a id="L934" href="#L934">934</a>
+<a id="L935" href="#L935">935</a>
+<a id="L936" href="#L936">936</a>
+<a id="L937" href="#L937">937</a>
+<a id="L938" href="#L938">938</a>
+<a id="L939" href="#L939">939</a>
+<a id="L940" href="#L940">940</a>
+<a id="L941" href="#L941">941</a>
+<a id="L942" href="#L942">942</a>
+<a id="L943" href="#L943">943</a>
+<a id="L944" href="#L944">944</a>
+<a id="L945" href="#L945">945</a>
+<a id="L946" href="#L946">946</a>
+<a id="L947" href="#L947">947</a>
+<a id="L948" href="#L948">948</a>
+<a id="L949" href="#L949">949</a>
+<a id="L950" href="#L950">950</a>
+<a id="L951" href="#L951">951</a>
+<a id="L952" href="#L952">952</a>
+<a id="L953" href="#L953">953</a>
+<a id="L954" href="#L954">954</a>
+<a id="L955" href="#L955">955</a>
+<a id="L956" href="#L956">956</a>
+<a id="L957" href="#L957">957</a>
+<a id="L958" href="#L958">958</a>
+<a id="L959" href="#L959">959</a>
+<a id="L960" href="#L960">960</a>
+<a id="L961" href="#L961">961</a>
+<a id="L962" href="#L962">962</a>
+<a id="L963" href="#L963">963</a>
+<a id="L964" href="#L964">964</a>
+<a id="L965" href="#L965">965</a>
+<a id="L966" href="#L966">966</a>
+<a id="L967" href="#L967">967</a>
+<a id="L968" href="#L968">968</a>
+<a id="L969" href="#L969">969</a>
+<a id="L970" href="#L970">970</a>
+<a id="L971" href="#L971">971</a>
+<a id="L972" href="#L972">972</a>
+<a id="L973" href="#L973">973</a>
+<a id="L974" href="#L974">974</a>
+<a id="L975" href="#L975">975</a>
+<a id="L976" href="#L976">976</a>
+<a id="L977" href="#L977">977</a>
+<a id="L978" href="#L978">978</a>
+<a id="L979" href="#L979">979</a>
+<a id="L980" href="#L980">980</a>
+<a id="L981" href="#L981">981</a>
+<a id="L982" href="#L982">982</a>
+<a id="L983" href="#L983">983</a>
+<a id="L984" href="#L984">984</a>
+<a id="L985" href="#L985">985</a>
+<a id="L986" href="#L986">986</a>
+<a id="L987" href="#L987">987</a>
+<a id="L988" href="#L988">988</a>
+<a id="L989" href="#L989">989</a>
+<a id="L990" href="#L990">990</a>
+<a id="L991" href="#L991">991</a>
+<a id="L992" href="#L992">992</a>
+<a id="L993" href="#L993">993</a>
+<a id="L994" href="#L994">994</a>
+<a id="L995" href="#L995">995</a>
+<a id="L996" href="#L996">996</a>
+<a id="L997" href="#L997">997</a>
+<a id="L998" href="#L998">998</a>
+<a id="L999" href="#L999">999</a>
+<a id="L1000" href="#L1000">1000</a>
+<a id="L1001" href="#L1001">1001</a>
+<a id="L1002" href="#L1002">1002</a>
+<a id="L1003" href="#L1003">1003</a>
+<a id="L1004" href="#L1004">1004</a>
+<a id="L1005" href="#L1005">1005</a>
+<a id="L1006" href="#L1006">1006</a>
+<a id="L1007" href="#L1007">1007</a>
+<a id="L1008" href="#L1008">1008</a>
+<a id="L1009" href="#L1009">1009</a>
+<a id="L1010" href="#L1010">1010</a>
+<a id="L1011" href="#L1011">1011</a>
+<a id="L1012" href="#L1012">1012</a>
+<a id="L1013" href="#L1013">1013</a>
+<a id="L1014" href="#L1014">1014</a>
+<a id="L1015" href="#L1015">1015</a>
+<a id="L1016" href="#L1016">1016</a>
+<a id="L1017" href="#L1017">1017</a>
+<a id="L1018" href="#L1018">1018</a>
+<a id="L1019" href="#L1019">1019</a>
+<a id="L1020" href="#L1020">1020</a>
+<a id="L1021" href="#L1021">1021</a>
+<a id="L1022" href="#L1022">1022</a>
+<a id="L1023" href="#L1023">1023</a>
+<a id="L1024" href="#L1024">1024</a>
+<a id="L1025" href="#L1025">1025</a>
+<a id="L1026" href="#L1026">1026</a>
+<a id="L1027" href="#L1027">1027</a>
+<a id="L1028" href="#L1028">1028</a>
+<a id="L1029" href="#L1029">1029</a>
+<a id="L1030" href="#L1030">1030</a>
+<a id="L1031" href="#L1031">1031</a>
+<a id="L1032" href="#L1032">1032</a>
+<a id="L1033" href="#L1033">1033</a>
+<a id="L1034" href="#L1034">1034</a>
+<a id="L1035" href="#L1035">1035</a>
+<a id="L1036" href="#L1036">1036</a>
+<a id="L1037" href="#L1037">1037</a>
+<a id="L1038" href="#L1038">1038</a>
+<a id="L1039" href="#L1039">1039</a>
+<a id="L1040" href="#L1040">1040</a>
+<a id="L1041" href="#L1041">1041</a>
+<a id="L1042" href="#L1042">1042</a>
+<a id="L1043" href="#L1043">1043</a>
+<a id="L1044" href="#L1044">1044</a>
+<a id="L1045" href="#L1045">1045</a>
+<a id="L1046" href="#L1046">1046</a>
+<a id="L1047" href="#L1047">1047</a>
+<a id="L1048" href="#L1048">1048</a>
+<a id="L1049" href="#L1049">1049</a>
+<a id="L1050" href="#L1050">1050</a>
+<a id="L1051" href="#L1051">1051</a>
+<a id="L1052" href="#L1052">1052</a>
+<a id="L1053" href="#L1053">1053</a>
+<a id="L1054" href="#L1054">1054</a>
+<a id="L1055" href="#L1055">1055</a>
+<a id="L1056" href="#L1056">1056</a>
+<a id="L1057" href="#L1057">1057</a>
+<a id="L1058" href="#L1058">1058</a>
+<a id="L1059" href="#L1059">1059</a>
+<a id="L1060" href="#L1060">1060</a>
+<a id="L1061" href="#L1061">1061</a>
+<a id="L1062" href="#L1062">1062</a>
+<a id="L1063" href="#L1063">1063</a>
+<a id="L1064" href="#L1064">1064</a>
+<a id="L1065" href="#L1065">1065</a>
+<a id="L1066" href="#L1066">1066</a>
+<a id="L1067" href="#L1067">1067</a>
+<a id="L1068" href="#L1068">1068</a>
+<a id="L1069" href="#L1069">1069</a>
+<a id="L1070" href="#L1070">1070</a>
+<a id="L1071" href="#L1071">1071</a>
+<a id="L1072" href="#L1072">1072</a>
+<a id="L1073" href="#L1073">1073</a>
+<a id="L1074" href="#L1074">1074</a>
+<a id="L1075" href="#L1075">1075</a>
+<a id="L1076" href="#L1076">1076</a>
+<a id="L1077" href="#L1077">1077</a>
+<a id="L1078" href="#L1078">1078</a>
+<a id="L1079" href="#L1079">1079</a>
+<a id="L1080" href="#L1080">1080</a>
+<a id="L1081" href="#L1081">1081</a>
+<a id="L1082" href="#L1082">1082</a>
+<a id="L1083" href="#L1083">1083</a>
+<a id="L1084" href="#L1084">1084</a>
+<a id="L1085" href="#L1085">1085</a>
+<a id="L1086" href="#L1086">1086</a>
+<a id="L1087" href="#L1087">1087</a>
+<a id="L1088" href="#L1088">1088</a>
+<a id="L1089" href="#L1089">1089</a>
+<a id="L1090" href="#L1090">1090</a>
+<a id="L1091" href="#L1091">1091</a>
+<a id="L1092" href="#L1092">1092</a>
+<a id="L1093" href="#L1093">1093</a>
+<a id="L1094" href="#L1094">1094</a>
+<a id="L1095" href="#L1095">1095</a>
+<a id="L1096" href="#L1096">1096</a>
+<a id="L1097" href="#L1097">1097</a>
+<a id="L1098" href="#L1098">1098</a>
+<a id="L1099" href="#L1099">1099</a>
+<a id="L1100" href="#L1100">1100</a>
+<a id="L1101" href="#L1101">1101</a>
+<a id="L1102" href="#L1102">1102</a>
+<a id="L1103" href="#L1103">1103</a>
+<a id="L1104" href="#L1104">1104</a>
+<a id="L1105" href="#L1105">1105</a>
+<a id="L1106" href="#L1106">1106</a>
+<a id="L1107" href="#L1107">1107</a>
+<a id="L1108" href="#L1108">1108</a>
+<a id="L1109" href="#L1109">1109</a>
+<a id="L1110" href="#L1110">1110</a>
+<a id="L1111" href="#L1111">1111</a>
+<a id="L1112" href="#L1112">1112</a>
+<a id="L1113" href="#L1113">1113</a>
+<a id="L1114" href="#L1114">1114</a>
+<a id="L1115" href="#L1115">1115</a>
+<a id="L1116" href="#L1116">1116</a>
+<a id="L1117" href="#L1117">1117</a>
+<a id="L1118" href="#L1118">1118</a>
+<a id="L1119" href="#L1119">1119</a>
+<a id="L1120" href="#L1120">1120</a>
+<a id="L1121" href="#L1121">1121</a>
+<a id="L1122" href="#L1122">1122</a>
+<a id="L1123" href="#L1123">1123</a>
+<a id="L1124" href="#L1124">1124</a>
+<a id="L1125" href="#L1125">1125</a>
+<a id="L1126" href="#L1126">1126</a>
+<a id="L1127" href="#L1127">1127</a>
+<a id="L1128" href="#L1128">1128</a>
+<a id="L1129" href="#L1129">1129</a>
+<a id="L1130" href="#L1130">1130</a>
+<a id="L1131" href="#L1131">1131</a>
+<a id="L1132" href="#L1132">1132</a>
+<a id="L1133" href="#L1133">1133</a>
+<a id="L1134" href="#L1134">1134</a>
+<a id="L1135" href="#L1135">1135</a>
+<a id="L1136" href="#L1136">1136</a>
+<a id="L1137" href="#L1137">1137</a>
+<a id="L1138" href="#L1138">1138</a>
+<a id="L1139" href="#L1139">1139</a>
+<a id="L1140" href="#L1140">1140</a>
+<a id="L1141" href="#L1141">1141</a>
+<a id="L1142" href="#L1142">1142</a>
+<a id="L1143" href="#L1143">1143</a>
+<a id="L1144" href="#L1144">1144</a>
+<a id="L1145" href="#L1145">1145</a>
+<a id="L1146" href="#L1146">1146</a>
+<a id="L1147" href="#L1147">1147</a>
+<a id="L1148" href="#L1148">1148</a>
+<a id="L1149" href="#L1149">1149</a>
+<a id="L1150" href="#L1150">1150</a>
+<a id="L1151" href="#L1151">1151</a>
+<a id="L1152" href="#L1152">1152</a>
+<a id="L1153" href="#L1153">1153</a>
+<a id="L1154" href="#L1154">1154</a>
+<a id="L1155" href="#L1155">1155</a>
+<a id="L1156" href="#L1156">1156</a>
+<a id="L1157" href="#L1157">1157</a>
+<a id="L1158" href="#L1158">1158</a>
+<a id="L1159" href="#L1159">1159</a>
+<a id="L1160" href="#L1160">1160</a>
+<a id="L1161" href="#L1161">1161</a>
+<a id="L1162" href="#L1162">1162</a>
+<a id="L1163" href="#L1163">1163</a>
+<a id="L1164" href="#L1164">1164</a>
+<a id="L1165" href="#L1165">1165</a>
+<a id="L1166" href="#L1166">1166</a>
+<a id="L1167" href="#L1167">1167</a>
+<a id="L1168" href="#L1168">1168</a>
+<a id="L1169" href="#L1169">1169</a>
+<a id="L1170" href="#L1170">1170</a>
+<a id="L1171" href="#L1171">1171</a>
+<a id="L1172" href="#L1172">1172</a>
+<a id="L1173" href="#L1173">1173</a>
+<a id="L1174" href="#L1174">1174</a>
+<a id="L1175" href="#L1175">1175</a>
+<a id="L1176" href="#L1176">1176</a>
+<a id="L1177" href="#L1177">1177</a>
+<a id="L1178" href="#L1178">1178</a>
+<a id="L1179" href="#L1179">1179</a>
+<a id="L1180" href="#L1180">1180</a>
+<a id="L1181" href="#L1181">1181</a>
+<a id="L1182" href="#L1182">1182</a>
+<a id="L1183" href="#L1183">1183</a>
+<a id="L1184" href="#L1184">1184</a>
+<a id="L1185" href="#L1185">1185</a>
+<a id="L1186" href="#L1186">1186</a>
+<a id="L1187" href="#L1187">1187</a>
+<a id="L1188" href="#L1188">1188</a>
+<a id="L1189" href="#L1189">1189</a>
+<a id="L1190" href="#L1190">1190</a>
+<a id="L1191" href="#L1191">1191</a>
+<a id="L1192" href="#L1192">1192</a>
+<a id="L1193" href="#L1193">1193</a>
+<a id="L1194" href="#L1194">1194</a>
+<a id="L1195" href="#L1195">1195</a>
+<a id="L1196" href="#L1196">1196</a>
+<a id="L1197" href="#L1197">1197</a>
+<a id="L1198" href="#L1198">1198</a>
+<a id="L1199" href="#L1199">1199</a>
+<a id="L1200" href="#L1200">1200</a>
+<a id="L1201" href="#L1201">1201</a>
+<a id="L1202" href="#L1202">1202</a>
+<a id="L1203" href="#L1203">1203</a>
+<a id="L1204" href="#L1204">1204</a>
+<a id="L1205" href="#L1205">1205</a>
+<a id="L1206" href="#L1206">1206</a>
+<a id="L1207" href="#L1207">1207</a>
+<a id="L1208" href="#L1208">1208</a>
+<a id="L1209" href="#L1209">1209</a>
+<a id="L1210" href="#L1210">1210</a>
+<a id="L1211" href="#L1211">1211</a>
+<a id="L1212" href="#L1212">1212</a>
+<a id="L1213" href="#L1213">1213</a>
+<a id="L1214" href="#L1214">1214</a>
+<a id="L1215" href="#L1215">1215</a>
+<a id="L1216" href="#L1216">1216</a>
+<a id="L1217" href="#L1217">1217</a>
+<a id="L1218" href="#L1218">1218</a>
+<a id="L1219" href="#L1219">1219</a>
+<a id="L1220" href="#L1220">1220</a>
+<a id="L1221" href="#L1221">1221</a>
+<a id="L1222" href="#L1222">1222</a>
+<a id="L1223" href="#L1223">1223</a>
+<a id="L1224" href="#L1224">1224</a>
+<a id="L1225" href="#L1225">1225</a>
+<a id="L1226" href="#L1226">1226</a>
+<a id="L1227" href="#L1227">1227</a>
+<a id="L1228" href="#L1228">1228</a>
+<a id="L1229" href="#L1229">1229</a>
+<a id="L1230" href="#L1230">1230</a>
+<a id="L1231" href="#L1231">1231</a>
+<a id="L1232" href="#L1232">1232</a>
+<a id="L1233" href="#L1233">1233</a>
+<a id="L1234" href="#L1234">1234</a>
+<a id="L1235" href="#L1235">1235</a>
+<a id="L1236" href="#L1236">1236</a>
+<a id="L1237" href="#L1237">1237</a>
+<a id="L1238" href="#L1238">1238</a>
+<a id="L1239" href="#L1239">1239</a>
+<a id="L1240" href="#L1240">1240</a>
+<a id="L1241" href="#L1241">1241</a>
+<a id="L1242" href="#L1242">1242</a>
+<a id="L1243" href="#L1243">1243</a>
+<a id="L1244" href="#L1244">1244</a>
+<a id="L1245" href="#L1245">1245</a>
+<a id="L1246" href="#L1246">1246</a>
+<a id="L1247" href="#L1247">1247</a>
+<a id="L1248" href="#L1248">1248</a>
+<a id="L1249" href="#L1249">1249</a>
+<a id="L1250" href="#L1250">1250</a>
+<a id="L1251" href="#L1251">1251</a>
+<a id="L1252" href="#L1252">1252</a>
+<a id="L1253" href="#L1253">1253</a>
+<a id="L1254" href="#L1254">1254</a>
+<a id="L1255" href="#L1255">1255</a>
+<a id="L1256" href="#L1256">1256</a>
+<a id="L1257" href="#L1257">1257</a>
+<a id="L1258" href="#L1258">1258</a>
+<a id="L1259" href="#L1259">1259</a>
+<a id="L1260" href="#L1260">1260</a>
+<a id="L1261" href="#L1261">1261</a>
+<a id="L1262" href="#L1262">1262</a>
+<a id="L1263" href="#L1263">1263</a>
+<a id="L1264" href="#L1264">1264</a>
+<a id="L1265" href="#L1265">1265</a>
+<a id="L1266" href="#L1266">1266</a>
+<a id="L1267" href="#L1267">1267</a>
+<a id="L1268" href="#L1268">1268</a>
+<a id="L1269" href="#L1269">1269</a>
+<a id="L1270" href="#L1270">1270</a>
+<a id="L1271" href="#L1271">1271</a>
+<a id="L1272" href="#L1272">1272</a>
+<a id="L1273" href="#L1273">1273</a>
+<a id="L1274" href="#L1274">1274</a>
+<a id="L1275" href="#L1275">1275</a>
+<a id="L1276" href="#L1276">1276</a>
+<a id="L1277" href="#L1277">1277</a>
+<a id="L1278" href="#L1278">1278</a>
+<a id="L1279" href="#L1279">1279</a>
+<a id="L1280" href="#L1280">1280</a>
+<a id="L1281" href="#L1281">1281</a>
+<a id="L1282" href="#L1282">1282</a>
+<a id="L1283" href="#L1283">1283</a>
+<a id="L1284" href="#L1284">1284</a>
+<a id="L1285" href="#L1285">1285</a>
+<a id="L1286" href="#L1286">1286</a>
+<a id="L1287" href="#L1287">1287</a>
+<a id="L1288" href="#L1288">1288</a>
+<a id="L1289" href="#L1289">1289</a>
+<a id="L1290" href="#L1290">1290</a>
+<a id="L1291" href="#L1291">1291</a>
+<a id="L1292" href="#L1292">1292</a>
+<a id="L1293" href="#L1293">1293</a>
+<a id="L1294" href="#L1294">1294</a>
+<a id="L1295" href="#L1295">1295</a>
+<a id="L1296" href="#L1296">1296</a>
+<a id="L1297" href="#L1297">1297</a>
+<a id="L1298" href="#L1298">1298</a>
+<a id="L1299" href="#L1299">1299</a>
+<a id="L1300" href="#L1300">1300</a>
+<a id="L1301" href="#L1301">1301</a>
+<a id="L1302" href="#L1302">1302</a>
+<a id="L1303" href="#L1303">1303</a>
+<a id="L1304" href="#L1304">1304</a>
+<a id="L1305" href="#L1305">1305</a>
+<a id="L1306" href="#L1306">1306</a>
+<a id="L1307" href="#L1307">1307</a>
+<a id="L1308" href="#L1308">1308</a>
+<a id="L1309" href="#L1309">1309</a>
+<a id="L1310" href="#L1310">1310</a>
+<a id="L1311" href="#L1311">1311</a>
+<a id="L1312" href="#L1312">1312</a>
+<a id="L1313" href="#L1313">1313</a>
+<a id="L1314" href="#L1314">1314</a>
+<a id="L1315" href="#L1315">1315</a>
+<a id="L1316" href="#L1316">1316</a>
+<a id="L1317" href="#L1317">1317</a>
+<a id="L1318" href="#L1318">1318</a>
+<a id="L1319" href="#L1319">1319</a>
+<a id="L1320" href="#L1320">1320</a>
+<a id="L1321" href="#L1321">1321</a>
+<a id="L1322" href="#L1322">1322</a>
+<a id="L1323" href="#L1323">1323</a>
+<a id="L1324" href="#L1324">1324</a>
+<a id="L1325" href="#L1325">1325</a>
+<a id="L1326" href="#L1326">1326</a>
+<a id="L1327" href="#L1327">1327</a>
+<a id="L1328" href="#L1328">1328</a>
+<a id="L1329" href="#L1329">1329</a>
+<a id="L1330" href="#L1330">1330</a>
+<a id="L1331" href="#L1331">1331</a>
+<a id="L1332" href="#L1332">1332</a>
+<a id="L1333" href="#L1333">1333</a>
+<a id="L1334" href="#L1334">1334</a>
+<a id="L1335" href="#L1335">1335</a>
+<a id="L1336" href="#L1336">1336</a>
+<a id="L1337" href="#L1337">1337</a>
+<a id="L1338" href="#L1338">1338</a>
+<a id="L1339" href="#L1339">1339</a>
+<a id="L1340" href="#L1340">1340</a>
+<a id="L1341" href="#L1341">1341</a>
+<a id="L1342" href="#L1342">1342</a>
+<a id="L1343" href="#L1343">1343</a>
+<a id="L1344" href="#L1344">1344</a>
+<a id="L1345" href="#L1345">1345</a>
+<a id="L1346" href="#L1346">1346</a>
+<a id="L1347" href="#L1347">1347</a>
+<a id="L1348" href="#L1348">1348</a>
+<a id="L1349" href="#L1349">1349</a>
+<a id="L1350" href="#L1350">1350</a>
+<a id="L1351" href="#L1351">1351</a>
+<a id="L1352" href="#L1352">1352</a>
+<a id="L1353" href="#L1353">1353</a>
+<a id="L1354" href="#L1354">1354</a>
+<a id="L1355" href="#L1355">1355</a>
+<a id="L1356" href="#L1356">1356</a>
+<a id="L1357" href="#L1357">1357</a>
+<a id="L1358" href="#L1358">1358</a>
+<a id="L1359" href="#L1359">1359</a>
+<a id="L1360" href="#L1360">1360</a>
+<a id="L1361" href="#L1361">1361</a>
+<a id="L1362" href="#L1362">1362</a>
+<a id="L1363" href="#L1363">1363</a>
+<a id="L1364" href="#L1364">1364</a>
+<a id="L1365" href="#L1365">1365</a>
+<a id="L1366" href="#L1366">1366</a>
+<a id="L1367" href="#L1367">1367</a>
+<a id="L1368" href="#L1368">1368</a>
+<a id="L1369" href="#L1369">1369</a>
+<a id="L1370" href="#L1370">1370</a>
+<a id="L1371" href="#L1371">1371</a>
+<a id="L1372" href="#L1372">1372</a>
+<a id="L1373" href="#L1373">1373</a>
+<a id="L1374" href="#L1374">1374</a>
+<a id="L1375" href="#L1375">1375</a>
+<a id="L1376" href="#L1376">1376</a>
+<a id="L1377" href="#L1377">1377</a>
+<a id="L1378" href="#L1378">1378</a>
+<a id="L1379" href="#L1379">1379</a>
+<a id="L1380" href="#L1380">1380</a>
+<a id="L1381" href="#L1381">1381</a>
+<a id="L1382" href="#L1382">1382</a>
+<a id="L1383" href="#L1383">1383</a>
+<a id="L1384" href="#L1384">1384</a>
+<a id="L1385" href="#L1385">1385</a>
+<a id="L1386" href="#L1386">1386</a>
+<a id="L1387" href="#L1387">1387</a>
+<a id="L1388" href="#L1388">1388</a>
+<a id="L1389" href="#L1389">1389</a>
+<a id="L1390" href="#L1390">1390</a>
+<a id="L1391" href="#L1391">1391</a>
+<a id="L1392" href="#L1392">1392</a>
+<a id="L1393" href="#L1393">1393</a>
+<a id="L1394" href="#L1394">1394</a>
+<a id="L1395" href="#L1395">1395</a>
+<a id="L1396" href="#L1396">1396</a>
+<a id="L1397" href="#L1397">1397</a>
+<a id="L1398" href="#L1398">1398</a>
+<a id="L1399" href="#L1399">1399</a>
+<a id="L1400" href="#L1400">1400</a>
+<a id="L1401" href="#L1401">1401</a>
+<a id="L1402" href="#L1402">1402</a>
+<a id="L1403" href="#L1403">1403</a>
+<a id="L1404" href="#L1404">1404</a>
+<a id="L1405" href="#L1405">1405</a>
+<a id="L1406" href="#L1406">1406</a>
+<a id="L1407" href="#L1407">1407</a>
+<a id="L1408" href="#L1408">1408</a>
+<a id="L1409" href="#L1409">1409</a>
+<a id="L1410" href="#L1410">1410</a>
+<a id="L1411" href="#L1411">1411</a>
+<a id="L1412" href="#L1412">1412</a>
+<a id="L1413" href="#L1413">1413</a>
+<a id="L1414" href="#L1414">1414</a>
+<a id="L1415" href="#L1415">1415</a>
+<a id="L1416" href="#L1416">1416</a>
+<a id="L1417" href="#L1417">1417</a>
+<a id="L1418" href="#L1418">1418</a>
+<a id="L1419" href="#L1419">1419</a>
+<a id="L1420" href="#L1420">1420</a>
+<a id="L1421" href="#L1421">1421</a>
+<a id="L1422" href="#L1422">1422</a>
+<a id="L1423" href="#L1423">1423</a>
+<a id="L1424" href="#L1424">1424</a>
+<a id="L1425" href="#L1425">1425</a>
+<a id="L1426" href="#L1426">1426</a>
+<a id="L1427" href="#L1427">1427</a>
+<a id="L1428" href="#L1428">1428</a>
+<a id="L1429" href="#L1429">1429</a>
+<a id="L1430" href="#L1430">1430</a>
+<a id="L1431" href="#L1431">1431</a>
+<a id="L1432" href="#L1432">1432</a>
+<a id="L1433" href="#L1433">1433</a>
+<a id="L1434" href="#L1434">1434</a>
+<a id="L1435" href="#L1435">1435</a>
+<a id="L1436" href="#L1436">1436</a>
+<a id="L1437" href="#L1437">1437</a>
+<a id="L1438" href="#L1438">1438</a>
+<a id="L1439" href="#L1439">1439</a>
+<a id="L1440" href="#L1440">1440</a>
+<a id="L1441" href="#L1441">1441</a>
+<a id="L1442" href="#L1442">1442</a>
+<a id="L1443" href="#L1443">1443</a>
+<a id="L1444" href="#L1444">1444</a>
+<a id="L1445" href="#L1445">1445</a>
+<a id="L1446" href="#L1446">1446</a>
+<a id="L1447" href="#L1447">1447</a>
+<a id="L1448" href="#L1448">1448</a>
+<a id="L1449" href="#L1449">1449</a>
+<a id="L1450" href="#L1450">1450</a>
+<a id="L1451" href="#L1451">1451</a>
+<a id="L1452" href="#L1452">1452</a>
+<a id="L1453" href="#L1453">1453</a>
+<a id="L1454" href="#L1454">1454</a>
+<a id="L1455" href="#L1455">1455</a>
+<a id="L1456" href="#L1456">1456</a>
+<a id="L1457" href="#L1457">1457</a>
+<a id="L1458" href="#L1458">1458</a>
+<a id="L1459" href="#L1459">1459</a>
+<a id="L1460" href="#L1460">1460</a>
+<a id="L1461" href="#L1461">1461</a>
+<a id="L1462" href="#L1462">1462</a>
+<a id="L1463" href="#L1463">1463</a>
+<a id="L1464" href="#L1464">1464</a>
+<a id="L1465" href="#L1465">1465</a>
+<a id="L1466" href="#L1466">1466</a>
+<a id="L1467" href="#L1467">1467</a>
+<a id="L1468" href="#L1468">1468</a>
+<a id="L1469" href="#L1469">1469</a>
+<a id="L1470" href="#L1470">1470</a>
+<a id="L1471" href="#L1471">1471</a>
+<a id="L1472" href="#L1472">1472</a>
+<a id="L1473" href="#L1473">1473</a>
+<a id="L1474" href="#L1474">1474</a>
+<a id="L1475" href="#L1475">1475</a>
+<a id="L1476" href="#L1476">1476</a>
+<a id="L1477" href="#L1477">1477</a>
+<a id="L1478" href="#L1478">1478</a>
+<a id="L1479" href="#L1479">1479</a>
+<a id="L1480" href="#L1480">1480</a>
+<a id="L1481" href="#L1481">1481</a>
+<a id="L1482" href="#L1482">1482</a>
+<a id="L1483" href="#L1483">1483</a>
+<a id="L1484" href="#L1484">1484</a>
+<a id="L1485" href="#L1485">1485</a>
+<a id="L1486" href="#L1486">1486</a>
+<a id="L1487" href="#L1487">1487</a>
+<a id="L1488" href="#L1488">1488</a>
+<a id="L1489" href="#L1489">1489</a>
+<a id="L1490" href="#L1490">1490</a>
+<a id="L1491" href="#L1491">1491</a>
+<a id="L1492" href="#L1492">1492</a>
+<a id="L1493" href="#L1493">1493</a>
+<a id="L1494" href="#L1494">1494</a>
+<a id="L1495" href="#L1495">1495</a>
+<a id="L1496" href="#L1496">1496</a>
+<a id="L1497" href="#L1497">1497</a>
+<a id="L1498" href="#L1498">1498</a>
+<a id="L1499" href="#L1499">1499</a>
+<a id="L1500" href="#L1500">1500</a>
+<a id="L1501" href="#L1501">1501</a>
+<a id="L1502" href="#L1502">1502</a>
+<a id="L1503" href="#L1503">1503</a>
+<a id="L1504" href="#L1504">1504</a>
+<a id="L1505" href="#L1505">1505</a>
+<a id="L1506" href="#L1506">1506</a>
+<a id="L1507" href="#L1507">1507</a>
+<a id="L1508" href="#L1508">1508</a>
+<a id="L1509" href="#L1509">1509</a>
+<a id="L1510" href="#L1510">1510</a>
+<a id="L1511" href="#L1511">1511</a>
+<a id="L1512" href="#L1512">1512</a>
+<a id="L1513" href="#L1513">1513</a>
+<a id="L1514" href="#L1514">1514</a>
+<a id="L1515" href="#L1515">1515</a>
+<a id="L1516" href="#L1516">1516</a>
+<a id="L1517" href="#L1517">1517</a>
+<a id="L1518" href="#L1518">1518</a>
+<a id="L1519" href="#L1519">1519</a>
+<a id="L1520" href="#L1520">1520</a>
+<a id="L1521" href="#L1521">1521</a>
+<a id="L1522" href="#L1522">1522</a>
+<a id="L1523" href="#L1523">1523</a>
+<a id="L1524" href="#L1524">1524</a>
+<a id="L1525" href="#L1525">1525</a>
+<a id="L1526" href="#L1526">1526</a>
+<a id="L1527" href="#L1527">1527</a>
+<a id="L1528" href="#L1528">1528</a>
+<a id="L1529" href="#L1529">1529</a>
+<a id="L1530" href="#L1530">1530</a>
+<a id="L1531" href="#L1531">1531</a>
+<a id="L1532" href="#L1532">1532</a>
+<a id="L1533" href="#L1533">1533</a>
+<a id="L1534" href="#L1534">1534</a>
+<a id="L1535" href="#L1535">1535</a>
+<a id="L1536" href="#L1536">1536</a>
+<a id="L1537" href="#L1537">1537</a>
+<a id="L1538" href="#L1538">1538</a>
+<a id="L1539" href="#L1539">1539</a>
+<a id="L1540" href="#L1540">1540</a>
+<a id="L1541" href="#L1541">1541</a>
+<a id="L1542" href="#L1542">1542</a>
+<a id="L1543" href="#L1543">1543</a>
+<a id="L1544" href="#L1544">1544</a>
+<a id="L1545" href="#L1545">1545</a>
+<a id="L1546" href="#L1546">1546</a>
+<a id="L1547" href="#L1547">1547</a>
+<a id="L1548" href="#L1548">1548</a>
+<a id="L1549" href="#L1549">1549</a>
+<a id="L1550" href="#L1550">1550</a>
+<a id="L1551" href="#L1551">1551</a>
+<a id="L1552" href="#L1552">1552</a>
+<a id="L1553" href="#L1553">1553</a>
+<a id="L1554" href="#L1554">1554</a>
+<a id="L1555" href="#L1555">1555</a>
+<a id="L1556" href="#L1556">1556</a>
+<a id="L1557" href="#L1557">1557</a>
+<a id="L1558" href="#L1558">1558</a>
+<a id="L1559" href="#L1559">1559</a>
+<a id="L1560" href="#L1560">1560</a>
+<a id="L1561" href="#L1561">1561</a>
+<a id="L1562" href="#L1562">1562</a>
+<a id="L1563" href="#L1563">1563</a>
+<a id="L1564" href="#L1564">1564</a>
+<a id="L1565" href="#L1565">1565</a>
+<a id="L1566" href="#L1566">1566</a>
+<a id="L1567" href="#L1567">1567</a>
+<a id="L1568" href="#L1568">1568</a>
+<a id="L1569" href="#L1569">1569</a>
+<a id="L1570" href="#L1570">1570</a>
+<a id="L1571" href="#L1571">1571</a>
+<a id="L1572" href="#L1572">1572</a>
+<a id="L1573" href="#L1573">1573</a>
+<a id="L1574" href="#L1574">1574</a>
+<a id="L1575" href="#L1575">1575</a>
+<a id="L1576" href="#L1576">1576</a>
+<a id="L1577" href="#L1577">1577</a>
+<a id="L1578" href="#L1578">1578</a>
+<a id="L1579" href="#L1579">1579</a>
+<a id="L1580" href="#L1580">1580</a>
+<a id="L1581" href="#L1581">1581</a>
+<a id="L1582" href="#L1582">1582</a>
+<a id="L1583" href="#L1583">1583</a>
+<a id="L1584" href="#L1584">1584</a>
+<a id="L1585" href="#L1585">1585</a>
+<a id="L1586" href="#L1586">1586</a>
+<a id="L1587" href="#L1587">1587</a>
+<a id="L1588" href="#L1588">1588</a>
+<a id="L1589" href="#L1589">1589</a>
+<a id="L1590" href="#L1590">1590</a>
+<a id="L1591" href="#L1591">1591</a>
+<a id="L1592" href="#L1592">1592</a>
+<a id="L1593" href="#L1593">1593</a>
+<a id="L1594" href="#L1594">1594</a>
+<a id="L1595" href="#L1595">1595</a>
+<a id="L1596" href="#L1596">1596</a>
+<a id="L1597" href="#L1597">1597</a>
+<a id="L1598" href="#L1598">1598</a>
+<a id="L1599" href="#L1599">1599</a>
+<a id="L1600" href="#L1600">1600</a>
+<a id="L1601" href="#L1601">1601</a>
+<a id="L1602" href="#L1602">1602</a>
+<a id="L1603" href="#L1603">1603</a>
+<a id="L1604" href="#L1604">1604</a>
+<a id="L1605" href="#L1605">1605</a>
+<a id="L1606" href="#L1606">1606</a>
+<a id="L1607" href="#L1607">1607</a>
+<a id="L1608" href="#L1608">1608</a>
+<a id="L1609" href="#L1609">1609</a>
+<a id="L1610" href="#L1610">1610</a>
+<a id="L1611" href="#L1611">1611</a>
+<a id="L1612" href="#L1612">1612</a>
+<a id="L1613" href="#L1613">1613</a>
+<a id="L1614" href="#L1614">1614</a>
+<a id="L1615" href="#L1615">1615</a>
+<a id="L1616" href="#L1616">1616</a>
+<a id="L1617" href="#L1617">1617</a>
+<a id="L1618" href="#L1618">1618</a>
+<a id="L1619" href="#L1619">1619</a>
+<a id="L1620" href="#L1620">1620</a>
+<a id="L1621" href="#L1621">1621</a>
+<a id="L1622" href="#L1622">1622</a>
+<a id="L1623" href="#L1623">1623</a>
+<a id="L1624" href="#L1624">1624</a>
+<a id="L1625" href="#L1625">1625</a></pre><pre class="lang-ts"><code>// 3D fractals in Gaussian splats. Each kind bakes a few million samples on
+// the GPU (a GpuArrayWriter: a fragment pass, so both backends) into a
+// table of sample.ts, a chunk per frame; a generator (shade.ts) draws every
+// sample as a splat each frame, with the palette, lights, fog, motion and
+// 4D turn as uniforms, then bloom and tone mapping (three's RenderPipeline).
+//
+// Bakes are kept: each table holds one bake (its inputs, its progress, the
+// order it was last sorted into), up to a share of GPU memory (?cache=, the
+// number of tables). A request finds the same samples baked before, or
+// parks the bake under way (resumed when asked for again) and starts its
+// own; meanwhile the queued surprises bake ahead, a slice each in turn
+// (see "Surprise me" below), so most surprises need no bake at all.
+//
+// The shown table and the next one: once a bake is
+// done, both are ordered the same way on a worker and the shown fractal
+// turns into the new one splat for splat (morph.ts; styles: morph, swirl,
+// burst, orb, galaxy, fountain, stardust, swarm, sweep, ripple, dissolve,
+// or random, the default), its look, sky, light and camera tweened along;
+// then the tables swap. Kind, sampling and 4D turn change when the
+// transition starts, never during its bake, and the side it leaves keeps
+// its own palette and turn. Requests during a transition wait for its end;
+// "loop" keeps breathing between the last two. Small edits (a slider, new
+// samples, the light, a view baked from the camera) morph quickly within
+// one kind; a new look alone (palette, style, bloom, a new angle) blends
+// without a bake.
+//
+// "Surprise me" (Space, the button at the top, the tour by default): the
+// next of a few queued fractals, each baked and paired with the shown one
+// ahead (their bakes take turns, so light ones land first), so it starts
+// at once; when none is ready yet, a quick new look or angle for this one
+// instead. Often from a new angle, then a camera shot once it lands
+// (shots.ts: hold, spin, zoom, orbit, truck, crane, push). Every
+// kind's bake program compiles during the first bake, so later bakes
+// never stall on a compile.
+//
+// Kinds: distance-estimated surfaces, sphere-traced per sample and lit with
+// baked occlusion and soft shadows (surfaces.ts: Mandelbulb, Mandelbox,
+// kaleidoscopic IFS, quaternion Julia, Apollonian, pseudo-Kleinian);
+// chaos-game clouds (clouds.ts: 3D flames, Sierpinski and Menger dust, a
+// 4D Buddhabrot turned live); strange attractors as threads of light
+// (attractors.ts); a fractal tree with blossoms in the wind (tree.ts).
+// Presets in presets.ts, palettes in palettes.ts, idle motions in motion.ts.
+//
+// Query parameters:
+//   ?preset=      a preset's name, lowercase with dashes (golden-hour-bulb)
+//   ?splats=      samples per bake (by device and quality, device.ts:
+//                 standard / high 2M / 4M on a desktop's WebGPU, 1M / 2M on
+//                 iOS, 500k / 1M on Android, half on WebGL2)
+//   ?quality=     standard | high (default: the device's last choice)
+//   ?hidpi=       0 | 1 (default: on for desktops, off on phones and tablets)
+//   ?transition=  a transition style (default random)
+//   ?motion=      idle sway (default) | float | turntable | drift | still
+//   ?tour=1       a surprise every 24 s
+//   ?ui=0         no panel, gallery or text
+//   ?gpu=         webgpu | webgpu-gl
+//   ?demo=        0: straight to the gallery (the page opens on the demo
+//                 menu, demo/demo.ts, unless ?ui=0 or ?tour=1); aurora |
+//                 tidal | lumen: prepare that demo (a click starts it)
+//   ?sound=0      demos start silent
+//   ?render=1     with ?demo=&lt;tune&gt;: a film for a frame-by-frame recorder
+//
+// Demo mode (the menu the page opens on, D, or "Demo videos") plays the
+// fractals as music videos. Behind its menu the gallery keeps drawing (no
+// baking ahead); once a demo prepares it steps aside (drawing, camera, keys
+// and bakes paused, its cache freed) and comes back as it was ("explore
+// the fractals" or Esc). The canvas's resolution
+// follows the frame rate (device.ts).
+//
+// `radixFractals` in the console holds the page: `ready` once the first
+// fractal is shown, `show(name)`, `surprise()`, `shot(name)`, `bake()`
+// (again, with the current
+// values), `settled()` (nothing baking, sorting or moving), `progress()`
+// (the transition's, or -1), `baked()` (the fraction of the current bake)
+// and `samples()` (the table shown).
+import * as THREE from "three";
+import { RenderPipeline } from "three/webgpu";
+import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
+import GUI, { type Controller } from "lil-gui";
+import { CameraControls, GpuArrays, SplatCollection, SplatGenerator, SplatRenderer, TSL, createRenderer, getGpuCaps, type ArrayData } from <a class="import" href="../../src/index.ts.html" title="src/index.ts">"@sparkjsdev/radix"</a>;
+import { ATTRACTORS, attractorKind } from <a class="import" href="attractors.ts.html" title="examples/fractals/attractors.ts">"./attractors.js"</a>;
+import { flameKind, nebulaKind } from <a class="import" href="clouds.ts.html" title="examples/fractals/clouds.ts">"./clouds.js"</a>;
+import type { DemoMode, Handoff } from <a class="import" href="demo/demo.ts.html" title="examples/fractals/demo/demo.ts">"./demo/demo.js"</a>;
+import { Budget, FramePace, Resolution, deviceTier, pixelRatioOf, saveHiDpi, saveQuality, splatsOf, tableBytes, type Quality } from <a class="import" href="device.ts.html" title="examples/fractals/device.ts">"./device.js"</a>;
+import { makeBakeUniforms, type Family, type Kind } from <a class="import" href="kind.ts.html" title="examples/fractals/kind.ts">"./kind.js"</a>;
+import { TRANSITIONS, TableSorter, makeMorphUniforms, morphGenerator, setStyle as setTransitionStyle, type Ordered, type Pairing, type TransitionStyle } from <a class="import" href="morph.ts.html" title="examples/fractals/morph.ts">"./morph.js"</a>;
+import { MOTIONS, Motion, type MotionName } from <a class="import" href="motion.ts.html" title="examples/fractals/motion.ts">"./motion.js"</a>;
+import { PALETTES, paletteAt } from <a class="import" href="palettes.ts.html" title="examples/fractals/palettes.ts">"./palettes.js"</a>;
+import { PRESETS, type Preset } from <a class="import" href="presets.ts.html" title="examples/fractals/presets.ts">"./presets.js"</a>;
+import { Director, SHOTS, type ShotName } from <a class="import" href="shots.ts.html" title="examples/fractals/shots.ts">"./shots.js"</a>;
+import { SAMPLES } from <a class="import" href="sample.ts.html" title="examples/fractals/sample.ts">"./sample.js"</a>;
+import {
+  LOOK_DEFAULTS, STYLES, copyPaletteSlot, makeLookUniforms, setPalette, setPaletteSlot, setSky, shadeGenerator, skyNode, skyOf, type Look, type Sky,
+} from <a class="import" href="shade.ts.html" title="examples/fractals/shade.ts">"./shade.js"</a>;
+import { FORMULAS, surfaceKind } from <a class="import" href="surfaces.ts.html" title="examples/fractals/surfaces.ts">"./surfaces.js"</a>;
+import { treeKind } from <a class="import" href="tree.ts.html" title="examples/fractals/tree.ts">"./tree.js"</a>;
+
+const { pass } = TSL;
+
+const params = new URLSearchParams(location.search);
+const status = document.getElementById("status")!;
+const progressBar = document.getElementById("progress")!;
+const titleName = document.querySelector("#title .name")!;
+const titleSub = document.querySelector("#title .sub")!;
+const title = document.getElementById("title")!;
+const gallery = document.getElementById("gallery")!;
+if (params.get("ui") === "0") {
+  document.body.classList.add("bare");
+}
+
+const renderer = await createRenderer();
+const webgpu = getGpuCaps(renderer).backend === "webgpu";
+const tier = deviceTier(webgpu);
+const rendering = params.get("render") === "1";
+const resolution = new Resolution(renderer, tier.pixelRatio);
+// The frame time bakes size their chunks against
+const pace = new FramePace();
+// The next fractal's bake (frames may slow to about 1.5x), and the queued
+// surprises' (a few ms over the device's frame time)
+const nextBudget = new Budget(pace, 4096, 1 &lt;&lt; 19, 32768);
+const aheadBudget = new Budget(pace, 1024, 1 &lt;&lt; 18, 8192);
+// HiDPI on or off, from the demo menu or the panel (kept for this device)
+const setHiDpi = (on: boolean) =&gt; {
+  tier.hiDpi = on;
+  saveHiDpi(on);
+  resolution.setBase(pixelRatioOf(on));
+};
+renderer.setSize(innerWidth, innerHeight);
+// The splats draw into the bloom pass's linear half-float target, so the
+// pipeline's output transform tone maps and encodes sRGB (createRenderer
+// leaves the canvas linear for splats drawn to it directly)
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 100);
+camera.position.set(0, 0.6, 3.4);
+// The page's camera settings and nothing saved: no storage key, and the
+// personal settings other Radix pages save are set aside too. A drag
+// turns the fractal with the finger or mouse on every device (the defaults
+// invert look on touch screens, which suits fly mode, not an orbit)
+const CAMERA = {
+  mode: "orbit" as const, minDistance: 0.02, maxDistance: 20, moveSpeed: 0.6,
+  invertLookX: false, invertLookY: false,
+  // A drag's turn and pan glide on after release (a flick spins the fractal)
+  inertia: { look: 0.15, move: 0.15, pointerLook: 0.7, pointerMove: 0.45 },
+};
+const controls = new CameraControls({ canvas: renderer.domElement, object: camera, settings: CAMERA });
+controls.settings = { ...CameraControls.DEFAULTS, ...CAMERA };
+controls.lookAt(new THREE.Vector3());
+const motion = new Motion(renderer.domElement);
+const director = new Director();
+const startMotion = params.get("motion") as MotionName;
+if (MOTIONS.includes(startMotion)) {
+  motion.setMode(startMotion);
+}
+
+// --- Kinds, look and state ---
+
+const bakeU = makeBakeUniforms();
+const KINDS: Kind[] = [
+  ...FORMULAS.map((formula) =&gt; surfaceKind(formula, bakeU)),
+  flameKind(bakeU),
+  nebulaKind(bakeU),
+  ...ATTRACTORS.map((attractor) =&gt; attractorKind(attractor, bakeU)),
+  treeKind(bakeU),
+];
+const kindById = new Map(KINDS.map((kind) =&gt; [kind.id, kind]));
+const defaultsOf = (kind: Kind) =&gt; Object.fromEntries(Object.entries(kind.params).map(([key, param]) =&gt; [key, param.value]));
+const values: Record&lt;string, Record&lt;string, number&gt;&gt; = Object.fromEntries(KINDS.map((kind) =&gt; [kind.id, defaultsOf(kind)]));
+const presets = PRESETS;
+
+const u = makeLookUniforms();
+const look: Look = { ...LOOK_DEFAULTS };
+let sky: Sky = skyOf(PALETTES.gold);
+const state = {
+  preset: "",
+  kind: "mandelbulb",
+  palette: "gold",
+  style: "studio",
+  splats: Number(params.get("splats")) || tier.splats,
+  sampling: "orbit" as "orbit" | "camera",
+  // With camera sampling: bake again once the camera stops
+  autoRefocus: true,
+  coverage: 1,
+  motion: motion.mode,
+  motionSpeed: 1,
+  transition: TRANSITIONS[params.get("transition") ?? ""] ? params.get("transition")! : "random",
+  pairing: "auto" as "auto" | Pairing,
+  duration: 2,
+  loop: false,
+  tour: params.get("tour") === "1",
+  tourSeconds: 24,
+  // What the tour does next: a surprise or the next preset
+  tourOrder: "surprise" as "surprise" | "in order",
+  lightAzimuth: 35,
+  lightElevation: 45,
+  turn: 0,
+  bloom: 0.5,
+  bloomRadius: 0.45,
+  bloomThreshold: 0.7,
+  exposure: 1,
+  // Depth of field: the aperture's half-angle tangent, focused on the
+  // orbit target
+  aperture: 0,
+};
+
+// --- Tables of samples: the one shown, the one baked for the next
+// transition, and bakes kept for later (done, or parked half way) ---
+
+interface Table {
+  arrays: GpuArrays;
+  ordered: Ordered;
+  pairing?: Pairing;
+  // Objects drawing it; a retired table is freed when none is left
+  users: number;
+  retired: boolean;
+}
+
+// What a bake's writer reads, set again before each of its chunks (bakes
+// take turns: the next fractal, and the ones baked ahead)
+interface BakeInputs {
+  kind: Kind;
+  values: Record&lt;string, number&gt;;
+  seed: number;
+  view: THREE.Matrix4;
+  tanY: number;
+  aspect: number;
+  light: THREE.Vector3;
+  sampling: "orbit" | "camera";
+  coverage: number;
+}
+
+interface Bake {
+  // Everything that decides the samples but the seed (keyOf)
+  key: string;
+  table: Table;
+  // Rows baked so far
+  done: number;
+  inputs: BakeInputs;
+  // The preset it was baked for, as it stands (no edits)
+  preset?: Preset;
+  // Last asked for or shown (performance.now()), for eviction
+  used: number;
+  // Being read back to the CPU (its table is not free until done)
+  reading?: boolean;
+}
+
+const sorter = new TableSorter(renderer, state.splats, 2);
+const steadyGenerator = shadeGenerator(u);
+const m = makeMorphUniforms();
+const transitionGenerator = morphGenerator(u, m);
+const splatRenderer = new SplatRenderer({ renderer, params: { maxStdDev: 2.6 } });
+scene.add(splatRenderer);
+
+const makeTable = (): Table =&gt; ({
+  arrays: new GpuArrays({ renderer, bundles: { samples: SAMPLES }, capacity: state.splats }),
+  ordered: { order: SplatGenerator.indices(renderer, [0]), visible: 0 },
+  users: 0,
+  retired: false,
+});
+
+// How many tables to keep: the shown one, the next, and bakes ahead, within
+// a share of GPU memory (?cache= sets the count)
+const tablesFor = (splats: number) =&gt; Number(params.get("cache")) || Math.max(2, Math.min(8, Math.floor((tier.memory * 0.8) / tableBytes(splats))));
+let maxTables = tablesFor(state.splats);
+
+const emptyBake = (): Bake =&gt; ({ key: "", table: makeTable(), done: 0, inputs: undefined as never, used: 0 });
+// Every table, a bake each: the shown one (empty at first), the next one,
+// those baked ahead and those kept
+let shownBake = emptyBake();
+let bakes: Bake[] = [shownBake];
+// The bake the next transition goes to (the queued surprises' are in `bakes`)
+let nextBake: Bake | undefined;
+const shown = () =&gt; shownBake.table;
+const hidden = () =&gt; nextBake!.table;
+
+function retire(table: Table) {
+  table.retired = true;
+  if (table.users === 0) {
+    table.arrays.dispose();
+    table.ordered.order.dispose();
+  }
+}
+
+// A table for a new bake: a free slot, else the table of the bake used
+// longest ago that nothing draws and `keep` does not hold. Undefined when
+// none is free (a bake ahead waits; the next fractal's always gets one)
+function tableFor(keep: Set&lt;string&gt;, force: boolean): Table | undefined {
+  if (bakes.length &lt; maxTables) {
+    return makeTable();
+  }
+  const victims = bakes
+    .filter((bake) =&gt; bake !== shownBake &amp;&amp; bake !== nextBake &amp;&amp; bake.table.users === 0 &amp;&amp; !bake.reading &amp;&amp; !keep.has(bake.key))
+    .sort((a, b) =&gt; a.used - b.used);
+  const victim = victims[0];
+  if (victim) {
+    bakes = bakes.filter((bake) =&gt; bake !== victim);
+    victim.table.pairing = undefined;
+    return victim.table;
+  }
+  return force ? makeTable() : undefined;
+}
+
+// Over the limit after a forced table: the oldest idle bakes go
+function trim() {
+  while (bakes.length &gt; maxTables) {
+    const keep = new Set(queue.map((q) =&gt; q.key));
+    const idle = bakes.filter((bake) =&gt; bake !== shownBake &amp;&amp; bake !== nextBake &amp;&amp; !keep.has(bake.key) &amp;&amp; !bake.reading &amp;&amp; bake.table.users === 0).sort((a, b) =&gt; a.used - b.used);
+    if (!idle[0]) {
+      return;
+    }
+    bakes = bakes.filter((bake) =&gt; bake !== idle[0]);
+    retire(idle[0].table);
+  }
+}
+
+// Every bake but the shown one goes (demo mode needs the memory); a next
+// one still drawn in a transition stays until it ends
+function freeCache() {
+  if (nextBake &amp;&amp; nextBake.table.users === 0) {
+    nextBake = undefined;
+    if (phase === "baking" || phase === "sorting") {
+      phase = "idle";
+      pending = undefined;
+      generation += 1;
+    }
+  }
+  for (const bake of bakes) {
+    if (bake !== shownBake &amp;&amp; bake !== nextBake) {
+      retire(bake.table);
+    }
+  }
+  bakes = bakes.filter((bake) =&gt; bake === shownBake || bake === nextBake);
+}
+
+// The release of an object drawing these tables
+function use(...used: Table[]) {
+  used.forEach((table) =&gt; (table.users += 1));
+  return () =&gt; used.forEach((table) =&gt; {
+    table.users -= 1;
+    if (table.retired &amp;&amp; table.users === 0) {
+      table.arrays.dispose();
+      table.ordered.order.dispose();
+    }
+  });
+}
+
+function showSteady() {
+  const table = shown();
+  splatRenderer.collection = new SplatCollection([SplatCollection.object({
+    generator: steadyGenerator, data: { samples: table.arrays }, count: state.splats, matrixWorld: motion.holder.matrixWorld, release: use(table),
+  })]);
+}
+
+function showTransition() {
+  const [from, to] = [shown(), hidden()];
+  splatRenderer.collection = new SplatCollection([SplatCollection.object({
+    generator: transitionGenerator,
+    data: { from: from.arrays, to: to.arrays, fromOrder: from.ordered, toOrder: to.ordered },
+    count: state.splats,
+    matrixWorld: motion.holder.matrixWorld,
+    release: use(from, to),
+  })]);
+}
+
+// --- Requests: bake, order, transition; or a change of look alone ---
+
+interface View {
+  position: THREE.Vector3;
+  target: THREE.Vector3;
+  fov: number;
+}
+
+// What a request may change besides the shape
+interface Remix {
+  look: Partial&lt;Look&gt;;
+  palette: string;
+  style: string;
+  bloom: number;
+  exposure: number;
+  aperture: number;
+  camera: View;
+}
+
+interface Plan {
+  preset?: Preset;
+  // The preset's values are already in place (an edit during its bake)
+  applied?: boolean;
+  // A new shape (the chosen transition) or an edit of this one (a quick morph)
+  long: boolean;
+  // false: only the look changes, without a bake
+  reshape?: boolean;
+  // New samples even if these were baked before
+  fresh?: boolean;
+  remix?: Partial&lt;Remix&gt;;
+  // What the camera does once the new view lands
+  shot?: ShotName;
+  // The transition style (a queued surprise's, picked when it was queued)
+  style?: string;
+}
+
+interface Target {
+  kind: string;
+  look: Look;
+  palette: string;
+  style: string;
+  light: [number, number];
+  bloom: number;
+  exposure: number;
+  aperture: number;
+  sampling: "orbit" | "camera";
+  turn: number;
+  camera?: View;
+  shot?: ShotName;
+}
+
+type Phase = "idle" | "baking" | "sorting" | "morphing" | "restyling";
+let phase: Phase = "idle";
+let current: Plan = { long: true };
+let pending: Plan | undefined;
+let target: Target | undefined;
+let style: TransitionStyle = TRANSITIONS.morph;
+let styleName = "morph";
+let pairing: Pairing = "hilbert";
+let duration = 1;
+let generation = 0;
+let firstShown = false;
+// The kind in the shown table, and the 4D turn speed of the one a
+// transition leaves
+let shownKind = "";
+let fromTurn = 0;
+
+let bakeStart = 0;
+let bakeSeconds = 0;
+let bakeSeed = 1;
+const bakedPose = new THREE.Matrix4();
+const baked = new Set&lt;string&gt;();
+
+const reshapes = (plan: Plan) =&gt; plan.reshape !== false;
+
+function merge(a: Plan, b: Plan): Plan {
+  if (b.preset) {
+    return b;
+  }
+  return {
+    preset: a.preset, applied: a.applied, long: a.long || b.long, reshape: reshapes(a) || reshapes(b), fresh: a.fresh || b.fresh,
+    remix: { ...a.remix, ...b.remix, look: { ...a.remix?.look, ...b.remix?.look } }, shot: b.shot ?? a.shot,
+  };
+}
+
+function request(change: Plan) {
+  if (phase === "morphing" || phase === "restyling") {
+    pending = pending ? merge(pending, change) : change;
+  } else if (phase === "baking" || phase === "sorting") {
+    // Into the transition on its way
+    begin(change.preset ? change : { ...merge(current, change), applied: true });
+  } else if (reshapes(change)) {
+    begin(change);
+  } else {
+    startRestyle(change);
+  }
+}
+
+// The camera pose a preset's view asks for
+function viewOf(preset: Preset): View {
+  const view = preset.view ?? {};
+  const center = new THREE.Vector3(...(view.target ?? [0, 0, 0]));
+  const az = THREE.MathUtils.degToRad(view.azimuth ?? 30);
+  const el = THREE.MathUtils.degToRad(view.elevation ?? 20);
+  const position = new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)).multiplyScalar(view.distance ?? 3.4).add(center);
+  return { position, target: center, fov: view.fov ?? 40 };
+}
+
+// Where a plan ends: its preset's (or the current) look, then its remix
+function targetOf(change: Plan): Target {
+  const preset = change.preset;
+  const kind = kindById.get(preset?.kind ?? state.kind)!;
+  const t: Target = preset ? {
+    kind: preset.kind,
+    look: { ...LOOK_DEFAULTS, ...kind.look, ...STYLES[preset.style], ...preset.look },
+    palette: preset.palette,
+    style: preset.style,
+    light: [preset.light?.azimuth ?? 35, preset.light?.elevation ?? 45],
+    bloom: preset.bloom ?? 0.5,
+    exposure: preset.exposure ?? 1,
+    aperture: preset.aperture ?? 0,
+    sampling: preset.sampling ?? "orbit",
+    turn: preset.turn ?? 0,
+    camera: viewOf(preset),
+  } : {
+    kind: state.kind,
+    look: { ...look },
+    palette: state.palette,
+    style: state.style,
+    light: [state.lightAzimuth, state.lightElevation],
+    bloom: state.bloom,
+    exposure: state.exposure,
+    aperture: state.aperture,
+    sampling: state.sampling,
+    turn: state.turn,
+  };
+  const remix = change.remix ?? {};
+  if (remix.style) {
+    t.style = remix.style;
+    Object.assign(t.look, STYLES[remix.style]);
+  }
+  Object.assign(t.look, remix.look);
+  t.palette = remix.palette ?? t.palette;
+  t.bloom = remix.bloom ?? t.bloom;
+  t.exposure = remix.exposure ?? t.exposure;
+  t.aperture = remix.aperture ?? t.aperture;
+  t.camera = remix.camera ?? t.camera;
+  t.shot = change.shot;
+  return t;
+}
+
+const round = (value: number, digits = 4) =&gt; Number(value.toFixed(digits));
+
+// What a plan would bake, changing nothing: its writer's inputs and its key
+function bakeOf(change: Plan, t: Target): BakeInputs &amp; { key: string } {
+  const kind = kindById.get(t.kind)!;
+  const kindValues = change.preset &amp;&amp; !change.applied ? { ...defaultsOf(kind), ...change.preset.params } : { ...values[kind.id] };
+  // Camera sampling bakes for where the camera will be, seen from the
+  // fractal at rest (idle motion only nudges it from there)
+  const view = new THREE.Matrix4();
+  if (t.camera) {
+    view.lookAt(t.camera.position, t.camera.target, camera.up).setPosition(t.camera.position);
+  } else {
+    camera.updateMatrixWorld();
+    view.copy(camera.matrixWorld);
+  }
+  const tanY = Math.tan(THREE.MathUtils.degToRad((t.camera?.fov ?? camera.fov) / 2));
+  const inputs: BakeInputs = {
+    kind, values: kindValues, seed: 0, view, tanY, aspect: camera.aspect, light: lightDirection(...t.light), sampling: t.sampling, coverage: state.coverage,
+  };
+  const sorted = Object.entries(kindValues).sort(([a], [b]) =&gt; (a &lt; b ? -1 : 1)).map(([name, value]) =&gt; [name, round(value)]);
+  const seen = t.sampling === "camera" ? [...view.elements.map((value) =&gt; round(value, 3)), round(tanY), round(camera.aspect, 3)] : 0;
+  return { ...inputs, key: JSON.stringify([kind.id, sorted, t.sampling, t.light.map((value) =&gt; round(value, 2)), round(state.coverage), state.splats, seen]) };
+}
+
+const presetKey = (preset: Preset) =&gt; bakeOf({ preset, long: true }, targetOf({ preset, long: true })).key;
+
+// Sets every uniform a bake's writer reads
+function applyInputs(b: BakeInputs) {
+  for (const [key, uniform] of Object.entries(b.kind.uniforms)) {
+    uniform.value = b.values[key];
+  }
+  b.kind.prepare?.(b.values);
+  bakeU.seed.value = b.seed;
+  bakeU.count.value = state.splats;
+  bakeU.coverage.value = b.coverage;
+  bakeU.fromCamera.value = b.sampling === "camera" ? 1 : 0;
+  bakeU.eye.value.setFromMatrixPosition(b.view);
+  bakeU.right.value.setFromMatrixColumn(b.view, 0).normalize();
+  bakeU.up.value.setFromMatrixColumn(b.view, 1).normalize();
+  bakeU.forward.value.setFromMatrixColumn(b.view, 2).normalize().negate();
+  bakeU.tanY.value = b.tanY;
+  bakeU.tanX.value = b.tanY * b.aspect;
+  bakeU.lightDir.value.copy(b.light);
+}
+
+// A bake left for another is kept (a queued one stays queued)
+function parkNext() {
+  nextBake = undefined;
+}
+
+function begin(change: Plan) {
+  current = change;
+  const preset = change.preset;
+  if (preset &amp;&amp; !change.applied) {
+    state.preset = preset.name;
+    state.kind = preset.kind;
+    values[preset.kind] = { ...defaultsOf(kindById.get(preset.kind)!), ...preset.params };
+    announce(preset);
+  }
+  target = targetOf(change);
+
+  // The same samples, baked before or under way, are used as they are
+  // (new samples always bake anew)
+  const wanted = bakeOf({ ...change, applied: true }, target);
+  const key = change.fresh ? `${wanted.key}#${bakeSeed + 1}` : wanted.key;
+  if (nextBake &amp;&amp; nextBake.key !== key) {
+    parkNext();
+  }
+  let bake = bakes.find((each) =&gt; each.key === key &amp;&amp; each !== shownBake);
+  if (!bake &amp;&amp; cpuBakes.has(key)) {
+    bake = restore(key, preset, tableFor(new Set(), true)!);
+  }
+  if (!bake) {
+    bakeSeed += 1;
+    bake = {
+      key, table: tableFor(new Set(), true)!, done: 0, inputs: { ...wanted, seed: bakeSeed },
+      preset: preset &amp;&amp; key === presetKey(preset) ? preset : undefined, used: 0,
+    };
+    bakes.push(bake);
+  }
+  bake.used = performance.now();
+  nextBake = bake;
+  bakedPose.copy(bake.inputs.view);
+  baked.add(target.kind);
+
+  if (change.long) {
+    styleName = change.style ?? (state.transition === "random" ? pick(Object.keys(TRANSITIONS)) : state.transition);
+    style = TRANSITIONS[styleName];
+    pairing = state.pairing === "auto" ? style.pairing : state.pairing;
+    duration = state.duration;
+  } else {
+    styleName = "morph";
+    style = { ...TRANSITIONS.morph, spread: 0.1 };
+    pairing = "hilbert";
+    duration = 0.8;
+  }
+  generation += 1;
+  bakeStart = performance.now();
+  if (bake.done &gt;= state.splats) {
+    bakeSeconds = 0;
+    phase = "sorting";
+    order(generation).catch((error) =&gt; console.error(error));
+  } else {
+    phase = "baking";
+  }
+}
+
+const pick = &lt;T&gt;(list: T[]) =&gt; list[Math.floor(Math.random() * list.length)];
+
+// Rows [done, done + count) of a bake
+function bakeChunk(bake: Bake, count: number) {
+  applyInputs(bake.inputs);
+  bake.table.arrays.write(bake.inputs.kind.writer(), { at: bake.done, count, first: bake.done });
+  bake.done += count;
+}
+
+// The next fractal's bake, in chunks sized to the device's frame time (a
+// little slower frames allowed); otherwise the queued surprises', in what
+// the frames leave (during transitions too). Whether a chunk was baked
+function bakeStep(dt: number) {
+  if (!pace.bakes()) {
+    return false;
+  }
+  if (phase === "baking" &amp;&amp; nextBake) {
+    bakeChunk(nextBake, Math.min(nextBudget.next(dt, pace.base * 0.5 + 2), state.splats - nextBake.done));
+    if (nextBake.done &gt;= state.splats) {
+      bakeSeconds = (performance.now() - bakeStart) / 1000;
+      phase = "sorting";
+      order(generation).catch((error) =&gt; console.error(error));
+    }
+    return true;
+  }
+  if ((phase === "idle" || phase === "morphing" || phase === "restyling") &amp;&amp; firstShown &amp;&amp; (!demo?.active || demo.idle)) {
+    return bakeAhead(dt);
+  }
+  return false;
+}
+
+// --- The surprise queue: new fractals baked and paired ahead ---
+//
+// A few surprises wait in a queue, each a preset with its transition
+// style, look and shot picked when it is queued. Their bakes take turns, a
+// slice each per frame within the frame's slack, so light fractals land
+// quickly and heavy ones still progress. The first one baked is paired
+// ahead: its table and the shown one are sorted into its transition's
+// order while nothing else happens, so a surprise starts at once.
+
+interface Queued {
+  preset: Preset;
+  style: string;
+  remix: Partial&lt;Remix&gt;;
+  shot: ShotName;
+  key: string;
+}
+
+let queue: Queued[] = [];
+let turn = 0;
+let presorting = false;
+// A surprise asked for during a transition plays when it ends
+let surpriseNext = false;
+
+// Phones keep the queue in CPU memory (?stash=1 anywhere): every queued bake
+// but the next surprise is read back and its table freed, so the gallery
+// holds 3 tables on the GPU (the shown one, the next, the bake under way)
+const stashQueue = tier.platform !== "desktop" || params.get("stash") === "1";
+const cpuBakes = new Map&lt;string, { data: ArrayData; inputs: BakeInputs }&gt;();
+const queueSize = () =&gt; (stashQueue ? 4 : Math.max(1, Math.min(4, maxTables - 2)));
+// How long a kind takes to bake, roughly: sphere-traced surfaces the most
+const COST: Record&lt;Family, number&gt; = { surface: 4, tree: 2, cloud: 1, threads: 1 };
+const costOf = (preset: Preset) =&gt; COST[kindById.get(preset.kind)!.family];
+const light = (preset: Preset) =&gt; costOf(preset) &lt; 4;
+const pairingOf = (name: string) =&gt; (state.pairing === "auto" ? TRANSITIONS[name].pairing : state.pairing);
+const bakeFor = (key: string) =&gt; bakes.find((bake) =&gt; bake.key === key &amp;&amp; bake !== shownBake);
+const onGpu = (q: Queued) =&gt; (bakeFor(q.key)?.done ?? 0) &gt;= state.splats;
+const isReady = (q: Queued) =&gt; onGpu(q) || cpuBakes.has(q.key);
+
+// A bake kept on the CPU, uploaded into a table (milliseconds, no bake)
+function restore(key: string, preset: Preset | undefined, table: Table): Bake {
+  const saved = cpuBakes.get(key)!;
+  table.arrays.upload(saved.data);
+  table.pairing = undefined;
+  const bake: Bake = { key, table, done: state.splats, inputs: saved.inputs, preset, used: performance.now() };
+  bakes.push(bake);
+  return bake;
+}
+
+// A finished bake ahead with the queue on the CPU: kept on the GPU when it
+// is the next surprise, else read back and its table freed
+function settle(bake: Bake) {
+  if (queue.find(isReady)?.key === bake.key) {
+    return;
+  }
+  bake.reading = true;
+  void bake.table.arrays.read({ start: 0, count: state.splats }).then((data) =&gt; {
+    cpuBakes.set(bake.key, { data, inputs: bake.inputs });
+  }).finally(() =&gt; {
+    bake.reading = false;
+    if (bake !== nextBake &amp;&amp; bake !== shownBake &amp;&amp; bake.table.users === 0) {
+      bakes = bakes.filter((each) =&gt; each !== bake);
+      retire(bake.table);
+    }
+  });
+}
+
+function queued(preset: Preset): Queued {
+  const style = state.transition === "random" ? pick(Object.keys(TRANSITIONS)) : state.transition;
+  const remix = Math.random() &lt; 0.35 ? randomLook() : {};
+  if (preset.sampling !== "camera" &amp;&amp; Math.random() &lt; 0.5) {
+    remix.camera = nudged(viewOf(preset));
+  }
+  return { preset, style, remix, shot: preset.sampling === "camera" ? "hold" : randomShot(), key: presetKey(preset) };
+}
+
+// New fractals up to the queue's size: never the one shown, a new kind
+// after each when one is left
+function fillQueue() {
+  queue = queue.filter((q) =&gt; q.preset.name !== state.preset);
+  while (queue.length &lt; queueSize()) {
+    const last = queue[queue.length - 1]?.preset.kind ?? state.kind;
+    const taken = new Set([state.preset, ...queue.map((q) =&gt; q.preset.name)]);
+    const fresh = presets.filter((preset) =&gt; !taken.has(preset.name));
+    // At least one light fractal queued, so the first surprise lands soon
+    const pool = queue.some((q) =&gt; light(q.preset)) ? fresh : fresh.filter(light);
+    const varied = pool.filter((preset) =&gt; preset.kind !== last);
+    if (pool.length === 0) {
+      return;
+    }
+    queue.push(queued(pick(varied.length &gt; 0 ? varied : pool)));
+  }
+}
+
+function bakeAhead(dt: number) {
+  fillQueue();
+  if (stashQueue) {
+    return bakeAheadStashed(dt);
+  }
+  const open = queue.filter((q) =&gt; !isReady(q));
+  if (open.length === 0) {
+    presort();
+    return false;
+  }
+  // Until one is ready, the cheapest left; then each in turn
+  const left = (q: Queued) =&gt; costOf(q.preset) * (1 - (bakeFor(q.key)?.done ?? 0) / state.splats);
+  turn = (turn + 1) % open.length;
+  const q = queue.some(isReady) ? open[turn] : open.reduce((a, b) =&gt; (left(b) &lt; left(a) ? b : a));
+  let bake = bakeFor(q.key);
+  if (!bake) {
+    const table = tableFor(new Set(queue.map((each) =&gt; each.key)), false);
+    if (!table) {
+      presort();
+      return false;
+    }
+    const inputs = bakeOf({ preset: q.preset, long: true }, targetOf({ preset: q.preset, long: true }));
+    bakeSeed += 1;
+    bake = { key: q.key, table, done: 0, inputs: { ...inputs, seed: bakeSeed }, preset: q.preset, used: performance.now() };
+    bakes.push(bake);
+    baked.add(q.preset.kind);
+  }
+  if (bake === nextBake) {
+    return false;
+  }
+  bakeChunk(bake, Math.min(aheadBudget.next(dt, 3), state.splats - bake.done));
+  if (bake.done &gt;= state.splats) {
+    presort();
+  }
+  return true;
+}
+
+// The queue on the CPU: the next surprise uploaded and paired, and one
+// bake at a time (the one under way, else the cheapest left)
+function bakeAheadStashed(dt: number) {
+  const keep = new Set(queue.map((each) =&gt; each.key));
+  const head = queue.find(isReady);
+  if (head &amp;&amp; !bakeFor(head.key)) {
+    const table = tableFor(keep, false);
+    if (table) {
+      restore(head.key, head.preset, table);
+    }
+  }
+  presort();
+  const open = queue.filter((q) =&gt; !isReady(q));
+  if (open.length === 0) {
+    return false;
+  }
+  const left = (q: Queued) =&gt; costOf(q.preset) * (1 - (bakeFor(q.key)?.done ?? 0) / state.splats);
+  const q = open.find((each) =&gt; bakeFor(each.key)) ?? open.reduce((a, b) =&gt; (left(b) &lt; left(a) ? b : a));
+  let bake = bakeFor(q.key);
+  if (!bake) {
+    const table = tableFor(keep, false);
+    if (!table) {
+      return false;
+    }
+    const inputs = bakeOf({ preset: q.preset, long: true }, targetOf({ preset: q.preset, long: true }));
+    bakeSeed += 1;
+    bake = { key: q.key, table, done: 0, inputs: { ...inputs, seed: bakeSeed }, preset: q.preset, used: performance.now() };
+    bakes.push(bake);
+    baked.add(q.preset.kind);
+  }
+  if (bake === nextBake) {
+    return false;
+  }
+  bakeChunk(bake, Math.min(aheadBudget.next(dt, 3), state.splats - bake.done));
+  if (bake.done &gt;= state.splats) {
+    settle(bake);
+  }
+  return true;
+}
+
+// The first ready surprise's table, then the shown one, sorted into that
+// surprise's transition order (one at a time, while idle; dropped if a
+// transition started meanwhile)
+function presort() {
+  const head = queue.find(isReady);
+  if (presorting || phase !== "idle" || !head || !onGpu(head)) {
+    return;
+  }
+  const p = pairingOf(head.style);
+  const queuedTable = bakeFor(head.key)!.table;
+  const table = queuedTable.pairing !== p ? queuedTable : shown().pairing !== p &amp;&amp; shown().ordered.visible &gt; 0 ? shown() : undefined;
+  if (!table) {
+    return;
+  }
+  presorting = true;
+  void sorter.sort(table.arrays, state.splats, p).then((ordered) =&gt; {
+    const drawn = table === shown() ? 1 : 0;
+    if (phase === "idle" &amp;&amp; !table.retired &amp;&amp; table.users &lt;= drawn) {
+      table.ordered.order.dispose();
+      table.ordered = ordered;
+      table.pairing = p;
+    } else {
+      ordered.order.dispose();
+    }
+  }).finally(() =&gt; (presorting = false));
+}
+
+// Both tables in this transition's order (a table keeps the last one it
+// was sorted into), then the transition
+async function order(id: number) {
+  const [from, to] = [shown(), hidden()];
+  if (to.pairing !== pairing) {
+    const sorted = await sorter.sort(to.arrays, state.splats, pairing, to.ordered.order);
+    to.ordered = sorted;
+    to.pairing = pairing;
+    if (id !== generation) {
+      return;
+    }
+  }
+  if (from.pairing !== pairing &amp;&amp; from.ordered.visible &gt; 0) {
+    from.ordered = await sorter.sort(from.arrays, state.splats, pairing, from.ordered.order);
+    from.pairing = pairing;
+    if (id !== generation) {
+      return;
+    }
+  }
+  startTransition();
+}
+
+// The look, sky, light and post values a transition or restyle runs between
+let tween: {
+  time: number;
+  reverse: boolean;
+  look: [Look, Look];
+  sky: [Sky, Sky];
+  light: [THREE.Vector3, THREE.Vector3];
+  post: [number[], number[]];
+} | undefined;
+// The camera's own tween, which may outlast the look's; then the shot
+let cameraTween: { from: View; to: View; time: number; length: number } | undefined;
+let queuedShot: ShotName | undefined;
+
+function startTween(to: Target) {
+  director.stop(motion);
+  queuedShot = undefined;
+  copyPaletteSlot(u.palettes[1], u.palettes[0]);
+  state.palette = to.palette;
+  state.style = to.style;
+  setPaletteSlot(u.palettes[0], PALETTES[to.palette]);
+  [state.lightAzimuth, state.lightElevation] = to.light;
+  tween = {
+    time: 0,
+    reverse: false,
+    look: [{ ...look }, { ...to.look }],
+    sky: [sky, skyOf(PALETTES[to.palette])],
+    light: [u.lightDir.value.clone(), lightDirection(...to.light)],
+    post: [[state.bloom, state.exposure, state.aperture], [to.bloom, to.exposure, to.aperture]],
+  };
+  if (to.camera) {
+    cameraTween = {
+      from: { position: camera.position.clone(), target: controls.getTarget(new THREE.Vector3()), fov: camera.fov },
+      to: to.camera,
+      time: 0,
+      length: Math.max(duration, 1.4),
+    };
+  }
+  rebuildGui();
+}
+
+function startTransition() {
+  const to = target!;
+  startTween(to);
+  // The fractal left keeps turning in 4D; a new kind starts unturned
+  u.turnFromXW.value = u.turnXW.value;
+  u.turnFromYW.value = u.turnYW.value;
+  u.turnFromZW.value = u.turnZW.value;
+  fromTurn = state.turn;
+  if (to.kind !== shownKind) {
+    u.turnXW.value = u.turnYW.value = u.turnZW.value = 0;
+  }
+  state.turn = to.turn;
+  state.sampling = to.sampling;
+  setTransitionStyle(m, style);
+  m.count.value = state.splats;
+  m.t.value = 0;
+  showTransition();
+  phase = "morphing";
+}
+
+function startRestyle(change: Plan) {
+  current = change;
+  target = targetOf(change);
+  duration = state.duration * 0.8;
+  styleName = "restyle";
+  startTween(target);
+  u.paletteMix.value = 0;
+  phase = "restyling";
+  announceLook(target);
+}
+
+const mixNumbers = (a: number, b: number, k: number) =&gt; a + (b - a) * k;
+
+function transitionStep(seconds: number) {
+  if ((phase !== "morphing" &amp;&amp; phase !== "restyling") || !tween) {
+    return;
+  }
+  // Loop: back and forth between the two until something new is asked for
+  const looping = phase === "morphing" &amp;&amp; state.loop &amp;&amp; !pending;
+  tween.time += seconds / duration;
+  if (tween.time &gt;= 1 &amp;&amp; looping) {
+    tween.time = 0;
+    tween.reverse = !tween.reverse;
+  }
+  if (tween.reverse &amp;&amp; pending) {
+    tween.reverse = false;
+    tween.time = 1 - tween.time;
+  }
+  const t = Math.min(tween.time, 1);
+  const shownT = tween.reverse ? 1 - t : t;
+  const k = THREE.MathUtils.smoothstep(shownT, 0, 1);
+  if (phase === "morphing") {
+    m.t.value = shownT;
+  } else {
+    u.paletteMix.value = k;
+  }
+
+  const [lookFrom, lookTo] = tween.look;
+  for (const key of Object.keys(lookTo) as (keyof Look)[]) {
+    if (lookFrom[key] !== lookTo[key]) {
+      look[key] = mixNumbers(lookFrom[key], lookTo[key], k);
+    }
+  }
+  setSky(u, tween.sky[0], tween.sky[1], k);
+  u.lightDir.value.lerpVectors(tween.light[0], tween.light[1], k).normalize();
+  [state.bloom, state.exposure, state.aperture] = tween.post[0].map((from, i) =&gt; mixNumbers(from, tween!.post[1][i], k));
+
+  if (t &gt;= 1 &amp;&amp; !(state.loop &amp;&amp; phase === "morphing" &amp;&amp; !pending)) {
+    finishTransition();
+  }
+}
+
+function cameraStep(seconds: number) {
+  if (!cameraTween) {
+    return;
+  }
+  cameraTween.time = Math.min(1, cameraTween.time + seconds / cameraTween.length);
+  const c = THREE.MathUtils.smootherstep(cameraTween.time, 0, 1);
+  const { from, to } = cameraTween;
+  camera.position.lerpVectors(from.position, to.position, c);
+  camera.fov = mixNumbers(from.fov, to.fov, c);
+  camera.updateProjectionMatrix();
+  controls.lookAt(new THREE.Vector3().lerpVectors(from.target, to.target, c));
+  if (cameraTween.time &gt;= 1) {
+    cameraTween = undefined;
+  }
+}
+
+function finishTransition() {
+  if (phase === "morphing") {
+    shownBake = nextBake!;
+    shownBake.used = performance.now();
+    nextBake = undefined;
+    shownKind = target!.kind;
+    showSteady();
+    trim();
+  }
+  u.paletteMix.value = 1;
+  sky = tween!.sky[1];
+  setSky(u, sky, sky);
+  tween = undefined;
+  phase = "idle";
+  firstShown = true;
+  queuedShot = target?.shot;
+  Object.assign(page, { ready: true });
+  listeners.forEach((controller) =&gt; controller.updateDisplay());
+  if (pending) {
+    const change = pending;
+    pending = undefined;
+    request(change);
+  } else if (surpriseNext) {
+    surpriseNext = false;
+    surprise();
+  }
+}
+
+// New tables (a new sample count): the first transition grows from nothing
+function allocate() {
+  bakes.forEach((bake) =&gt; retire(bake.table));
+  maxTables = tablesFor(state.splats);
+  shownBake = emptyBake();
+  bakes = [shownBake];
+  nextBake = undefined;
+  queue = [];
+  cpuBakes.clear();
+  tween = undefined;
+  phase = "idle";
+  pending = undefined;
+  showSteady();
+  begin({ long: true });
+}
+
+// --- Surprises: the next queued fractal once it is baked (usually), else
+// a quick change of look or view for this one; then a shot ---
+
+const SHOT_WEIGHTS: [ShotName, number][] = [["hold", 2], ["spin", 2], ["zoom", 2], ["orbit", 3], ["truck", 1.5], ["crane", 1.5], ["push", 1.5]];
+const rand = (lo: number, hi: number) =&gt; lo + Math.random() * (hi - lo);
+
+function randomShot(): ShotName {
+  let x = Math.random() * SHOT_WEIGHTS.reduce((sum, [, w]) =&gt; sum + w, 0);
+  return SHOT_WEIGHTS.find(([, w]) =&gt; (x -= w) &lt; 0)?.[0] ?? "hold";
+}
+
+function randomLook(): Partial&lt;Remix&gt; {
+  const remix: Partial&lt;Remix&gt; = {
+    look: { frequency: rand(0.6, 2.2), shift: rand(0, 1), accent: rand(-0.4, 0.8) },
+    bloom: rand(0.25, 1.2),
+    exposure: rand(0.9, 1.12),
+    aperture: Math.random() &lt; 0.15 ? rand(0.004, 0.011) : 0,
+  };
+  if (Math.random() &lt; 0.85) {
+    remix.palette = pick(Object.keys(PALETTES).filter((name) =&gt; name !== state.palette));
+  }
+  if (Math.random() &lt; 0.35) {
+    remix.style = pick(Object.keys(STYLES).filter((name) =&gt; name !== state.style));
+  }
+  return remix;
+}
+
+// A new angle on the same target: around, up or down, nearer or farther
+function nudged(view: View): View {
+  const offset = view.position.clone().sub(view.target);
+  const distance = offset.length() * rand(0.75, 1.2);
+  const azimuth = Math.atan2(offset.x, offset.z) + (Math.random() &lt; 0.5 ? -1 : 1) * THREE.MathUtils.degToRad(rand(25, 80));
+  const elevation = THREE.MathUtils.degToRad(rand(-5, 45));
+  const position = new THREE.Vector3(Math.cos(elevation) * Math.sin(azimuth), Math.sin(elevation), Math.cos(elevation) * Math.cos(azimuth))
+    .multiplyScalar(distance).add(view.target);
+  return { position, target: view.target.clone(), fov: view.fov };
+}
+
+function surprise() {
+  tourTime = 0;
+  if (phase === "morphing" || phase === "restyling") {
+    surpriseNext = true;
+    return;
+  }
+  fillQueue();
+  const ready = queue.find(onGpu) ?? queue.find(isReady);
+  if (ready &amp;&amp; Math.random() &lt; 0.85) {
+    queue = queue.filter((q) =&gt; q !== ready);
+    announce(ready.preset);
+    request({ preset: ready.preset, long: true, remix: ready.remix, shot: ready.shot, style: ready.style });
+    cpuBakes.delete(ready.key);
+    return;
+  }
+  // Nothing baked yet (or now and then anyway): a new look, often from a new angle
+  const fromCamera = state.sampling === "camera";
+  const remix = randomLook();
+  if (!fromCamera &amp;&amp; Math.random() &lt; 0.7) {
+    remix.camera = nudged({ position: camera.position.clone(), target: controls.getTarget(new THREE.Vector3()), fov: camera.fov });
+  }
+  request({ long: false, reshape: false, remix, shot: fromCamera ? "hold" : randomShot() });
+}
+
+// Every kind's bake program, compiled while the first fractal bakes (the
+// screen shows only the sky) or later while nothing else happens, so a
+// first bake of a kind never stalls a frame
+const warmTable = new GpuArrays({ renderer, bundles: { samples: SAMPLES }, capacity: 4096 });
+let warmAt = 0;
+
+function warmStep(now: number) {
+  if ((firstShown &amp;&amp; phase !== "idle") || now &lt; warmAt) {
+    return;
+  }
+  const kind = KINDS.find((each) =&gt; !baked.has(each.id));
+  if (kind) {
+    baked.add(kind.id);
+    warmTable.write(kind.writer(), { at: 0, count: 4 });
+    warmAt = firstShown ? now + 300 : now;
+  }
+}
+
+// --- Bloom and tone mapping ---
+
+const pipeline = new RenderPipeline(renderer);
+const scenePass = pass(scene, camera);
+const sceneColor = scenePass.getTextureNode("output");
+const glow = bloom(sceneColor, state.bloom, state.bloomRadius, state.bloomThreshold);
+pipeline.outputNode = sceneColor.add(glow);
+scene.backgroundNode = skyNode(u);
+
+// --- Light, palette, presets ---
+
+function lightDirection(azimuth: number, elevation: number) {
+  const az = THREE.MathUtils.degToRad(azimuth);
+  const el = THREE.MathUtils.degToRad(elevation);
+  return new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
+}
+
+const slug = (name: string) =&gt; name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function announce(preset: Preset) {
+  titleName.textContent = preset.name;
+  titleSub.textContent = `${kindById.get(preset.kind)!.label} · ${preset.palette} · ${preset.style}`;
+  title.classList.remove("faded");
+  clearTimeout(fadeTimer);
+  fadeTimer = setTimeout(() =&gt; title.classList.add("faded"), 5000);
+  for (const chip of gallery.children) {
+    chip.classList.toggle("active", (chip as HTMLElement).dataset.name === preset.name);
+  }
+}
+
+// The title for a new look of the same fractal
+function announceLook(to: Target) {
+  titleSub.textContent = `${kindById.get(to.kind)!.label} · ${to.palette} · ${to.style}`;
+  title.classList.remove("faded");
+  clearTimeout(fadeTimer);
+  fadeTimer = setTimeout(() =&gt; title.classList.add("faded"), 5000);
+}
+
+function show(preset: Preset) {
+  tourTime = 0;
+  request({ preset, long: true });
+}
+let fadeTimer = 0;
+let tourTime = 0;
+
+const step = (by: number) =&gt; {
+  // From the preset asked for last, so quick presses walk the list
+  const name = pending?.preset?.name ?? state.preset;
+  const index = presets.findIndex((preset) =&gt; preset.name === name);
+  const preset = presets[(index + by + presets.length) % presets.length];
+  announce(preset);
+  show(preset);
+};
+
+document.getElementById("demos")!.onclick = () =&gt; void openDemo();
+document.getElementById("surprise")!.onclick = () =&gt; surprise();
+const surpriseDots = document.querySelector("#surprise small")!;
+
+for (const preset of presets) {
+  const chip = document.createElement("button");
+  chip.dataset.name = preset.name;
+  const palette = PALETTES[preset.palette];
+  const stops = [0, 0.25, 0.5, 0.75, 1].map((t) =&gt; paletteAt(palette, t * 0.9).map((c) =&gt; Math.round(c * 255 * 0.8)).join(","));
+  chip.style.background = `linear-gradient(120deg, ${stops.map((rgb) =&gt; `rgb(${rgb})`).join(", ")})`;
+  chip.innerHTML = `${preset.name}&lt;small&gt;${kindById.get(preset.kind)!.label}&lt;/small&gt;`;
+  chip.onclick = () =&gt; {
+    announce(preset);
+    show(preset);
+  };
+  gallery.append(chip);
+}
+
+// --- The panel ---
+
+const gui = new GUI({ title: "Fractals" });
+gui.domElement.classList.add("ui");
+if (tier.platform !== "desktop") {
+  gui.close();
+}
+// The swipe direction, for this visit (the demos' camera too)
+const swipe = { reverse: false };
+gui.add(swipe, "reverse").name("reverse swipe").onChange((on: boolean) =&gt; {
+  controls.settings.invertLookX = on;
+  controls.settings.invertLookY = on;
+});
+let shapeFolder: GUI | undefined;
+const listeners: Controller[] = [];
+const edit = () =&gt; request({ long: false });
+const reseed = () =&gt; request({ long: false, fresh: true });
+
+function rebuildGui() {
+  listeners.forEach((controller) =&gt; controller.updateDisplay());
+  shapeFolder?.destroy();
+  const kind = kindById.get(state.kind)!;
+  shapeFolder = gui.addFolder(`Shape: ${kind.label}`);
+  const kindValues = values[kind.id];
+  for (const [key, param] of Object.entries(kind.params)) {
+    shapeFolder.add(kindValues, key, param.min, param.max, param.step ?? 0.01).name(param.label ?? key).onFinishChange(edit);
+  }
+  shapeFolder.add({ reseed }, "reseed").name("new samples (R)");
+  // Right under the gallery folder
+  gui.$children.insertBefore(shapeFolder.domElement, transitionFolder.domElement.nextSibling);
+}
+
+const watch = &lt;T extends Controller&gt;(controller: T) =&gt; {
+  listeners.push(controller);
+  return controller;
+};
+
+const galleryFolder = gui.addFolder("Gallery");
+watch(galleryFolder.add(state, "preset", presets.map((preset) =&gt; preset.name)).onChange((name: string) =&gt; show(presets.find((preset) =&gt; preset.name === name)!)));
+watch(galleryFolder.add(state, "kind", Object.fromEntries(KINDS.map((kind) =&gt; [kind.label, kind.id]))).name("fractal").onChange((id: string) =&gt; {
+  request({ long: true, remix: { look: kindById.get(id)!.look } });
+  rebuildGui();
+}));
+galleryFolder.add({ surprise }, "surprise").name("surprise me (space)");
+watch(galleryFolder.add(state, "tour").name("tour (T)"));
+galleryFolder.add(state, "tourOrder", ["surprise", "in order"]).name("tour moves");
+galleryFolder.add(state, "tourSeconds", 8, 90, 1).name("seconds each");
+watch(galleryFolder.add(state, "motion", [...MOTIONS]).onChange((mode: MotionName) =&gt; motion.setMode(mode)));
+galleryFolder.add(state, "motionSpeed", 0, 4, 0.01).name("motion speed").onChange((speed: number) =&gt; (motion.speed = speed));
+
+const transitionFolder = gui.addFolder("Transitions");
+watch(transitionFolder.add(state, "transition", [...Object.keys(TRANSITIONS), "random"]).name("style"));
+watch(transitionFolder.add(state, "pairing", { auto: "auto", "nearest (Hilbert curve)": "hilbert", "by height": "layers", "by radius": "radial", "by angle": "spiral", random: "random" }));
+transitionFolder.add(state, "duration", 0.3, 10, 0.1).name("seconds");
+watch(transitionFolder.add(state, "loop").name("loop between the last two"));
+transitionFolder.close();
+
+const colorFolder = gui.addFolder("Color");
+watch(colorFolder.add(state, "palette", Object.keys(PALETTES)).onChange((name: string) =&gt; {
+  setPalette(u, PALETTES[name]);
+  sky = skyOf(PALETTES[name]);
+}));
+watch(colorFolder.add(look, "frequency", 0.1, 6, 0.01));
+watch(colorFolder.add(look, "shift", 0, 2, 0.001));
+watch(colorFolder.add(look, "cycle", -0.3, 0.3, 0.001).name("cycle speed"));
+watch(colorFolder.add(look, "accent", -1, 1, 0.01));
+watch(colorFolder.add(look, "saturation", 0, 2, 0.01));
+watch(colorFolder.add(u.background, "value", 0, 2, 0.01).name("sky"));
+
+const lightFolder = gui.addFolder("Light");
+watch(lightFolder.add(state, "style", Object.keys(STYLES)).onChange((name: string) =&gt; {
+  Object.assign(look, STYLES[name]);
+  listeners.forEach((controller) =&gt; controller.updateDisplay());
+}));
+const relight = () =&gt; {
+  u.lightDir.value.copy(lightDirection(state.lightAzimuth, state.lightElevation));
+};
+watch(lightFolder.add(state, "lightAzimuth", -180, 180, 1).name("azimuth").onChange(relight).onFinishChange(edit));
+watch(lightFolder.add(state, "lightElevation", -10, 90, 1).name("elevation").onChange(relight).onFinishChange(edit));
+for (const [key, min, max] of [["key", 0, 4], ["ambient", 0, 2], ["occlusion", 0, 1], ["shadows", 0, 1], ["specular", 0, 3], ["shininess", 2, 120], ["metal", 0, 1], ["rim", 0, 3], ["glow", 0, 4], ["crevices", 0, 4], ["fog", 0, 0.6]] as const) {
+  watch(lightFolder.add(look, key, min, max, 0.01));
+}
+lightFolder.close();
+
+const splatFolder = gui.addFolder("Splats");
+splatFolder.add(state, "splats", { "250k": 250_000, "500k": 500_000, "1M": 1_000_000, "1.5M": 1_500_000, "2M": 2_000_000, "3M": 3_000_000, "4M": 4_000_000 })
+  .onChange(allocate);
+watch(splatFolder.add(look, "sizeScale", 0.2, 4, 0.01).name("size"));
+watch(splatFolder.add(look, "opacity", 0.02, 1, 0.01));
+watch(splatFolder.add(look, "flatness", 0.2, 5, 0.01).name("thickness"));
+watch(splatFolder.add(state, "sampling", { "all around": "orbit", "from the camera": "camera" }).onChange(edit));
+splatFolder.add(state, "autoRefocus").name("bake when still");
+splatFolder.add({ refocus: reseed }, "refocus").name("bake for this view");
+splatFolder.add(state, "coverage", 0.3, 3, 0.01).name("bake size").onFinishChange(edit);
+splatFolder.add(tier, "hiDpi").name("HiDPI").onChange(setHiDpi).listen();
+splatFolder.close();
+
+
+const motionFolder = gui.addFolder("Effects");
+watch(motionFolder.add(look, "sway", 0, 3, 0.01));
+watch(motionFolder.add(look, "petals", 0, 2, 0.01));
+watch(motionFolder.add(look, "pulse", 0, 2, 0.01).name("light pulses"));
+watch(motionFolder.add(look, "pulseSpeed", -1, 1, 0.01).name("pulse speed"));
+watch(motionFolder.add(look, "twinkle", 0, 1, 0.01));
+watch(motionFolder.add(state, "turn", -0.5, 0.5, 0.001).name("4D turn"));
+motionFolder.close();
+
+const postFolder = gui.addFolder("Bloom and exposure");
+watch(postFolder.add(state, "bloom", 0, 3, 0.01));
+postFolder.add(state, "bloomRadius", 0, 1, 0.01).name("radius");
+postFolder.add(state, "bloomThreshold", 0, 2, 0.01).name("threshold");
+watch(postFolder.add(state, "exposure", 0.2, 3, 0.01));
+watch(postFolder.add(state, "aperture", 0, 0.03, 0.0005).name("depth of field"));
+postFolder.add(renderer, "toneMapping", { neutral: THREE.NeutralToneMapping, AgX: THREE.AgXToneMapping, ACES: THREE.ACESFilmicToneMapping, none: THREE.NoToneMapping })
+  .name("tone mapping").onChange(() =&gt; (pipeline.needsUpdate = true));
+postFolder.close();
+
+gui.add({ save }, "save").name("save PNG (S)");
+
+function save() {
+  pipeline.render();
+  renderer.domElement.toBlob((blob) =&gt; {
+    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob!), download: `${slug(state.preset || state.kind)}.png` });
+    link.click();
+  });
+}
+
+addEventListener("keydown", (event) =&gt; {
+  if ((event.target as HTMLElement).closest("input, select, textarea") || event.metaKey || event.ctrlKey || demo?.active) {
+    return;
+  }
+  const key = event.key.toLowerCase();
+  if (key === "d") {
+    void openDemo();
+  } else if (key === "n") {
+    step(1);
+  } else if (key === "p") {
+    step(-1);
+  } else if (key === "t") {
+    state.tour = !state.tour;
+    tourTime = 0;
+    listeners.forEach((controller) =&gt; controller.updateDisplay());
+  } else if (key === " ") {
+    event.preventDefault();
+    surprise();
+  } else if (key === "r") {
+    reseed();
+  } else if (key === "h") {
+    document.body.classList.toggle("bare");
+  } else if (key === "s") {
+    save();
+  }
+});
+
+// A camera move of the user's ends the page's own
+motion.onInput = () =&gt; {
+  cameraTween = undefined;
+  queuedShot = undefined;
+  director.stop(motion);
+};
+
+// --- Start ---
+
+const page = {
+  ready: false, renderer, scene, camera, controls, state, look, values, kinds: KINDS, uniforms: u, motion,
+  presets: presets.map((preset) =&gt; ({ name: preset.name, slug: slug(preset.name) })),
+  show: (name: string) =&gt; show(presets.find((preset) =&gt; slug(preset.name) === slug(name))!),
+  baked: () =&gt; (phase === "baking" &amp;&amp; nextBake ? nextBake.done / state.splats : 1),
+  settled: () =&gt; phase === "idle" &amp;&amp; !pending,
+  // The bakes kept (the shown one first): preset, done (0..1)
+  cache: () =&gt; bakes.map((bake) =&gt; ({ preset: bake.preset?.name ?? (bake.key ? "edited" : "empty"), done: bake.done / state.splats, shown: bake === shownBake })),
+  // Queued surprises kept in CPU memory
+  cpu: () =&gt; cpuBakes.size,
+  // The transition's progress, or -1 outside one
+  progress: () =&gt; (phase === "morphing" ? m.t.value : -1),
+  surprise,
+  shot: (name: ShotName) =&gt; director.start(name),
+  shots: SHOTS,
+  samples: () =&gt; shown().arrays,
+  bake: reseed,
+  setPalette: (name: string) =&gt; {
+    state.palette = name;
+    setPalette(u, PALETTES[name]);
+    sky = skyOf(PALETTES[name]);
+  },
+};
+Object.assign(window, { radixFractals: page });
+
+// A quality (from the demo menu): its samples, for the gallery (baked again)
+// and the demos (kept for this device)
+function setQuality(quality: Quality) {
+  tier.quality = quality;
+  tier.splats = splatsOf(tier.platform, webgpu, quality);
+  saveQuality(quality);
+  if (!params.get("splats") &amp;&amp; state.splats !== tier.splats) {
+    state.splats = tier.splats;
+    allocate();
+    gui.controllersRecursive().forEach((controller) =&gt; controller.updateDisplay());
+  }
+}
+
+// A demo's last fractal, shown at once as it was: its samples become the
+// shown table (or it bakes, if they did not come), in its own look, the
+// demo's palette, from the demo's camera
+function adopt(h: Handoff) {
+  const preset = presets.find((each) =&gt; each.name === h.preset);
+  if (!preset) {
+    h.arrays?.dispose();
+    return;
+  }
+  const view: View = { position: h.camera.position, target: h.camera.target, fov: h.camera.fov };
+  if (!h.arrays || h.count !== state.splats) {
+    h.arrays?.dispose();
+    request({ preset, long: true, remix: { camera: view, palette: h.palette } });
+    return;
+  }
+  // Whatever the gallery had under way stops
+  tween = undefined;
+  cameraTween = undefined;
+  pending = undefined;
+  surpriseNext = false;
+  queuedShot = undefined;
+  director.stop(motion);
+  parkNext();
+  generation += 1;
+
+  state.preset = preset.name;
+  state.kind = preset.kind;
+  values[preset.kind] = { ...defaultsOf(kindById.get(preset.kind)!), ...preset.params };
+  announce(preset);
+  const t = targetOf({ preset, long: true, remix: { palette: h.palette } });
+  current = { preset, long: true };
+  target = t;
+  const inputs = bakeOf({ preset, long: true, applied: true }, t);
+  bakeSeed += 1;
+  shownBake = {
+    key: inputs.key, table: { arrays: h.arrays, ordered: { order: SplatGenerator.indices(renderer, [0]), visible: 0 }, users: 0, retired: false },
+    done: state.splats, inputs: { ...inputs, seed: bakeSeed }, preset, used: performance.now(),
+  };
+  bakes.push(shownBake);
+  trim();
+  shownKind = preset.kind;
+  queue = queue.filter((q) =&gt; q.preset.name !== preset.name);
+
+  Object.assign(look, t.look);
+  state.palette = t.palette;
+  state.style = t.style;
+  setPalette(u, PALETTES[t.palette]);
+  sky = skyOf(PALETTES[t.palette]);
+  setSky(u, sky, sky);
+  u.paletteMix.value = 1;
+  [state.lightAzimuth, state.lightElevation] = t.light;
+  u.lightDir.value.copy(lightDirection(...t.light));
+  [state.bloom, state.exposure, state.aperture, state.turn, state.sampling] = [t.bloom, t.exposure, t.aperture, t.turn, t.sampling];
+  u.turnXW.value = u.turnYW.value = u.turnZW.value = 0;
+  camera.position.copy(view.position);
+  camera.fov = view.fov;
+  camera.updateProjectionMatrix();
+  controls.lookAt(view.target);
+
+  phase = "idle";
+  firstShown = true;
+  showSteady();
+  rebuildGui();
+  listeners.forEach((controller) =&gt; controller.updateDisplay());
+}
+
+// --- Demo mode (loaded when first opened) ---
+
+let demo: DemoMode | undefined;
+
+async function loadDemo() {
+  if (!demo) {
+    const { DemoMode } = await import(<a class="import" href="demo/demo.ts.html" title="examples/fractals/demo/demo.ts">"./demo/demo.js"</a>);
+    demo = new DemoMode({
+      renderer, webgpu, canvas: renderer.domElement, kinds: KINDS, bakeU, get splats() {
+        return Number(params.get("splats")) || tier.splats;
+      }, memory: tier.memory, platform: tier.platform,
+      hiDpi: () =&gt; tier.hiDpi,
+      setHiDpi,
+      quality: () =&gt; tier.quality,
+      setQuality,
+      splatsAt: (quality: Quality) =&gt; splatsOf(tier.platform, webgpu, quality),
+      resolution: rendering ? undefined : resolution,
+      pace,
+      enter: () =&gt; {
+        controls.enabled = false;
+        director.stop(motion);
+        document.body.classList.add("demo");
+      },
+      yield: freeCache,
+      adopt,
+      reverse: () =&gt; swipe.reverse,
+      exit: () =&gt; {
+        controls.enabled = true;
+        document.body.classList.remove("demo");
+      },
+    }, { sound: params.get("sound") !== "0" });
+    Object.assign(page, { demo });
+  }
+  return demo;
+}
+
+async function openDemo(name?: string, start = false) {
+  (await loadDemo()).open(name, start);
+}
+
+showSteady();
+const demoParam = params.get("demo");
+if (rendering &amp;&amp; demoParam) {
+  void loadDemo().then((mode) =&gt; mode.film(demoParam));
+} else {
+  show(presets.find((preset) =&gt; slug(preset.name) === params.get("preset")) ?? presets[0]);
+  if (demoParam !== "0" &amp;&amp; params.get("ui") !== "0" &amp;&amp; !state.tour) {
+    void openDemo(demoParam ?? undefined);
+  }
+}
+
+let last = performance.now();
+let frames = 0;
+let fps = 0;
+let fpsTime = last;
+const lastPose = new THREE.Matrix4();
+let stillSince = 0;
+const samePose = (a: THREE.Matrix4, b: THREE.Matrix4) =&gt; a.elements.every((value, i) =&gt; Math.abs(value - b.elements[i]) &lt; 1e-4);
+const inverse = new THREE.Matrix4();
+
+renderer.setAnimationLoop((now) =&gt; {
+  const dt = now - last;
+  last = now;
+  if (demo?.active &amp;&amp; demo.state !== "menu") {
+    demo.frame(dt);
+    return;
+  }
+  const seconds = Math.min(dt, 100) / 1000;
+
+  transitionStep(seconds);
+  cameraStep(seconds);
+  if (!cameraTween &amp;&amp; queuedShot &amp;&amp; phase === "idle") {
+    director.start(queuedShot);
+    queuedShot = undefined;
+  }
+  director.update(seconds, camera, controls, motion);
+  motion.update(seconds, camera, controls, { held: Boolean(cameraTween) || director.holds, baked: state.sampling === "camera" });
+  controls.update();
+  // Camera sampling follows the view: a new bake once the camera has moved
+  // and held still
+  camera.updateMatrixWorld();
+  if (!samePose(camera.matrixWorld, lastPose)) {
+    lastPose.copy(camera.matrixWorld);
+    stillSince = now;
+  }
+  if (state.sampling === "camera" &amp;&amp; state.autoRefocus &amp;&amp; phase === "idle" &amp;&amp; !cameraTween &amp;&amp; !samePose(camera.matrixWorld, bakedPose) &amp;&amp; now - stillSince &gt; 400) {
+    edit();
+  }
+  if (state.tour &amp;&amp; phase === "idle") {
+    tourTime += seconds;
+    if (tourTime &gt; state.tourSeconds) {
+      if (state.tourOrder === "surprise") {
+        surprise();
+      } else {
+        step(1);
+      }
+    }
+  }
+  warmStep(now);
+
+  u.time.value = now / 1000;
+  for (const key of Object.keys(look) as (keyof Look)[]) {
+    u[key].value = look[key];
+  }
+  u.turnXW.value += state.turn * seconds;
+  u.turnZW.value += state.turn * 0.61 * seconds;
+  u.turnFromXW.value += fromTurn * seconds;
+  u.turnFromZW.value += fromTurn * 0.61 * seconds;
+  inverse.copy(motion.holder.matrixWorld).invert();
+  camera.getWorldPosition(u.camera.value).applyMatrix4(inverse);
+  glow.strength.value = state.bloom;
+  glow.radius.value = state.bloomRadius;
+  glow.threshold.value = state.bloomThreshold;
+  renderer.toneMappingExposure = state.exposure;
+  splatRenderer.objectParams.apertureTan = state.aperture;
+  splatRenderer.objectParams.focalDistance = controls.distance;
+
+  if (!bakeStep(dt)) {
+    pace.update(dt);
+  }
+  pipeline.render();
+  if (!rendering) {
+    resolution.update(dt, phase === "baking" || queue.some((q) =&gt; !isReady(q)));
+  }
+
+  frames += 1;
+  if (now - fpsTime &gt; 500) {
+    fps = (frames * 1000) / (now - fpsTime);
+    frames = 0;
+    fpsTime = now;
+  }
+  const baking = phase === "baking" &amp;&amp; nextBake ? nextBake.done / state.splats : 0;
+  progressBar.style.width = `${phase === "baking" ? 100 * baking : phase === "idle" ? 0 : 100}%`;
+  progressBar.style.opacity = phase === "baking" || phase === "sorting" ? "1" : "0";
+  const readyCount = queue.filter(isReady).length;
+  const ahead = ` · surprises ${readyCount}/${queue.length} ready`;
+  const dots = queue.map((q) =&gt; (isReady(q) ? "\u25cf" : "\u25cb")).join("");
+  if (surpriseDots.textContent !== dots) {
+    surpriseDots.textContent = dots;
+  }
+  const doing = {
+    idle: `${bakeSeconds &gt; 0 ? `baked in ${bakeSeconds.toFixed(1)} s` : "from the cache"}${ahead}`,
+    baking: `baking ${Math.round(100 * baking)}%`,
+    sorting: `pairing (${pairing})`,
+    morphing: `${styleName} ${Math.round(m.t.value * 100)}%${pending ? " · next waiting" : ""}`,
+    restyling: `new look${pending ? " · next waiting" : ""}`,
+  }[phase];
+  const scale = resolution.scale &lt; 0.99 ? ` · ${Math.round(resolution.scale * 100)}% res` : "";
+  status.textContent = `${webgpu ? "WebGPU" : "WebGL2"} · ${(state.splats / 1e6).toFixed(2)}M splats · ${fps.toFixed(0)} fps${scale} · ${doing}` +
+    (director.holds || director.name === "spin" ? ` · ${director.name}` : "");
+  if (!firstShown) {
+    status.textContent += " · first bake";
+  }
+});
+
+addEventListener("resize", () =&gt; {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});</code></pre></div>
+</main>
+</div>
+<script src="../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

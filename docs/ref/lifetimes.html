@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lifetimes · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/lifetimes.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/lifetimes.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html" class="on">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="lifetimes">Lifetimes<a class="anchor" href="#lifetimes">#</a></h1>
+<p>When to render, when to free data, and what to dispose. Radix does not free anything the app made and does not read an object's data. It tells the app when a render has something new to show (<code>onInvalidate</code>) and when an object is no longer drawn by anything (<code>release</code>).</p>
+<p>Code: <a href="../../src/render/SplatRenderer.ts.html"><code>src/render/SplatRenderer.ts</code></a> and <code>SplatView.ts</code>.</p>
+<pre class="lang-ts"><code>const splatRenderer = new SplatRenderer({
+  renderer,
+  collection,
+  onInvalidate: () =&gt; requestRender(),
+});
+
+splatRenderer.collection = new SplatCollection([
+  // Freed once nothing draws it
+  SplatCollection.arrays(splats, { matrixWorld, release: () =&gt; splats.dispose() }),
+]);</code></pre>
+<h2 id="on-demand-rendering">On-demand rendering<a class="anchor" href="#on-demand-rendering">#</a></h2>
+<p><code>onInvalidate(view?)</code> is called when work that Radix did, or was asked to do, needs a render to be shown:</p>
+<ul>
+<li>an order <code>autoSort</code> applied (with the view it is for);</li>
+<li>a <code>requestSort()</code> (of a view, or <code>undefined</code> for every view of the renderer), unless a sort in flight will call it when its order lands.</li>
+</ul>
+<p>It is never called for the app's own changes (a new collection, new params, a moved object), which the app already knows about.</p>
+<ul>
+<li>With the GPU sort, a render shows each change immediately, so only the app's changes need renders.</li>
+<li>With the CPU sort, a render starts a sort, its order lands later, <code>onInvalidate</code> asks for the render that shows it, and that render starts another sort only if the camera moved meanwhile. When nothing changes, rendering stops.</li>
+</ul>
+<h2 id="object-releases">Object releases<a class="anchor" href="#object-releases">#</a></h2>
+<p>An object's <code>release</code> runs once, when that object is in no renderer's live collection. A renderer's live collections are:</p>
+<ul>
+<li>its <code>collection</code>, and its views' own collections;</li>
+<li>with the CPU sort, each view's applied order's collection;</li>
+<li>the collections of sorts in flight, and of the finished order that can still be applied.</li>
+</ul>
+<pre class="lang-ts"><code>const indices = SplatGenerator.indices(renderer, chosen, pool.pop());
+const object = SplatCollection.object({
+  generator: listed,
+  data: { splats, indices },
+  count: chosen.length,
+  matrixWorld,
+  // Once nothing draws or sorts this object; the splats stay
+  release: () =&gt; pool.push(indices),
+});
+splatRenderer.collection = new SplatCollection([object]);</code></pre>
+<ul>
+<li><strong>An object frees what it owns</strong>: a LoD subset's index list, or a file's arrays when one object draws the whole file. Resources shared by several objects (one file behind many LoD subsets) are freed by the app once all their objects are released.</li>
+<li><strong>Use the same object wherever it is shared</strong>: in several collections, views, or renderers. It is released after the last of them. To move an object to another renderer, add it to the new one before removing it from the old one.</li>
+<li><strong>Synchronous</strong>: a release runs inside the call that retired the object's last live collection (<code>apply</code>, setting a collection, a sort finishing, or <code>dispose()</code>), after the bookkeeping, so it may set a collection itself.</li>
+<li>Only objects that have a <code>release</code> are tracked.</li>
+</ul>
+<p>On WebGPU an old collection is retired at the next assignment; on the CPU sort it stays live until a newer order is applied, a few frames later. Code that frees data on assignment instead of in <code>release</code> crashes or draws garbage on the WebGL2 path.</p>
+<h2 id="disposal">Disposal<a class="anchor" href="#disposal">#</a></h2>
+<table><thead><tr><th>Call</th><th>What it frees</th></tr></thead><tbody><tr><td><code>splatRenderer.dispose()</code></td><td>the renderer's projected arrays, sorter, material, and its views; objects only it held are released. The shared sort pool (<code>SplatRenderer.sortPool</code>) stays for other renderers. It also hides the renderer (<code>visible = false</code>), and <code>prepare</code> or a render of it does nothing, so one left in the scene costs nothing and makes no GPU resources again. Remove it from the scene too</td></tr><tr><td><code>view.dispose()</code></td><td>the view's order and key arrays; takes it off its renderer, releasing objects only it held</td></tr><tr><td><code>SplatProjector.dispose(generator)</code></td><td>a generator's compiled programs, once no live collection uses it. Garbage collection does not free GPU pipelines. Apps that make generators once never need this</td></tr><tr><td><code>arrays.dispose()</code></td><td>a <code>GpuArrays</code>'s textures: an object's <code>release</code> is the place for it</td></tr><tr><td><code>pool.dispose()</code></td><td>a <code>WorkerPool</code>'s workers; later calls reject instead of making new ones</td></tr></tbody></table>
+<p>A renderer that is garbage-collected without <code>dispose()</code> logs a console warning, and its objects are released at that point. Dispose renderers explicitly: the warning means GPU memory was held longer than needed.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Views are held until disposed. On the CPU sort, each new camera object gets a new view, and they pile up; use <code>viewKey</code> (<a href="views.html#view-keys">Views and CPU orders</a>).</li>
+<li>A sort in flight when its view or renderer is disposed rejects its promise, makes no worker, and keeps no key arrays. A renderer disposes its views at once, and a view's sort checks for that after each step that waits (the key readback, the worker sort), so a sort never reaches a disposed renderer. An autoSort that ends this way is not reported.</li>
+<li>Showing a disposed renderer again (<code>visible = true</code>) makes three draw its disposed material, as with any disposed three.js mesh: make a new renderer instead.</li>
+<li><code>release</code> may run later than expected on the CPU sort (an old order is still shown), and never if the object is still in some renderer. Check both when debugging leaks.</li>
+</ul>
+<div class="pager"><a class="prev" href="sorting.html"><small>Previous</small>Sorting</a><a class="next" href="xr.html"><small>Next</small>WebXR and stereo</a></div>
+<p class="source">Source: <a href="../lifetimes.md.html">docs/lifetimes.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#on-demand-rendering">On-demand rendering</a>
+<a class="h2" href="#object-releases">Object releases</a>
+<a class="h2" href="#disposal">Disposal</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

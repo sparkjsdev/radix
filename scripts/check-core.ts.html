@@ -1,0 +1,3960 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>check-core.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from scripts/check-core.ts by scripts/build-site.mjs -->
+<body data-root="../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../docs/api.md.html">api.md</a><a href="../docs/arraydata.md.html">arraydata.md</a><a href="../docs/checks.md.html">checks.md</a><a href="../docs/concepts.md.html">concepts.md</a><a href="../docs/controls.md.html">controls.md</a><a href="../docs/encoding.md.html">encoding.md</a><a href="../docs/files.md.html">files.md</a><a href="../docs/generators.md.html">generators.md</a><a href="../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../docs/lifetimes.md.html">lifetimes.md</a><a href="../docs/multi-splat.md.html">multi-splat.md</a><a href="../docs/overview.md.html">overview.md</a><a href="../docs/params.md.html">params.md</a><a href="../docs/performance.md.html">performance.md</a><a href="../docs/projection.md.html">projection.md</a><a href="../docs/quickstart.md.html">quickstart.md</a><a href="../docs/rdx.md.html">rdx.md</a><a href="../docs/recipes.md.html">recipes.md</a><a href="../docs/renderer.md.html">renderer.md</a><a href="../docs/rendering.md.html">rendering.md</a><a href="../docs/sh.md.html">sh.md</a><a href="../docs/shaders.md.html">shaders.md</a><a href="../docs/site.js.html">site.js</a><a href="../docs/sorting.md.html">sorting.md</a><a href="../docs/splats.md.html">splats.md</a><a href="../docs/views.md.html">views.md</a><a href="../docs/wgpu.md.html">wgpu.md</a><a href="../docs/workers.md.html">workers.md</a><a href="../docs/xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../examples/doom/data.ts.html">data.ts</a><a href="../examples/doom/game.ts.html">game.ts</a><a href="../examples/doom/hud.ts.html">hud.ts</a><a href="../examples/doom/level.ts.html">level.ts</a><a href="../examples/doom/lighting.ts.html">lighting.ts</a><a href="../examples/doom/main.ts.html">main.ts</a><a href="../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../examples/film/score.ts.html">score.ts</a><a href="../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../examples/film/text.ts.html">text.ts</a><a href="../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../examples/fractals/demo/library.ts.html">library.ts</a><a href="../examples/fractals/demo/music.ts.html">music.ts</a><a href="../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../examples/fractals/device.ts.html">device.ts</a><a href="../examples/fractals/kind.ts.html">kind.ts</a><a href="../examples/fractals/main.ts.html">main.ts</a><a href="../examples/fractals/morph.ts.html">morph.ts</a><a href="../examples/fractals/motion.ts.html">motion.ts</a><a href="../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../examples/fractals/presets.ts.html">presets.ts</a><a href="../examples/fractals/sample.ts.html">sample.ts</a><a href="../examples/fractals/shade.ts.html">shade.ts</a><a href="../examples/fractals/shots.ts.html">shots.ts</a><a href="../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../examples/fxedit/checks.ts.html">checks.ts</a><a href="../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/fxedit/editors.ts.html">editors.ts</a><a href="../examples/fxedit/framed.ts.html">framed.ts</a><a href="../examples/fxedit/juice.ts.html">juice.ts</a><a href="../examples/fxedit/layout.ts.html">layout.ts</a><a href="../examples/fxedit/main.ts.html">main.ts</a><a href="../examples/fxedit/palette.ts.html">palette.ts</a><a href="../examples/fxedit/preview.ts.html">preview.ts</a><a href="../examples/fxedit/settings.ts.html">settings.ts</a><a href="../examples/fxedit/sound.ts.html">sound.ts</a><a href="../examples/fxedit/springs.ts.html">springs.ts</a><a href="../examples/fxedit/themes.ts.html">themes.ts</a><a href="../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../examples/lcc/collision.ts.html">collision.ts</a><a href="../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/lcc/gui.ts.html">gui.ts</a><a href="../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../examples/lcc/main.ts.html">main.ts</a><a href="../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../examples/quake/data.ts.html">data.ts</a><a href="../examples/quake/entities.ts.html">entities.ts</a><a href="../examples/quake/game.ts.html">game.ts</a><a href="../examples/quake/hud.ts.html">hud.ts</a><a href="../examples/quake/lighting.ts.html">lighting.ts</a><a href="../examples/quake/main.ts.html">main.ts</a><a href="../examples/quake/models.ts.html">models.ts</a><a href="../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../examples/scenes/main.ts.html">main.ts</a><a href="../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../examples/sogs/gui.ts.html">gui.ts</a><a href="../examples/sogs/lod.ts.html">lod.ts</a><a href="../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../examples/sogs/main.ts.html">main.ts</a><a href="../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../examples/sogs/resident.ts.html">resident.ts</a><a href="../examples/sogs/sh.ts.html">sh.ts</a><a href="../examples/sogs/sog.ts.html">sog.ts</a><a href="../examples/sogs/validate.ts.html">validate.ts</a><a href="../examples/sogs/webp.ts.html">webp.ts</a><a href="../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../examples/spark/js/assets.ts.html">assets.ts</a><a href="../examples/spark/js/construct.ts.html">construct.ts</a><a href="../examples/spark/js/cube.ts.html">cube.ts</a><a href="../examples/spark/js/examples.ts.html">examples.ts</a><a href="../examples/spark/js/files.ts.html">files.ts</a><a href="../examples/spark/js/objects.ts.html">objects.ts</a><a href="../examples/spark/js/page.ts.html">page.ts</a><a href="../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../examples/spark/js/snow.ts.html">snow.ts</a><a href="../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../examples/spark/lofi/main.ts.html">main.ts</a><a href="../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../examples/splats/catalog.ts.html">catalog.ts</a><a href="../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/splats/gui.ts.html">gui.ts</a><a href="../examples/splats/main.ts.html">main.ts</a><a href="../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../examples/spz/catalog.ts.html">catalog.ts</a><a href="../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../examples/xr/main.ts.html">main.ts</a></details></details><details open><summary>scripts</summary><a href="build-docs.mjs.html">build-docs.mjs</a><a href="check-core.ts.html" class="on">check-core.ts</a><a href="check-examples.mjs.html">check-examples.mjs</a><a href="check-test.mjs.html">check-test.mjs</a><a href="convert-large-ply.ts.html">convert-large-ply.ts</a><a href="dev-link.mjs.html">dev-link.mjs</a><a href="inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../src/core/axes.ts.html">axes.ts</a><a href="../src/core/bundles.ts.html">bundles.ts</a><a href="../src/core/compress.ts.html">compress.ts</a><a href="../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../src/core/encoding.ts.html">encoding.ts</a><a href="../src/core/files.ts.html">files.ts</a><a href="../src/core/formats.ts.html">formats.ts</a><a href="../src/core/index.ts.html">index.ts</a><a href="../src/core/layout.ts.html">layout.ts</a><a href="../src/core/math.ts.html">math.ts</a><a href="../src/core/ply.ts.html">ply.ts</a><a href="../src/core/progress.ts.html">progress.ts</a><a href="../src/core/rad.ts.html">rad.ts</a><a href="../src/core/rdx.ts.html">rdx.ts</a><a href="../src/core/sh.ts.html">sh.ts</a><a href="../src/core/sort.ts.html">sort.ts</a><a href="../src/core/splats.ts.html">splats.ts</a><a href="../src/core/spz.ts.html">spz.ts</a><a href="../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../src/gpu/backend.ts.html">backend.ts</a><a href="../src/gpu/baseline.ts.html">baseline.ts</a><a href="../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../src/gpu/hdr.ts.html">hdr.ts</a><a href="../src/gpu/index.ts.html">index.ts</a><a href="../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../src/render/SplatView.ts.html">SplatView.ts</a><a href="../src/render/index.ts.html">index.ts</a><a href="../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../src/render/splatParams.ts.html">splatParams.ts</a><a href="../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../src/wgpu/index.ts.html">index.ts</a><a href="../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../src/worker/index.ts.html">index.ts</a><a href="../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>check-core.ts</h1>
+<p class="path">scripts/check-core.ts · <a href="check-core.ts">raw</a> · <a href="../build/examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
+
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a>
+<a id="L528" href="#L528">528</a>
+<a id="L529" href="#L529">529</a>
+<a id="L530" href="#L530">530</a>
+<a id="L531" href="#L531">531</a>
+<a id="L532" href="#L532">532</a>
+<a id="L533" href="#L533">533</a>
+<a id="L534" href="#L534">534</a>
+<a id="L535" href="#L535">535</a>
+<a id="L536" href="#L536">536</a>
+<a id="L537" href="#L537">537</a>
+<a id="L538" href="#L538">538</a>
+<a id="L539" href="#L539">539</a>
+<a id="L540" href="#L540">540</a>
+<a id="L541" href="#L541">541</a>
+<a id="L542" href="#L542">542</a>
+<a id="L543" href="#L543">543</a>
+<a id="L544" href="#L544">544</a>
+<a id="L545" href="#L545">545</a>
+<a id="L546" href="#L546">546</a>
+<a id="L547" href="#L547">547</a>
+<a id="L548" href="#L548">548</a>
+<a id="L549" href="#L549">549</a>
+<a id="L550" href="#L550">550</a>
+<a id="L551" href="#L551">551</a>
+<a id="L552" href="#L552">552</a>
+<a id="L553" href="#L553">553</a>
+<a id="L554" href="#L554">554</a>
+<a id="L555" href="#L555">555</a>
+<a id="L556" href="#L556">556</a>
+<a id="L557" href="#L557">557</a>
+<a id="L558" href="#L558">558</a>
+<a id="L559" href="#L559">559</a>
+<a id="L560" href="#L560">560</a>
+<a id="L561" href="#L561">561</a>
+<a id="L562" href="#L562">562</a>
+<a id="L563" href="#L563">563</a>
+<a id="L564" href="#L564">564</a>
+<a id="L565" href="#L565">565</a>
+<a id="L566" href="#L566">566</a>
+<a id="L567" href="#L567">567</a>
+<a id="L568" href="#L568">568</a>
+<a id="L569" href="#L569">569</a>
+<a id="L570" href="#L570">570</a>
+<a id="L571" href="#L571">571</a>
+<a id="L572" href="#L572">572</a>
+<a id="L573" href="#L573">573</a>
+<a id="L574" href="#L574">574</a>
+<a id="L575" href="#L575">575</a>
+<a id="L576" href="#L576">576</a>
+<a id="L577" href="#L577">577</a>
+<a id="L578" href="#L578">578</a>
+<a id="L579" href="#L579">579</a>
+<a id="L580" href="#L580">580</a>
+<a id="L581" href="#L581">581</a>
+<a id="L582" href="#L582">582</a>
+<a id="L583" href="#L583">583</a>
+<a id="L584" href="#L584">584</a>
+<a id="L585" href="#L585">585</a>
+<a id="L586" href="#L586">586</a>
+<a id="L587" href="#L587">587</a>
+<a id="L588" href="#L588">588</a>
+<a id="L589" href="#L589">589</a>
+<a id="L590" href="#L590">590</a>
+<a id="L591" href="#L591">591</a>
+<a id="L592" href="#L592">592</a>
+<a id="L593" href="#L593">593</a>
+<a id="L594" href="#L594">594</a>
+<a id="L595" href="#L595">595</a>
+<a id="L596" href="#L596">596</a>
+<a id="L597" href="#L597">597</a>
+<a id="L598" href="#L598">598</a>
+<a id="L599" href="#L599">599</a>
+<a id="L600" href="#L600">600</a>
+<a id="L601" href="#L601">601</a>
+<a id="L602" href="#L602">602</a>
+<a id="L603" href="#L603">603</a>
+<a id="L604" href="#L604">604</a>
+<a id="L605" href="#L605">605</a>
+<a id="L606" href="#L606">606</a>
+<a id="L607" href="#L607">607</a>
+<a id="L608" href="#L608">608</a>
+<a id="L609" href="#L609">609</a>
+<a id="L610" href="#L610">610</a>
+<a id="L611" href="#L611">611</a>
+<a id="L612" href="#L612">612</a>
+<a id="L613" href="#L613">613</a>
+<a id="L614" href="#L614">614</a>
+<a id="L615" href="#L615">615</a>
+<a id="L616" href="#L616">616</a>
+<a id="L617" href="#L617">617</a>
+<a id="L618" href="#L618">618</a>
+<a id="L619" href="#L619">619</a>
+<a id="L620" href="#L620">620</a>
+<a id="L621" href="#L621">621</a>
+<a id="L622" href="#L622">622</a>
+<a id="L623" href="#L623">623</a>
+<a id="L624" href="#L624">624</a>
+<a id="L625" href="#L625">625</a>
+<a id="L626" href="#L626">626</a>
+<a id="L627" href="#L627">627</a>
+<a id="L628" href="#L628">628</a>
+<a id="L629" href="#L629">629</a>
+<a id="L630" href="#L630">630</a>
+<a id="L631" href="#L631">631</a>
+<a id="L632" href="#L632">632</a>
+<a id="L633" href="#L633">633</a>
+<a id="L634" href="#L634">634</a>
+<a id="L635" href="#L635">635</a>
+<a id="L636" href="#L636">636</a>
+<a id="L637" href="#L637">637</a>
+<a id="L638" href="#L638">638</a>
+<a id="L639" href="#L639">639</a>
+<a id="L640" href="#L640">640</a>
+<a id="L641" href="#L641">641</a>
+<a id="L642" href="#L642">642</a>
+<a id="L643" href="#L643">643</a>
+<a id="L644" href="#L644">644</a>
+<a id="L645" href="#L645">645</a>
+<a id="L646" href="#L646">646</a>
+<a id="L647" href="#L647">647</a>
+<a id="L648" href="#L648">648</a>
+<a id="L649" href="#L649">649</a>
+<a id="L650" href="#L650">650</a>
+<a id="L651" href="#L651">651</a>
+<a id="L652" href="#L652">652</a>
+<a id="L653" href="#L653">653</a>
+<a id="L654" href="#L654">654</a>
+<a id="L655" href="#L655">655</a>
+<a id="L656" href="#L656">656</a>
+<a id="L657" href="#L657">657</a>
+<a id="L658" href="#L658">658</a>
+<a id="L659" href="#L659">659</a>
+<a id="L660" href="#L660">660</a>
+<a id="L661" href="#L661">661</a>
+<a id="L662" href="#L662">662</a>
+<a id="L663" href="#L663">663</a>
+<a id="L664" href="#L664">664</a>
+<a id="L665" href="#L665">665</a>
+<a id="L666" href="#L666">666</a>
+<a id="L667" href="#L667">667</a>
+<a id="L668" href="#L668">668</a>
+<a id="L669" href="#L669">669</a>
+<a id="L670" href="#L670">670</a>
+<a id="L671" href="#L671">671</a>
+<a id="L672" href="#L672">672</a>
+<a id="L673" href="#L673">673</a>
+<a id="L674" href="#L674">674</a>
+<a id="L675" href="#L675">675</a>
+<a id="L676" href="#L676">676</a>
+<a id="L677" href="#L677">677</a>
+<a id="L678" href="#L678">678</a>
+<a id="L679" href="#L679">679</a>
+<a id="L680" href="#L680">680</a>
+<a id="L681" href="#L681">681</a>
+<a id="L682" href="#L682">682</a>
+<a id="L683" href="#L683">683</a>
+<a id="L684" href="#L684">684</a>
+<a id="L685" href="#L685">685</a>
+<a id="L686" href="#L686">686</a>
+<a id="L687" href="#L687">687</a>
+<a id="L688" href="#L688">688</a>
+<a id="L689" href="#L689">689</a>
+<a id="L690" href="#L690">690</a>
+<a id="L691" href="#L691">691</a>
+<a id="L692" href="#L692">692</a>
+<a id="L693" href="#L693">693</a>
+<a id="L694" href="#L694">694</a>
+<a id="L695" href="#L695">695</a>
+<a id="L696" href="#L696">696</a>
+<a id="L697" href="#L697">697</a>
+<a id="L698" href="#L698">698</a>
+<a id="L699" href="#L699">699</a>
+<a id="L700" href="#L700">700</a>
+<a id="L701" href="#L701">701</a>
+<a id="L702" href="#L702">702</a>
+<a id="L703" href="#L703">703</a>
+<a id="L704" href="#L704">704</a>
+<a id="L705" href="#L705">705</a>
+<a id="L706" href="#L706">706</a>
+<a id="L707" href="#L707">707</a>
+<a id="L708" href="#L708">708</a>
+<a id="L709" href="#L709">709</a>
+<a id="L710" href="#L710">710</a>
+<a id="L711" href="#L711">711</a>
+<a id="L712" href="#L712">712</a>
+<a id="L713" href="#L713">713</a>
+<a id="L714" href="#L714">714</a>
+<a id="L715" href="#L715">715</a>
+<a id="L716" href="#L716">716</a>
+<a id="L717" href="#L717">717</a>
+<a id="L718" href="#L718">718</a>
+<a id="L719" href="#L719">719</a>
+<a id="L720" href="#L720">720</a>
+<a id="L721" href="#L721">721</a>
+<a id="L722" href="#L722">722</a>
+<a id="L723" href="#L723">723</a>
+<a id="L724" href="#L724">724</a>
+<a id="L725" href="#L725">725</a>
+<a id="L726" href="#L726">726</a>
+<a id="L727" href="#L727">727</a>
+<a id="L728" href="#L728">728</a>
+<a id="L729" href="#L729">729</a>
+<a id="L730" href="#L730">730</a>
+<a id="L731" href="#L731">731</a>
+<a id="L732" href="#L732">732</a>
+<a id="L733" href="#L733">733</a>
+<a id="L734" href="#L734">734</a>
+<a id="L735" href="#L735">735</a>
+<a id="L736" href="#L736">736</a>
+<a id="L737" href="#L737">737</a>
+<a id="L738" href="#L738">738</a>
+<a id="L739" href="#L739">739</a>
+<a id="L740" href="#L740">740</a>
+<a id="L741" href="#L741">741</a>
+<a id="L742" href="#L742">742</a>
+<a id="L743" href="#L743">743</a>
+<a id="L744" href="#L744">744</a>
+<a id="L745" href="#L745">745</a>
+<a id="L746" href="#L746">746</a>
+<a id="L747" href="#L747">747</a>
+<a id="L748" href="#L748">748</a>
+<a id="L749" href="#L749">749</a>
+<a id="L750" href="#L750">750</a>
+<a id="L751" href="#L751">751</a>
+<a id="L752" href="#L752">752</a>
+<a id="L753" href="#L753">753</a>
+<a id="L754" href="#L754">754</a>
+<a id="L755" href="#L755">755</a>
+<a id="L756" href="#L756">756</a>
+<a id="L757" href="#L757">757</a>
+<a id="L758" href="#L758">758</a>
+<a id="L759" href="#L759">759</a>
+<a id="L760" href="#L760">760</a>
+<a id="L761" href="#L761">761</a>
+<a id="L762" href="#L762">762</a>
+<a id="L763" href="#L763">763</a>
+<a id="L764" href="#L764">764</a>
+<a id="L765" href="#L765">765</a>
+<a id="L766" href="#L766">766</a>
+<a id="L767" href="#L767">767</a>
+<a id="L768" href="#L768">768</a>
+<a id="L769" href="#L769">769</a>
+<a id="L770" href="#L770">770</a>
+<a id="L771" href="#L771">771</a>
+<a id="L772" href="#L772">772</a>
+<a id="L773" href="#L773">773</a>
+<a id="L774" href="#L774">774</a>
+<a id="L775" href="#L775">775</a>
+<a id="L776" href="#L776">776</a>
+<a id="L777" href="#L777">777</a>
+<a id="L778" href="#L778">778</a>
+<a id="L779" href="#L779">779</a>
+<a id="L780" href="#L780">780</a>
+<a id="L781" href="#L781">781</a>
+<a id="L782" href="#L782">782</a>
+<a id="L783" href="#L783">783</a>
+<a id="L784" href="#L784">784</a>
+<a id="L785" href="#L785">785</a>
+<a id="L786" href="#L786">786</a>
+<a id="L787" href="#L787">787</a>
+<a id="L788" href="#L788">788</a>
+<a id="L789" href="#L789">789</a>
+<a id="L790" href="#L790">790</a>
+<a id="L791" href="#L791">791</a>
+<a id="L792" href="#L792">792</a>
+<a id="L793" href="#L793">793</a>
+<a id="L794" href="#L794">794</a>
+<a id="L795" href="#L795">795</a>
+<a id="L796" href="#L796">796</a>
+<a id="L797" href="#L797">797</a>
+<a id="L798" href="#L798">798</a>
+<a id="L799" href="#L799">799</a>
+<a id="L800" href="#L800">800</a>
+<a id="L801" href="#L801">801</a>
+<a id="L802" href="#L802">802</a>
+<a id="L803" href="#L803">803</a>
+<a id="L804" href="#L804">804</a>
+<a id="L805" href="#L805">805</a>
+<a id="L806" href="#L806">806</a>
+<a id="L807" href="#L807">807</a>
+<a id="L808" href="#L808">808</a>
+<a id="L809" href="#L809">809</a>
+<a id="L810" href="#L810">810</a>
+<a id="L811" href="#L811">811</a>
+<a id="L812" href="#L812">812</a>
+<a id="L813" href="#L813">813</a>
+<a id="L814" href="#L814">814</a>
+<a id="L815" href="#L815">815</a>
+<a id="L816" href="#L816">816</a>
+<a id="L817" href="#L817">817</a>
+<a id="L818" href="#L818">818</a>
+<a id="L819" href="#L819">819</a>
+<a id="L820" href="#L820">820</a>
+<a id="L821" href="#L821">821</a>
+<a id="L822" href="#L822">822</a>
+<a id="L823" href="#L823">823</a>
+<a id="L824" href="#L824">824</a>
+<a id="L825" href="#L825">825</a>
+<a id="L826" href="#L826">826</a>
+<a id="L827" href="#L827">827</a>
+<a id="L828" href="#L828">828</a>
+<a id="L829" href="#L829">829</a>
+<a id="L830" href="#L830">830</a>
+<a id="L831" href="#L831">831</a>
+<a id="L832" href="#L832">832</a>
+<a id="L833" href="#L833">833</a>
+<a id="L834" href="#L834">834</a>
+<a id="L835" href="#L835">835</a>
+<a id="L836" href="#L836">836</a>
+<a id="L837" href="#L837">837</a>
+<a id="L838" href="#L838">838</a>
+<a id="L839" href="#L839">839</a>
+<a id="L840" href="#L840">840</a>
+<a id="L841" href="#L841">841</a>
+<a id="L842" href="#L842">842</a>
+<a id="L843" href="#L843">843</a>
+<a id="L844" href="#L844">844</a>
+<a id="L845" href="#L845">845</a>
+<a id="L846" href="#L846">846</a>
+<a id="L847" href="#L847">847</a>
+<a id="L848" href="#L848">848</a>
+<a id="L849" href="#L849">849</a>
+<a id="L850" href="#L850">850</a>
+<a id="L851" href="#L851">851</a>
+<a id="L852" href="#L852">852</a>
+<a id="L853" href="#L853">853</a>
+<a id="L854" href="#L854">854</a>
+<a id="L855" href="#L855">855</a>
+<a id="L856" href="#L856">856</a>
+<a id="L857" href="#L857">857</a>
+<a id="L858" href="#L858">858</a>
+<a id="L859" href="#L859">859</a>
+<a id="L860" href="#L860">860</a>
+<a id="L861" href="#L861">861</a>
+<a id="L862" href="#L862">862</a>
+<a id="L863" href="#L863">863</a>
+<a id="L864" href="#L864">864</a>
+<a id="L865" href="#L865">865</a>
+<a id="L866" href="#L866">866</a>
+<a id="L867" href="#L867">867</a>
+<a id="L868" href="#L868">868</a>
+<a id="L869" href="#L869">869</a>
+<a id="L870" href="#L870">870</a>
+<a id="L871" href="#L871">871</a>
+<a id="L872" href="#L872">872</a>
+<a id="L873" href="#L873">873</a>
+<a id="L874" href="#L874">874</a>
+<a id="L875" href="#L875">875</a>
+<a id="L876" href="#L876">876</a>
+<a id="L877" href="#L877">877</a>
+<a id="L878" href="#L878">878</a>
+<a id="L879" href="#L879">879</a>
+<a id="L880" href="#L880">880</a>
+<a id="L881" href="#L881">881</a>
+<a id="L882" href="#L882">882</a>
+<a id="L883" href="#L883">883</a>
+<a id="L884" href="#L884">884</a>
+<a id="L885" href="#L885">885</a>
+<a id="L886" href="#L886">886</a>
+<a id="L887" href="#L887">887</a>
+<a id="L888" href="#L888">888</a>
+<a id="L889" href="#L889">889</a>
+<a id="L890" href="#L890">890</a>
+<a id="L891" href="#L891">891</a>
+<a id="L892" href="#L892">892</a>
+<a id="L893" href="#L893">893</a>
+<a id="L894" href="#L894">894</a>
+<a id="L895" href="#L895">895</a>
+<a id="L896" href="#L896">896</a>
+<a id="L897" href="#L897">897</a>
+<a id="L898" href="#L898">898</a>
+<a id="L899" href="#L899">899</a>
+<a id="L900" href="#L900">900</a>
+<a id="L901" href="#L901">901</a>
+<a id="L902" href="#L902">902</a>
+<a id="L903" href="#L903">903</a>
+<a id="L904" href="#L904">904</a>
+<a id="L905" href="#L905">905</a>
+<a id="L906" href="#L906">906</a>
+<a id="L907" href="#L907">907</a>
+<a id="L908" href="#L908">908</a>
+<a id="L909" href="#L909">909</a>
+<a id="L910" href="#L910">910</a>
+<a id="L911" href="#L911">911</a>
+<a id="L912" href="#L912">912</a>
+<a id="L913" href="#L913">913</a>
+<a id="L914" href="#L914">914</a>
+<a id="L915" href="#L915">915</a>
+<a id="L916" href="#L916">916</a>
+<a id="L917" href="#L917">917</a>
+<a id="L918" href="#L918">918</a>
+<a id="L919" href="#L919">919</a>
+<a id="L920" href="#L920">920</a>
+<a id="L921" href="#L921">921</a>
+<a id="L922" href="#L922">922</a>
+<a id="L923" href="#L923">923</a>
+<a id="L924" href="#L924">924</a>
+<a id="L925" href="#L925">925</a>
+<a id="L926" href="#L926">926</a>
+<a id="L927" href="#L927">927</a>
+<a id="L928" href="#L928">928</a>
+<a id="L929" href="#L929">929</a>
+<a id="L930" href="#L930">930</a>
+<a id="L931" href="#L931">931</a>
+<a id="L932" href="#L932">932</a>
+<a id="L933" href="#L933">933</a>
+<a id="L934" href="#L934">934</a>
+<a id="L935" href="#L935">935</a>
+<a id="L936" href="#L936">936</a>
+<a id="L937" href="#L937">937</a>
+<a id="L938" href="#L938">938</a>
+<a id="L939" href="#L939">939</a>
+<a id="L940" href="#L940">940</a>
+<a id="L941" href="#L941">941</a>
+<a id="L942" href="#L942">942</a>
+<a id="L943" href="#L943">943</a>
+<a id="L944" href="#L944">944</a>
+<a id="L945" href="#L945">945</a>
+<a id="L946" href="#L946">946</a>
+<a id="L947" href="#L947">947</a>
+<a id="L948" href="#L948">948</a>
+<a id="L949" href="#L949">949</a>
+<a id="L950" href="#L950">950</a>
+<a id="L951" href="#L951">951</a>
+<a id="L952" href="#L952">952</a>
+<a id="L953" href="#L953">953</a>
+<a id="L954" href="#L954">954</a>
+<a id="L955" href="#L955">955</a>
+<a id="L956" href="#L956">956</a>
+<a id="L957" href="#L957">957</a>
+<a id="L958" href="#L958">958</a>
+<a id="L959" href="#L959">959</a>
+<a id="L960" href="#L960">960</a>
+<a id="L961" href="#L961">961</a>
+<a id="L962" href="#L962">962</a>
+<a id="L963" href="#L963">963</a>
+<a id="L964" href="#L964">964</a>
+<a id="L965" href="#L965">965</a>
+<a id="L966" href="#L966">966</a>
+<a id="L967" href="#L967">967</a>
+<a id="L968" href="#L968">968</a>
+<a id="L969" href="#L969">969</a>
+<a id="L970" href="#L970">970</a>
+<a id="L971" href="#L971">971</a>
+<a id="L972" href="#L972">972</a>
+<a id="L973" href="#L973">973</a>
+<a id="L974" href="#L974">974</a>
+<a id="L975" href="#L975">975</a>
+<a id="L976" href="#L976">976</a>
+<a id="L977" href="#L977">977</a>
+<a id="L978" href="#L978">978</a>
+<a id="L979" href="#L979">979</a>
+<a id="L980" href="#L980">980</a>
+<a id="L981" href="#L981">981</a>
+<a id="L982" href="#L982">982</a>
+<a id="L983" href="#L983">983</a>
+<a id="L984" href="#L984">984</a>
+<a id="L985" href="#L985">985</a>
+<a id="L986" href="#L986">986</a>
+<a id="L987" href="#L987">987</a>
+<a id="L988" href="#L988">988</a>
+<a id="L989" href="#L989">989</a>
+<a id="L990" href="#L990">990</a>
+<a id="L991" href="#L991">991</a>
+<a id="L992" href="#L992">992</a>
+<a id="L993" href="#L993">993</a>
+<a id="L994" href="#L994">994</a>
+<a id="L995" href="#L995">995</a>
+<a id="L996" href="#L996">996</a>
+<a id="L997" href="#L997">997</a>
+<a id="L998" href="#L998">998</a>
+<a id="L999" href="#L999">999</a>
+<a id="L1000" href="#L1000">1000</a>
+<a id="L1001" href="#L1001">1001</a>
+<a id="L1002" href="#L1002">1002</a>
+<a id="L1003" href="#L1003">1003</a>
+<a id="L1004" href="#L1004">1004</a>
+<a id="L1005" href="#L1005">1005</a>
+<a id="L1006" href="#L1006">1006</a>
+<a id="L1007" href="#L1007">1007</a>
+<a id="L1008" href="#L1008">1008</a>
+<a id="L1009" href="#L1009">1009</a>
+<a id="L1010" href="#L1010">1010</a>
+<a id="L1011" href="#L1011">1011</a>
+<a id="L1012" href="#L1012">1012</a>
+<a id="L1013" href="#L1013">1013</a>
+<a id="L1014" href="#L1014">1014</a>
+<a id="L1015" href="#L1015">1015</a>
+<a id="L1016" href="#L1016">1016</a>
+<a id="L1017" href="#L1017">1017</a>
+<a id="L1018" href="#L1018">1018</a>
+<a id="L1019" href="#L1019">1019</a>
+<a id="L1020" href="#L1020">1020</a>
+<a id="L1021" href="#L1021">1021</a>
+<a id="L1022" href="#L1022">1022</a>
+<a id="L1023" href="#L1023">1023</a>
+<a id="L1024" href="#L1024">1024</a>
+<a id="L1025" href="#L1025">1025</a>
+<a id="L1026" href="#L1026">1026</a>
+<a id="L1027" href="#L1027">1027</a>
+<a id="L1028" href="#L1028">1028</a>
+<a id="L1029" href="#L1029">1029</a>
+<a id="L1030" href="#L1030">1030</a>
+<a id="L1031" href="#L1031">1031</a>
+<a id="L1032" href="#L1032">1032</a>
+<a id="L1033" href="#L1033">1033</a>
+<a id="L1034" href="#L1034">1034</a>
+<a id="L1035" href="#L1035">1035</a>
+<a id="L1036" href="#L1036">1036</a>
+<a id="L1037" href="#L1037">1037</a>
+<a id="L1038" href="#L1038">1038</a>
+<a id="L1039" href="#L1039">1039</a>
+<a id="L1040" href="#L1040">1040</a>
+<a id="L1041" href="#L1041">1041</a>
+<a id="L1042" href="#L1042">1042</a>
+<a id="L1043" href="#L1043">1043</a>
+<a id="L1044" href="#L1044">1044</a>
+<a id="L1045" href="#L1045">1045</a>
+<a id="L1046" href="#L1046">1046</a>
+<a id="L1047" href="#L1047">1047</a>
+<a id="L1048" href="#L1048">1048</a>
+<a id="L1049" href="#L1049">1049</a>
+<a id="L1050" href="#L1050">1050</a>
+<a id="L1051" href="#L1051">1051</a>
+<a id="L1052" href="#L1052">1052</a>
+<a id="L1053" href="#L1053">1053</a>
+<a id="L1054" href="#L1054">1054</a>
+<a id="L1055" href="#L1055">1055</a>
+<a id="L1056" href="#L1056">1056</a>
+<a id="L1057" href="#L1057">1057</a>
+<a id="L1058" href="#L1058">1058</a>
+<a id="L1059" href="#L1059">1059</a>
+<a id="L1060" href="#L1060">1060</a>
+<a id="L1061" href="#L1061">1061</a>
+<a id="L1062" href="#L1062">1062</a>
+<a id="L1063" href="#L1063">1063</a>
+<a id="L1064" href="#L1064">1064</a>
+<a id="L1065" href="#L1065">1065</a>
+<a id="L1066" href="#L1066">1066</a>
+<a id="L1067" href="#L1067">1067</a>
+<a id="L1068" href="#L1068">1068</a>
+<a id="L1069" href="#L1069">1069</a>
+<a id="L1070" href="#L1070">1070</a>
+<a id="L1071" href="#L1071">1071</a>
+<a id="L1072" href="#L1072">1072</a>
+<a id="L1073" href="#L1073">1073</a>
+<a id="L1074" href="#L1074">1074</a>
+<a id="L1075" href="#L1075">1075</a>
+<a id="L1076" href="#L1076">1076</a>
+<a id="L1077" href="#L1077">1077</a>
+<a id="L1078" href="#L1078">1078</a>
+<a id="L1079" href="#L1079">1079</a>
+<a id="L1080" href="#L1080">1080</a>
+<a id="L1081" href="#L1081">1081</a>
+<a id="L1082" href="#L1082">1082</a>
+<a id="L1083" href="#L1083">1083</a>
+<a id="L1084" href="#L1084">1084</a>
+<a id="L1085" href="#L1085">1085</a>
+<a id="L1086" href="#L1086">1086</a>
+<a id="L1087" href="#L1087">1087</a>
+<a id="L1088" href="#L1088">1088</a>
+<a id="L1089" href="#L1089">1089</a>
+<a id="L1090" href="#L1090">1090</a>
+<a id="L1091" href="#L1091">1091</a>
+<a id="L1092" href="#L1092">1092</a>
+<a id="L1093" href="#L1093">1093</a>
+<a id="L1094" href="#L1094">1094</a>
+<a id="L1095" href="#L1095">1095</a>
+<a id="L1096" href="#L1096">1096</a>
+<a id="L1097" href="#L1097">1097</a>
+<a id="L1098" href="#L1098">1098</a>
+<a id="L1099" href="#L1099">1099</a>
+<a id="L1100" href="#L1100">1100</a>
+<a id="L1101" href="#L1101">1101</a>
+<a id="L1102" href="#L1102">1102</a>
+<a id="L1103" href="#L1103">1103</a>
+<a id="L1104" href="#L1104">1104</a>
+<a id="L1105" href="#L1105">1105</a>
+<a id="L1106" href="#L1106">1106</a>
+<a id="L1107" href="#L1107">1107</a>
+<a id="L1108" href="#L1108">1108</a>
+<a id="L1109" href="#L1109">1109</a>
+<a id="L1110" href="#L1110">1110</a>
+<a id="L1111" href="#L1111">1111</a>
+<a id="L1112" href="#L1112">1112</a>
+<a id="L1113" href="#L1113">1113</a>
+<a id="L1114" href="#L1114">1114</a>
+<a id="L1115" href="#L1115">1115</a>
+<a id="L1116" href="#L1116">1116</a>
+<a id="L1117" href="#L1117">1117</a>
+<a id="L1118" href="#L1118">1118</a>
+<a id="L1119" href="#L1119">1119</a>
+<a id="L1120" href="#L1120">1120</a>
+<a id="L1121" href="#L1121">1121</a>
+<a id="L1122" href="#L1122">1122</a>
+<a id="L1123" href="#L1123">1123</a>
+<a id="L1124" href="#L1124">1124</a>
+<a id="L1125" href="#L1125">1125</a>
+<a id="L1126" href="#L1126">1126</a>
+<a id="L1127" href="#L1127">1127</a>
+<a id="L1128" href="#L1128">1128</a>
+<a id="L1129" href="#L1129">1129</a>
+<a id="L1130" href="#L1130">1130</a>
+<a id="L1131" href="#L1131">1131</a>
+<a id="L1132" href="#L1132">1132</a>
+<a id="L1133" href="#L1133">1133</a>
+<a id="L1134" href="#L1134">1134</a>
+<a id="L1135" href="#L1135">1135</a>
+<a id="L1136" href="#L1136">1136</a>
+<a id="L1137" href="#L1137">1137</a>
+<a id="L1138" href="#L1138">1138</a>
+<a id="L1139" href="#L1139">1139</a>
+<a id="L1140" href="#L1140">1140</a>
+<a id="L1141" href="#L1141">1141</a>
+<a id="L1142" href="#L1142">1142</a>
+<a id="L1143" href="#L1143">1143</a>
+<a id="L1144" href="#L1144">1144</a>
+<a id="L1145" href="#L1145">1145</a>
+<a id="L1146" href="#L1146">1146</a>
+<a id="L1147" href="#L1147">1147</a>
+<a id="L1148" href="#L1148">1148</a>
+<a id="L1149" href="#L1149">1149</a>
+<a id="L1150" href="#L1150">1150</a>
+<a id="L1151" href="#L1151">1151</a>
+<a id="L1152" href="#L1152">1152</a>
+<a id="L1153" href="#L1153">1153</a>
+<a id="L1154" href="#L1154">1154</a>
+<a id="L1155" href="#L1155">1155</a>
+<a id="L1156" href="#L1156">1156</a>
+<a id="L1157" href="#L1157">1157</a>
+<a id="L1158" href="#L1158">1158</a>
+<a id="L1159" href="#L1159">1159</a>
+<a id="L1160" href="#L1160">1160</a>
+<a id="L1161" href="#L1161">1161</a>
+<a id="L1162" href="#L1162">1162</a>
+<a id="L1163" href="#L1163">1163</a>
+<a id="L1164" href="#L1164">1164</a>
+<a id="L1165" href="#L1165">1165</a>
+<a id="L1166" href="#L1166">1166</a>
+<a id="L1167" href="#L1167">1167</a>
+<a id="L1168" href="#L1168">1168</a>
+<a id="L1169" href="#L1169">1169</a>
+<a id="L1170" href="#L1170">1170</a>
+<a id="L1171" href="#L1171">1171</a>
+<a id="L1172" href="#L1172">1172</a>
+<a id="L1173" href="#L1173">1173</a>
+<a id="L1174" href="#L1174">1174</a>
+<a id="L1175" href="#L1175">1175</a>
+<a id="L1176" href="#L1176">1176</a>
+<a id="L1177" href="#L1177">1177</a>
+<a id="L1178" href="#L1178">1178</a>
+<a id="L1179" href="#L1179">1179</a>
+<a id="L1180" href="#L1180">1180</a>
+<a id="L1181" href="#L1181">1181</a>
+<a id="L1182" href="#L1182">1182</a>
+<a id="L1183" href="#L1183">1183</a>
+<a id="L1184" href="#L1184">1184</a>
+<a id="L1185" href="#L1185">1185</a>
+<a id="L1186" href="#L1186">1186</a>
+<a id="L1187" href="#L1187">1187</a>
+<a id="L1188" href="#L1188">1188</a>
+<a id="L1189" href="#L1189">1189</a>
+<a id="L1190" href="#L1190">1190</a>
+<a id="L1191" href="#L1191">1191</a>
+<a id="L1192" href="#L1192">1192</a>
+<a id="L1193" href="#L1193">1193</a>
+<a id="L1194" href="#L1194">1194</a>
+<a id="L1195" href="#L1195">1195</a>
+<a id="L1196" href="#L1196">1196</a>
+<a id="L1197" href="#L1197">1197</a>
+<a id="L1198" href="#L1198">1198</a>
+<a id="L1199" href="#L1199">1199</a>
+<a id="L1200" href="#L1200">1200</a>
+<a id="L1201" href="#L1201">1201</a>
+<a id="L1202" href="#L1202">1202</a>
+<a id="L1203" href="#L1203">1203</a>
+<a id="L1204" href="#L1204">1204</a>
+<a id="L1205" href="#L1205">1205</a>
+<a id="L1206" href="#L1206">1206</a>
+<a id="L1207" href="#L1207">1207</a>
+<a id="L1208" href="#L1208">1208</a>
+<a id="L1209" href="#L1209">1209</a>
+<a id="L1210" href="#L1210">1210</a>
+<a id="L1211" href="#L1211">1211</a>
+<a id="L1212" href="#L1212">1212</a>
+<a id="L1213" href="#L1213">1213</a>
+<a id="L1214" href="#L1214">1214</a>
+<a id="L1215" href="#L1215">1215</a>
+<a id="L1216" href="#L1216">1216</a>
+<a id="L1217" href="#L1217">1217</a>
+<a id="L1218" href="#L1218">1218</a>
+<a id="L1219" href="#L1219">1219</a>
+<a id="L1220" href="#L1220">1220</a>
+<a id="L1221" href="#L1221">1221</a>
+<a id="L1222" href="#L1222">1222</a>
+<a id="L1223" href="#L1223">1223</a>
+<a id="L1224" href="#L1224">1224</a>
+<a id="L1225" href="#L1225">1225</a>
+<a id="L1226" href="#L1226">1226</a>
+<a id="L1227" href="#L1227">1227</a>
+<a id="L1228" href="#L1228">1228</a>
+<a id="L1229" href="#L1229">1229</a>
+<a id="L1230" href="#L1230">1230</a>
+<a id="L1231" href="#L1231">1231</a>
+<a id="L1232" href="#L1232">1232</a>
+<a id="L1233" href="#L1233">1233</a>
+<a id="L1234" href="#L1234">1234</a>
+<a id="L1235" href="#L1235">1235</a>
+<a id="L1236" href="#L1236">1236</a>
+<a id="L1237" href="#L1237">1237</a>
+<a id="L1238" href="#L1238">1238</a>
+<a id="L1239" href="#L1239">1239</a>
+<a id="L1240" href="#L1240">1240</a>
+<a id="L1241" href="#L1241">1241</a>
+<a id="L1242" href="#L1242">1242</a>
+<a id="L1243" href="#L1243">1243</a>
+<a id="L1244" href="#L1244">1244</a>
+<a id="L1245" href="#L1245">1245</a>
+<a id="L1246" href="#L1246">1246</a>
+<a id="L1247" href="#L1247">1247</a>
+<a id="L1248" href="#L1248">1248</a>
+<a id="L1249" href="#L1249">1249</a>
+<a id="L1250" href="#L1250">1250</a>
+<a id="L1251" href="#L1251">1251</a>
+<a id="L1252" href="#L1252">1252</a>
+<a id="L1253" href="#L1253">1253</a>
+<a id="L1254" href="#L1254">1254</a>
+<a id="L1255" href="#L1255">1255</a>
+<a id="L1256" href="#L1256">1256</a>
+<a id="L1257" href="#L1257">1257</a>
+<a id="L1258" href="#L1258">1258</a>
+<a id="L1259" href="#L1259">1259</a>
+<a id="L1260" href="#L1260">1260</a>
+<a id="L1261" href="#L1261">1261</a>
+<a id="L1262" href="#L1262">1262</a>
+<a id="L1263" href="#L1263">1263</a>
+<a id="L1264" href="#L1264">1264</a>
+<a id="L1265" href="#L1265">1265</a>
+<a id="L1266" href="#L1266">1266</a>
+<a id="L1267" href="#L1267">1267</a>
+<a id="L1268" href="#L1268">1268</a>
+<a id="L1269" href="#L1269">1269</a>
+<a id="L1270" href="#L1270">1270</a>
+<a id="L1271" href="#L1271">1271</a>
+<a id="L1272" href="#L1272">1272</a>
+<a id="L1273" href="#L1273">1273</a>
+<a id="L1274" href="#L1274">1274</a>
+<a id="L1275" href="#L1275">1275</a>
+<a id="L1276" href="#L1276">1276</a>
+<a id="L1277" href="#L1277">1277</a>
+<a id="L1278" href="#L1278">1278</a>
+<a id="L1279" href="#L1279">1279</a>
+<a id="L1280" href="#L1280">1280</a>
+<a id="L1281" href="#L1281">1281</a>
+<a id="L1282" href="#L1282">1282</a>
+<a id="L1283" href="#L1283">1283</a>
+<a id="L1284" href="#L1284">1284</a>
+<a id="L1285" href="#L1285">1285</a>
+<a id="L1286" href="#L1286">1286</a>
+<a id="L1287" href="#L1287">1287</a>
+<a id="L1288" href="#L1288">1288</a>
+<a id="L1289" href="#L1289">1289</a>
+<a id="L1290" href="#L1290">1290</a>
+<a id="L1291" href="#L1291">1291</a>
+<a id="L1292" href="#L1292">1292</a>
+<a id="L1293" href="#L1293">1293</a>
+<a id="L1294" href="#L1294">1294</a>
+<a id="L1295" href="#L1295">1295</a>
+<a id="L1296" href="#L1296">1296</a>
+<a id="L1297" href="#L1297">1297</a>
+<a id="L1298" href="#L1298">1298</a>
+<a id="L1299" href="#L1299">1299</a>
+<a id="L1300" href="#L1300">1300</a>
+<a id="L1301" href="#L1301">1301</a>
+<a id="L1302" href="#L1302">1302</a>
+<a id="L1303" href="#L1303">1303</a>
+<a id="L1304" href="#L1304">1304</a>
+<a id="L1305" href="#L1305">1305</a>
+<a id="L1306" href="#L1306">1306</a>
+<a id="L1307" href="#L1307">1307</a>
+<a id="L1308" href="#L1308">1308</a>
+<a id="L1309" href="#L1309">1309</a>
+<a id="L1310" href="#L1310">1310</a>
+<a id="L1311" href="#L1311">1311</a>
+<a id="L1312" href="#L1312">1312</a>
+<a id="L1313" href="#L1313">1313</a>
+<a id="L1314" href="#L1314">1314</a>
+<a id="L1315" href="#L1315">1315</a>
+<a id="L1316" href="#L1316">1316</a>
+<a id="L1317" href="#L1317">1317</a>
+<a id="L1318" href="#L1318">1318</a>
+<a id="L1319" href="#L1319">1319</a>
+<a id="L1320" href="#L1320">1320</a>
+<a id="L1321" href="#L1321">1321</a>
+<a id="L1322" href="#L1322">1322</a>
+<a id="L1323" href="#L1323">1323</a>
+<a id="L1324" href="#L1324">1324</a>
+<a id="L1325" href="#L1325">1325</a>
+<a id="L1326" href="#L1326">1326</a>
+<a id="L1327" href="#L1327">1327</a>
+<a id="L1328" href="#L1328">1328</a>
+<a id="L1329" href="#L1329">1329</a>
+<a id="L1330" href="#L1330">1330</a>
+<a id="L1331" href="#L1331">1331</a>
+<a id="L1332" href="#L1332">1332</a>
+<a id="L1333" href="#L1333">1333</a>
+<a id="L1334" href="#L1334">1334</a>
+<a id="L1335" href="#L1335">1335</a>
+<a id="L1336" href="#L1336">1336</a>
+<a id="L1337" href="#L1337">1337</a>
+<a id="L1338" href="#L1338">1338</a>
+<a id="L1339" href="#L1339">1339</a>
+<a id="L1340" href="#L1340">1340</a>
+<a id="L1341" href="#L1341">1341</a>
+<a id="L1342" href="#L1342">1342</a>
+<a id="L1343" href="#L1343">1343</a>
+<a id="L1344" href="#L1344">1344</a>
+<a id="L1345" href="#L1345">1345</a>
+<a id="L1346" href="#L1346">1346</a>
+<a id="L1347" href="#L1347">1347</a>
+<a id="L1348" href="#L1348">1348</a>
+<a id="L1349" href="#L1349">1349</a>
+<a id="L1350" href="#L1350">1350</a>
+<a id="L1351" href="#L1351">1351</a>
+<a id="L1352" href="#L1352">1352</a>
+<a id="L1353" href="#L1353">1353</a>
+<a id="L1354" href="#L1354">1354</a>
+<a id="L1355" href="#L1355">1355</a>
+<a id="L1356" href="#L1356">1356</a>
+<a id="L1357" href="#L1357">1357</a>
+<a id="L1358" href="#L1358">1358</a>
+<a id="L1359" href="#L1359">1359</a>
+<a id="L1360" href="#L1360">1360</a>
+<a id="L1361" href="#L1361">1361</a>
+<a id="L1362" href="#L1362">1362</a>
+<a id="L1363" href="#L1363">1363</a>
+<a id="L1364" href="#L1364">1364</a>
+<a id="L1365" href="#L1365">1365</a>
+<a id="L1366" href="#L1366">1366</a>
+<a id="L1367" href="#L1367">1367</a>
+<a id="L1368" href="#L1368">1368</a>
+<a id="L1369" href="#L1369">1369</a>
+<a id="L1370" href="#L1370">1370</a>
+<a id="L1371" href="#L1371">1371</a>
+<a id="L1372" href="#L1372">1372</a>
+<a id="L1373" href="#L1373">1373</a>
+<a id="L1374" href="#L1374">1374</a>
+<a id="L1375" href="#L1375">1375</a>
+<a id="L1376" href="#L1376">1376</a>
+<a id="L1377" href="#L1377">1377</a>
+<a id="L1378" href="#L1378">1378</a>
+<a id="L1379" href="#L1379">1379</a>
+<a id="L1380" href="#L1380">1380</a>
+<a id="L1381" href="#L1381">1381</a>
+<a id="L1382" href="#L1382">1382</a>
+<a id="L1383" href="#L1383">1383</a>
+<a id="L1384" href="#L1384">1384</a>
+<a id="L1385" href="#L1385">1385</a>
+<a id="L1386" href="#L1386">1386</a>
+<a id="L1387" href="#L1387">1387</a>
+<a id="L1388" href="#L1388">1388</a>
+<a id="L1389" href="#L1389">1389</a>
+<a id="L1390" href="#L1390">1390</a>
+<a id="L1391" href="#L1391">1391</a>
+<a id="L1392" href="#L1392">1392</a>
+<a id="L1393" href="#L1393">1393</a>
+<a id="L1394" href="#L1394">1394</a>
+<a id="L1395" href="#L1395">1395</a>
+<a id="L1396" href="#L1396">1396</a>
+<a id="L1397" href="#L1397">1397</a>
+<a id="L1398" href="#L1398">1398</a>
+<a id="L1399" href="#L1399">1399</a>
+<a id="L1400" href="#L1400">1400</a>
+<a id="L1401" href="#L1401">1401</a>
+<a id="L1402" href="#L1402">1402</a>
+<a id="L1403" href="#L1403">1403</a>
+<a id="L1404" href="#L1404">1404</a>
+<a id="L1405" href="#L1405">1405</a>
+<a id="L1406" href="#L1406">1406</a>
+<a id="L1407" href="#L1407">1407</a>
+<a id="L1408" href="#L1408">1408</a>
+<a id="L1409" href="#L1409">1409</a>
+<a id="L1410" href="#L1410">1410</a>
+<a id="L1411" href="#L1411">1411</a>
+<a id="L1412" href="#L1412">1412</a>
+<a id="L1413" href="#L1413">1413</a>
+<a id="L1414" href="#L1414">1414</a>
+<a id="L1415" href="#L1415">1415</a>
+<a id="L1416" href="#L1416">1416</a>
+<a id="L1417" href="#L1417">1417</a>
+<a id="L1418" href="#L1418">1418</a>
+<a id="L1419" href="#L1419">1419</a>
+<a id="L1420" href="#L1420">1420</a>
+<a id="L1421" href="#L1421">1421</a>
+<a id="L1422" href="#L1422">1422</a>
+<a id="L1423" href="#L1423">1423</a>
+<a id="L1424" href="#L1424">1424</a>
+<a id="L1425" href="#L1425">1425</a>
+<a id="L1426" href="#L1426">1426</a>
+<a id="L1427" href="#L1427">1427</a>
+<a id="L1428" href="#L1428">1428</a>
+<a id="L1429" href="#L1429">1429</a>
+<a id="L1430" href="#L1430">1430</a>
+<a id="L1431" href="#L1431">1431</a>
+<a id="L1432" href="#L1432">1432</a>
+<a id="L1433" href="#L1433">1433</a>
+<a id="L1434" href="#L1434">1434</a>
+<a id="L1435" href="#L1435">1435</a>
+<a id="L1436" href="#L1436">1436</a>
+<a id="L1437" href="#L1437">1437</a>
+<a id="L1438" href="#L1438">1438</a>
+<a id="L1439" href="#L1439">1439</a>
+<a id="L1440" href="#L1440">1440</a>
+<a id="L1441" href="#L1441">1441</a>
+<a id="L1442" href="#L1442">1442</a>
+<a id="L1443" href="#L1443">1443</a>
+<a id="L1444" href="#L1444">1444</a>
+<a id="L1445" href="#L1445">1445</a>
+<a id="L1446" href="#L1446">1446</a>
+<a id="L1447" href="#L1447">1447</a>
+<a id="L1448" href="#L1448">1448</a>
+<a id="L1449" href="#L1449">1449</a>
+<a id="L1450" href="#L1450">1450</a>
+<a id="L1451" href="#L1451">1451</a>
+<a id="L1452" href="#L1452">1452</a>
+<a id="L1453" href="#L1453">1453</a>
+<a id="L1454" href="#L1454">1454</a>
+<a id="L1455" href="#L1455">1455</a>
+<a id="L1456" href="#L1456">1456</a>
+<a id="L1457" href="#L1457">1457</a>
+<a id="L1458" href="#L1458">1458</a>
+<a id="L1459" href="#L1459">1459</a>
+<a id="L1460" href="#L1460">1460</a>
+<a id="L1461" href="#L1461">1461</a>
+<a id="L1462" href="#L1462">1462</a>
+<a id="L1463" href="#L1463">1463</a>
+<a id="L1464" href="#L1464">1464</a>
+<a id="L1465" href="#L1465">1465</a>
+<a id="L1466" href="#L1466">1466</a>
+<a id="L1467" href="#L1467">1467</a>
+<a id="L1468" href="#L1468">1468</a>
+<a id="L1469" href="#L1469">1469</a>
+<a id="L1470" href="#L1470">1470</a>
+<a id="L1471" href="#L1471">1471</a>
+<a id="L1472" href="#L1472">1472</a>
+<a id="L1473" href="#L1473">1473</a>
+<a id="L1474" href="#L1474">1474</a>
+<a id="L1475" href="#L1475">1475</a>
+<a id="L1476" href="#L1476">1476</a>
+<a id="L1477" href="#L1477">1477</a>
+<a id="L1478" href="#L1478">1478</a>
+<a id="L1479" href="#L1479">1479</a>
+<a id="L1480" href="#L1480">1480</a>
+<a id="L1481" href="#L1481">1481</a>
+<a id="L1482" href="#L1482">1482</a>
+<a id="L1483" href="#L1483">1483</a>
+<a id="L1484" href="#L1484">1484</a>
+<a id="L1485" href="#L1485">1485</a>
+<a id="L1486" href="#L1486">1486</a>
+<a id="L1487" href="#L1487">1487</a>
+<a id="L1488" href="#L1488">1488</a>
+<a id="L1489" href="#L1489">1489</a>
+<a id="L1490" href="#L1490">1490</a>
+<a id="L1491" href="#L1491">1491</a>
+<a id="L1492" href="#L1492">1492</a>
+<a id="L1493" href="#L1493">1493</a>
+<a id="L1494" href="#L1494">1494</a>
+<a id="L1495" href="#L1495">1495</a>
+<a id="L1496" href="#L1496">1496</a>
+<a id="L1497" href="#L1497">1497</a>
+<a id="L1498" href="#L1498">1498</a>
+<a id="L1499" href="#L1499">1499</a>
+<a id="L1500" href="#L1500">1500</a>
+<a id="L1501" href="#L1501">1501</a>
+<a id="L1502" href="#L1502">1502</a>
+<a id="L1503" href="#L1503">1503</a>
+<a id="L1504" href="#L1504">1504</a>
+<a id="L1505" href="#L1505">1505</a>
+<a id="L1506" href="#L1506">1506</a>
+<a id="L1507" href="#L1507">1507</a>
+<a id="L1508" href="#L1508">1508</a>
+<a id="L1509" href="#L1509">1509</a>
+<a id="L1510" href="#L1510">1510</a>
+<a id="L1511" href="#L1511">1511</a>
+<a id="L1512" href="#L1512">1512</a>
+<a id="L1513" href="#L1513">1513</a>
+<a id="L1514" href="#L1514">1514</a>
+<a id="L1515" href="#L1515">1515</a>
+<a id="L1516" href="#L1516">1516</a>
+<a id="L1517" href="#L1517">1517</a>
+<a id="L1518" href="#L1518">1518</a>
+<a id="L1519" href="#L1519">1519</a>
+<a id="L1520" href="#L1520">1520</a>
+<a id="L1521" href="#L1521">1521</a>
+<a id="L1522" href="#L1522">1522</a>
+<a id="L1523" href="#L1523">1523</a>
+<a id="L1524" href="#L1524">1524</a>
+<a id="L1525" href="#L1525">1525</a>
+<a id="L1526" href="#L1526">1526</a>
+<a id="L1527" href="#L1527">1527</a>
+<a id="L1528" href="#L1528">1528</a>
+<a id="L1529" href="#L1529">1529</a>
+<a id="L1530" href="#L1530">1530</a>
+<a id="L1531" href="#L1531">1531</a>
+<a id="L1532" href="#L1532">1532</a>
+<a id="L1533" href="#L1533">1533</a>
+<a id="L1534" href="#L1534">1534</a>
+<a id="L1535" href="#L1535">1535</a>
+<a id="L1536" href="#L1536">1536</a>
+<a id="L1537" href="#L1537">1537</a>
+<a id="L1538" href="#L1538">1538</a>
+<a id="L1539" href="#L1539">1539</a>
+<a id="L1540" href="#L1540">1540</a>
+<a id="L1541" href="#L1541">1541</a>
+<a id="L1542" href="#L1542">1542</a>
+<a id="L1543" href="#L1543">1543</a>
+<a id="L1544" href="#L1544">1544</a>
+<a id="L1545" href="#L1545">1545</a>
+<a id="L1546" href="#L1546">1546</a>
+<a id="L1547" href="#L1547">1547</a>
+<a id="L1548" href="#L1548">1548</a>
+<a id="L1549" href="#L1549">1549</a>
+<a id="L1550" href="#L1550">1550</a>
+<a id="L1551" href="#L1551">1551</a>
+<a id="L1552" href="#L1552">1552</a>
+<a id="L1553" href="#L1553">1553</a>
+<a id="L1554" href="#L1554">1554</a>
+<a id="L1555" href="#L1555">1555</a>
+<a id="L1556" href="#L1556">1556</a>
+<a id="L1557" href="#L1557">1557</a>
+<a id="L1558" href="#L1558">1558</a>
+<a id="L1559" href="#L1559">1559</a>
+<a id="L1560" href="#L1560">1560</a>
+<a id="L1561" href="#L1561">1561</a>
+<a id="L1562" href="#L1562">1562</a>
+<a id="L1563" href="#L1563">1563</a>
+<a id="L1564" href="#L1564">1564</a>
+<a id="L1565" href="#L1565">1565</a>
+<a id="L1566" href="#L1566">1566</a>
+<a id="L1567" href="#L1567">1567</a>
+<a id="L1568" href="#L1568">1568</a>
+<a id="L1569" href="#L1569">1569</a>
+<a id="L1570" href="#L1570">1570</a>
+<a id="L1571" href="#L1571">1571</a>
+<a id="L1572" href="#L1572">1572</a>
+<a id="L1573" href="#L1573">1573</a>
+<a id="L1574" href="#L1574">1574</a>
+<a id="L1575" href="#L1575">1575</a>
+<a id="L1576" href="#L1576">1576</a>
+<a id="L1577" href="#L1577">1577</a>
+<a id="L1578" href="#L1578">1578</a>
+<a id="L1579" href="#L1579">1579</a>
+<a id="L1580" href="#L1580">1580</a>
+<a id="L1581" href="#L1581">1581</a>
+<a id="L1582" href="#L1582">1582</a>
+<a id="L1583" href="#L1583">1583</a>
+<a id="L1584" href="#L1584">1584</a>
+<a id="L1585" href="#L1585">1585</a>
+<a id="L1586" href="#L1586">1586</a>
+<a id="L1587" href="#L1587">1587</a>
+<a id="L1588" href="#L1588">1588</a>
+<a id="L1589" href="#L1589">1589</a>
+<a id="L1590" href="#L1590">1590</a>
+<a id="L1591" href="#L1591">1591</a>
+<a id="L1592" href="#L1592">1592</a>
+<a id="L1593" href="#L1593">1593</a>
+<a id="L1594" href="#L1594">1594</a>
+<a id="L1595" href="#L1595">1595</a>
+<a id="L1596" href="#L1596">1596</a>
+<a id="L1597" href="#L1597">1597</a>
+<a id="L1598" href="#L1598">1598</a>
+<a id="L1599" href="#L1599">1599</a>
+<a id="L1600" href="#L1600">1600</a>
+<a id="L1601" href="#L1601">1601</a>
+<a id="L1602" href="#L1602">1602</a>
+<a id="L1603" href="#L1603">1603</a>
+<a id="L1604" href="#L1604">1604</a>
+<a id="L1605" href="#L1605">1605</a>
+<a id="L1606" href="#L1606">1606</a>
+<a id="L1607" href="#L1607">1607</a>
+<a id="L1608" href="#L1608">1608</a>
+<a id="L1609" href="#L1609">1609</a>
+<a id="L1610" href="#L1610">1610</a>
+<a id="L1611" href="#L1611">1611</a>
+<a id="L1612" href="#L1612">1612</a>
+<a id="L1613" href="#L1613">1613</a>
+<a id="L1614" href="#L1614">1614</a>
+<a id="L1615" href="#L1615">1615</a>
+<a id="L1616" href="#L1616">1616</a>
+<a id="L1617" href="#L1617">1617</a>
+<a id="L1618" href="#L1618">1618</a>
+<a id="L1619" href="#L1619">1619</a>
+<a id="L1620" href="#L1620">1620</a>
+<a id="L1621" href="#L1621">1621</a>
+<a id="L1622" href="#L1622">1622</a>
+<a id="L1623" href="#L1623">1623</a>
+<a id="L1624" href="#L1624">1624</a>
+<a id="L1625" href="#L1625">1625</a>
+<a id="L1626" href="#L1626">1626</a>
+<a id="L1627" href="#L1627">1627</a>
+<a id="L1628" href="#L1628">1628</a>
+<a id="L1629" href="#L1629">1629</a>
+<a id="L1630" href="#L1630">1630</a>
+<a id="L1631" href="#L1631">1631</a>
+<a id="L1632" href="#L1632">1632</a>
+<a id="L1633" href="#L1633">1633</a>
+<a id="L1634" href="#L1634">1634</a>
+<a id="L1635" href="#L1635">1635</a>
+<a id="L1636" href="#L1636">1636</a>
+<a id="L1637" href="#L1637">1637</a>
+<a id="L1638" href="#L1638">1638</a>
+<a id="L1639" href="#L1639">1639</a>
+<a id="L1640" href="#L1640">1640</a>
+<a id="L1641" href="#L1641">1641</a>
+<a id="L1642" href="#L1642">1642</a>
+<a id="L1643" href="#L1643">1643</a>
+<a id="L1644" href="#L1644">1644</a>
+<a id="L1645" href="#L1645">1645</a>
+<a id="L1646" href="#L1646">1646</a>
+<a id="L1647" href="#L1647">1647</a>
+<a id="L1648" href="#L1648">1648</a>
+<a id="L1649" href="#L1649">1649</a>
+<a id="L1650" href="#L1650">1650</a>
+<a id="L1651" href="#L1651">1651</a>
+<a id="L1652" href="#L1652">1652</a>
+<a id="L1653" href="#L1653">1653</a>
+<a id="L1654" href="#L1654">1654</a>
+<a id="L1655" href="#L1655">1655</a>
+<a id="L1656" href="#L1656">1656</a>
+<a id="L1657" href="#L1657">1657</a>
+<a id="L1658" href="#L1658">1658</a>
+<a id="L1659" href="#L1659">1659</a>
+<a id="L1660" href="#L1660">1660</a>
+<a id="L1661" href="#L1661">1661</a>
+<a id="L1662" href="#L1662">1662</a>
+<a id="L1663" href="#L1663">1663</a>
+<a id="L1664" href="#L1664">1664</a>
+<a id="L1665" href="#L1665">1665</a>
+<a id="L1666" href="#L1666">1666</a>
+<a id="L1667" href="#L1667">1667</a>
+<a id="L1668" href="#L1668">1668</a>
+<a id="L1669" href="#L1669">1669</a>
+<a id="L1670" href="#L1670">1670</a>
+<a id="L1671" href="#L1671">1671</a>
+<a id="L1672" href="#L1672">1672</a>
+<a id="L1673" href="#L1673">1673</a>
+<a id="L1674" href="#L1674">1674</a>
+<a id="L1675" href="#L1675">1675</a>
+<a id="L1676" href="#L1676">1676</a>
+<a id="L1677" href="#L1677">1677</a>
+<a id="L1678" href="#L1678">1678</a>
+<a id="L1679" href="#L1679">1679</a>
+<a id="L1680" href="#L1680">1680</a>
+<a id="L1681" href="#L1681">1681</a>
+<a id="L1682" href="#L1682">1682</a>
+<a id="L1683" href="#L1683">1683</a>
+<a id="L1684" href="#L1684">1684</a>
+<a id="L1685" href="#L1685">1685</a>
+<a id="L1686" href="#L1686">1686</a>
+<a id="L1687" href="#L1687">1687</a>
+<a id="L1688" href="#L1688">1688</a>
+<a id="L1689" href="#L1689">1689</a>
+<a id="L1690" href="#L1690">1690</a>
+<a id="L1691" href="#L1691">1691</a>
+<a id="L1692" href="#L1692">1692</a>
+<a id="L1693" href="#L1693">1693</a>
+<a id="L1694" href="#L1694">1694</a>
+<a id="L1695" href="#L1695">1695</a>
+<a id="L1696" href="#L1696">1696</a>
+<a id="L1697" href="#L1697">1697</a>
+<a id="L1698" href="#L1698">1698</a>
+<a id="L1699" href="#L1699">1699</a>
+<a id="L1700" href="#L1700">1700</a>
+<a id="L1701" href="#L1701">1701</a>
+<a id="L1702" href="#L1702">1702</a>
+<a id="L1703" href="#L1703">1703</a>
+<a id="L1704" href="#L1704">1704</a>
+<a id="L1705" href="#L1705">1705</a>
+<a id="L1706" href="#L1706">1706</a>
+<a id="L1707" href="#L1707">1707</a>
+<a id="L1708" href="#L1708">1708</a>
+<a id="L1709" href="#L1709">1709</a>
+<a id="L1710" href="#L1710">1710</a>
+<a id="L1711" href="#L1711">1711</a>
+<a id="L1712" href="#L1712">1712</a>
+<a id="L1713" href="#L1713">1713</a>
+<a id="L1714" href="#L1714">1714</a>
+<a id="L1715" href="#L1715">1715</a>
+<a id="L1716" href="#L1716">1716</a>
+<a id="L1717" href="#L1717">1717</a>
+<a id="L1718" href="#L1718">1718</a>
+<a id="L1719" href="#L1719">1719</a>
+<a id="L1720" href="#L1720">1720</a>
+<a id="L1721" href="#L1721">1721</a>
+<a id="L1722" href="#L1722">1722</a>
+<a id="L1723" href="#L1723">1723</a>
+<a id="L1724" href="#L1724">1724</a>
+<a id="L1725" href="#L1725">1725</a>
+<a id="L1726" href="#L1726">1726</a>
+<a id="L1727" href="#L1727">1727</a>
+<a id="L1728" href="#L1728">1728</a>
+<a id="L1729" href="#L1729">1729</a>
+<a id="L1730" href="#L1730">1730</a>
+<a id="L1731" href="#L1731">1731</a>
+<a id="L1732" href="#L1732">1732</a>
+<a id="L1733" href="#L1733">1733</a>
+<a id="L1734" href="#L1734">1734</a>
+<a id="L1735" href="#L1735">1735</a>
+<a id="L1736" href="#L1736">1736</a>
+<a id="L1737" href="#L1737">1737</a>
+<a id="L1738" href="#L1738">1738</a>
+<a id="L1739" href="#L1739">1739</a>
+<a id="L1740" href="#L1740">1740</a>
+<a id="L1741" href="#L1741">1741</a>
+<a id="L1742" href="#L1742">1742</a>
+<a id="L1743" href="#L1743">1743</a>
+<a id="L1744" href="#L1744">1744</a>
+<a id="L1745" href="#L1745">1745</a>
+<a id="L1746" href="#L1746">1746</a>
+<a id="L1747" href="#L1747">1747</a>
+<a id="L1748" href="#L1748">1748</a>
+<a id="L1749" href="#L1749">1749</a>
+<a id="L1750" href="#L1750">1750</a>
+<a id="L1751" href="#L1751">1751</a>
+<a id="L1752" href="#L1752">1752</a>
+<a id="L1753" href="#L1753">1753</a>
+<a id="L1754" href="#L1754">1754</a>
+<a id="L1755" href="#L1755">1755</a>
+<a id="L1756" href="#L1756">1756</a>
+<a id="L1757" href="#L1757">1757</a>
+<a id="L1758" href="#L1758">1758</a>
+<a id="L1759" href="#L1759">1759</a>
+<a id="L1760" href="#L1760">1760</a>
+<a id="L1761" href="#L1761">1761</a>
+<a id="L1762" href="#L1762">1762</a>
+<a id="L1763" href="#L1763">1763</a>
+<a id="L1764" href="#L1764">1764</a>
+<a id="L1765" href="#L1765">1765</a>
+<a id="L1766" href="#L1766">1766</a>
+<a id="L1767" href="#L1767">1767</a>
+<a id="L1768" href="#L1768">1768</a>
+<a id="L1769" href="#L1769">1769</a>
+<a id="L1770" href="#L1770">1770</a>
+<a id="L1771" href="#L1771">1771</a>
+<a id="L1772" href="#L1772">1772</a>
+<a id="L1773" href="#L1773">1773</a>
+<a id="L1774" href="#L1774">1774</a>
+<a id="L1775" href="#L1775">1775</a>
+<a id="L1776" href="#L1776">1776</a>
+<a id="L1777" href="#L1777">1777</a>
+<a id="L1778" href="#L1778">1778</a>
+<a id="L1779" href="#L1779">1779</a>
+<a id="L1780" href="#L1780">1780</a>
+<a id="L1781" href="#L1781">1781</a>
+<a id="L1782" href="#L1782">1782</a>
+<a id="L1783" href="#L1783">1783</a>
+<a id="L1784" href="#L1784">1784</a>
+<a id="L1785" href="#L1785">1785</a>
+<a id="L1786" href="#L1786">1786</a>
+<a id="L1787" href="#L1787">1787</a>
+<a id="L1788" href="#L1788">1788</a>
+<a id="L1789" href="#L1789">1789</a>
+<a id="L1790" href="#L1790">1790</a>
+<a id="L1791" href="#L1791">1791</a>
+<a id="L1792" href="#L1792">1792</a>
+<a id="L1793" href="#L1793">1793</a>
+<a id="L1794" href="#L1794">1794</a>
+<a id="L1795" href="#L1795">1795</a>
+<a id="L1796" href="#L1796">1796</a>
+<a id="L1797" href="#L1797">1797</a>
+<a id="L1798" href="#L1798">1798</a>
+<a id="L1799" href="#L1799">1799</a>
+<a id="L1800" href="#L1800">1800</a>
+<a id="L1801" href="#L1801">1801</a>
+<a id="L1802" href="#L1802">1802</a>
+<a id="L1803" href="#L1803">1803</a>
+<a id="L1804" href="#L1804">1804</a>
+<a id="L1805" href="#L1805">1805</a>
+<a id="L1806" href="#L1806">1806</a>
+<a id="L1807" href="#L1807">1807</a>
+<a id="L1808" href="#L1808">1808</a>
+<a id="L1809" href="#L1809">1809</a>
+<a id="L1810" href="#L1810">1810</a>
+<a id="L1811" href="#L1811">1811</a>
+<a id="L1812" href="#L1812">1812</a>
+<a id="L1813" href="#L1813">1813</a>
+<a id="L1814" href="#L1814">1814</a>
+<a id="L1815" href="#L1815">1815</a>
+<a id="L1816" href="#L1816">1816</a>
+<a id="L1817" href="#L1817">1817</a>
+<a id="L1818" href="#L1818">1818</a>
+<a id="L1819" href="#L1819">1819</a>
+<a id="L1820" href="#L1820">1820</a>
+<a id="L1821" href="#L1821">1821</a>
+<a id="L1822" href="#L1822">1822</a>
+<a id="L1823" href="#L1823">1823</a>
+<a id="L1824" href="#L1824">1824</a>
+<a id="L1825" href="#L1825">1825</a>
+<a id="L1826" href="#L1826">1826</a>
+<a id="L1827" href="#L1827">1827</a>
+<a id="L1828" href="#L1828">1828</a>
+<a id="L1829" href="#L1829">1829</a>
+<a id="L1830" href="#L1830">1830</a>
+<a id="L1831" href="#L1831">1831</a>
+<a id="L1832" href="#L1832">1832</a>
+<a id="L1833" href="#L1833">1833</a>
+<a id="L1834" href="#L1834">1834</a>
+<a id="L1835" href="#L1835">1835</a>
+<a id="L1836" href="#L1836">1836</a>
+<a id="L1837" href="#L1837">1837</a>
+<a id="L1838" href="#L1838">1838</a>
+<a id="L1839" href="#L1839">1839</a>
+<a id="L1840" href="#L1840">1840</a>
+<a id="L1841" href="#L1841">1841</a>
+<a id="L1842" href="#L1842">1842</a>
+<a id="L1843" href="#L1843">1843</a>
+<a id="L1844" href="#L1844">1844</a>
+<a id="L1845" href="#L1845">1845</a>
+<a id="L1846" href="#L1846">1846</a>
+<a id="L1847" href="#L1847">1847</a>
+<a id="L1848" href="#L1848">1848</a>
+<a id="L1849" href="#L1849">1849</a>
+<a id="L1850" href="#L1850">1850</a>
+<a id="L1851" href="#L1851">1851</a>
+<a id="L1852" href="#L1852">1852</a>
+<a id="L1853" href="#L1853">1853</a>
+<a id="L1854" href="#L1854">1854</a>
+<a id="L1855" href="#L1855">1855</a>
+<a id="L1856" href="#L1856">1856</a>
+<a id="L1857" href="#L1857">1857</a>
+<a id="L1858" href="#L1858">1858</a>
+<a id="L1859" href="#L1859">1859</a>
+<a id="L1860" href="#L1860">1860</a>
+<a id="L1861" href="#L1861">1861</a>
+<a id="L1862" href="#L1862">1862</a>
+<a id="L1863" href="#L1863">1863</a>
+<a id="L1864" href="#L1864">1864</a>
+<a id="L1865" href="#L1865">1865</a>
+<a id="L1866" href="#L1866">1866</a>
+<a id="L1867" href="#L1867">1867</a>
+<a id="L1868" href="#L1868">1868</a>
+<a id="L1869" href="#L1869">1869</a>
+<a id="L1870" href="#L1870">1870</a>
+<a id="L1871" href="#L1871">1871</a>
+<a id="L1872" href="#L1872">1872</a>
+<a id="L1873" href="#L1873">1873</a>
+<a id="L1874" href="#L1874">1874</a>
+<a id="L1875" href="#L1875">1875</a>
+<a id="L1876" href="#L1876">1876</a>
+<a id="L1877" href="#L1877">1877</a>
+<a id="L1878" href="#L1878">1878</a>
+<a id="L1879" href="#L1879">1879</a>
+<a id="L1880" href="#L1880">1880</a>
+<a id="L1881" href="#L1881">1881</a>
+<a id="L1882" href="#L1882">1882</a>
+<a id="L1883" href="#L1883">1883</a>
+<a id="L1884" href="#L1884">1884</a>
+<a id="L1885" href="#L1885">1885</a>
+<a id="L1886" href="#L1886">1886</a>
+<a id="L1887" href="#L1887">1887</a>
+<a id="L1888" href="#L1888">1888</a>
+<a id="L1889" href="#L1889">1889</a>
+<a id="L1890" href="#L1890">1890</a>
+<a id="L1891" href="#L1891">1891</a>
+<a id="L1892" href="#L1892">1892</a>
+<a id="L1893" href="#L1893">1893</a>
+<a id="L1894" href="#L1894">1894</a>
+<a id="L1895" href="#L1895">1895</a>
+<a id="L1896" href="#L1896">1896</a>
+<a id="L1897" href="#L1897">1897</a>
+<a id="L1898" href="#L1898">1898</a>
+<a id="L1899" href="#L1899">1899</a>
+<a id="L1900" href="#L1900">1900</a>
+<a id="L1901" href="#L1901">1901</a>
+<a id="L1902" href="#L1902">1902</a>
+<a id="L1903" href="#L1903">1903</a>
+<a id="L1904" href="#L1904">1904</a>
+<a id="L1905" href="#L1905">1905</a>
+<a id="L1906" href="#L1906">1906</a>
+<a id="L1907" href="#L1907">1907</a>
+<a id="L1908" href="#L1908">1908</a>
+<a id="L1909" href="#L1909">1909</a>
+<a id="L1910" href="#L1910">1910</a>
+<a id="L1911" href="#L1911">1911</a>
+<a id="L1912" href="#L1912">1912</a>
+<a id="L1913" href="#L1913">1913</a>
+<a id="L1914" href="#L1914">1914</a>
+<a id="L1915" href="#L1915">1915</a>
+<a id="L1916" href="#L1916">1916</a>
+<a id="L1917" href="#L1917">1917</a>
+<a id="L1918" href="#L1918">1918</a>
+<a id="L1919" href="#L1919">1919</a>
+<a id="L1920" href="#L1920">1920</a>
+<a id="L1921" href="#L1921">1921</a>
+<a id="L1922" href="#L1922">1922</a>
+<a id="L1923" href="#L1923">1923</a>
+<a id="L1924" href="#L1924">1924</a>
+<a id="L1925" href="#L1925">1925</a>
+<a id="L1926" href="#L1926">1926</a>
+<a id="L1927" href="#L1927">1927</a>
+<a id="L1928" href="#L1928">1928</a>
+<a id="L1929" href="#L1929">1929</a>
+<a id="L1930" href="#L1930">1930</a>
+<a id="L1931" href="#L1931">1931</a>
+<a id="L1932" href="#L1932">1932</a>
+<a id="L1933" href="#L1933">1933</a>
+<a id="L1934" href="#L1934">1934</a>
+<a id="L1935" href="#L1935">1935</a>
+<a id="L1936" href="#L1936">1936</a>
+<a id="L1937" href="#L1937">1937</a>
+<a id="L1938" href="#L1938">1938</a>
+<a id="L1939" href="#L1939">1939</a>
+<a id="L1940" href="#L1940">1940</a>
+<a id="L1941" href="#L1941">1941</a>
+<a id="L1942" href="#L1942">1942</a>
+<a id="L1943" href="#L1943">1943</a>
+<a id="L1944" href="#L1944">1944</a>
+<a id="L1945" href="#L1945">1945</a>
+<a id="L1946" href="#L1946">1946</a>
+<a id="L1947" href="#L1947">1947</a>
+<a id="L1948" href="#L1948">1948</a>
+<a id="L1949" href="#L1949">1949</a>
+<a id="L1950" href="#L1950">1950</a></pre><pre class="lang-ts"><code>// Checks of src/core in Node: npm run check:core
+import {
+  ArrayData, Axes, CompressedPlyFile, Compression, Encoding, PlyFile, RadFile, RdxFile, Sh, ShPalette, SortKeys, SplatFiles, SplatMath, Splats, SpzFile, Zstd,
+  defineBundle,
+  type ArrayBundle, type CovSplat, type ExtSplat, type PackedEncoding, type Quat, type ShCodecName, type ShDegree, type SortKeyBits, type SplatBundle, type SplatFormat,
+  type Vec3,
+} from <a class="import" href="../src/core/index.ts.html" title="src/core/index.ts">"../src/core"</a>;
+
+const failures: string[] = [];
+
+// The core config has no Node types: the zstd calls the zstd check compares with
+type NodeZlib = { zstdCompressSync(bytes: Uint8Array): Uint8Array; zstdDecompressSync(bytes: Uint8Array): Uint8Array };
+const NODE_ZLIB: string = "node:zlib";
+
+async function check(name: string, fn: () =&gt; string | undefined | Promise&lt;string | undefined&gt;) {
+  let detail: string | undefined;
+  try {
+    detail = await fn();
+  } catch (error) {
+    detail = String(error instanceof Error ? error.message : error);
+  }
+  console.log(`${detail === undefined ? "ok  " : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+  if (detail !== undefined) {
+    failures.push(name);
+  }
+}
+
+// First mismatch of two arrays, or undefined
+function compare(actual: ArrayLike&lt;number&gt;, expected: ArrayLike&lt;number&gt;) {
+  if (actual.length !== expected.length) {
+    return `length ${actual.length}, expected ${expected.length}`;
+  }
+  for (let i = 0; i &lt; expected.length; i += 1) {
+    if (actual[i] !== expected[i]) {
+      return `value ${i}: got ${actual[i]}, expected ${expected[i]}`;
+    }
+  }
+  return undefined;
+}
+
+// Deterministic random numbers (mulberry32)
+let seed = 12345;
+function random() {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed &gt;&gt;&gt; 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t &gt;&gt;&gt; 7), 61 | t)) ^ t;
+  return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+}
+
+function randomUnit(): Vec3 {
+  while (true) {
+    const v = { x: random() * 2 - 1, y: random() * 2 - 1, z: random() * 2 - 1 };
+    const length = Math.hypot(v.x, v.y, v.z);
+    if (length &gt; 0.1 &amp;&amp; length &lt;= 1) {
+      return { x: v.x / length, y: v.y / length, z: v.z / length };
+    }
+  }
+}
+
+function randomQuat(): Quat {
+  const axis = randomUnit();
+  const angle = random() * Math.PI * 2;
+  const s = Math.sin(angle / 2);
+  return { x: axis.x * s, y: axis.y * s, z: axis.z * s, w: Math.cos(angle / 2) };
+}
+
+function randomSplat(): ExtSplat {
+  return {
+    center: { x: (random() - 0.5) * 200, y: (random() - 0.5) * 200, z: (random() - 0.5) * 200 },
+    scales: { x: Math.exp(random() * 9 - 6), y: Math.exp(random() * 9 - 6), z: Math.exp(random() * 9 - 6) },
+    quaternion: randomQuat(),
+    rgb: { r: random() * 4 - 1, g: random() * 4 - 1, b: random() * 4 - 1 },
+    opacity: random() * (255 / 128),
+    normal: randomUnit(),
+    roughness: random(),
+    metallic: random(),
+  };
+}
+
+const degrees = (radians: number) =&gt; (radians * 180) / Math.PI;
+const vecAngle = (a: Vec3, b: Vec3) =&gt; Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z)));
+// Angle of the rotation between two unit quaternions (q and -q are one rotation)
+const quatAngle = (a: Quat, b: Quat) =&gt; 2 * Math.acos(Math.min(1, Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w)));
+const lnError = (actual: number, expected: number) =&gt; Math.abs(Math.log(actual) - Math.log(expected));
+// Half-float rounding of ln(v): 2^-11 relative, 2^-25 absolute below the normal range
+const lnHalfBound = (v: number) =&gt; Math.max(Math.abs(Math.log(v)) * 2 ** -11, 2 ** -25) + 1e-12;
+// Worst rounded 12 + 12 octahedral error over random directions: about 0.057 degrees
+const OCT24_DEGREES = 0.06;
+
+// --- ArrayData ---
+
+const POINTS = defineBundle({ position: "float32x4", rgba: "unorm8x4" });
+const INDICES = defineBundle({ index: "uint32" }, { packing: 4 });
+
+await check("addBundle types and sizes", () =&gt; {
+  const data = new ArrayData({ bundles: { points: POINTS }, count: 1000 }).addBundle("order", INDICES);
+  const position: Float32Array = data.bundles.points.channels.position.data;
+  const index: Uint32Array = data.bundles.order.channels.index.data;
+  // @ts-expect-error: no such channel
+  void data.bundles.points.channels.missing;
+  return data.capacity === 4096 &amp;&amp; position.length === 4096 * 4 &amp;&amp; index.length === 4096 ? undefined : `capacity ${data.capacity}`;
+});
+
+await check("addBundle adopts long enough arrays and copies short ones", () =&gt; {
+  const data = new ArrayData({ count: 10 });
+  const long = new Float32Array(4096 * 4);
+  const short = new Uint8Array(8).fill(7);
+  data.addBundle("points", POINTS, { data: { position: long, rgba: short } });
+  const { position, rgba } = data.bundles.points.channels;
+  if (position.data !== long || rgba.data === short || rgba.data.length !== 4096 * 4 || rgba.data[7] !== 7) {
+    return "wrong adoption";
+  }
+  try {
+    data.addBundle("bad", POINTS, { data: { position: new Uint32Array(4096 * 4) } });
+    return "accepted a Uint32Array for float32x4";
+  } catch {
+    return undefined;
+  }
+});
+
+await check("defineBundle rejects packings the formats cannot take", () =&gt; {
+  try {
+    defineBundle({ v: "uint32x2" }, { packing: 4 });
+    return "uint32x2 packed 4 accepted";
+  } catch {
+    return undefined;
+  }
+});
+
+await check("capacity grows by doubling and keeps contents", () =&gt; {
+  const data = new ArrayData({ bundles: { order: INDICES }, count: 4096 });
+  data.bundles.order.channels.index.data.forEach((_, i, a) =&gt; (a[i] = i));
+  data.ensureCapacity(5000);
+  const first = data.capacity;
+  data.ensureCapacity(9000);
+  const second = data.capacity;
+  const kept = data.bundles.order.channels.index.data[4095] === 4095;
+  data.setCapacity(4096 * 8);
+  return first === 8192 &amp;&amp; second === 16384 &amp;&amp; kept &amp;&amp; data.count === 4096 ? undefined : `capacities ${first}, ${second}, kept ${kept}`;
+});
+
+await check("copyFrom and clone", () =&gt; {
+  const src = new ArrayData({ bundles: { order: INDICES }, count: 100 });
+  src.bundles.order.channels.index.data.forEach((_, i, a) =&gt; (a[i] = i * 3));
+  const dst = new ArrayData({ bundles: { order: INDICES } });
+  dst.copyFrom(src, { srcStart: 10, dstStart: 5000, count: 50 });
+  const copied = dst.count === 5050 &amp;&amp; dst.bundles.order.channels.index.data[5000] === 30 &amp;&amp; dst.bundles.order.channels.index.data[5049] === 177;
+
+  const copy = src.clone();
+  copy.bundles.order.channels.index.data[0] = 99;
+  return copied &amp;&amp; src.bundles.order.channels.index.data[0] === 0 &amp;&amp; copy.count === 100 ? undefined : "copy or clone wrong";
+});
+
+await check("transfer round trip", () =&gt; {
+  const data = new ArrayData({ bundles: { points: POINTS }, count: 3, meta: { name: "t" } });
+  data.bundles.points.channels.position.data.set([1, 2, 3, 4]);
+  data.bundles.points.meta.note = "kept";
+  const t = data.toTransferable();
+  const received = ArrayData.fromTransferable(structuredClone(t, { transfer: ArrayData.transferables(t) }));
+  const position = received.bundles.points.channels.position.data;
+  if (data.bundles.points.channels.position.data.length !== 0) {
+    return "the sender's arrays were not transferred";
+  }
+  return received.count === 3 &amp;&amp; received.meta.name === "t" &amp;&amp; received.bundles.points.meta.note === "kept" &amp;&amp; position[3] === 4
+    &amp;&amp; received.bundles.points.def.channels.rgba === "unorm8x4" ? undefined : "lost data";
+});
+
+// --- RDX ---
+
+const CHUNK = 4096 * 4;
+const COUNT = 70000; // 5 chunks of CHUNK, the last one partial
+
+function rdxSource(meta: Record&lt;string, unknown&gt; = { name: "test" }) {
+  const data = new ArrayData({
+    bundles: {
+      extSplats: Splats.EXT,
+      order: INDICES,
+      wide: defineBundle({ v: "uint32x5" }),
+      half: defineBundle({ h: "float16x2" }, { packing: 2 }),
+      derived: defineBundle({ d: "float32" }, { serialize: false }),
+    },
+    count: COUNT,
+    meta,
+  });
+  data.bundles.extSplats.channels.extA.data.forEach((_, i, a) =&gt; (a[i] = i * 7));
+  data.bundles.extSplats.channels.extB.data.forEach((_, i, a) =&gt; (a[i] = i ^ 0x5555));
+  data.bundles.order.channels.index.data.forEach((_, i, a) =&gt; (a[i] = COUNT - i));
+  data.bundles.wide.channels.v.data.forEach((_, i, a) =&gt; (a[i] = i % 1000));
+  data.bundles.half.channels.h.data.forEach((_, i, a) =&gt; (a[i] = i &amp; 0x3bff));
+  data.bundles.order.meta.note = "packed";
+  return data;
+}
+
+function rdxMatches(source: ArrayData, decoded: ArrayData) {
+  if (decoded.count !== COUNT || "derived" in decoded.bundles || decoded.meta.name !== source.meta.name) {
+    return `count ${decoded.count}, bundles ${Object.keys(decoded.bundles)}`;
+  }
+  if (decoded.bundles.order.def.packing !== 4 || decoded.bundles.order.meta.note !== "packed") {
+    return "packing or meta lost";
+  }
+  for (const name of ["extSplats", "order", "wide", "half"]) {
+    for (const [label, channel] of Object.entries(source.bundles[name].channels)) {
+      const length = COUNT * Number(channel.format.split("x")[1] ?? 1);
+      const mismatch = compare(decoded.bundles[name].channels[label].data.subarray(0, length), channel.data.subarray(0, length));
+      if (mismatch) {
+        return `${name}.${label} ${mismatch}`;
+      }
+    }
+  }
+  return undefined;
+}
+
+await check("rdx whole file", async () =&gt; {
+  const source = rdxSource();
+  return rdxMatches(source, await RdxFile.decode(await RdxFile.encode(source, { chunkSize: CHUNK })));
+});
+
+await check("rdx chunked, decoded out of order", async () =&gt; {
+  const source = rdxSource();
+  const { header: headerBytes, chunks } = await RdxFile.encodeChunks(source, { chunkSize: CHUNK });
+  const { header } = RdxFile.decodeHeader(headerBytes);
+  const target = RdxFile.makeData(header);
+  for (const chunk of [...chunks].reverse()) {
+    await RdxFile.decodeChunk(header, chunk, target);
+  }
+  return chunks.length === 5 ? rdxMatches(source, target) : `${chunks.length} chunks`;
+});
+
+await check("rdx default chunk size and bad sizes", async () =&gt; {
+  const { header } = RdxFile.decodeHeader((await RdxFile.encodeChunks(rdxSource())).header);
+  try {
+    await RdxFile.encodeChunks(rdxSource(), { chunkSize: 5000 });
+    return "chunk size 5000 accepted";
+  } catch {
+    return header.chunkSize === RdxFile.CHUNK_SIZE &amp;&amp; header.chunks.length === 2 ? undefined : `header ${header.chunkSize}`;
+  }
+});
+
+await check("openRdx reads every chunk, a header over 64 KB in two reads", async () =&gt; {
+  const source = rdxSource({ name: "big", padding: "x".repeat(100_000) });
+  const file = await RdxFile.encode(source, { chunkSize: CHUNK });
+  const reads: [number, number][] = [];
+  const rdx = await RdxFile.open(async (start, end) =&gt; {
+    reads.push([start, end]);
+    return file.subarray(start, end);
+  });
+  const target = RdxFile.makeData(rdx.header);
+  for (let chunk = 0; chunk &lt; rdx.header.chunks.length; chunk += 1) {
+    await rdx.readChunk(chunk, target);
+  }
+  return reads.length === 2 + 5 ? rdxMatches(source, target) : `${reads.length} reads`;
+});
+
+await check("loadRdx over Range requests, and from a server ignoring Range", async () =&gt; {
+  const source = rdxSource();
+  const file = await RdxFile.encode(source, { chunkSize: CHUNK });
+  const realFetch = globalThis.fetch;
+  try {
+    for (const honorRange of [true, false]) {
+      let requests = 0;
+      globalThis.fetch = async (_url, init) =&gt; {
+        requests += 1;
+        const range = new Headers(init?.headers).get("Range")!.match(/bytes=(\d+)-(\d+)/)!;
+        return honorRange
+          ? new Response(file.slice(Number(range[1]), Number(range[2]) + 1), { status: 206 })
+          : new Response(file.slice(), { status: 200 });
+      };
+      const rdx = await RdxFile.load("scene.rdx");
+      const target = RdxFile.makeData(rdx.header);
+      for (let chunk = 0; chunk &lt; rdx.header.chunks.length; chunk += 1) {
+        await rdx.readChunk(chunk, target);
+      }
+      const mismatch = rdxMatches(source, target);
+      if (mismatch || requests !== (honorRange ? 6 : 1)) {
+        return `${honorRange ? "206" : "200"}: ${mismatch ?? `${requests} requests`}`;
+      }
+    }
+    return undefined;
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+await check("chunked files: encodeRdxFiles names, loadRdx with chunked", async () =&gt; {
+  const source = rdxSource();
+  const files = await RdxFile.encodeFiles(source, "data/scene.rdx", { chunkSize: CHUNK });
+  const names = Object.keys(files).join(" ");
+  if (names !== "data/scene.rdx data/scene-0.rdx data/scene-1.rdx data/scene-2.rdx data/scene-3.rdx data/scene-4.rdx") {
+    return names;
+  }
+  if (RdxFile.chunkName("scene.rdx?v=2", 3) !== "scene-3.rdx?v=2") {
+    return RdxFile.chunkName("scene.rdx?v=2", 3);
+  }
+
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url) =&gt; {
+      const file = files[String(url)];
+      return file ? new Response(file.slice(), { status: 200 }) : new Response(null, { status: 404 });
+    };
+    const rdx = await RdxFile.load("data/scene.rdx", { chunked: true });
+    const target = RdxFile.makeData(rdx.header);
+    for (const chunk of [4, 2, 0, 1, 3]) {
+      await rdx.readChunk(chunk, target);
+    }
+    return rdxMatches(source, target);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// --- Splat codecs ---
+
+const N = 20000;
+
+await check("octahedral normals within the 12 + 12 bit budget; generic and fixed-size codecs agree", () =&gt; {
+  let worst = 0;
+  const decoded = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i &lt; N; i += 1) {
+    const v = randomUnit();
+    const code = Encoding.encodeOct24(v);
+    if (code !== Encoding.encodeOct(v, 12)) {
+      return `encodeOct24 ${code} vs encodeOct ${Encoding.encodeOct(v, 12)}`;
+    }
+    worst = Math.max(worst, vecAngle(Encoding.decodeOct24(code, decoded), v));
+  }
+  return degrees(worst) &lt;= OCT24_DEGREES ? undefined : `max error ${degrees(worst)} degrees`;
+});
+
+await check("no normal and -Z normal round-trip", () =&gt; {
+  const out = { x: 1, y: 1, z: 1 };
+  Encoding.decodeOct24(Encoding.encodeOct24({ x: 0, y: 0, z: 0 }), out);
+  if (out.x !== 0 || out.y !== 0 || out.z !== 0) {
+    return "zero normal decoded as a direction";
+  }
+  const code = Encoding.encodeOct24({ x: 0, y: 0, z: -1 });
+  Encoding.decodeOct24(code, out);
+  return code !== 0 &amp;&amp; Math.abs(out.z + 1) &lt; 1e-9 ? undefined : `-Z decoded as ${JSON.stringify(out)}`;
+});
+
+await check("ext splats within their bit budgets", () =&gt; {
+  const data = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: N });
+  const inputs = Array.from({ length: N }, randomSplat);
+  inputs.forEach((s, i) =&gt; Splats.encodeExt(data.bundles.extSplats, i, s));
+  const out = Splats.makeExtSplat();
+
+  let rotation = 0;
+  let normal = 0;
+  for (let i = 0; i &lt; N; i += 1) {
+    const s = inputs[i];
+    Splats.decodeExt(data.bundles.extSplats, i, out);
+    if (out.center.x !== Math.fround(s.center.x) || out.center.z !== Math.fround(s.center.z)) {
+      return `center ${i}`;
+    }
+    if (Math.abs(out.opacity - s.opacity) &gt; 1 / 256 + 1e-12) {
+      return `opacity ${s.opacity} -&gt; ${out.opacity}`;
+    }
+    for (const axis of ["x", "y", "z"] as const) {
+      if (lnError(out.scales[axis], s.scales[axis]) &gt; lnHalfBound(s.scales[axis])) {
+        return `scale ${s.scales[axis]} -&gt; ${out.scales[axis]}`;
+      }
+    }
+    const maxAbs = Math.max(Math.abs(s.rgb.r), Math.abs(s.rgb.g), Math.abs(s.rgb.b));
+    if (Math.max(Math.abs(out.rgb.r - s.rgb.r), Math.abs(out.rgb.g - s.rgb.g), Math.abs(out.rgb.b - s.rgb.b)) &gt; maxAbs / 255 + 1e-9) {
+      return `rgb ${JSON.stringify(s.rgb)} -&gt; ${JSON.stringify(out.rgb)}`;
+    }
+    if (Math.abs(out.roughness - s.roughness) &gt; 1 / 510 + 1e-12 || Math.abs(out.metallic - s.metallic) &gt; 1 / 510 + 1e-12) {
+      return `roughness / metallic ${s.roughness}, ${s.metallic}`;
+    }
+    normal = Math.max(normal, vecAngle(out.normal, s.normal));
+    rotation = Math.max(rotation, quatAngle(out.quaternion, s.quaternion));
+  }
+  // Angle step pi / 4095 (at most 0.022 degrees off), plus the rounded
+  // 10-bit axis error (about 0.2 degrees) times 2 sin(angle / 2)
+  return degrees(normal) &lt;= OCT24_DEGREES &amp;&amp; degrees(rotation) &lt;= 0.45 ? undefined : `normal ${degrees(normal)}, rotation ${degrees(rotation)} degrees`;
+});
+
+await check("small turns from identity keep the 12-bit angle's precision", () =&gt; {
+  const data = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 1 });
+  const s = Splats.makeExtSplat();
+  const out = Splats.makeExtSplat();
+  let worst = 0;
+  for (let i = 0; i &lt; N; i += 1) {
+    const axis = randomUnit();
+    const half = ((random() * 2 * Math.PI) / 180) / 2;
+    s.quaternion = { x: axis.x * Math.sin(half), y: axis.y * Math.sin(half), z: axis.z * Math.sin(half), w: Math.cos(half) };
+    Splats.encodeExt(data.bundles.extSplats, 0, s);
+    worst = Math.max(worst, quatAngle(Splats.decodeExt(data.bundles.extSplats, 0, out).quaternion, s.quaternion));
+  }
+  // Turns of up to 2 degrees: the axis error is scaled by 2 sin(1 degree)
+  return degrees(worst) &lt;= 0.03 ? undefined : `${degrees(worst)} degrees`;
+});
+
+await check("identity and zero quaternions", () =&gt; {
+  const out = { x: 1, y: 1, z: 1, w: 0 };
+  const data = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 1 });
+  Splats.encodeExt(data.bundles.extSplats, 0, Splats.makeExtSplat());
+  Encoding.decodeQuatOct32(data.bundles.extSplats.channels.extB.data[3], out);
+  return out.x === 0 &amp;&amp; out.y === 0 &amp;&amp; out.z === 0 &amp;&amp; out.w === 1 ? undefined : JSON.stringify(out);
+});
+
+await check("cov splats: encoding, and splatFromCov / covFromSplat back to itself", () =&gt; {
+  const data = new ArrayData({ bundles: { covSplats: Splats.COV }, count: N });
+  const covs: CovSplat[] = [];
+  for (let i = 0; i &lt; N; i += 1) {
+    const c = Splats.toCov(randomSplat(), Splats.makeCovSplat());
+    covs.push(c);
+    Splats.encodeCov(data.bundles.covSplats, i, c);
+  }
+
+  const out = Splats.makeCovSplat();
+  const splat = Splats.makeSplat();
+  const back = Splats.makeCovSplat();
+  for (let i = 0; i &lt; N; i += 1) {
+    const c = covs[i].cov;
+    Splats.decodeCov(data.bundles.covSplats, i, out);
+    for (const [key, a, b] of [["xy", c.xx, c.yy], ["xz", c.xx, c.zz], ["yz", c.yy, c.zz]] as const) {
+      // The correlation's own half rounding (at most |c ln c| 2^-11 &lt; 2e-4), plus the diagonal's
+      const correlation = Math.abs(c[key]) / Math.sqrt(a * b);
+      const bound = Math.sqrt(a * b) * (2e-4 + correlation * (lnHalfBound(a) + lnHalfBound(b)) / 2);
+      if (Math.abs(out.cov[key] - c[key]) &gt; bound) {
+        return `cov ${key} ${c[key]} -&gt; ${out.cov[key]}`;
+      }
+    }
+    if (lnError(out.cov.xx, c.xx) &gt; lnHalfBound(c.xx)) {
+      return `cov xx ${c.xx} -&gt; ${out.cov.xx}`;
+    }
+
+    Splats.toCov(Splats.fromCov(covs[i], splat), back);
+    const scale = Math.max(c.xx, c.yy, c.zz);
+    for (const key of ["xx", "yy", "zz", "xy", "xz", "yz"] as const) {
+      if (Math.abs(back.cov[key] - c[key]) &gt; scale * 1e-6) {
+        return `round trip ${key} ${c[key]} -&gt; ${back.cov[key]}`;
+      }
+    }
+  }
+  return undefined;
+});
+
+await check("packed splats within their encoding ranges", () =&gt; {
+  const data = new ArrayData({ bundles: { packedSplats: Splats.PACKED }, count: N });
+  const bundle = data.bundles.packedSplats;
+  const { rgbMin, rgbMax, lnScaleMin, lnScaleMax } = Splats.packedEncodingOf(bundle);
+  const inputs = Array.from({ length: N }, () =&gt; {
+    const s = randomSplat();
+    s.rgb = { r: random(), g: random(), b: random() };
+    s.opacity = random();
+    s.center = { x: (random() - 0.5) * 20, y: (random() - 0.5) * 20, z: (random() - 0.5) * 20 };
+    return s;
+  });
+  inputs.forEach((s, i) =&gt; Splats.encodePacked(bundle, i, s));
+
+  const out = Splats.makeSplat();
+  let rotation = 0;
+  for (let i = 0; i &lt; N; i += 1) {
+    const s = inputs[i];
+    Splats.decodePacked(bundle, i, out);
+    if (Math.abs(out.rgb.g - s.rgb.g) &gt; (rgbMax - rgbMin) / 510 + 1e-9 || Math.abs(out.opacity - s.opacity) &gt; 1 / 510 + 1e-9) {
+      return `rgb / opacity ${i}`;
+    }
+    if (Math.abs(out.center.y - s.center.y) &gt; Math.abs(s.center.y) * 2 ** -11 + 2 ** -25) {
+      return `center ${s.center.y} -&gt; ${out.center.y}`;
+    }
+    if (lnError(out.scales.x, s.scales.x) &gt; (lnScaleMax - lnScaleMin) / 254 / 2 + 1e-9) {
+      return `scale ${s.scales.x} -&gt; ${out.scales.x}`;
+    }
+    rotation = Math.max(rotation, quatAngle(out.quaternion, s.quaternion));
+  }
+  // Angle step pi / 255 (at most 0.35 degrees off), plus the rounded 8-bit axis
+  return degrees(rotation) &lt;= 2 ? undefined : `rotation ${degrees(rotation)} degrees`;
+});
+
+await check("getSplats / findSplats: by name, then standard names, then channel names and formats", () =&gt; {
+  const data = new ArrayData({ bundles: { order: INDICES, fake: defineBundle({ extA: "uint32x2", extB: "uint32x4" }), scan: Splats.COV }, count: 1 });
+  const found = Splats.get(data);
+  if (found.name !== "scan" || found.layout !== "covSplats" || !Splats.isCov(found.bundle) || Splats.isExt(found.bundle)) {
+    return `${found.name} ${found.layout}`;
+  }
+  const both = new ArrayData({ bundles: { other: Splats.EXT, packedSplats: Splats.PACKED }, count: 1 });
+  if (Splats.get(both).name !== "packedSplats" || Splats.get(both, "other").layout !== "extSplats" || Splats.find(both, "nope") !== undefined) {
+    return "standard name or explicit name not preferred";
+  }
+  const none = new ArrayData({ bundles: { order: INDICES }, count: 1 });
+  try {
+    Splats.get(none);
+    return "getSplats without splats did not throw";
+  } catch {
+    return Splats.find(none) === undefined ? undefined : "findSplats found splats in none";
+  }
+});
+
+// --- Splat access by bundle type ---
+
+// Splats of every layout from the same random inputs
+function layouts(count: number) {
+  const data = new ArrayData({ bundles: { ext: Splats.EXT, cov: Splats.COV, packed: Splats.PACKED }, count });
+  const inputs = Array.from({ length: count }, () =&gt; {
+    const s = randomSplat();
+    s.rgb = { r: random(), g: random(), b: random() };
+    s.opacity = random();
+    s.center = { x: (random() - 0.5) * 20, y: (random() - 0.5) * 20, z: (random() - 0.5) * 20 };
+    return s;
+  });
+  inputs.forEach((s, i) =&gt; {
+    Splats.encodeExt(data.bundles.ext, i, s);
+    Splats.encodeCov(data.bundles.cov, i, { ...Splats.toCov(s, Splats.makeCovSplat()), normal: s.normal });
+    Splats.encodePacked(data.bundles.packed, i, s);
+  });
+  return { data, inputs };
+}
+
+await check("loadCenter agrees with loadSplat for every layout", () =&gt; {
+  const { data } = layouts(1000);
+  const s = Splats.makeSplat();
+  const center = { x: 0, y: 0, z: 0 };
+  for (const [layout, bundle] of Object.entries(data.bundles) as [string, SplatBundle][]) {
+    for (let i = 0; i &lt; 1000; i += 1) {
+      Splats.load(bundle, i, s);
+      Splats.loadCenter(bundle, i, center);
+      if (center.x !== s.center.x || center.z !== s.center.z) {
+        return `${layout} center ${i}`;
+      }
+    }
+  }
+  return undefined;
+});
+
+await check("storeSplat and storePbr keep each other's bits; together they match encodeExtSplat", () =&gt; {
+  const { data, inputs } = layouts(N);
+  const bundle = data.bundles.ext;
+  const split = new ArrayData({ bundles: { ext: Splats.EXT }, count: N }).bundles.ext;
+  const reversed = new ArrayData({ bundles: { ext: Splats.EXT }, count: N }).bundles.ext;
+  inputs.forEach((s, i) =&gt; {
+    Splats.store(split, i, s);
+    Splats.storePbr(split, i, s);
+    Splats.storePbr(reversed, i, s);
+    Splats.store(reversed, i, s);
+  });
+  for (const label of ["extA", "extB"] as const) {
+    const mismatch = compare(split.channels[label].data, bundle.channels[label].data) ?? compare(reversed.channels[label].data, bundle.channels[label].data);
+    if (mismatch) {
+      return `${label} ${mismatch}`;
+    }
+  }
+
+  // Overwriting one half leaves the other
+  const p = Splats.makePbr();
+  const s = Splats.makeSplat();
+  Splats.store(split, 0, inputs[1]);
+  Splats.loadPbr(split, 0, p);
+  const pbrKept = Math.abs(p.metallic - inputs[0].metallic) &lt;= 1 / 510 &amp;&amp; vecAngle(p.normal, inputs[0].normal) &lt; 0.001;
+  Splats.storePbr(reversed, 0, inputs[1]);
+  Splats.load(reversed, 0, s);
+  const splatKept = s.center.x === Math.fround(inputs[0].center.x) &amp;&amp; Math.abs(s.opacity - inputs[0].opacity) &lt;= 1 / 256;
+  return pbrKept &amp;&amp; splatKept ? undefined : `pbr kept ${pbrKept}, splat kept ${splatKept}`;
+});
+
+await check("storeSplat matches the low-level encoders for cov and packed", () =&gt; {
+  const { data, inputs } = layouts(2000);
+  const cov = new ArrayData({ bundles: { cov: Splats.COV }, count: 2000 }).bundles.cov;
+  const packed = new ArrayData({ bundles: { packed: Splats.PACKED }, count: 2000 }).bundles.packed;
+  inputs.forEach((s, i) =&gt; {
+    Splats.store(packed, i, s);
+    // storeSplat keeps the normal bits: write them first, as encodeCovSplat does
+    Splats.encodeCov(cov, i, { ...Splats.makeCovSplat(), normal: s.normal });
+    Splats.store(cov, i, s);
+  });
+  return compare(packed.channels.packed.data, data.bundles.packed.channels.packed.data)
+    ?? compare(cov.channels.covA.data, data.bundles.cov.channels.covA.data)
+    ?? compare(cov.channels.covB.data, data.bundles.cov.channels.covB.data);
+});
+
+await check("splat access is typed by the bundle", () =&gt; {
+  const { data } = layouts(1);
+  const pbr = Splats.makePbr();
+  const s = Splats.makeSplat();
+  Splats.loadPbr(data.bundles.ext, 0, pbr);
+  // @ts-expect-error packed splats have no PBR
+  void (() =&gt; Splats.loadPbr(data.bundles.packed, 0, pbr));
+  // @ts-expect-error cov splats have no PBR
+  void (() =&gt; Splats.storePbr(data.bundles.cov, 0, pbr));
+  const untyped: ArrayData = data;
+  // @ts-expect-error an untyped bundle could be any layout
+  void (() =&gt; Splats.load(untyped.bundles.ext, 0, s));
+
+  const { bundle } = Splats.get(untyped);
+  Splats.load(bundle, 0, s);
+  // @ts-expect-error not narrowed yet
+  void (() =&gt; Splats.loadPbr(bundle, 0, pbr));
+  if (Splats.isExt(bundle)) {
+    Splats.loadPbr(bundle, 0, pbr);
+  }
+  const packedData = Splats.make(1, { layout: "packedSplats" });
+  Splats.load(packedData.bundles.packedSplats, 0, s);
+  // @ts-expect-error the data's splats are packed
+  void (() =&gt; packedData.bundles.extSplats.channels);
+  const plain: ArrayBundle = untyped.bundles.packed;
+  return Splats.isPacked(plain) &amp;&amp; !Splats.isExt(plain) ? undefined : "guards wrong";
+});
+
+// --- Double buffering ---
+
+await check("swap and setFromTransferable keep bundle and channel objects", () =&gt; {
+  const a = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 10, meta: { name: "a" } });
+  const b = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 20, meta: { name: "b" } });
+  a.bundles.extSplats.channels.extA.data[0] = 1;
+  b.bundles.extSplats.channels.extA.data[0] = 2;
+  a.swap(b);
+  if (a.count !== 20 || a.meta.name !== "b" || a.bundles.extSplats.channels.extA.data[0] !== 2 || b.bundles.extSplats.channels.extA.data[0] !== 1) {
+    return "swap";
+  }
+
+  const bundle = a.bundles.extSplats;
+  const channel = bundle.channels.extA;
+  const t = a.toTransferable();
+  const back = structuredClone(t, { transfer: ArrayData.transferables(t) });
+  if (channel.data.length !== 0) {
+    return "not transferred";
+  }
+  back.bundles.extra = { def: Splats.LOD_TREE, meta: {}, channels: { node: new Uint32Array(4096 * 2) } };
+  a.setFromTransferable(back);
+  return a.bundles.extSplats === bundle &amp;&amp; a.bundles.extSplats.channels.extA === channel &amp;&amp; channel.data[0] === 2 &amp;&amp; a.count === 20
+    &amp;&amp; (a.bundles as Record&lt;string, ArrayBundle&gt;).extra.channels.node.data.length === 8192 ? undefined : "objects or data lost";
+});
+
+// --- Splat files ---
+
+// Decoded splats agree within `bounds` (scales and rotation in ln / degrees)
+function closeSplats(a: ArrayData, b: ArrayData, bounds: { center: number; ln: number; rgb: number; opacity: number; degrees: number; pbr?: number }) {
+  if (a.count !== b.count) {
+    return `count ${a.count} vs ${b.count}`;
+  }
+  const [fa, fb] = [Splats.get(a).bundle, Splats.get(b).bundle];
+  const [sa, sb] = [Splats.makeSplat(), Splats.makeSplat()];
+  const [pa, pb] = [Splats.makePbr(), Splats.makePbr()];
+  for (let i = 0; i &lt; a.count; i += 1) {
+    Splats.load(fa, i, sa);
+    Splats.load(fb, i, sb);
+    const centerError = Math.max(Math.abs(sa.center.x - sb.center.x), Math.abs(sa.center.y - sb.center.y), Math.abs(sa.center.z - sb.center.z));
+    const lnScale = Math.max(...(["x", "y", "z"] as const).map((k) =&gt; lnError(sa.scales[k], sb.scales[k])));
+    const rgb = Math.max(Math.abs(sa.rgb.r - sb.rgb.r), Math.abs(sa.rgb.g - sb.rgb.g), Math.abs(sa.rgb.b - sb.rgb.b));
+    const rotation = degrees(quatAngle(sa.quaternion, sb.quaternion));
+    if (centerError &gt; bounds.center || lnScale &gt; bounds.ln || rgb &gt; bounds.rgb || Math.abs(sa.opacity - sb.opacity) &gt; bounds.opacity || rotation &gt; bounds.degrees) {
+      return `splat ${i}: center ${centerError}, ln scale ${lnScale}, rgb ${rgb}, opacity ${sa.opacity} vs ${sb.opacity}, rotation ${rotation}`;
+    }
+    if (bounds.pbr !== undefined &amp;&amp; Splats.isExt(fa) &amp;&amp; Splats.isExt(fb)) {
+      Splats.loadPbr(fa, i, pa);
+      Splats.loadPbr(fb, i, pb);
+      if (Math.abs(pa.metallic - pb.metallic) &gt; bounds.pbr || (pa.normal.z !== 0 &amp;&amp; vecAngle(pa.normal, pb.normal) &gt; bounds.pbr * 4)) {
+        return `pbr ${i}: metallic ${pa.metallic} vs ${pb.metallic}, normal ${JSON.stringify(pa.normal)} vs ${JSON.stringify(pb.normal)}`;
+      }
+    }
+  }
+  return undefined;
+}
+
+function fileSource(count: number, withTree: boolean) {
+  const data = new ArrayData({ bundles: { extSplats: Splats.EXT }, count, meta: {} });
+  for (let i = 0; i &lt; count; i += 1) {
+    const s = randomSplat();
+    s.rgb = { r: random(), g: random(), b: random() };
+    s.opacity = random();
+    s.scales = { x: Math.exp(random() * 8 - 6), y: Math.exp(random() * 8 - 6), z: Math.exp(random() * 8 - 6) };
+    Splats.encodeExt(data.bundles.extSplats, i, s);
+  }
+  if (withTree) {
+    const nodes = data.addBundle("lodTree", Splats.LOD_TREE).bundles.lodTree.channels.node.data;
+    for (let i = 0; i &lt; count; i += 1) {
+      nodes[i * 2] = i % 7;
+      nodes[i * 2 + 1] = (i * 13) % count;
+    }
+  }
+  return data;
+}
+
+function sameTree(a: ArrayData, b: ArrayData) {
+  const [ta, tb] = [Splats.findLodTree(a), Splats.findLodTree(b)];
+  if (!ta || !tb) {
+    return `tree ${!!ta} ${!!tb}`;
+  }
+  return compare(tb.channels.node.data.subarray(0, a.count * 2), ta.channels.node.data.subarray(0, a.count * 2));
+}
+
+await check("PLY round trip, with and without PBR", async () =&gt; {
+  const source = fileSource(3000, false);
+  const { splats: plain } = await PlyFile.read(PlyFile.write(source));
+  const { splats: pbr } = await PlyFile.read(PlyFile.write(source, { pbr: true }));
+  // f32 floats of the decoded values: one code off at most
+  const bounds = { center: 1e-4, ln: 2 ** -9, rgb: 2 / 255, opacity: 1 / 128, degrees: 0.1, pbr: 1 / 255 };
+  return closeSplats(source, plain, { ...bounds, pbr: undefined }) ?? closeSplats(source, pbr, bounds)
+    ?? (pbr.meta.format === "ply" &amp;&amp; plain.meta.ignoredShDegree === 0 ? undefined : "meta");
+});
+
+await check("PLY point clouds and SH degree", async () =&gt; {
+  const header = "ply\nformat binary_little_endian 1.0\nelement vertex 2\nproperty float x\nproperty float y\nproperty float z\n"
+    + "property uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n";
+  const bytes = new Uint8Array(header.length + 2 * 15);
+  bytes.set(new TextEncoder().encode(header));
+  const view = new DataView(bytes.buffer, header.length);
+  view.setFloat32(15, 2, true);
+  view.setUint8(15 + 12, 255);
+  const { splats: cloud } = await PlyFile.read(bytes);
+  const s = Splats.makeSplat();
+  Splats.load(cloud.bundles.extSplats, 1, s);
+  if (s.center.x !== 2 || Math.abs(s.rgb.r - 1) &gt; 1 / 255 || s.rgb.g !== 0 || Math.abs(s.scales.x - 0.001) &gt; 1e-5) {
+    return `point ${JSON.stringify(s)}`;
+  }
+
+  const names = ["x", "y", "z", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3", "opacity", "f_dc_0", "f_dc_1", "f_dc_2",
+    ...Array.from({ length: 24 }, (_, k) =&gt; `f_rest_${k}`)];
+  const shHeader = `ply\nformat binary_little_endian 1.0\nelement vertex 1\n${names.map((n) =&gt; `property float ${n}`).join("\n")}\nend_header\n`;
+  const sh = new Uint8Array(shHeader.length + names.length * 4);
+  sh.set(new TextEncoder().encode(shHeader));
+  const { splats: read } = await PlyFile.read(sh);
+  const { splats: skipped } = await PlyFile.read(sh, { sh: false });
+  return Sh.find(read.bundles)?.degree === 2 &amp;&amp; read.meta.ignoredShDegree === 0 &amp;&amp; !Sh.find(skipped.bundles) &amp;&amp; skipped.meta.ignoredShDegree === 2
+    ? undefined : "SH degree";
+});
+
+// A compressed PLY's quantization of fileSource splats in table order
+// (centers within +-100: 10-bit y over a 200-wide chunk; ln scales over 8;
+// 8-bit colors and opacity over 1; 10-bit smallest-three rotations), plus
+// the ext splats' own rounding
+const COMPRESSED_BOUNDS = { center: 200 / 1023 / 2 + 1e-3, ln: 8 / 1023 / 2 + 2 ** -9, rgb: 1 / 510 + 2 / 255, opacity: 1 / 510 + 1 / 128, degrees: 0.3 };
+
+await check("compressed PLY round trip in table order", async () =&gt; {
+  const source = fileSource(3000, false);
+  const bytes = CompressedPlyFile.write(source, { sort: false });
+  const { splats: loaded } = await PlyFile.read(bytes);
+  const headerLength = new TextDecoder().decode(bytes.subarray(0, 4096)).indexOf("end_header\n") + "end_header\n".length;
+  if (bytes.byteLength !== headerLength + Math.ceil(3000 / 256) * 18 * 4 + 3000 * 16) {
+    return `size ${bytes.byteLength}`;
+  }
+  return closeSplats(source, loaded, COMPRESSED_BOUNDS)
+    ?? (loaded.meta.format === "ply" &amp;&amp; loaded.meta.compressed === true &amp;&amp; loaded.meta.ignoredShDegree === 0 ? undefined : "meta");
+});
+
+await check("compressed PLY in Morton order: the same splats, in smaller chunks", async () =&gt; {
+  const source = fileSource(3000, false);
+  const { splats: sorted } = await PlyFile.read(CompressedPlyFile.write(source));
+  const { splats: unsorted } = await PlyFile.read(CompressedPlyFile.write(source, { sort: false }));
+  const [from, inSorted, inUnsorted] = [source.bundles.extSplats, sorted.bundles.extSplats, unsorted.bundles.extSplats];
+
+  // Each sorted splat's source: the nearest center, used once
+  const centers = Array.from({ length: source.count }, (_, j) =&gt; Splats.loadCenter(from, j, { x: 0, y: 0, z: 0 }));
+  const reordered = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: source.count, meta: {} });
+  const used = new Uint8Array(source.count);
+  const [s, c] = [Splats.makeExtSplat(), { x: 0, y: 0, z: 0 }];
+  const error = (a: Vec3, b: Vec3) =&gt; Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z));
+  let [sortedError, unsortedError] = [0, 0];
+  for (let i = 0; i &lt; source.count; i += 1) {
+    Splats.loadCenter(inSorted, i, c);
+    let nearest = 0;
+    for (let j = 1; j &lt; source.count; j += 1) {
+      nearest = error(centers[j], c) &lt; error(centers[nearest], c) ? j : nearest;
+    }
+    if (used[nearest]) {
+      return `source splat ${nearest} written twice`;
+    }
+    used[nearest] = 1;
+    sortedError += error(centers[nearest], c);
+    unsortedError += error(centers[i], Splats.loadCenter(inUnsorted, i, c));
+    Splats.encodeExt(reordered.bundles.extSplats, i, Splats.decodeExt(from, nearest, s));
+  }
+  // The mean (chunks across octant boundaries still span the whole scene),
+  // of 12 chunks of uniformly scattered splats: about 0.6 of the unsorted
+  return sortedError &lt; unsortedError * 0.75 ? closeSplats(reordered, sorted, COMPRESSED_BOUNDS)
+    : `mean center errors ${sortedError / source.count} sorted, ${unsortedError / source.count} not`;
+});
+
+await check("compressed PLY of older SuperSplat files: no color ranges, an sh element", async () =&gt; {
+  const header = [
+    "ply", "format binary_little_endian 1.0", "element chunk 1",
+    ...["min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "min_scale_x", "min_scale_y", "min_scale_z", "max_scale_x", "max_scale_y", "max_scale_z"]
+      .map((name) =&gt; `property float ${name}`),
+    "element vertex 2", ...["packed_position", "packed_rotation", "packed_scale", "packed_color"].map((name) =&gt; `property uint ${name}`),
+    "element sh 2", ...Array.from({ length: 9 }, (_, k) =&gt; `property uchar f_rest_${k}`),
+    "end_header", "",
+  ].join("\n");
+  const bytes = new Uint8Array(header.length + 12 * 4 + 2 * 16 + 2 * 9);
+  bytes.set(new TextEncoder().encode(header));
+  const view = new DataView(bytes.buffer, header.length);
+  [0, 0, 0, 2, 4, 6, -1, -1, -1, 1, 1, 1].forEach((value, k) =&gt; view.setFloat32(k * 4, value, true));
+  const words = [
+    // (2, 4, 0); 90 degrees about x (x largest, w code 1023); ln scales -1, 1, 1; rgb (1, 0, 0.2), opacity 1
+    2047 * 2 ** 21 + 1023 * 2 ** 11, 2 ** 30 + 1023 * 2 ** 20 + 512 * 2 ** 10 + 512, 1023 * 2 ** 11 + 2047, 255 * 2 ** 24 + 51 * 2 ** 8 + 255,
+    // (0, 0, 6); about identity (w largest); ln scales about 0; rgb (0, 1, 0), opacity 128 / 255
+    2047, 512 * 2 ** 20 + 512 * 2 ** 10 + 512, 1023 * 2 ** 21 + 512 * 2 ** 11 + 1023, 255 * 2 ** 16 + 128,
+  ];
+  words.forEach((word, k) =&gt; view.setUint32(48 + k * 4, word, true));
+  const { splats: loaded } = await PlyFile.read(bytes);
+
+  const expected = new ArrayData({ bundles: { extSplats: Splats.EXT }, count: 2, meta: {} });
+  const e = Splats.makeExtSplat();
+  Object.assign(e, { center: { x: 2, y: 4, z: 0 }, scales: { x: Math.exp(-1), y: Math.E, z: Math.E }, quaternion: { x: Math.SQRT1_2, y: 0, z: 0, w: Math.SQRT1_2 },
+    rgb: { r: 1, g: 0, b: 0.2 }, opacity: 1 });
+  Splats.encodeExt(expected.bundles.extSplats, 0, e);
+  Object.assign(e, { center: { x: 0, y: 0, z: 6 }, scales: { x: 1, y: 1, z: 1 }, quaternion: { x: 0, y: 0, z: 0, w: 1 }, rgb: { r: 0, g: 1, b: 0 }, opacity: 128 / 255 });
+  Splats.encodeExt(expected.bundles.extSplats, 1, e);
+  return closeSplats(expected, loaded, { center: 1e-3, ln: 2 ** -8, rgb: 2 / 255, opacity: 1 / 128, degrees: 0.2 })
+    ?? (loaded.meta.compressed === true &amp;&amp; Sh.find(loaded.bundles)?.degree === 1 ? undefined : "meta");
+});
+
+// PBR is stored as ext holds it (Oct24 normal, unorm8 roughness and
+// metallic): the same roughness and metallic bits back, and the same
+// normal (Oct24 has duplicate codes on its fold, x = -1, where either code
+// of a pair may come back)
+function samePbr(a: ArrayData, b: ArrayData) {
+  const [ea, eb] = [Splats.get(a).bundle, Splats.get(b).bundle];
+  if (!Splats.isExt(ea) || !Splats.isExt(eb)) {
+    return "not ext";
+  }
+  const [na, nb] = [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }];
+  for (let i = 0; i &lt; a.count; i += 1) {
+    Encoding.decodeOct24(ea.channels.extA.data[i * 4 + 3] &amp; 0xffffff, na);
+    Encoding.decodeOct24(eb.channels.extA.data[i * 4 + 3] &amp; 0xffffff, nb);
+    const [ra, rb] = [ea.channels.extB.data[i * 4 + 2] &gt;&gt;&gt; 16, eb.channels.extB.data[i * 4 + 2] &gt;&gt;&gt; 16];
+    if (Math.max(Math.abs(na.x - nb.x), Math.abs(na.y - nb.y), Math.abs(na.z - nb.z)) &gt; 1e-6 || ra !== rb) {
+      return `pbr ${i}: normal ${JSON.stringify(na)} vs ${JSON.stringify(nb)}, roughness | metallic ${ra} vs ${rb}`;
+    }
+  }
+  return undefined;
+}
+
+await check("SPZ round trips with PBR and the LoD tree: v3 (gzip) and v4 (NGSP, RX records)", async () =&gt; {
+  const source = fileSource(3000, true);
+  // Some splats without a normal (0)
+  for (let i = 0; i &lt; source.count; i += 5) {
+    Splats.storePbr(source.bundles.extSplats, i, { normal: { x: 0, y: 0, z: 0 }, roughness: random(), metallic: random() });
+  }
+  for (const version of [3, 4] as const) {
+    const { splats: loaded } = await SpzFile.read(await SpzFile.write(source, { version, pbr: true }));
+    // 12 fractional bits, 8-bit colors (COLOR_SCALE / 255), 1/16 ln steps, smallest-three rotation
+    const error = closeSplats(source, loaded, { center: 2 ** -12, ln: 1 / 32 + 2 ** -9, rgb: 0.006, opacity: 1 / 128, degrees: 0.6 })
+      ?? samePbr(source, loaded) ?? sameTree(source, loaded)
+      ?? (loaded.meta.container === (version === 4 ? "ngsp" : "gzip") ? undefined : `container ${String(loaded.meta.container)}`);
+    if (error) {
+      return `v${version}: ${error}`;
+    }
+  }
+  return undefined;
+});
+
+await check("SPZ version 2 round trip (3-byte rotations)", async () =&gt; {
+  const source = fileSource(3000, true);
+  const { splats: loaded } = await SpzFile.read(await SpzFile.write(source, { version: 2, pbr: true }));
+  // As v3, but x, y, z rotation bytes of 1 / 127.5 each: w = sqrt(1 - |xyz|^2)
+  // loses precision for turns near 180 degrees (a true w of 0.08 can decode
+  // as 0: about 9 degrees), which is why SPZ v3 changed the encoding
+  return loaded.meta.version !== 2 ? `version ${String(loaded.meta.version)}`
+    : closeSplats(source, loaded, { center: 2 ** -12, ln: 1 / 32 + 2 ** -9, rgb: 0.006, opacity: 1 / 128, degrees: 15 }) ?? samePbr(source, loaded) ?? sameTree(source, loaded);
+});
+
+// A written SPZ's inner bytes (header then columns) changed by `edit`, gzipped again
+async function editSpz(file: Uint8Array&lt;ArrayBuffer&gt;, edit: (bytes: Uint8Array&lt;ArrayBuffer&gt;) =&gt; Uint8Array&lt;ArrayBuffer&gt;) {
+  return Compression.gzip(edit(new Uint8Array(await Compression.gunzip(file))));
+}
+
+// [u32 type][u32 byteLength][payload]
+function spzRecord(type: number, payload: Uint8Array) {
+  const out = new Uint8Array(8 + payload.byteLength);
+  new DataView(out.buffer).setUint32(0, type, true);
+  new DataView(out.buffer).setUint32(4, payload.byteLength, true);
+  out.set(payload, 8);
+  return out;
+}
+
+await check("SPZ in gzip with version 4 (v3's layout, SH degree 4) and extension records after the SH (flag 0x02)", async () =&gt; {
+  const source = fileSource(500, false);
+  Sh.add(source, "ext", 4);
+  const encode = Sh.encoder(source);
+  shValues(500, 4).forEach((c, i) =&gt; encode(i, c));
+  const v3 = await SpzFile.write(source);
+  const v4 = await editSpz(v3, (bytes) =&gt; {
+    new DataView(bytes.buffer, bytes.byteOffset).setUint32(4, 4, true);
+    return bytes;
+  });
+  const [{ splats: a }, { splats: b }] = [await SpzFile.read(v3), await SpzFile.read(v4)];
+  if (b.meta.version !== 4 || Sh.find(b.bundles)?.degree !== 4) {
+    return `gzip version 4: version ${String(b.meta.version)}, SH degree ${Sh.find(b.bundles)?.degree}`;
+  }
+  const same = compare(b.bundles.extSplats.channels.extA.data, a.bundles.extSplats.channels.extA.data)
+    ?? compare(b.bundles.extSplats.channels.extB.data, a.bundles.extSplats.channels.extB.data)
+    ?? compare((b as ArrayData).bundles.extSh.channels.extShF.data, (a as ArrayData).bundles.extSh.channels.extShF.data);
+  if (same) {
+    return `gzip version 4 differs from v3: ${same}`;
+  }
+  // Safe orbit, coordinate system (RDF) and an unknown record after the SH
+  const records = [
+    spzRecord(0xadbe0002, new Uint8Array(Float32Array.of(0.25, 1.5, 3).buffer)),
+    spzRecord(0xadbe0003, new Uint8Array(Uint32Array.of(6).buffer)),
+    spzRecord(0x12340001, new Uint8Array(5)),
+  ];
+  const withRecords = await editSpz(v3, (bytes) =&gt; {
+    const out = new Uint8Array(bytes.byteLength + records.reduce((n, r) =&gt; n + r.byteLength, 0));
+    out.set(bytes);
+    out[14] |= 0x02;
+    let at = bytes.byteLength;
+    for (const r of records) {
+      out.set(r, at);
+      at += r.byteLength;
+    }
+    return out;
+  });
+  const { splats: c } = await SpzFile.read(withRecords);
+  const orbit = c.meta.safeOrbitCamera as { elevationMin: number; elevationMax: number; radiusMin: number } | undefined;
+  if (orbit?.elevationMin !== 0.25 || orbit.elevationMax !== 1.5 || orbit.radiusMin !== 3 || c.meta.coordinateSystem !== "RDF"
+    || JSON.stringify(c.meta.skippedExtensions) !== JSON.stringify([0x12340001]) || a.meta.coordinateSystem !== "RUB") {
+    return `records: ${JSON.stringify(c.meta)}`;
+  }
+  // Asked for RUB: y and z flip (RDF -&gt; RUB)
+  const { splats: d } = await SpzFile.read(withRecords, { coordinateSystem: "RUB" });
+  const [sc, sd] = [Splats.makeSplat(), Splats.makeSplat()];
+  Splats.load(c.bundles.extSplats, 7, sc);
+  Splats.load(d.bundles.extSplats, 7, sd);
+  return d.meta.coordinateSystem === "RUB" &amp;&amp; sd.center.x === sc.center.x &amp;&amp; sd.center.y === -sc.center.y &amp;&amp; sd.center.z === -sc.center.z ? undefined
+    : `converted: ${JSON.stringify(sc.center)} -&gt; ${JSON.stringify(sd.center)}, ${String(d.meta.coordinateSystem)}`;
+});
+
+await check("zstd: our encoder read by fzstd and Node, Node's frames read by fzstd (random, skewed, RLE; block edges)", async () =&gt; {
+  const zlib = (await import(NODE_ZLIB)) as NodeZlib;
+  const kinds: Record&lt;string, (n: number) =&gt; Uint8Array&gt; = {
+    random: (n) =&gt; Uint8Array.from({ length: n }, () =&gt; (random() * 256) | 0),
+    skewed: (n) =&gt; Uint8Array.from({ length: n }, () =&gt; Math.min(255, Math.floor(-Math.log(1 - random()) * 6))),
+    rle: (n) =&gt; new Uint8Array(n).fill(9),
+    blocks: (n) =&gt; Uint8Array.from({ length: n }, (_, i) =&gt; ((i &gt;&gt; 17) % 2 === 0 ? (random() &lt; 0.9 ? 3 : 200) : (random() * 256) | 0)),
+  };
+  for (const [kind, make] of Object.entries(kinds)) {
+    for (const n of [0, 1, 63, 64, 1023, 1024, 16384, 131071, 131072, 131073, 300000]) {
+      const bytes = make(n);
+      const ours = await Zstd.compress(bytes, { native: false });
+      const error = compare(await Zstd.decompress(ours, n, { native: false }), bytes) ?? compare(zlib.zstdDecompressSync(ours), bytes)
+        ?? compare(await Zstd.decompress(zlib.zstdCompressSync(bytes), n, { native: false }), bytes);
+      if (error) {
+        return `${kind} ${n}: ${error}`;
+      }
+    }
+  }
+  try {
+    await Zstd.decompress(await Zstd.compress(new Uint8Array(10)), 11);
+    return "wrong size accepted";
+  } catch {
+    return undefined;
+  }
+});
+
+// An SPZ 4 file's header and table of contents: [header, extensions, toc
+// entries, streams]
+function ngspParts(file: Uint8Array) {
+  const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
+  const toc = view.getUint32(16, true);
+  return { view, toc, streams: file[15], data: toc + file[15] * 16 };
+}
+
+await check("SPZ 4: degrees 0 and 4, records, v3 and v4 alike, NGSP detected", async () =&gt; {
+  for (const degree of [0, 4] as const) {
+    const source = fileSource(700, true);
+    source.meta.safeOrbitCamera = { elevationMin: 0.5, elevationMax: 1, radiusMin: 2 };
+    source.meta.coordinateSystem = "LUF";
+    if (degree === 4) {
+      Sh.add(source, "ext", degree);
+      const encode = Sh.encoder(source);
+      shValues(700, degree).forEach((c, i) =&gt; encode(i, c));
+    }
+    const v4 = await SpzFile.write(source, { version: 4, pbr: true });
+    const { streams } = ngspParts(v4);
+    if (SplatFiles.detectFormat(v4) !== "spz" || streams !== (degree &gt; 0 ? 6 : 5) || (v4[14] &amp; 0xc0) !== 0 || (v4[14] &amp; 0x02) === 0) {
+      return `degree ${degree}: detected ${SplatFiles.detectFormat(v4)}, ${streams} streams, flags ${v4[14]}`;
+    }
+    const [u3, u4] = [await SpzFile.unpack(await SpzFile.write(source, { pbr: true })), await SpzFile.unpack(v4)];
+    for (const key of ["centers", "alphas", "colors", "scales", "rotations", "sh", "lodTree", "pbr"] as const) {
+      const error = compare(u4[key] ?? [], u3[key] ?? []);
+      if (error) {
+        return `degree ${degree}, ${key}: ${error}`;
+      }
+    }
+    const { splats: back } = await SplatFiles.decode(v4);
+    if (back.meta.coordinateSystem !== "LUF" || JSON.stringify(back.meta.safeOrbitCamera) !== JSON.stringify(source.meta.safeOrbitCamera)
+      || (Sh.find(back.bundles)?.degree ?? 0) !== degree || back.meta.skippedExtensions !== undefined) {
+      return `degree ${degree}: meta ${JSON.stringify(back.meta)}`;
+    }
+  }
+  return undefined;
+});
+
+await check("SPZ unpack from streams in chunks of 1, 7 and random bytes; early ends rejected; sh: false stops before the SH stream", async () =&gt; {
+  const source = fileSource(400, true);
+  Sh.add(source, "ext", 3);
+  const encode = Sh.encoder(source);
+  shValues(400, 3).forEach((c, i) =&gt; encode(i, c));
+  const stream = (bytes: Uint8Array, size: () =&gt; number, pulled = { bytes: 0 }) =&gt; new ReadableStream&lt;Uint8Array&gt;({
+    pull(controller) {
+      if (pulled.bytes &gt;= bytes.byteLength) {
+        controller.close();
+        return;
+      }
+      const n = Math.max(1, size());
+      controller.enqueue(bytes.slice(pulled.bytes, pulled.bytes + n));
+      pulled.bytes += n;
+    },
+  });
+  for (const version of [2, 3, 4] as const) {
+    const file = await SpzFile.write(source, { version, pbr: true });
+    const whole = await SpzFile.unpack(file);
+    for (const size of [() =&gt; 1, () =&gt; 7, () =&gt; 1 + Math.floor(random() * 3000)]) {
+      const parts = await SpzFile.unpack(stream(file, size));
+      for (const key of ["centers", "rotations", "sh", "lodTree", "pbr"] as const) {
+        const error = compare(parts[key] ?? [], whole[key] ?? []);
+        if (error) {
+          return `v${version}, ${key}: ${error}`;
+        }
+      }
+    }
+    try {
+      await SpzFile.unpack(stream(file.subarray(0, file.byteLength - 3), () =&gt; 100));
+      return `v${version}: a truncated stream read`;
+    } catch {
+      // expected
+    }
+  }
+  const v4 = await SpzFile.write(source, { version: 4 });
+  const pulled = { bytes: 0 };
+  const noSh = await SpzFile.unpack(stream(v4, () =&gt; 16, pulled), { sh: false });
+  const { view, toc } = ngspParts(v4);
+  const shFrame = view.getUint32(toc + 5 * 16, true);
+  // Within the chunk holding the SH frame's start, plus the one chunk the
+  // stream pulls ahead into its queue
+  return noSh.sh === undefined &amp;&amp; pulled.bytes &lt;= v4.byteLength - shFrame + 32 ? undefined
+    : `sh: false read ${pulled.bytes} of ${v4.byteLength} bytes, SH frame ${shFrame}, sh ${noSh.sh?.byteLength}`;
+});
+
+await check("SPZ 4 rejects tampered files: TOC, stream counts and sizes, trailing bytes, point counts, truncation", async () =&gt; {
+  const source = fileSource(300, false);
+  const file = await SpzFile.write(source, { version: 4 });
+  const { toc, data } = ngspParts(file);
+  const edits: [string, (bytes: Uint8Array&lt;ArrayBuffer&gt;) =&gt; Uint8Array&lt;ArrayBuffer&gt;][] = [
+    ["toc inside the header", (b) =&gt; (new DataView(b.buffer).setUint32(16, 20, true), b)],
+    ["stream count", (b) =&gt; ((b[15] = 6), b)],
+    ["uncompressed size", (b) =&gt; (new DataView(b.buffer).setUint32(toc + 8, 300 * 9 + 1, true), b)],
+    ["compressed size past the end", (b) =&gt; (new DataView(b.buffer).setUint32(toc + 4 * 16, 1e6, true), b)],
+    ["high size word", (b) =&gt; (new DataView(b.buffer).setUint32(toc + 4, 1 &lt;&lt; 22, true), b)],
+    ["trailing bytes", (b) =&gt; { const out = new Uint8Array(b.byteLength + 1); out.set(b); return out; }],
+    ["point count", (b) =&gt; (new DataView(b.buffer).setUint32(8, 2_000_000_000, true), b)],
+    ["version", (b) =&gt; (new DataView(b.buffer).setUint32(4, 5, true), b)],
+    ["truncated", (b) =&gt; b.slice(0, data + 5)],
+    ["corrupt stream", (b) =&gt; { b.fill(0x55, data, data + 20); return b; }],
+  ];
+  for (const [name, edit] of edits) {
+    try {
+      await SpzFile.read(edit(file.slice()));
+      return `${name}: read`;
+    } catch {
+      // expected
+    }
+  }
+  return undefined;
+});
+
+await check("SPZ without the tree and with lod forced on a treeless file", async () =&gt; {
+  const source = fileSource(100, true);
+  const { splats: loaded } = await SpzFile.read(await SpzFile.write(source, { lod: false }));
+  if (Splats.findLodTree(loaded)) {
+    return "tree written";
+  }
+  try {
+    await SpzFile.write(fileSource(10, false), { lod: true });
+    return "lod without a tree accepted";
+  } catch {
+    return undefined;
+  }
+});
+
+await check("RAD round trip in several chunks, with the LoD tree", async () =&gt; {
+  const source = fileSource(70000, true);
+  const file = await RadFile.write(source, { chunkSize: 30000 });
+  const { splats: loaded } = await RadFile.read(file);
+  return closeSplats(source, loaded, { center: 1e-4, ln: 2 ** -9, rgb: 2 / 255, opacity: 1 / 128, degrees: 0.1 }) ?? sameTree(source, loaded);
+});
+
+await check("format detection and encodeSplats / decodeSplats", async () =&gt; {
+  const source = fileSource(500, true);
+  for (const format of ["ply", "compressed-ply", "spz", "rad", "rdx"] as SplatFormat[]) {
+    // sort: false keeps compressed PLY in table order (others ignore it)
+    const bytes = await SplatFiles.encode(source, format, { sort: false });
+    const detected = format === "compressed-ply" ? "ply" : format;
+    if (SplatFiles.detectFormat(bytes) !== detected) {
+      return `${format} detected as ${SplatFiles.detectFormat(bytes)}`;
+    }
+    const { splats: loaded } = await SplatFiles.decode(bytes);
+    const mismatch = closeSplats(source, loaded, format === "compressed-ply" ? COMPRESSED_BOUNDS
+      : { center: 2 ** -12, ln: 1 / 32 + 2 ** -9, rgb: 0.006, opacity: 1 / 128, degrees: 0.6 });
+    if (mismatch) {
+      return `${format}: ${mismatch}`;
+    }
+    if (detected !== "ply" &amp;&amp; sameTree(source, loaded)) {
+      return `${format} tree`;
+    }
+  }
+  try {
+    SplatFiles.detectFormat(new Uint8Array([1, 2, 3, 4]), "scene.xyz");
+    return "unknown format accepted";
+  } catch {
+    return SplatFiles.detectFormat(new Uint8Array([1, 2, 3, 4]), "scene.SPZ?v=1") === "spz" ? undefined : "extension";
+  }
+});
+
+// Covariances of two loads of the same splats agree to `relative` of the largest variance
+function closeCovs(a: ArrayData, b: ArrayData, relative: number) {
+  const [fa, fb] = [Splats.get(a).bundle, Splats.get(b).bundle];
+  const [sa, sb] = [Splats.makeSplat(), Splats.makeSplat()];
+  const [ca, cb] = [Splats.makeCovSplat(), Splats.makeCovSplat()];
+  for (let i = 0; i &lt; a.count; i += 1) {
+    Splats.toCov(Splats.load(fa, i, sa), ca);
+    Splats.toCov(Splats.load(fb, i, sb), cb);
+    const scale = Math.max(ca.cov.xx, ca.cov.yy, ca.cov.zz);
+    for (const key of ["xx", "yy", "zz", "xy", "xz", "yz"] as const) {
+      if (Math.abs(ca.cov[key] - cb.cov[key]) &gt; scale * relative) {
+        return `splat ${i} cov ${key}: ${ca.cov[key]} vs ${cb.cov[key]}`;
+      }
+    }
+  }
+  return undefined;
+}
+
+await check("decodeSplats into packedSplats (with an encoding) and covSplats, for every format", async () =&gt; {
+  const source = fileSource(500, true);
+  const encoding = { rgbMin: -0.25, rgbMax: 1.25, lnScaleMin: -8, lnScaleMax: 4 };
+  for (const format of ["ply", "compressed-ply", "spz", "rad", "rdx"] as SplatFormat[]) {
+    const bytes = await SplatFiles.encode(source, format, { sort: false });
+    const { splats: packed } = await SplatFiles.decode(bytes, { layout: "packedSplats", encoding });
+    if (!Splats.isPacked(packed.bundles.packedSplats) || JSON.stringify(Splats.packedEncodingOf(packed.bundles.packedSplats)) !== JSON.stringify(encoding)) {
+      return `${format}: packed bundle or encoding`;
+    }
+    // Half centers (within +-100), colors in 1.5 / 255 steps, log scales in
+    // 12 / 254 steps, 8-bit rotations; plus SPZ's and compressed PLY's own steps
+    const mismatch = closeSplats(source, packed, {
+      center: format === "compressed-ply" ? COMPRESSED_BOUNDS.center + 0.04 : 0.04, ln: 6 / 254 + 1 / 32 + 1e-9, rgb: 0.75 / 255 + 0.006, opacity: 1 / 255 + 1 / 128, degrees: 2.6,
+    });
+    if (mismatch) {
+      return `${format} packed: ${mismatch}`;
+    }
+    if (!format.endsWith("ply") &amp;&amp; sameTree(source, packed)) {
+      return `${format} tree`;
+    }
+    // The same file as ext and as cov: the codecs' own rounding apart
+    const covMismatch = closeCovs((await SplatFiles.decode(bytes)).splats, (await SplatFiles.decode(bytes, { layout: "covSplats" })).splats, 0.01);
+    if (covMismatch) {
+      return `${format} cov: ${covMismatch}`;
+    }
+  }
+  return undefined;
+});
+
+await check("packedSplats encoding is optional: defaults, partial fields, the file's own", async () =&gt; {
+  const source = fileSource(200, false);
+  const same = (a: PackedEncoding, b: PackedEncoding) =&gt; JSON.stringify(a) === JSON.stringify(b);
+  const { splats: plain } = await SplatFiles.decode(await SplatFiles.encode(source, "spz"), { layout: "packedSplats" });
+  if (!same(Splats.packedEncodingOf(plain.bundles.packedSplats), Splats.DEFAULT_PACKED_ENCODING)) {
+    return `no encoding: ${JSON.stringify(plain.bundles.packedSplats.meta.encoding)}`;
+  }
+  const { splats: partial } = await SplatFiles.decode(await SplatFiles.encode(source, "ply"), { layout: "packedSplats", encoding: { rgbMax: 2 } });
+  if (!same(Splats.packedEncodingOf(partial.bundles.packedSplats), { ...Splats.DEFAULT_PACKED_ENCODING, rgbMax: 2 })) {
+    return `partial: ${JSON.stringify(partial.bundles.packedSplats.meta.encoding)}`;
+  }
+  // An RDX of packed splats keeps its encoding unless one is given
+  const custom = { rgbMin: -1, rgbMax: 3, lnScaleMin: -9, lnScaleMax: 5 };
+  const rdx = await SplatFiles.encode(Splats.convert(source, { layout: "packedSplats", encoding: custom }), "rdx");
+  const { splats: kept } = await SplatFiles.decode(rdx, { layout: "packedSplats" });
+  const { splats: overridden } = await SplatFiles.decode(rdx, { layout: "packedSplats", encoding: { rgbMin: 0 } });
+  return same(Splats.packedEncodingOf(kept.bundles.packedSplats), custom) &amp;&amp; same(Splats.packedEncodingOf(overridden.bundles.packedSplats), { ...custom, rgbMin: 0 })
+    ? undefined : `rdx: ${JSON.stringify(kept.bundles.packedSplats.meta.encoding)}, ${JSON.stringify(overridden.bundles.packedSplats.meta.encoding)}`;
+});
+
+await check("convertSplats: unchanged when in the layout, converted otherwise, other bundles shared", () =&gt; {
+  const source = fileSource(1000, true);
+  if (Splats.convert(source, { layout: "extSplats" }) !== source) {
+    return "data already in the layout was converted";
+  }
+  const packed = Splats.convert(source, { layout: "packedSplats", encoding: { rgbMin: -0.5, rgbMax: 1.5 } });
+  const encoding = Splats.packedEncodingOf(packed.bundles.packedSplats);
+  if (encoding.rgbMin !== -0.5 || encoding.lnScaleMin !== Splats.DEFAULT_PACKED_ENCODING.lnScaleMin || Splats.findLodTree(packed)?.channels.node.data !== Splats.findLodTree(source)?.channels.node.data) {
+    return "encoding, or the tree not shared";
+  }
+  // Packed to ext keeps what packed holds: ext's codes are finer
+  const lost = closeSplats(packed, Splats.convert(packed, { layout: "extSplats" }), { center: 1e-6, ln: 0.01, rgb: 2 / 255, opacity: 1 / 128, degrees: 0.5 });
+  if (lost) {
+    return `packed to ext: ${lost}`;
+  }
+  const named = new ArrayData({ bundles: { scan: Splats.EXT }, count: 10 });
+  const renamed = Splats.convert(named, { layout: "extSplats" });
+  return renamed.bundles.extSplats.channels.extA.data === named.bundles.scan.channels.extA.data ? undefined : "renaming copied the arrays";
+});
+
+await check("sort keys: monotonic back to front, invalid last, every width", () =&gt; {
+  const distances = [0, 1e-12, 1e-6, 0.001, 0.5, 1, 1.0001, 2, 100, 1e6, 1e12, 3e38];
+  for (const bits of [16, 24, 32] as SortKeyBits[]) {
+    const keys = distances.map((d) =&gt; SortKeys.compute(d, bits));
+    for (let i = 1; i &lt; keys.length; i += 1) {
+      if (keys[i] &gt; keys[i - 1]) {
+        return `${bits} bits: key of ${distances[i]} above the key of ${distances[i - 1]}`;
+      }
+    }
+    if (keys.some((key) =&gt; key &gt;= SortKeys.validMax(bits) + 1) || [Infinity, NaN, -Infinity].some((d) =&gt; SortKeys.compute(d, bits) !== SortKeys.invalid(bits))) {
+      return `${bits} bits: valid keys must stay below the invalid digit, non-finite give the mask`;
+    }
+  }
+  return SortKeys.compute(1, 32) !== (0xffffffff ^ 0x3f800000) &gt;&gt;&gt; 0 ? "32-bit key of 1" : undefined;
+});
+
+await check("sortKeys: stable, invalid last, the same order at every width", () =&gt; {
+  const count = 20000;
+  const distances = Array.from({ length: count }, (_, i) =&gt; (i % 97 === 0 ? Infinity : Math.round(random() * 1000) / 10));
+  const expected = distances.map((d, i) =&gt; ({ d, i })).filter(({ d }) =&gt; Number.isFinite(d)).sort((a, b) =&gt; b.d - a.d || a.i - b.i).map(({ i }) =&gt; i);
+  for (const bits of [16, 24, 32] as SortKeyBits[]) {
+    const keys = new Uint32Array(distances.map((d) =&gt; SortKeys.compute(d, bits)));
+    const { ordering, visible } = SortKeys.sort({ keys, count, bits });
+    if (visible !== expected.length) {
+      return `${bits} bits: ${visible} visible, expected ${expected.length}`;
+    }
+    const mismatch = compare(ordering.subarray(0, visible), expected);
+    if (mismatch) {
+      return `${bits} bits: ${mismatch}`;
+    }
+    if (!ordering.subarray(visible).every((i) =&gt; !Number.isFinite(distances[i]))) {
+      return `${bits} bits: a valid splat after the invalid ones`;
+    }
+  }
+  return ArrayData.INDICES.packing === 4 &amp;&amp; ArrayData.INDICES.channels.index === "uint32" ? undefined : "ArrayData.INDICES";
+});
+
+// --- Spherical harmonics ---
+
+// Coefficients like real scans' (|c| mostly below 0.5) with a few outliers
+// up to +-5, and splats to carry them
+function shValues(count: number, degree: ShDegree = 3) {
+  return Array.from({ length: count }, (_, i) =&gt; Float32Array.from({ length: Sh.COEFFICIENTS[degree] * 3 }, () =&gt; (random() - 0.5) * (i % 211 === 0 ? 10 : 0.4 * random())));
+}
+
+function shSource(count: number, codec: ShCodecName = "ext", degree: ShDegree = 3) {
+  const data = fileSource(count, false);
+  Sh.add(data, codec, degree);
+  const encode = Sh.encoder(data);
+  const values = shValues(count, degree);
+  values.forEach((c, i) =&gt; encode(i, c));
+  return { data, values };
+}
+
+// RMS color error over all directions (orthonormal basis: sqrt(sum e^2 / 4pi)),
+// in 8-bit steps, of `data`'s SH against `values`, and the largest |error|
+function shError(data: ArrayData, values: Float32Array[], degree = 3) {
+  const decode = Sh.decoder(data);
+  const out = new Float32Array(Sh.VALUES);
+  let sum = 0;
+  let worst = 0;
+  for (let i = 0; i &lt; data.count; i += 1) {
+    decode(i, out);
+    for (let v = 0; v &lt; Sh.COEFFICIENTS[degree] * 3; v += 1) {
+      sum += (out[v] - values[i][v]) ** 2;
+      worst = Math.max(worst, Math.abs(out[v] - values[i][v]));
+    }
+  }
+  return { rms: Math.sqrt(sum / data.count / 3 / (4 * Math.PI)) * 255, worst };
+}
+
+await check("SH codecs: round trips within their budgets, a lower degree reads a prefix", () =&gt; {
+  const { data, values } = shSource(4000, "ext", 4);
+  const budgets: [ShCodecName, number][] = [["ext", 0.2], ["packed", 0.4]];
+  for (const [codec, budget] of budgets) {
+    for (const degree of [4, 3, 2, 1] as ShDegree[]) {
+      const converted = Sh.convert(data, codec, { degree });
+      const found = Sh.find(converted.bundles);
+      if (found?.codec !== codec || found.degree !== degree || found.name !== `${codec}Sh`) {
+        return `${codec} degree ${degree}: found ${found?.codec} ${found?.degree} in ${found?.name}`;
+      }
+      const { rms } = shError(converted, values, degree);
+      if (rms &gt; budget) {
+        return `${codec} degree ${degree}: RMS ${rms.toFixed(3)} / 255`;
+      }
+    }
+  }
+  // Degree 4 words read at degree 1 to 3: the same values as a lower-degree encode
+  for (const codec of ["ext", "packed"]) {
+    const c = Sh.codec(codec);
+    const words = new Uint32Array(24);
+    const low = new Uint32Array(24);
+    c.encode(values[5], 4, words, 0);
+    for (const degree of [1, 2, 3] as ShDegree[]) {
+      c.encode(values[5], degree, low, 0);
+      const [a, b] = [c.decode(words, 0, degree, new Float32Array(Sh.VALUES)), c.decode(low, 0, degree, new Float32Array(Sh.VALUES))];
+      if (packedDiffers(codec, a, b, degree)) {
+        return `${codec}: degree ${degree} prefix of a degree-4 entry differs`;
+      }
+    }
+  }
+  return undefined;
+});
+
+// Packed scales are per band, so a prefix decodes the same as a lower-degree encode
+function packedDiffers(codec: string, a: Float32Array, b: Float32Array, degree: ShDegree) {
+  for (let v = 0; v &lt; Sh.COEFFICIENTS[degree] * 3; v += 1) {
+    if (a[v] !== b[v]) {
+      return `${codec} value ${v}`;
+    }
+  }
+  return undefined;
+}
+
+await check("SH channel names: the codec and the texel (A, B, ...); other names are not SH", () =&gt; {
+  const names = (codec: ShCodecName, degree: ShDegree) =&gt; Object.keys(Sh.bundle(codec, degree).channels).join(",");
+  const got = [names("ext", 1), names("ext", 2), names("ext", 3), names("ext", 4), names("packed", 1), names("packed", 2), names("packed", 3), names("packed", 4)];
+  const want = [
+    "extShA", "extShA,extShB", "extShA,extShB,extShC,extShD", "extShA,extShB,extShC,extShD,extShE,extShF",
+    "packedShA", "packedShA,packedShB", "packedShA,packedShB,packedShC", "packedShA,packedShB,packedShC,packedShD,packedShE",
+  ];
+  if (got.join("|") !== want.join("|")) {
+    return got.join(" | ");
+  }
+  for (const codec of ["ext", "packed"] as ShCodecName[]) {
+    for (const degree of [1, 2, 3, 4] as ShDegree[]) {
+      const found = Sh.find(new ArrayData({ count: 1 }).addBundle(`${codec}Sh`, Sh.bundle(codec, degree)).bundles);
+      if (found?.codec !== codec || found.degree !== degree) {
+        return `${codec} degree ${degree} found as ${found?.codec} ${found?.degree}`;
+      }
+    }
+  }
+  const partial = new ArrayData({ count: 1 }).addBundle("extSh", defineBundle({ extShA: "uint32x4", extShB: "uint32x4", extShC: "uint32x4", extShD: "uint32x4", extShE: "uint32x4" }));
+  if (Sh.find(partial.bundles)) {
+    return "ext A..E (no degree) found as SH";
+  }
+  const old = new ArrayData({ count: 1 }).addBundle("extSh", defineBundle({ extSh1: "uint32x4", extSh2: "uint32x4" }));
+  return Sh.find(old.bundles) ? "old channel names found as SH" : undefined;
+});
+
+await check("SH palettes: power-of-two strides by default, entries side by side, convert and expand", () =&gt; {
+  const values = shValues(64);
+  for (const [codec, degree, stride] of [["ext", 4, 8], ["packed", 4, 8], ["ext", 3, 4], ["packed", 3, 4], ["packed", 2, 2], ["packed", 1, 1], ["ext", 1, 1]] as [ShCodecName, ShDegree, number][]) {
+    const palette = ShPalette.create({ codec, degree, size: 64 });
+    if (palette.stride !== stride || palette.data.count !== 64 * stride) {
+      return `${codec} degree ${degree}: stride ${palette.stride}`;
+    }
+  }
+  const palette = ShPalette.create({ codec: "packed", degree: 3, size: 64, stride: 3 });
+  values.forEach((c, n) =&gt; palette.set(n, c));
+  const words = palette.data.bundles.shPalette.channels.shEntries.data;
+  const direct = new Uint32Array(12);
+  Sh.codec("packed").encode(values[9], 3, direct, 0);
+  if (compare(words.subarray(9 * 12, 10 * 12), direct)) {
+    return "entry 9 is not at elements 27..29";
+  }
+  const ext = palette.convert("ext");
+  const data = fileSource(100, false);
+  const labels = Array.from({ length: 100 }, (_, i) =&gt; (i * 5) % 64);
+  palette.expand(data, labels, "ext");
+  const decode = Sh.decoder(data);
+  for (let i = 0; i &lt; 100; i += 1) {
+    const a = decode(i, new Float32Array(Sh.VALUES));
+    const b = ext.get(labels[i]);
+    if (a.some((v, k) =&gt; Math.abs(v - b[k]) &gt; 1e-6)) {
+      return `expanded splat ${i}`;
+    }
+  }
+  return undefined;
+});
+
+await check("SH through every writer and reader (PLY exact, the others within their formats)", async () =&gt; {
+  const { data, values } = shSource(3000);
+  const extError = shError(data, values);
+  // [format, options, RMS budget, largest error budget]
+  const cases: [SplatFormat, object, number, number][] = [
+    ["ply", {}, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["rdx", {}, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["rad", { radSh: "f32" }, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["rad", { radSh: "f16" }, extError.rms + 0.05, extError.worst + 0.004],
+    // s8 over the chunk's largest |value| (outliers of 5: steps of 5 / 127)
+    ["rad", {}, 4, 0.05],
+    ["compressed-ply", { sort: false }, 40, 1.1],
+    ["spz", {}, 60, 4.1],
+  ];
+  for (const [format, options, rms, worst] of cases) {
+    const bytes = await SplatFiles.encode(data, format, options);
+    const { splats: back } = await SplatFiles.decode(bytes, { name: `x.${format}` });
+    const found = Sh.find(back.bundles);
+    if (found?.codec !== "ext" || found.degree !== 3) {
+      return `${format}: ${found?.codec} degree ${found?.degree}`;
+    }
+    const error = shError(back, values);
+    if (error.rms &gt; rms || error.worst &gt; worst) {
+      return `${format} ${JSON.stringify(options)}: RMS ${error.rms.toFixed(3)}, largest ${error.worst.toFixed(4)}`;
+    }
+    const { splats: off } = await SplatFiles.decode(bytes, { name: `x.${format}`, sh: false });
+    if (Sh.find(off.bundles) || off.meta.ignoredShDegree !== 3) {
+      return `${format}: sh false kept SH (ignoredShDegree ${String(off.meta.ignoredShDegree)})`;
+    }
+  }
+  return undefined;
+});
+
+await check("SH degree 4: PLY (72 f_rest), SPZ and RDX keep it, compressed PLY and RAD write its first 3 bands, palettes too", async () =&gt; {
+  const { data, values } = shSource(3000, "ext", 4);
+  const extError = shError(data, values, 4);
+  // [format, options, degree read back, RMS budget, largest error budget]
+  const cases: [SplatFormat, object, ShDegree, number, number][] = [
+    ["ply", {}, 4, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["rdx", {}, 4, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["spz", {}, 4, 60, 4.1],
+    ["rad", { radSh: "f32" }, 3, extError.rms + 1e-9, extError.worst + 1e-9],
+    ["compressed-ply", { sort: false }, 3, 40, 1.1],
+  ];
+  for (const [format, options, degree, rms, worst] of cases) {
+    const bytes = await SplatFiles.encode(data, format, options);
+    if (format === "ply" &amp;&amp; !new TextDecoder().decode(bytes.subarray(0, 4096)).includes("property float f_rest_71\n")) {
+      return "PLY header lacks f_rest_71";
+    }
+    const { splats: back } = await SplatFiles.decode(bytes, { name: `x.${format}` });
+    const found = Sh.find(back.bundles);
+    if (found?.codec !== "ext" || found.degree !== degree) {
+      return `${format}: ${found?.codec} degree ${found?.degree}, expected ${degree}`;
+    }
+    const error = shError(back, values, degree);
+    if (error.rms &gt; rms || error.worst &gt; worst) {
+      return `${format} ${JSON.stringify(options)}: RMS ${error.rms.toFixed(3)}, largest ${error.worst.toFixed(4)}`;
+    }
+    const { splats: off } = await SplatFiles.decode(bytes, { name: `x.${format}`, sh: false });
+    if (off.meta.ignoredShDegree !== degree) {
+      return `${format}: ignoredShDegree ${String(off.meta.ignoredShDegree)}`;
+    }
+  }
+  const palette = ShPalette.create({ codec: "packed", degree: 4, size: 300 });
+  const entries = shValues(300, 4);
+  entries.forEach((c, n) =&gt; palette.set(n, c));
+  if (paletteError(palette, entries) &gt; 0.05 || paletteError(palette.convert("ext"), entries) &gt; 0.06) {
+    return `degree-4 palette: largest error ${paletteError(palette, entries)}`;
+  }
+  const labeled = fileSource(300, false) as ArrayData;
+  labeled.addBundle("shLabel", Sh.LABEL);
+  labeled.bundles.shLabel.channels.label.data.set(Array.from({ length: 300 }, (_, i) =&gt; (i * 7) % 300));
+  const { splats: rad, shPalette: radPalette } = await RadFile.read(await RadFile.write(labeled, { shPalette: palette, radSh: "f32" }));
+  if (!radPalette || radPalette.degree !== 3 || !(rad as ArrayData).bundles.shLabel || paletteError(radPalette, entries, 3) &gt; 0.06) {
+    return `RAD clustered degree 4: palette degree ${radPalette?.degree}`;
+  }
+  return undefined;
+});
+
+await check("SH loading: default ext, a codec asked for, RDX keeps its codec unless asked", async () =&gt; {
+  const { data } = shSource(500, "packed");
+  const ply = await SplatFiles.encode(data, "ply");
+  const rdx = await SplatFiles.encode(data, "rdx");
+  const name = ({ splats }: { splats: ArrayData }) =&gt; Sh.find(splats.bundles)?.codec;
+  const got = [
+    name(await SplatFiles.decode(ply, { name: "a.ply" })),
+    name(await SplatFiles.decode(ply, { name: "a.ply", sh: "packed" })),
+    name(await SplatFiles.decode(rdx, { name: "a.rdx" })),
+    name(await SplatFiles.decode(rdx, { name: "a.rdx", sh: "ext" })),
+    name(await SplatFiles.decode(rdx, { name: "a.rdx", layout: "packedSplats" })),
+  ];
+  return compare(got.map((g) =&gt; ["ext", "packed"].indexOf(g ?? "")), [0, 1, 1, 0, 1]) &amp;&amp; `codecs ${got.join(", ")}`;
+});
+
+const labelsOf = (data: ArrayData) =&gt; data.bundles.shLabel?.channels.label.data.subarray(0, data.count);
+
+// Largest difference of palette entries from `values` (coefficient-major,
+// through `degree`)
+function paletteError(palette: ShPalette, values: Float32Array[], degree: ShDegree = palette.degree) {
+  const out = new Float32Array(Sh.VALUES);
+  let worst = 0;
+  for (let n = 0; n &lt; values.length; n += 1) {
+    palette.get(n, out);
+    for (let v = 0; v &lt; Sh.COEFFICIENTS[degree] * 3; v += 1) {
+      worst = Math.max(worst, Math.abs(out[v] - values[n][v]));
+    }
+  }
+  return worst;
+}
+
+await check("RAD clustered SH: palettes written and read back; the other writers expand them", async () =&gt; {
+  const values = shValues(300);
+  const palette = ShPalette.create({ codec: "ext", degree: 3, size: 300 });
+  values.forEach((c, n) =&gt; palette.set(n, c));
+  const exact = Array.from({ length: 300 }, (_, n) =&gt; palette.get(n));
+  const data = fileSource(5000, false);
+  const labels = data.addBundle("shLabel", Sh.LABEL).bundles.shLabel.channels.label.data.subarray(0, data.count);
+  labels.forEach((_, i, a) =&gt; (a[i] = (i * 7) % 300));
+  // [radSh, largest error against the written entries]: f32 re-encodes
+  // ext values exactly; f16 and s8 (over the palette's largest |value|,
+  // outliers of 5) add their steps, then ext's (2^3 / 255 at 5)
+  for (const [radSh, budget] of [["f32", 0], ["f16", 0.004 + 0.016], ["s8", 5 / 254 + 0.016]] as const) {
+    const bytes = await SplatFiles.encode(data, "rad", { shPalette: palette, radSh, chunkSize: 2000 });
+    const back = await SplatFiles.decode(bytes);
+    const p = back.shPalette;
+    if (!p || p.codec !== "ext" || p.degree !== 3 || p.size !== 300 || Sh.find(back.splats.bundles)) {
+      return `${radSh}: palette ${p?.codec} ${p?.degree} ${p?.size}, per-splat ${Sh.find(back.splats.bundles)?.name}`;
+    }
+    const mismatch = compare(labelsOf(back.splats) ?? [], labels);
+    if (mismatch) {
+      return `${radSh} labels: ${mismatch}`;
+    }
+    const error = paletteError(p, exact);
+    if (error &gt; budget + 1e-6) {
+      return `${radSh}: largest error ${error.toFixed(4)}`;
+    }
+  }
+  const bytes = await SplatFiles.encode(data, "rad", { shPalette: palette, radSh: "f32" });
+  const packed = await SplatFiles.decode(bytes, { sh: "packed" });
+  const off = await SplatFiles.decode(bytes, { sh: false });
+  if (packed.shPalette?.codec !== "packed" || off.shPalette || labelsOf(off.splats) || off.splats.meta.ignoredShDegree !== 3) {
+    return `sh "packed": ${packed.shPalette?.codec}; sh false: ${off.shPalette ? "a palette" : "none"}, ignoredShDegree ${String(off.splats.meta.ignoredShDegree)}`;
+  }
+  // PLY and RDX: per-splat SH, each splat its entry
+  for (const format of ["ply", "rdx"] as SplatFormat[]) {
+    const { splats, shPalette } = await SplatFiles.decode(await SplatFiles.encode(data, format, { shPalette: palette }), { name: `x.${format}` });
+    if (shPalette || labelsOf(splats) || !Sh.find(splats.bundles)) {
+      return `${format}: not expanded`;
+    }
+    const decode = Sh.decoder(splats);
+    for (let i = 0; i &lt; splats.count; i += 1) {
+      const m = compare(decode(i, new Float32Array(Sh.VALUES)), exact[labels[i]]);
+      if (m) {
+        return `${format} splat ${i}: ${m}`;
+      }
+    }
+  }
+  return undefined;
+});
+
+// A RAD file built by hand, uncompressed columns: Spark's build-lod layout
+// of clustered SH, which the writer's own output above does not cover
+function handRad(header: Record&lt;string, unknown&gt;, chunks: { base: number; count: number; columns: [string, string, Uint8Array, { min?: number; max?: number }?][] }[]) {
+  const encoder = new TextEncoder();
+  const pad8 = (n: number) =&gt; (n + 7) &amp; ~7;
+  const parts = chunks.map(({ base, count, columns }) =&gt; {
+    let payloadBytes = 0;
+    const properties = columns.map(([property, encoding, bytes, range]) =&gt; {
+      const p = { offset: payloadBytes, bytes: bytes.byteLength, property, encoding, ...range };
+      payloadBytes += pad8(bytes.byteLength);
+      return p;
+    });
+    const meta = encoder.encode(JSON.stringify({ version: 1, base, count, payloadBytes, properties }));
+    const out = new Uint8Array(8 + pad8(meta.byteLength) + 8 + payloadBytes);
+    const view = new DataView(out.buffer);
+    view.setUint32(0, 0x43444152, true);
+    view.setUint32(4, meta.byteLength, true);
+    out.set(meta, 8);
+    const at = 8 + pad8(meta.byteLength);
+    view.setUint32(at, payloadBytes, true);
+    columns.forEach(([, , bytes], c) =&gt; out.set(bytes, at + 8 + properties[c].offset));
+    return out;
+  });
+  let offset = 0;
+  const ranges = parts.map((part) =&gt; {
+    const range = { offset, bytes: part.byteLength };
+    offset += part.byteLength;
+    return range;
+  });
+  const head = encoder.encode(JSON.stringify({ version: 1, type: "gsplat", ...header, chunks: ranges }));
+  const file = new Uint8Array(8 + pad8(head.byteLength) + offset);
+  const view = new DataView(file.buffer);
+  view.setUint32(0, 0x30444152, true);
+  view.setUint32(4, head.byteLength, true);
+  file.set(head, 8);
+  let at = 8 + pad8(head.byteLength);
+  for (const part of parts) {
+    file.set(part, at);
+    at += part.byteLength;
+  }
+  return file;
+}
+
+// A chunk's splat columns (f32, dimension-planar): centers along x
+function handSplats(base: number, count: number): [string, string, Uint8Array][] {
+  const column = (dims: number, value: (i: number, d: number) =&gt; number) =&gt; {
+    const values = new Float32Array(dims * count);
+    for (let d = 0; d &lt; dims; d += 1) {
+      for (let i = 0; i &lt; count; i += 1) {
+        values[d * count + i] = value(i, d);
+      }
+    }
+    return new Uint8Array(values.buffer);
+  };
+  return [
+    ["center", "f32", column(3, (i, d) =&gt; (d === 0 ? base + i : 0))], ["alpha", "f32", column(1, () =&gt; 1)], ["rgb", "f32", column(3, () =&gt; 0.5)],
+    ["scales", "f32", column(3, () =&gt; 0.01)], ["orientation", "f32", column(3, () =&gt; 0)],
+  ];
+}
+
+// Codes of `values` (entries x 45, coefficient-major) as band columns
+// sh1_code .. sh&lt;degree&gt;_code, dimension-planar: s8 over each band's
+// largest |value| (and the values they decode to), or f32
+function handCodes(values: Float32Array[], degree: ShDegree, encoding: "s8" | "f32") {
+  const n = values.length;
+  const decoded = values.map(() =&gt; new Float32Array(45));
+  const columns: [string, string, Uint8Array, { min?: number; max?: number }?][] = [];
+  let first = 0;
+  for (const [band, dims] of ([[1, 9], [2, 15], [3, 21]] as const).slice(0, degree)) {
+    let max = 0;
+    values.forEach((c) =&gt; c.subarray(first, first + dims).forEach((v) =&gt; (max = Math.max(max, Math.abs(v)))));
+    const out = encoding === "s8" ? new Uint8Array(dims * n) : new Float32Array(dims * n);
+    for (let d = 0; d &lt; dims; d += 1) {
+      for (let e = 0; e &lt; n; e += 1) {
+        const v = values[e][first + d];
+        const code = Math.max(-127, Math.min(127, Math.round((v / max) * 127)));
+        out[d * n + e] = encoding === "s8" ? code &amp; 0xff : v;
+        decoded[e][first + d] = encoding === "s8" ? (code / 127) * max : v;
+      }
+    }
+    columns.push([`sh${band}_code`, encoding, new Uint8Array(out.buffer), encoding === "s8" ? { min: -max, max } : undefined]);
+    first += dims;
+  }
+  return { columns, decoded };
+}
+
+await check("RAD clustered SH from a hand-built file: codes in chunk 0, u16 and u32 labels, past 65,536 entries per splat", async () =&gt; {
+  // 500 entries at degree 3; two chunks, labels u16 then u32
+  const values = shValues(500);
+  const { columns, decoded } = handCodes(values, 3, "s8");
+  const labels = Uint32Array.from({ length: 1500 }, (_, i) =&gt; (i * 13) % 500);
+  const file = handRad({ count: 1500, maxSh: 3, shCodeCount: 500 }, [
+    { base: 0, count: 1000, columns: [...handSplats(0, 1000), ...columns, ["sh_label", "u16", new Uint8Array(Uint16Array.from(labels.subarray(0, 1000)).buffer)]] },
+    { base: 1000, count: 500, columns: [...handSplats(1000, 500), ["sh_label", "u32", new Uint8Array(labels.slice(1000).buffer)]] },
+  ]);
+  const { splats, shPalette } = await RadFile.read(file);
+  if (!shPalette || shPalette.size !== 500 || shPalette.degree !== 3 || shPalette.codec !== "ext") {
+    return `palette ${shPalette?.size} ${shPalette?.degree} ${shPalette?.codec}`;
+  }
+  const mismatch = compare(labelsOf(splats) ?? [], labels);
+  if (mismatch) {
+    return `labels: ${mismatch}`;
+  }
+  // The codes' values in ext: the same words as ext of the decoded codes
+  const expected = ShPalette.create({ codec: "ext", degree: 3, size: 500 });
+  decoded.forEach((c, n) =&gt; expected.set(n, c));
+  const words = compare(shPalette.data.bundles.shPalette.channels.shEntries.data, expected.data.bundles.shPalette.channels.shEntries.data);
+  if (words) {
+    return `entries: ${words}`;
+  }
+  // Within s8 and ext steps of the source coefficients
+  const error = paletteError(shPalette, values);
+  if (error &gt; 5 / 254 + 0.016) {
+    return `largest error against the source ${error.toFixed(4)}`;
+  }
+
+  // 70,000 entries at degree 1: labels past uint16, expanded into extSh
+  const many = Array.from({ length: 70000 }, (_, n) =&gt; Float32Array.from({ length: 45 }, (_, v) =&gt; (v &lt; 9 ? Math.sin(n * 0.37 + v) : 0)));
+  const big = handCodes(many, 1, "f32");
+  const pick = Uint32Array.from([69999, 0, 65536, 12345, 65535]);
+  const bigFile = handRad({ count: pick.length, maxSh: 1, shCodeCount: 70000 }, [
+    { base: 0, count: pick.length, columns: [...handSplats(0, pick.length), ...big.columns, ["sh_label", "u32", new Uint8Array(pick.buffer)]] },
+  ]);
+  const expanded = await RadFile.read(bigFile);
+  const found = Sh.find(expanded.splats.bundles);
+  if (expanded.shPalette || labelsOf(expanded.splats) || found?.codec !== "ext" || found.degree !== 1) {
+    return `past 65,536: palette ${expanded.shPalette ? "kept" : "none"}, per-splat ${found?.codec} ${found?.degree}`;
+  }
+  const decode = Sh.decoder(expanded.splats);
+  const ext = Sh.codec("ext");
+  const words16 = new Uint32Array(16);
+  for (let i = 0; i &lt; pick.length; i += 1) {
+    ext.encode(many[pick[i]], 1, words16, 0);
+    const m = compare(decode(i, new Float32Array(Sh.VALUES)).subarray(0, 9), ext.decode(words16, 0, 1, new Float32Array(Sh.VALUES)).subarray(0, 9));
+    if (m) {
+      return `expanded splat ${i}: ${m}`;
+    }
+  }
+  return undefined;
+});
+
+await check("SH evaluate: the 3DGS basis (band 1 along the axes)", () =&gt; {
+  const c = new Float32Array(Sh.VALUES);
+  c[0] = 1;
+  c[4] = 2;
+  c[8] = 3;
+  const [ry] = [Sh.evaluate(c, { x: 0, y: 1, z: 0 }, 1)];
+  const [, gz] = [0, Sh.evaluate(c, { x: 0, y: 0, z: 1 }, 1)];
+  const bx = Sh.evaluate(c, { x: 1, y: 0, z: 0 }, 1);
+  const k = 0.4886025;
+  return Math.abs(ry[0] + k) &lt; 1e-9 &amp;&amp; Math.abs(gz[1] - 2 * k) &lt; 1e-9 &amp;&amp; Math.abs(bx[2] + 3 * k) &lt; 1e-9 ? undefined : `${ry} ${gz} ${bx}`;
+});
+
+// Real SH Y_l^m from associated Legendre polynomials (Condon-Shortley
+// phase), m = -l .. l in coefficient order: the 3DGS basis
+function realSh(l: number, m: number, dir: Vec3) {
+  const am = Math.abs(m);
+  const x = dir.z;
+  let pmm = 1;
+  for (let i = 1; i &lt;= am; i += 1) {
+    pmm *= -(2 * i - 1) * Math.sqrt(1 - x * x);
+  }
+  let p = pmm;
+  if (l &gt; am) {
+    let low = pmm;
+    p = x * (2 * am + 1) * pmm;
+    for (let n = am + 2; n &lt;= l; n += 1) {
+      [low, p] = [p, ((2 * n - 1) * x * p - (n + am - 1) * low) / (n - am)];
+    }
+  }
+  let ratio = 1;
+  for (let i = l - am + 1; i &lt;= l + am; i += 1) {
+    ratio /= i;
+  }
+  const k = Math.sqrt(((2 * l + 1) / (4 * Math.PI)) * ratio);
+  const phi = Math.atan2(dir.y, dir.x);
+  return m === 0 ? k * p : m &gt; 0 ? Math.SQRT2 * k * Math.cos(m * phi) * p : Math.SQRT2 * k * Math.sin(am * phi) * p;
+}
+
+await check("SH evaluate: bands 1-4 match real SH from associated Legendre polynomials", () =&gt; {
+  const c = new Float32Array(Sh.VALUES);
+  let worst = 0;
+  for (let n = 0; n &lt; 200; n += 1) {
+    const dir = randomUnit();
+    for (let l = 1; l &lt;= 4; l += 1) {
+      for (let m = -l; m &lt;= l; m += 1) {
+        const k = l * l - 1 + m + l;
+        c.fill(0);
+        c[k * 3 + 1] = 1;
+        worst = Math.max(worst, Math.abs(Sh.evaluate(c, dir, 4)[1] - realSh(l, m, dir)));
+        if (Sh.evaluate(c, dir, l - 1)[1] !== 0) {
+          return `band ${l} drawn at degree ${l - 1}`;
+        }
+      }
+    }
+  }
+  return worst &lt; 2e-6 ? undefined : `largest difference ${worst}`;
+});
+
+// The core config has no Node types: the few fs calls the real-file check needs
+type NodeFs = {
+  existsSync(path: string): boolean;
+  openSync(path: string, flags: string): number;
+  readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: number): number;
+  readFileSync(path: string): Uint8Array;
+};
+const NODE_FS: string = "node:fs";
+
+// The real files, when present: the SPZ copy of the Grace interior
+// against its float PLY (sampled blocks; never the whole multi-GB PLY)
+await check("SH of real files: the grace SPZ reader against the float PLY", async () =&gt; {
+  const [ply, spz] = ["splats/grace-interior-10m-sh3.ply", "splats/grace-interior-10m-sh3.spz"];
+  const fs = (await import(NODE_FS)) as NodeFs;
+  if (!fs.existsSync(ply) || !fs.existsSync(spz)) {
+    return undefined;
+  }
+  const fd = fs.openSync(ply, "r");
+  const head = new Uint8Array(16384);
+  fs.readSync(fd, head, 0, head.length, 0);
+  const text = new TextDecoder("latin1").decode(head);
+  const end = text.indexOf("end_header\n") + 11;
+  const props = [...text.slice(0, end).matchAll(/property \w+ (\w+)/g)].map((m) =&gt; m[1]);
+  const stride = props.length * 4;
+  const rest = props.indexOf("f_rest_0");
+  const { splats: loaded } = await SpzFile.read(new Uint8Array(fs.readFileSync(spz)));
+  const decode = Sh.decoder(loaded);
+  const row = new Uint8Array(stride);
+  const rowView = new DataView(row.buffer);
+  const out = new Float32Array(Sh.VALUES);
+  let worst = 0;
+  for (let n = 0; n &lt; 2000; n += 1) {
+    const i = Math.floor(random() * loaded.count);
+    fs.readSync(fd, row, 0, stride, end + i * stride);
+    decode(i, out);
+    for (let v = 0; v &lt; 45; v += 1) {
+      const truth = rowView.getFloat32((rest + (v % 3) * 15 + Math.floor(v / 3)) * 4, true);
+      // SPZ: 5-bit band 1, 4-bit bands 2-3 over +-1 (steps 1/16, 1/8), clamped
+      worst = Math.max(worst, Math.abs(out[v] - Math.max(-1, Math.min(127 / 128, truth))));
+    }
+  }
+  return worst &lt;= 0.07 ? undefined : `largest difference ${worst}`;
+});
+
+// SH4 samples, when present (raymondyfei/SharedTestModels, CC0, in
+// splats/sh4/): each gzip version-4 SPZ against its float PLY. Same order,
+// no coordinate conversion; SPZ's writer keeps 5 bits of band 1 and 4 of
+// bands 2-4 (steps 1/16 and 1/8), and clamps to +-1
+for (const [name, count] of [["sparkling_water", 67390], ["scarf", 180345]] as const) {
+  await check(`SH4 of real files: ${name} SPZ (gzip, version 4) against its PLY`, () =&gt; sh4Sample(name, count));
+}
+
+async function sh4Sample(name: string, count: number) {
+  const [plyPath, spzPath] = [`splats/sh4/${name}.ply`, `splats/sh4/${name}.spz`];
+  const fs = (await import(NODE_FS)) as NodeFs;
+  if (!fs.existsSync(plyPath) || !fs.existsSync(spzPath)) {
+    return undefined;
+  }
+  const [{ splats: ply }, { splats: spz }] = [await PlyFile.read(new Uint8Array(fs.readFileSync(plyPath))), await SpzFile.read(new Uint8Array(fs.readFileSync(spzPath)))];
+  const [found, spzFound] = [Sh.find(ply.bundles), Sh.find(spz.bundles)];
+  if (ply.count !== count || spz.count !== ply.count || found?.degree !== 4 || spzFound?.degree !== 4 || spz.meta.version !== 4) {
+    return `counts ${ply.count} / ${spz.count}, degrees ${found?.degree} / ${spzFound?.degree}, version ${String(spz.meta.version)}`;
+  }
+  // Both load into ext: each side within half an ext step (2^-9 of 1) of its file
+  const [decodePly, decodeSpz] = [Sh.decoder(ply, found), Sh.decoder(spz, spzFound)];
+  const [splatPly, splatSpz] = [Splats.decoder(Splats.get(ply).bundle), Splats.decoder(Splats.get(spz).bundle)];
+  const [s, t] = [Splats.makeExtSplat(), Splats.makeExtSplat()];
+  const [a, b] = [new Float32Array(Sh.VALUES), new Float32Array(Sh.VALUES)];
+  const worst = [0, 0];
+  let flips = 0;
+  let center = 0;
+  for (let i = 0; i &lt; ply.count; i += 1) {
+    splatPly(i, s);
+    splatSpz(i, t);
+    center = Math.max(center, Math.abs(s.center.x - t.center.x), Math.abs(s.center.y - t.center.y), Math.abs(s.center.z - t.center.z));
+    decodePly(i, a);
+    decodeSpz(i, b);
+    for (let v = 0; v &lt; 72; v += 1) {
+      if (Math.abs(a[v]) &lt; 0.99) {
+        const band = v &lt; 9 ? 0 : 1;
+        worst[band] = Math.max(worst[band], Math.abs(a[v] - b[v]));
+      }
+      flips += Math.abs(a[v]) &gt; 0.3 &amp;&amp; a[v] * b[v] &lt; 0 ? 1 : 0;
+    }
+  }
+  // Half a quantization step plus 1/128, plus both sides' ext rounding
+  const limits = [1 / 32 + 1 / 128 + 1 / 256, 1 / 16 + 1 / 128 + 1 / 256];
+  return center &lt;= 1e-3 &amp;&amp; flips === 0 &amp;&amp; worst[0] &lt;= limits[0] &amp;&amp; worst[1] &lt;= limits[1] ? undefined
+    : `centers ${center}, band 1 ${worst[0].toFixed(4)}, bands 2-4 ${worst[1].toFixed(4)}, ${flips} sign flips`;
+}
+
+await check("Axes: all 16 x 16 systems: round trips, SH seen from the converted direction, quaternion and scales against M S M^T", () =&gt; {
+  const cov = (scales: Vec3, q: Quat) =&gt; SplatMath.covFromScaleQuat(scales, q, { xx: 0, yy: 0, zz: 0, xy: 0, xz: 0, yz: 0 });
+  for (const from of Axes.SYSTEMS) {
+    for (const to of Axes.SYSTEMS) {
+      const [c, back] = [Axes.converter(from, to), Axes.converter(to, from)];
+      for (let t = 0; t &lt; 4; t += 1) {
+        const values = Float32Array.from({ length: Sh.VALUES }, () =&gt; random() - 0.5);
+        const converted = c.sh(Float32Array.from(values), 4);
+        const dir = randomUnit();
+        const [seen, seenAfter] = [Sh.evaluate(values, dir, 4), Sh.evaluate(converted, c.vec({ ...dir }), 4)];
+        const roundTrip = back.sh(Float32Array.from(converted), 4);
+        const q = randomQuat();
+        const scales = { x: 0.5 + random(), y: 1 + random(), z: 2 + random() };
+        const [expected, actual] = [c.cov(cov(scales, q)), cov(c.scales({ ...scales }), c.quat({ ...q }))];
+        const covError = Math.max(...(["xx", "yy", "zz", "xy", "xz", "yz"] as const).map((k) =&gt; Math.abs(expected[k] - actual[k])));
+        const shError = Math.max(...seen.map((v, k) =&gt; Math.abs(v - seenAfter[k])), ...roundTrip.map((v, k) =&gt; Math.abs(v - values[k])));
+        if (shError &gt; 1e-6 || covError &gt; 1e-9) {
+          return `${from} -&gt; ${to}: SH ${shError}, covariance ${covError}`;
+        }
+      }
+    }
+  }
+  // Flips change signs only: coefficients copy exactly
+  const flipped = Axes.converter("RUB", "RDF").sh(Float32Array.from({ length: Sh.VALUES }, (_, v) =&gt; v + 1), 4);
+  return flipped.every((v, k) =&gt; Math.abs(v) === k + 1) ? undefined : "RUB -&gt; RDF changed magnitudes";
+});
+
+await check("Axes.convert on ext, cov and packed tables (per-splat SH, a palette) agrees with converting splats one at a time", () =&gt; {
+  for (const layout of ["extSplats", "covSplats", "packedSplats"] as const) {
+    const source = fileSource(200, false);
+    Sh.add(source, "ext", 3);
+    const encode = Sh.encoder(source);
+    shValues(200, 3).forEach((c, i) =&gt; encode(i, c));
+    const data = Splats.convert(source, { layout });
+    data.meta.coordinateSystem = "RUB";
+    const before = data.clone();
+    const palette = ShPalette.create({ codec: "packed", degree: 2, size: 8 });
+    shValues(8, 2).forEach((c, n) =&gt; palette.set(n, c));
+    const entries = Array.from({ length: 8 }, (_, n) =&gt; palette.get(n));
+    Axes.convert(data, "RFU", { shPalette: palette });
+    const c = Axes.converter("RUB", "RFU");
+    const [bundle, beforeBundle] = [Splats.get(data).bundle, Splats.get(before).bundle];
+    // One splat at a time into a copy, word for word against the table's
+    const one = before.clone();
+    const oneBundle = Splats.get(one).bundle;
+    const [decodeOne, encodeOne] = [Splats.decoder(beforeBundle), Splats.encoder(oneBundle)];
+    const [shAfter, shBefore] = [Sh.decoder(data), Sh.decoder(before)];
+    const [a, b, coeffs] = [new Float32Array(Sh.VALUES), new Float32Array(Sh.VALUES), new Float32Array(Sh.VALUES)];
+    for (let i = 0; i &lt; data.count; i += 1) {
+      if (Splats.isCov(bundle)) {
+        const [x, y] = [Splats.decodeCov(bundle, i, Splats.makeCovSplat()), Splats.decodeCov(beforeBundle as typeof bundle, i, Splats.makeCovSplat())];
+        c.vec(y.center);
+        c.cov(y.cov);
+        if (JSON.stringify(x.center) !== JSON.stringify(y.center) || Math.abs(x.cov.xy - y.cov.xy) &gt; 1e-3 * Math.max(x.cov.xx, x.cov.yy, x.cov.zz)) {
+          return `${layout} ${i}: ${JSON.stringify(x)} vs ${JSON.stringify(y)}`;
+        }
+      } else {
+        encodeOne(i, c.splat(decodeOne(i, Splats.makeExtSplat())));
+        const [channels, oneChannels] = [bundle.channels as Record&lt;string, { data: Uint32Array }&gt;, oneBundle.channels as Record&lt;string, { data: Uint32Array }&gt;];
+        for (const label of Object.keys(channels)) {
+          const error = compare(channels[label].data.subarray(i * 4, i * 4 + 4), oneChannels[label].data.subarray(i * 4, i * 4 + 4));
+          if (error) {
+            return `${layout} ${i} ${label}: ${error}`;
+          }
+        }
+      }
+      shAfter(i, a);
+      const expected = c.sh(shBefore(i, b), 3);
+      // ext's shared exponent: within 2^-8 of each coefficient's largest channel
+      const largest = (k: number) =&gt; Math.max(...[0, 1, 2].map((ch) =&gt; Math.abs(expected[Math.floor(k / 3) * 3 + ch])));
+      const bad = a.findIndex((v, k) =&gt; k &lt; 45 &amp;&amp; Math.abs(v - expected[k]) &gt; 2 ** -8 * largest(k) + 2 ** -14);
+      if (bad &gt;= 0) {
+        return `${layout} ${i}: SH value ${bad}: ${a[bad]} vs ${expected[bad]}`;
+      }
+    }
+    for (let n = 0; n &lt; 8; n += 1) {
+      const expected = c.sh(entries[n], 2);
+      palette.get(n, coeffs);
+      // packed: sint8 codes over each band's scale (rounded up a 16th of an octave)
+      const largest = Math.max(...expected.slice(0, 24).map(Math.abs));
+      if (coeffs.slice(0, 24).some((v, k) =&gt; Math.abs(v - expected[k]) &gt; largest / 100 + 1e-4)) {
+        return `${layout}: palette entry ${n}`;
+      }
+    }
+    if (data.meta.coordinateSystem !== "RFU") {
+      return `${layout}: meta ${String(data.meta.coordinateSystem)}`;
+    }
+  }
+  return undefined;
+});
+
+// SPZ 4 files from SharedTestModels (CC0, local copies in splats/spz4/):
+// each against its gzip version (same
+// bytes but for a few rotations) and the backpack against its float PLY
+await check("SPZ 4 real files: seashell_v4 and adobe_backpack_v4 against their gzip versions and the backpack's PLY", async () =&gt; {
+  const fs = (await import(NODE_FS)) as NodeFs;
+  const names = ["seashell_v4", "seashell", "adobe_backpack_v4", "adobe_backpack"].map((name) =&gt; `splats/spz4/${name}.spz`);
+  if (!names.every((name) =&gt; fs.existsSync(name))) {
+    return undefined;
+  }
+  const [shell4, shell, pack4, pack] = await Promise.all(names.map((name) =&gt; SpzFile.unpack(new Uint8Array(fs.readFileSync(name)))));
+  if (shell4.container !== "ngsp" || shell4.version !== 4 || shell4.shDegree !== 3 || shell.container !== "gzip" || pack.version !== 2) {
+    return `headers: ${shell4.container} ${shell4.version} ${shell4.shDegree}, ${shell.container}, backpack v${pack.version}`;
+  }
+  for (const key of ["centers", "alphas", "colors", "scales", "sh"] as const) {
+    const error = compare(shell4[key]!, shell[key]!) ?? compare(pack4[key]!, pack[key]!);
+    if (error) {
+      return `${key}: ${error}`;
+    }
+  }
+  const differing = shell4.rotations.reduce((n, v, k) =&gt; n + (v !== shell.rotations[k] ? 1 : 0), 0);
+  if (differing &gt; 8 || shell4.extensions[0]?.type !== 0xadbe0002) {
+    return `${differing} rotation bytes differ; records ${shell4.extensions.map((r) =&gt; r.type.toString(16))}`;
+  }
+  const ply = "splats/spz4/adobe_backpack.ply";
+  if (fs.existsSync(ply)) {
+    const [{ splats: a }, { splats: b }] = [await PlyFile.read(new Uint8Array(fs.readFileSync(ply))), await SpzFile.read(new Uint8Array(fs.readFileSync(names[2])))];
+    const [sa, sb] = [Splats.makeSplat(), Splats.makeSplat()];
+    let center = 0;
+    for (let i = 0; i &lt; a.count; i += 101) {
+      Splats.load(a.bundles.extSplats, i, sa);
+      Splats.load(b.bundles.extSplats, i, sb);
+      center = Math.max(center, Math.abs(sa.center.x - sb.center.x), Math.abs(sa.center.y - sb.center.y), Math.abs(sa.center.z - sb.center.z));
+    }
+    // 12 fraction bits; same order, no coordinate conversion
+    if (a.count !== b.count || center &gt; 2 ** -12) {
+      return `PLY: ${a.count} / ${b.count} splats, centers ${center}`;
+    }
+  }
+  return undefined;
+});
+
+if (failures.length &gt; 0) {
+  throw new Error(`${failures.length} check(s) failed: ${failures.join(", ")}`);
+}
+console.log("all checks passed");</code></pre></div>
+</main>
+</div>
+<script src="../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

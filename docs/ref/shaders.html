@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shaders · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/shaders.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/shaders.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html" class="on">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="shaders">Shaders<a class="anchor" href="#shaders">#</a></h1>
+<p>Radix's shaders are written in TSL (three.js Shading Language), which three compiles to WGSL on WebGPU and GLSL on WebGL2, so one source runs on both backends. This page covers what a shader needs from Radix: the <code>TSL</code> helper, the splat structs, reading and writing tables, the codecs, and the patterns generators and modifiers use.</p>
+<p>Code: <a href="../../src/gpu/tsl.ts.html"><code>src/gpu/tsl.ts</code></a>, <code>splats.tsl.ts</code>, <code>splatAccess.ts</code>, <code>encoding.tsl.ts</code>, <code>math.tsl.ts</code>, and <code>sortKey.tsl.ts</code>.</p>
+<pre class="lang-ts"><code>const { float, hash, mix, uniform, vec3 } = TSL;
+
+// The app's: time.value = seconds
+const time = uniform(0);
+
+splatRenderer.modifier = (s) =&gt; {
+  const out = s.toVar(); // a copy to change
+  // A random phase per splat, flickering between 0 and 1 over time
+  const phase = hash(s.get(&quot;index&quot;)).mul(6.28).add(time);
+  const flicker = phase.sin().mul(0.5).add(0.5);
+  const warm = vec3(1, 0.8, 0.3);
+  out.get(&quot;rgb&quot;).assign(mix(s.get(&quot;rgb&quot;), warm, flicker.mul(0.3)));
+  return out;
+};</code></pre>
+<h2 id="tsl-and-tslnode">TSL and TslNode<a class="anchor" href="#tsl-and-tslnode">#</a></h2>
+<p><code>TSL</code> is <code>three/tsl</code> with its export names checked but its node types loosened: <code>const { Fn, If, vec3, uint, uniform } = TSL;</code>. <code>TslNode</code> is the type of any TSL node. TSL infers shader types when a material or kernel is built, and three's per-type node typings would need a cast on nearly every expression, so Radix's APIs take and return <code>TslNode</code>.</p>
+<ul>
+<li>Shader code is built once, when a program first runs, from JavaScript functions. Loops and branches in JavaScript unroll at build time; TSL's <code>If</code> and <code>Loop</code> become shader branches and loops.</li>
+<li>TSL drops nodes that do not reach an output, so a modifier that only changes color costs nothing in a pass that only writes sort keys.</li>
+<li>Values that change should be uniforms (<code>uniform(value)</code>, then <code>.value = ...</code>), not new nodes, because a new node means a new program.</li>
+</ul>
+<h2 id="splat-structs">Splat structs<a class="anchor" href="#splat-structs">#</a></h2>
+<p>A splat in a shader is a TSL struct. Generators return one, readers load one, and modifiers take and return one.</p>
+<table><thead><tr><th><code>SplatNode</code> field</th><th>Type</th><th></th></tr></thead><tbody><tr><td><code>center</code></td><td><code>vec3</code></td><td>position</td></tr><tr><td><code>scales</code></td><td><code>vec3</code></td><td>the three standard deviations (linear, not log)</td></tr><tr><td><code>quaternion</code></td><td><code>vec4</code></td><td>rotation, <code>xyzw</code></td></tr><tr><td><code>rgb</code></td><td><code>vec3</code></td><td>color; may be above 1 or below 0</td></tr><tr><td><code>opacity</code></td><td><code>float</code></td><td>1 is opaque; up to about 2 for merged LoD nodes</td></tr><tr><td><code>index</code></td><td><code>uint</code></td><td>the source splat's index (through a remap, the stored splat's)</td></tr></tbody></table>
+<table><thead><tr><th><code>CovSplatNode</code> field</th><th>Type</th><th></th></tr></thead><tbody><tr><td><code>center</code></td><td><code>vec3</code></td><td>position</td></tr><tr><td><code>xxyyzz</code></td><td><code>vec3</code></td><td>the covariance's diagonal</td></tr><tr><td><code>xyxzyz</code></td><td><code>vec3</code></td><td>the covariance's off-diagonal entries</td></tr><tr><td><code>rgb</code>, <code>opacity</code>, <code>index</code></td><td></td><td>as above</td></tr><tr><td><code>normal</code></td><td><code>vec3</code></td><td>zero for none</td></tr></tbody></table>
+<p><code>PbrNode</code> has <code>normal</code> (<code>vec3</code>), <code>roughness</code>, and <code>metallic</code> (<code>float</code>). Make structs with <code>GpuSplats.Splat(center, scales, quaternion, rgb, opacity, index?)</code>, <code>GpuSplats.CovSplat(center, xxyyzz, xyxzyz, rgb, opacity, normal, index?)</code>, and <code>GpuSplats.Pbr(normal, roughness, metallic)</code>; fields left out are zero.</p>
+<p>Struct nodes are typed by brand: <code>get()</code> accepts only the struct's own field names, and a <code>CovSplatNode</code> is refused where a <code>SplatNode</code> is expected. To change a struct, copy it with <code>toVar()</code> and assign to its fields:</p>
+<pre class="lang-ts"><code>const grow = (s: SplatNode): SplatNode =&gt; {
+  const out = s.toVar();
+  out.get(&quot;scales&quot;).assign(s.get(&quot;scales&quot;).mul(1.5));
+  return out;
+};</code></pre>
+<p>Converting between the forms: <code>GpuSplats.toCov(splat)</code> is cheap; <code>GpuSplats.fromCov(cov)</code> diagonalizes the covariance (an eigendecomposition per splat). <code>GpuSplats.splatOf(generator, i)</code> and <code>covSplatOf(generator, i)</code> give a generator's splat in the asked form, converting only when the generator lacks it.</p>
+<h2 id="reading-and-writing-tables">Reading and writing tables<a class="anchor" href="#reading-and-writing-tables">#</a></h2>
+<ul>
+<li><strong>Any bundle</strong>: <code>new GpuArrayReader(def).bind(arrays, name)</code>, then <code>reader.load(channel, index)</code> in any shader stage (<a href="gpu-arrays.html#gpuarrayreader">GPU arrays</a>).</li>
+<li><strong>Splats</strong>: <code>GpuSplatReader.for(layout).bind(arrays)</code> or <code>GpuSplatReader.from(arrays)</code>, then <code>loadSplat</code>, <code>loadCovSplat</code>, <code>loadCenter</code>, <code>loadRgb</code>, <code>loadOpacity</code>, and <code>loadPbr</code> (ext) (<a href="splats.html#gpusplatreader-the-shader-side">Splats</a>).</li>
+<li><strong>Writing bundles</strong>: <code>GpuArrayWriter</code> (a fragment pass, both backends) or <code>WgpuArrayWriter</code> (compute, WebGPU), with <code>GpuSplats.storeExt</code>, <code>storeCov</code>, and <code>storePacked</code> for splats (<a href="gpu-arrays.html#gpuarraywriter">GPU arrays</a>).</li>
+<li><strong>Scattered writes and kernels</strong> (WebGPU): <code>WgpuArrayStore</code>, <code>WgpuCompute</code>, and <code>WgpuBuffer</code> (<a href="wgpu.html">WebGPU compute</a>).</li>
+</ul>
+<p>A reader's shader code depends only on its bundle definition. <code>bind</code> points it at data with uniforms and texture bindings, so a reader built once can read every table of that definition. This is how one <code>fromSplats</code> program draws every file of a layout.</p>
+<h2 id="codecs">Codecs<a class="anchor" href="#codecs">#</a></h2>
+<p>The TSL twins of the CPU codecs give the same bits (<a href="encoding.html">Encodings</a>):</p>
+<ul>
+<li><code>GpuSplats</code>: <code>decodeExt</code> / <code>encodeExt</code> / <code>decodeExtPbr</code>, <code>decodeCov</code> / <code>encodeCov</code>, <code>decodePacked</code> / <code>encodePacked</code> (with a <code>PackedEncoding</code> or a <code>vec4(rgbMin, rgbMax, lnScaleMin, lnScaleMax)</code> node), the <code>store*</code> functions, <code>toCov</code> / <code>fromCov</code>, <code>withIndex</code>, and <code>normalOf</code> (the axis of the smallest scale: a flat splat's normal).</li>
+<li><code>GpuEncoding</code>: half floats, unorm8, LoD opacity, shared-exponent color, and octahedral directions and quaternions.</li>
+<li><code>GpuSplatMath</code>: <code>quatRotate</code>, <code>quatMul</code>, <code>quatConj</code>, <code>mat3FromMat4</code>, <code>scaleQuatMatrix</code>, <code>covFromScaleQuat</code>, <code>covMatrix</code>, <code>symEigens</code>, and <code>basisToQuat</code>.</li>
+<li><code>GpuSortKeys</code>: <code>compute(distance, bits)</code> (the sort key of a distance; non-finite distances give the invalid key), <code>invalid(bits)</code> (all ones), <code>pack(key)</code> (to the RGBA8 texel of a <code>SortKeys.KEYS</code> channel), and <code>unpack(rgba)</code>. <code>bits</code> is a <code>uint</code> node, so a uniform can switch widths without a rebuild (<a href="sorting.html#sort-keys">Sorting</a>).</li>
+</ul>
+<h2 id="patterns">Patterns<a class="anchor" href="#patterns">#</a></h2>
+<p><strong>Per-splat randomness.</strong> Key it on <code>index</code>, which stays the stored splat's index through remaps, so an effect stays on the same splat when a LoD subset changes: <code>hash(s.get(&quot;index&quot;))</code>.</p>
+<p><strong>Animation.</strong> Read a uniform the app sets each frame. The GPU sort sees the moved splats in the same frame; the CPU sort sorts them again only when asked (<code>splatRenderer.requestSort()</code>), because it cannot see a uniform change (<a href="sorting.html#the-cpu-sort">Sorting</a>).</p>
+<p><strong>Per-object values.</strong> A generator's <code>bind(data)</code> runs before each object's dispatch; set uniforms there, so one program can draw objects with different values (<a href="generators.html#custom-generators">Generators and modifiers</a>).</p>
+<p><strong>Choosing a form.</strong> Implement <code>generateCovSplat</code> when a covariance is what you have (the <code>ewa</code> method reads covariances), <code>generateSplat</code> when you have scales and a rotation, or both. The program picks the form each step needs and converts only when it must.</p>
+<p><strong>Creating generators once.</strong> Generators and modifiers are cache keys. Make them once, at startup, and switch among them; a modifier made inside the render loop compiles a new program every frame.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Index math: <code>index</code> is a <code>uint</code>. Mixing it with <code>float</code> needs <code>float(index)</code>; mixing with <code>int</code> needs <code>int(index)</code>.</li>
+<li>WebGL2 has no compute shaders and no storage textures: <code>Wgpu*</code> classes throw there. Everything else on this page runs on both backends.</li>
+<li>Assign only to the fields of a variable made with <code>toVar()</code>. The struct a modifier receives can feed other steps of the program, so change a copy of it.</li>
+</ul>
+<div class="pager"><a class="prev" href="gpu-arrays.html"><small>Previous</small>GPU arrays</a><a class="next" href="wgpu.html"><small>Next</small>WebGPU compute</a></div>
+<p class="source">Source: <a href="../shaders.md.html">docs/shaders.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#tsl-and-tslnode">TSL and TslNode</a>
+<a class="h2" href="#splat-structs">Splat structs</a>
+<a class="h2" href="#reading-and-writing-tables">Reading and writing tables</a>
+<a class="h2" href="#codecs">Codecs</a>
+<a class="h2" href="#patterns">Patterns</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

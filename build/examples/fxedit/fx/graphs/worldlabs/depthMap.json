@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "depthMap",
+  "description": "The viewer's depth view, as on the blog: each splat's view depth on a log scale from near 0.6 to far 25 picks a color from the torch palette reversed (light near, dark far), and splats are dilated by 0.6 so the map reads as surfaces. Blend 1 is the full effect.",
+  "source": { "name": "World Labs threeviewer effects (pixelDepth.glsl, depth on the blog: torch_reverse, vizNear 0.6, vizFar 25, dilate_splats 0.6), blog demo parameters", "url": "wlt/apps/threeviewer/src/effects", "license": "World Labs internal, ported with the author's permission" },
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "camera": { "type": "input.camera" },
+    "depth": { "type": "wl.depthColor", "options": {"palette": "torch_reverse"}, "note": "log2 depth between near and far" },
+    "show": { "type": "color.blend", "inputs": {"amount": 1}, "options": {"mode": "replace"}, "note": "blend" },
+    "out": { "type": "splat.write", "inputs": {"scale": 1.6}, "note": "scale 1 + dilate_splats" }
+  },
+  "links": [
+    { "from": "center.value", "to": "depth.position" },
+    { "from": "camera.position", "to": "depth.cameraPosition" },
+    { "from": "camera.forward", "to": "depth.cameraForward" },
+    { "from": "rgb.value", "to": "show.base" },
+    { "from": "depth.value", "to": "show.color" },
+    { "from": "show.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Near": "depth.near",
+    "Far": "depth.far",
+    "Blend": "show.amount",
+    "Dilate": "out.scale"
+  }
+}

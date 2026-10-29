@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>projection.md · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from docs/projection.md by scripts/build-site.mjs -->
+<body data-root="" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details open><summary>docs</summary><a href="api.md.html">api.md</a><a href="arraydata.md.html">arraydata.md</a><a href="checks.md.html">checks.md</a><a href="concepts.md.html">concepts.md</a><a href="controls.md.html">controls.md</a><a href="encoding.md.html">encoding.md</a><a href="files.md.html">files.md</a><a href="generators.md.html">generators.md</a><a href="gpu-arrays.md.html">gpu-arrays.md</a><a href="lifetimes.md.html">lifetimes.md</a><a href="multi-splat.md.html">multi-splat.md</a><a href="overview.md.html">overview.md</a><a href="params.md.html">params.md</a><a href="performance.md.html">performance.md</a><a href="projection.md.html" class="on">projection.md</a><a href="quickstart.md.html">quickstart.md</a><a href="rdx.md.html">rdx.md</a><a href="recipes.md.html">recipes.md</a><a href="renderer.md.html">renderer.md</a><a href="rendering.md.html">rendering.md</a><a href="sh.md.html">sh.md</a><a href="shaders.md.html">shaders.md</a><a href="site.js.html">site.js</a><a href="sorting.md.html">sorting.md</a><a href="splats.md.html">splats.md</a><a href="views.md.html">views.md</a><a href="wgpu.md.html">wgpu.md</a><a href="workers.md.html">workers.md</a><a href="xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../examples/doom/data.ts.html">data.ts</a><a href="../examples/doom/game.ts.html">game.ts</a><a href="../examples/doom/hud.ts.html">hud.ts</a><a href="../examples/doom/level.ts.html">level.ts</a><a href="../examples/doom/lighting.ts.html">lighting.ts</a><a href="../examples/doom/main.ts.html">main.ts</a><a href="../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../examples/film/score.ts.html">score.ts</a><a href="../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../examples/film/text.ts.html">text.ts</a><a href="../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../examples/fractals/demo/library.ts.html">library.ts</a><a href="../examples/fractals/demo/music.ts.html">music.ts</a><a href="../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../examples/fractals/device.ts.html">device.ts</a><a href="../examples/fractals/kind.ts.html">kind.ts</a><a href="../examples/fractals/main.ts.html">main.ts</a><a href="../examples/fractals/morph.ts.html">morph.ts</a><a href="../examples/fractals/motion.ts.html">motion.ts</a><a href="../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../examples/fractals/presets.ts.html">presets.ts</a><a href="../examples/fractals/sample.ts.html">sample.ts</a><a href="../examples/fractals/shade.ts.html">shade.ts</a><a href="../examples/fractals/shots.ts.html">shots.ts</a><a href="../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../examples/fxedit/checks.ts.html">checks.ts</a><a href="../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/fxedit/editors.ts.html">editors.ts</a><a href="../examples/fxedit/framed.ts.html">framed.ts</a><a href="../examples/fxedit/juice.ts.html">juice.ts</a><a href="../examples/fxedit/layout.ts.html">layout.ts</a><a href="../examples/fxedit/main.ts.html">main.ts</a><a href="../examples/fxedit/palette.ts.html">palette.ts</a><a href="../examples/fxedit/preview.ts.html">preview.ts</a><a href="../examples/fxedit/settings.ts.html">settings.ts</a><a href="../examples/fxedit/sound.ts.html">sound.ts</a><a href="../examples/fxedit/springs.ts.html">springs.ts</a><a href="../examples/fxedit/themes.ts.html">themes.ts</a><a href="../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../examples/lcc/collision.ts.html">collision.ts</a><a href="../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/lcc/gui.ts.html">gui.ts</a><a href="../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../examples/lcc/main.ts.html">main.ts</a><a href="../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../examples/quake/data.ts.html">data.ts</a><a href="../examples/quake/entities.ts.html">entities.ts</a><a href="../examples/quake/game.ts.html">game.ts</a><a href="../examples/quake/hud.ts.html">hud.ts</a><a href="../examples/quake/lighting.ts.html">lighting.ts</a><a href="../examples/quake/main.ts.html">main.ts</a><a href="../examples/quake/models.ts.html">models.ts</a><a href="../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../examples/scenes/main.ts.html">main.ts</a><a href="../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../examples/sogs/gui.ts.html">gui.ts</a><a href="../examples/sogs/lod.ts.html">lod.ts</a><a href="../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../examples/sogs/main.ts.html">main.ts</a><a href="../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../examples/sogs/resident.ts.html">resident.ts</a><a href="../examples/sogs/sh.ts.html">sh.ts</a><a href="../examples/sogs/sog.ts.html">sog.ts</a><a href="../examples/sogs/validate.ts.html">validate.ts</a><a href="../examples/sogs/webp.ts.html">webp.ts</a><a href="../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../examples/spark/js/assets.ts.html">assets.ts</a><a href="../examples/spark/js/construct.ts.html">construct.ts</a><a href="../examples/spark/js/cube.ts.html">cube.ts</a><a href="../examples/spark/js/examples.ts.html">examples.ts</a><a href="../examples/spark/js/files.ts.html">files.ts</a><a href="../examples/spark/js/objects.ts.html">objects.ts</a><a href="../examples/spark/js/page.ts.html">page.ts</a><a href="../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../examples/spark/js/snow.ts.html">snow.ts</a><a href="../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../examples/spark/lofi/main.ts.html">main.ts</a><a href="../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../examples/splats/catalog.ts.html">catalog.ts</a><a href="../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/splats/gui.ts.html">gui.ts</a><a href="../examples/splats/main.ts.html">main.ts</a><a href="../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../examples/spz/catalog.ts.html">catalog.ts</a><a href="../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../examples/xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../scripts/check-core.ts.html">check-core.ts</a><a href="../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../scripts/check-test.mjs.html">check-test.mjs</a><a href="../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../src/core/axes.ts.html">axes.ts</a><a href="../src/core/bundles.ts.html">bundles.ts</a><a href="../src/core/compress.ts.html">compress.ts</a><a href="../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../src/core/encoding.ts.html">encoding.ts</a><a href="../src/core/files.ts.html">files.ts</a><a href="../src/core/formats.ts.html">formats.ts</a><a href="../src/core/index.ts.html">index.ts</a><a href="../src/core/layout.ts.html">layout.ts</a><a href="../src/core/math.ts.html">math.ts</a><a href="../src/core/ply.ts.html">ply.ts</a><a href="../src/core/progress.ts.html">progress.ts</a><a href="../src/core/rad.ts.html">rad.ts</a><a href="../src/core/rdx.ts.html">rdx.ts</a><a href="../src/core/sh.ts.html">sh.ts</a><a href="../src/core/sort.ts.html">sort.ts</a><a href="../src/core/splats.ts.html">splats.ts</a><a href="../src/core/spz.ts.html">spz.ts</a><a href="../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../src/gpu/backend.ts.html">backend.ts</a><a href="../src/gpu/baseline.ts.html">baseline.ts</a><a href="../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../src/gpu/hdr.ts.html">hdr.ts</a><a href="../src/gpu/index.ts.html">index.ts</a><a href="../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../src/render/SplatView.ts.html">SplatView.ts</a><a href="../src/render/index.ts.html">index.ts</a><a href="../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../src/render/splatParams.ts.html">splatParams.ts</a><a href="../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../src/wgpu/index.ts.html">index.ts</a><a href="../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../src/worker/index.ts.html">index.ts</a><a href="../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>projection.md</h1>
+<p class="path">docs/projection.md · <a href="projection.md.html">raw</a> · <a href="../build/examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
+<p class="outline">Headings: <a href="#L1">Projection</a><a href="#L35">Generate and project in one pass</a><a href="#L59">Methods</a><a href="#L74">SplatProjection: one object per method</a><a href="#L85">The camera: head and eyes</a><a href="#L95">Words</a><a href="#L112">Sort keys</a><a href="#L116">The draw</a><a href="#L124">Params</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a></pre><pre><code># Projection
+
+This page explains how a `SplatRenderer` turns splats into what it draws: the methods, their costs, and the code. All of it is internal to `render/`. Apps choose a `method` and params on a renderer, its views, and its objects ([rendering.md](rendering.md), [params.md](params.md)).
+
+Code: `src/render/SplatProjection.ts` (one object per method), `projections.tsl.ts` (the four methods), `projection.tsl.ts` (their shared parts), `splatCamera.ts` (the camera as uniforms), `splatTransform.tsl.ts` (each object's transforms), `splatParams.ts`, `SplatProjector.ts` (the programs and the dispatch), `splatDraw.ts` (the draw material), and `gpu/sortKey.tsl.ts` (`GpuSortKeys`, in `gpu/` because `wgpu/` reads the keys too). All of it is TSL, so it runs on both backends.
+
+The projection turns each splat into a few uint32 **words**, holding what the draw needs to place and shade a quad for every eye, plus one **sort key**. It is a writer body like any other, so `GpuArrayWriter` (a fragment pass, both backends) and `WgpuArrayWriter` (compute, WebGPU) can both run it, with the same bits. `SplatProjector` builds one program per generator; the program generates each splat, transforms it to head space (applying the modifier), and projects it.
+
+```ts
+// What SplatRenderer does on each render (internal functions)
+
+// Its settings, with the render's view's over them
+const settings = splatRenderer.settingsOf(view);
+
+// The head plus 1 eye, or 2 eyes from an XR ArrayCamera
+SplatCamera.set(renderer, camera);
+
+const projection = SplatProjection.get(settings.method);
+const arrays = new GpuArrays({
+  renderer,
+  bundles: projection.outputs(SplatCamera.eyes),
+  storage: true,
+});
+
+projectCollection({
+  renderer,
+  settings,
+  collection: settings.collection,
+  arrays,
+  pass: "full",
+  cullKeys: true,
+});
+```
+
+## Generate and project in one pass
+
+A generator is a splat reader or a TSL function that computes splat `index` in the shader ([generators.md](generators.md)). Generation and projection run in one kernel, with no intermediate splat arrays:
+
+```ts
+const ring: SplatGenerator = {
+  generateSplat: (i) =&gt;
+    GpuSplats.Splat(
+      centerOf(i),
+      vec3(0.01),
+      vec4(0, 0, 0, 1),
+      colorOf(i),
+      float(1),
+      uint(i),
+    ),
+};
+
+splatRenderer.collection = new SplatCollection([
+  { generator: ring, count, matrixWorld: ringObject.matrixWorld },
+]);
+```
+
+Each method reads one splat form (`projection.input`, `"cov"` or `"splat"`): ewa reads a covariance, and the others read scales and a rotation. When the generator's form differs, the program converts (`GpuSplats.toCov` / `fromCov`), so a projection only sees one kind of splat node.
+
+## Methods
+
+| Method | How it rasterizes a splat | Cost | Choose it for |
+|---|---|---|---|
+| `ewa` (default) | classic 3DGS / EWA splatting: each eye gets a 2D Gaussian from the projection's Jacobian at the splat's center | the cheapest | most scenes; the look 3DGS captures were trained for |
+| `3dgut` | a 2D bound from the unscented transform of 7 sigma points, then the 3D Gaussian evaluated at its maximum along each pixel's ray | within 25% of ewa from outside an object; 4-25x slower inside a scene | large or close splats and wide fields of view, where ewa's linearization at the center is inaccurate |
+| `htgs` | the exact outline of the ellipsoid (a dual quadric), then the same ray evaluation | like 3dgut, slower inside scenes | the tightest exact bounds |
+| `raygs` | a 3D quad facing the eye in the splat's whitened frame, with the density interpolated across it | within 10% of ewa | ray-evaluated look at nearly ewa's cost |
+
+- The ray methods (3dgut, htgs, raygs) use their outline only to place the quad. Each pixel then finds where its ray passes closest to the splat's center in 3D, so the shading stays exact even where the outline is approximate.
+- In the splat's whitened frame the ray is `o + t d`, and the density uses `|o × d|² / |d|²`, with `o × d` interpolated across the quad. The mathematically equal `|o|² - (o·d)² / |d|²` loses all precision to float32 rounding once a splat is thousands of times its own size away.
+- Inside a scene, a ray-method splat whose ellipsoid contains or crosses the camera correctly covers the whole screen. In the benchmarks that meant 800 to 4,500 fragments per pixel, against ewa's 30 to 250.
+
+Each method has four steps: `project` (the words of one splat), `look` (rgb, opacity, and whether it is culled), `vertex` (one quad corner from the words), and `density` (per fragment). They share the LoD opacity stretch, depth of field, culling, `boundFromCov`, the anti-aliasing filter, and screen clipping. ewa projects covariances directly; the ray methods need a rotation and scales, so they diagonalize each cov splat once.
+
+## SplatProjection: one object per method
+
+`SplatProjection.get(method)` returns the object for a method (`SplatProjection.METHODS` lists them):
+
+- `input`, `headWords`, `eyeWords`, and `words(eyes)`.
+- `bundle(eyes)` / `outputs(eyes)`: the `projected` bundle (`w0`, `w1`, ...) and a projection writer's outputs (`projected` and `sortKeys`).
+- `project(splatNode, eyes)`: the TSL that projects one head-space splat; returns its words, whether any eye shows it, whether it is invisible regardless of the view (zero opacity or size), and its distance from the head.
+- `write(splat, eyes)`: the writer body that projects `splat(index)` and writes its sort key.
+- `SplatProjection.writeKeys(splat, form)`: a body that writes only the sort key, for any method (the CPU sort's pass). `SplatProjection.setKeys(bits, cull)`: the key width and culling uniforms.
+- For the draw: `reader(eyes)`, `loadWords(reader, eyes, index)`, `look`, `vertex`, and `density`.
+
+## The camera: head and eyes
+
+Every splat is read once and projected for all eyes; the loop over the eyes unrolls in JavaScript when the shader is built.
+
+- The **head** is the camera in mono and the XR rig's pose in stereo. Splats reach the projection in head space. Words the eyes share are computed once, in head space: the center, color, opacity, rotation and scales, and the filter inflation.
+- Each **eye** computes only what differs, through `fromHead` (a uniform per eye; the identity in mono): its 2D bound or, for raygs, its quad frame.
+- The draw rebuilds eye-space data from the head words with the same `fromHead`. In the draw's shaders, `SplatCamera.viewIndex` is the eye being drawn.
+- `SplatCamera.set(renderer, camera)` (or `setViews({ head, eyes, size, ndcZMin })`) sets the uniforms. The size comes from an `ArrayCamera`'s viewport, the render target, or the canvas. It never modifies the camera: when an eye's projection uses the other clip-space convention (a camera made for WebGL used on WebGPU), the uniforms hold a converted projection.
+- The ray methods inflate splats by the head's pixel footprint, exact in mono and nearly exact for each eye in stereo.
+
+## Words
+
+The words of one splat (the head words, then each eye's) fill the `uint32x4` channels `w0`, `w1`, and `w2` of the bundle `projected`; the last channel is `uint32x2` when only 1 or 2 words remain. In the table, semicolons separate words:
+
+| Method | Head words | Words per eye | Mono | Stereo |
+|---|---|---|---|---|
+| ewa | none | ndc 2x16; depth20 and angle12; rgb; opacity8 and 2x12 log2 scales | 4 words, 16 B | 8 words, 32 B |
+| 3dgut, htgs | center direction; center distance; rgb; quat; 3 half log scales, opacity8 and the center direction's low bits | bound ndc 2x16; angle10 and 2x11 log2 scales | 8 words, 32 B | 10 words, 40 B |
+| raygs | center direction; center distance; rgb; opacity8 and the center direction's low bits | frame quat; float32 c²; 2 half log axis lengths | 7 words, 32 B | 10 words, 40 B |
+
+- `center` is an octahedral direction of 20 + 20 bits (the top 16 + 16 in the first head word, the low 4 + 4 in bits 24 to 31 of the last head word) and a float32 distance from the head. The direction is within 4e-6 rad, 0.3 px at 4K through a 0.5° lens. The distance is the only depth value, and it is precise enough for ray evaluation and the sort.
+- ewa's `depth20` is the view depth's float32 bits above 2^-14, rounded to 20: 5 exponent bits (2^-14 to 2^18 units) and 15 mantissa bits, so steps of 1.5e-5 to 3e-5 of the distance (1.5 to 3 cm at 1 km). Its `angle12` is the bound's angle on [0, π) in steps of π / 4096. The depth only places the quad for the depth test: the sort keys come from the unquantized distance.
+- Quaternions in words are `QuatOct32` codes.
+- The ray methods' bounds are rounded outward, since their quads only need to cover the splat.
+- An eye is culled when its opacity byte (ewa) or its second word (the others) is zero.
+- The sort key adds 4 B per splat: 20 / 36 B (mono / stereo) for ewa and 36 / 44 B for the ray methods. Every layout fits both writers' limits of 4 channels and 64 B.
+
+## Sort keys
+
+The bundle `sortKeys` (`SortKeys.KEYS`) holds one RGBA8 texel per splat: a back-to-front key from the splat's distance to the head (`GpuSortKeys.compute`, then `pack`). The width (16, 24, or 32 bits) is a uniform. `cullKeys` (a uniform) chooses which splats get the invalid key. For the GPU sort, which compacts invalid keys away, these are the splats culled in every eye. For the CPU sort, whose order arrives late, they are only invisible splats and splats outside `sortGuard`, and the draw culls per eye. More: [sorting.md](sorting.md#sort-keys).
+
+## The draw
+
+- The draw has no vertex attributes, only an index buffer of 1024 quads (`quadIndices`: `4q + [0, 1, 2, 2, 1, 3]`). It is a single draw call, and each instance draws 1024 splats (`WgpuSplatSorter.QUADS_PER_INSTANCE`): splat `instanceIndex × 1024 + vertexIndex / 4`, with the corner in bits 0 and 1 of `vertexIndex`. GPUs run vertex shaders in batches, and an instance per quad left most of each batch idle (10-15% of the draw).
+- Because the draw is indexed, each quad's 2 shared corners are shaded once: 4 vertex shader invocations per splat, not 6.
+- The order comes from the GPU sorter's values (an indirect draw) or from the applied CPU order's index list. The vertex stage loads the splat's words, rebuilds its eye-space data, and places the corner; the varyings each method's density reads are written explicitly, so the fragment stage repeats none of the vertex work.
+- There is one material, built against real (empty) projected arrays from the start, and rebuilt in place when the method, the eye count, or the order source changes.
+- Splats blend premultiplied "over" (one, one minus source alpha), back to front, in sRGB-encoded color as they were trained; they test depth but do not write it, so opaque meshes drawn first hide them.
+
+## Params
+
+`SplatParams` holds the defaults and the uniform nodes every program and draw reads (`SplatParams.nodes`, set before each dispatch and draw). `SplatViewParams` (`maxStdDev`, `minAlpha`, `falloff`) are read by the draw too, so there is one set per render. `SplatObjectParams` (`lodInflate`, `blurAmount`, `preBlurAmount`, `clipXY`, `minPixelRadius`, `maxPixelRadius`, `minContribution`, `focalDistance`, `apertureTan`, and `sortGuard`) are set per object. Renderers, views, and objects hold plain values. Every param and its default: [params.md](params.md).
+
+With `lodInflate`, the projection grows a stretched splat (an opacity above 1) and stores opacity 1; without it, the stretched opacity is stored as is, and the draw treats any stored opacity above 1 as a stretch.</code></pre></div>
+</main>
+</div>
+<script src="site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

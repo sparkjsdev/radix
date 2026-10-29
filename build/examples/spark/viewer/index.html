@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radix • Viewer</title>
+  <link rel="stylesheet" href="../js/example.css">
+  <style>
+    #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; background: #2b2928; color: #888; font-size: 1.1rem; }
+    #start h1 { font-weight: 400; color: #ddd; }
+    #start label, #start input, #drop { box-sizing: border-box; width: 300px; padding: 0.75rem; border: none; border-radius: 6px; background: #2f2f2f; color: inherit; font: inherit; text-align: center; cursor: pointer; }
+    #start input { color: #fff; cursor: text; }
+    #drop { width: 500px; padding: 4rem 0.75rem; border: 1px dashed #666; cursor: default; }
+    #drop.over { border-color: #aaa; color: #aaa; }
+    #save { position: fixed; top: 30px; right: 30px; padding: 0.5em 1.5em; border: none; border-radius: 0.5em; background: #3c3c3c; color: #ff6c6c; cursor: pointer; }
+    [hidden] { display: none !important; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "../../../../node_modules/three/build/three.webgpu.js",
+        "three/webgpu": "../../../../node_modules/three/build/three.webgpu.js",
+        "three/tsl": "../../../../node_modules/three/build/three.tsl.js",
+        "three/addons/": "../../../../node_modules/three/examples/jsm/",
+        "@sparkjsdev/radix": "../../../../dist/radix.module.js",
+        "lil-gui": "../../../../node_modules/lil-gui/dist/lil-gui.esm.js"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <button id="save" hidden>Download .spz</button>
+  <div id="start">
+    <h1>Radix viewer</h1>
+    <div id="drop">Drag and drop a splat file here (.ply, .spz, .rad, .rdx)</div>
+    <label>Choose file<input id="file" type="file" accept=".ply,.spz,.rad,.rdx" hidden /></label>
+    <form><input id="url" type="text" placeholder="Paste a splat URL" /></form>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+
+</html>

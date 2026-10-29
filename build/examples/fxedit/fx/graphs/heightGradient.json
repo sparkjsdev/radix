@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "heightGradient",
+  "description": "Position drives color. A ramp along an axis picks a color from a palette, blended over the scan. Spin the turntable and switch world / object: in world space the bands stay put, in object space they turn with the scan.",
+  "nodes": {
+    "center": { "type": "input.center", "note": "Where each splat is" },
+    "rgb": { "type": "input.rgb" },
+    "height": { "type": "field.axisGradient", "inputs": { "origin": [0, -0.8, 0], "axis": [0.4, 1, 0], "length": 0.8 }, "note": "0 at origin, 1 one length further along the axis" },
+    "palette": { "type": "color.cosinePalette", "inputs": { "d": [0, 0.33, 0.67] }, "note": "Turns the number into a rainbow" },
+    "blend": { "type": "color.tint", "inputs": { "intensity": 1, "amount": 0.75 } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "height.position" },
+    { "from": "height.value", "to": "palette.t" },
+    { "from": "rgb.value", "to": "blend.rgb" },
+    { "from": "palette.value", "to": "blend.color" },
+    { "from": "blend.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Band length": "height.length",
+    "Axis": "height.axis",
+    "Blend": "blend.amount",
+    "Palette phase": "palette.d"
+  }
+}

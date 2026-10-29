@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Splats · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/splats.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/splats.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html" class="on">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="splats">Splats<a class="anchor" href="#splats">#</a></h1>
+<p>A table stores Gaussian splats in one bundle, in one of three layouts. CPU code reads and writes them through <code>Splats</code>, and shaders through <code>GpuSplatReader</code> and <code>GpuSplats</code>. Both sides use the same bits, so a splat encoded in a worker decodes to the same values in a shader.</p>
+<p>Code: <a href="../../src/core/splats.ts.html"><code>src/core/splats.ts</code></a> (<code>Splats</code>); <a href="../../src/gpu/splatAccess.ts.html"><code>src/gpu/splatAccess.ts</code></a> (<code>GpuSplatReader</code>) and <code>splats.tsl.ts</code> (<code>GpuSplats</code>). How each field is encoded: <a href="encoding.html">Encodings</a>.</p>
+<pre class="lang-ts"><code>// Ext splats by default, in data.bundles.extSplats
+const data = await loadSplats(url);
+
+// The splat bundle, whichever layout was loaded
+const { bundle } = Splats.get(data);
+
+// Splat 0, read into a new record
+const splat = Splats.makeSplat();
+Splats.load(bundle, 0, splat);
+const { center, scales, quaternion, rgb, opacity } = splat;
+console.log(center, scales, quaternion, rgb, opacity);</code></pre>
+<h2 id="layouts">Layouts<a class="anchor" href="#layouts">#</a></h2>
+<table><thead><tr><th>Layout and bundle name</th><th>Definition</th><th>Size</th><th>Holds</th></tr></thead><tbody><tr><td><code>extSplats</code> (the default)</td><td><code>Splats.EXT</code>: <code>extA</code>, <code>extB</code> (<code>uint32x4</code> each)</td><td>32 B</td><td>a float32 center, opacity, HDR color, half-float log scales, and a rotation; PBR: a normal, roughness, and metallic</td></tr><tr><td><code>covSplats</code></td><td><code>Splats.COV</code>: <code>covA</code>, <code>covB</code></td><td>32 B</td><td>like ext, but a covariance instead of scales and rotation; a normal, but no roughness or metallic</td></tr><tr><td><code>packedSplats</code></td><td><code>Splats.PACKED</code>: <code>packed</code> (<code>uint32x4</code>)</td><td>16 B</td><td>half the memory of ext: 8-bit color and opacity, a half-float center, 8-bit log scales, and an 8 + 8 + 8 bit rotation; no PBR</td></tr></tbody></table>
+<p>A layout's name is also its standard bundle name, so ext splats are in <code>data.bundles.extSplats</code>. Lookups try the standard names first, then any bundle with a layout's channels.</p>
+<p>Spherical harmonics (bands 1 to 4) are not part of a layout. They sit in an SH bundle beside the splat bundle (<code>extSh</code> by default, <code>packedSh</code>, or a palette's labels) and work with any layout. <code>Sh.find(data.bundles)</code> finds the bundle by its channel names, as <code>Splats.find</code> finds the splats (<a href="sh.html">Spherical harmonics</a>).</p>
+<p>The words of each layout (A and B are <code>uint32x4</code>):</p>
+<pre><code>ext (32 B)
+  A.xyz  center, float32
+  A.w    normal (Oct24, 0 = none) | opacity byte &lt;&lt; 24 (128 = 1.0)
+  B.x    rgb: three 8-bit magnitudes, three sign bits, a shared 5-bit exponent
+  B.y    half(ln sx) | half(ln sy) &lt;&lt; 16
+  B.z    half(ln sz) | roughness unorm8 &lt;&lt; 16 | metallic unorm8 &lt;&lt; 24
+  B.w    rotation, QuatOct32: a 10 + 10 bit octahedral axis
+         | a 12-bit angle &lt;&lt; 20
+cov (32 B)
+  A, B.x as ext
+  B.y    half(ln xx) | half(ln yy) &lt;&lt; 16
+  B.z    half(ln zz) | half(c_xy) &lt;&lt; 16
+  B.w    half(c_xz) | half(c_yz) &lt;&lt; 16       (c = sign x ln|correlation|)
+packed (16 B)
+  x      r, g, b over [rgbMin, rgbMax] and opacity, unorm8 each
+  y      half(cx) | half(cy) &lt;&lt; 16
+  z      half(cz) | the rotation's 8 + 8 bit axis &lt;&lt; 16
+  w      three 8-bit log scales over [lnScaleMin, lnScaleMax] (0 = zero)
+         | the rotation's 8-bit angle &lt;&lt; 24</code></pre>
+<p><code>Splats.LOD_TREE</code> (<code>node</code>: <code>uint32x2</code>, the child count and the first child's index) defines a LoD tree with one node per splat, stored next to the splats in the bundle <code>lodTree</code>. <code>Splats.findLodTree(data)</code> returns it. Files that have a tree load it into that bundle (<a href="files.html">Splat files</a>).</p>
+<h2 id="choosing-a-layout">Choosing a layout<a class="anchor" href="#choosing-a-layout">#</a></h2>
+<table><thead><tr><th>Layout</th><th>Choose it for</th></tr></thead><tbody><tr><td><code>extSplats</code></td><td>the default: full precision, HDR colors, and PBR fields for lighting</td></tr><tr><td><code>covSplats</code></td><td>data that comes as covariances (merged LoD nodes, some generators), and the <code>ewa</code> method, which reads covariances directly</td></tr><tr><td><code>packedSplats</code></td><td>large files and low-memory devices: half the memory and about 30% faster projection, with colors and scales limited to the encoding's ranges</td></tr></tbody></table>
+<pre class="lang-ts"><code>const layout = settings.lowMemory ? &quot;packedSplats&quot; : &quot;extSplats&quot;;
+const data = await loadSplats(url, { layout });
+
+// Packed splats with room for HDR colors
+const hdr = await loadSplats(url, {
+  layout: &quot;packedSplats&quot;,
+  encoding: { rgbMin: -0.5, rgbMax: 1.5 },
+});</code></pre>
+<p><strong>Packed encodings.</strong> <code>PackedEncoding</code> (<code>rgbMin</code>, <code>rgbMax</code>, <code>lnScaleMin</code>, <code>lnScaleMax</code>) sets the ranges of the 8-bit codes. Every field is optional. Missing fields come from the source when it already holds packed splats (an RDX file, or <code>Splats.convert</code> from packed splats), and otherwise from <code>Splats.DEFAULT_PACKED_ENCODING</code>: colors 0 to 1, ln scales -12 to 9. The bundle keeps its encoding in <code>meta.encoding</code>; <code>Splats.packedEncodingOf(bundle)</code> returns it with the defaults filled in. Pass ranges when colors go outside 0 to 1 (HDR) or scales outside e^-12 to e^9.</p>
+<h2 id="records">Records<a class="anchor" href="#records">#</a></h2>
+<pre class="lang-ts"><code>// Every layout
+interface Splat {
+  center: Vec3;
+  scales: Vec3;
+  quaternion: Quat;
+  rgb: Rgb;
+  opacity: number;
+}
+
+// Ext only
+interface Pbr { normal: Vec3; roughness: number; metallic: number }
+type ExtSplat = Splat &amp; Pbr;
+
+interface CovSplat {
+  center: Vec3;
+  cov: Cov;
+  rgb: Rgb;
+  opacity: number;
+  normal: Vec3;
+}</code></pre>
+<ul>
+<li><code>Vec3</code> is <code>{ x, y, z }</code>, <code>Quat</code> is <code>{ x, y, z, w }</code>, <code>Rgb</code> is <code>{ r, g, b }</code>, and <code>Cov</code> is <code>{ xx, yy, zz, xy, xz, yz }</code>, so <code>THREE.Vector3</code>, <code>Quaternion</code>, and <code>Color</code> work directly.</li>
+<li>Opacity 1 is opaque; ext and cov store up to 255 / 128 (about 2), for merged LoD nodes.</li>
+<li>A normal of zero means none. Roughness is perceptual, 0 to 1.</li>
+<li><code>Splats.makeSplat()</code>, <code>makePbr()</code>, <code>makeExtSplat()</code>, and <code>makeCovSplat()</code> make records: a unit splat at the origin, white and opaque, roughness 1, metallic 0, no normal.</li>
+</ul>
+<h2 id="splats-the-cpu-side">Splats: the CPU side<a class="anchor" href="#splats-the-cpu-side">#</a></h2>
+<pre class="lang-ts"><code>const splats = data.bundles.extSplats;
+
+// Any layout (cov is diagonalized)
+Splats.load(splats, i, splat);
+
+// Any layout; keeps the PBR bits
+Splats.store(splats, i, splat);
+
+// Ext only
+Splats.loadPbr(splats, i, pbr);
+
+// Ext only; keeps the 3DGS bits
+Splats.storePbr(splats, i, pbr);
+
+// Any layout; reads only the center
+Splats.loadCenter(splats, i, out);
+
+// @ts-expect-error packed splats have no PBR
+Splats.loadPbr(packed.bundles.packedSplats, i, pbr);</code></pre>
+<p>A bundle's type comes from its definition, so TypeScript accepts a call only when the layout stores that data. Code that works with any layout finds the bundle with <code>Splats.get</code>:</p>
+<pre class="lang-ts"><code>// Throws when there is no splat bundle (Splats.find returns undefined)
+const { name, layout, bundle } = Splats.get(data);
+Splats.load(bundle, i, splat);
+if (Splats.isExt(bundle)) Splats.loadPbr(bundle, i, pbr);</code></pre>
+<p>For loops over every splat, <code>Splats.encoder(bundle)</code> and <code>Splats.decoder(bundle)</code> pick the layout's codec and look up its arrays once, before the loop. They return <code>(i, splat)</code> functions that write or read every field as an <code>ExtSplat</code>. Fields the layout lacks read as no normal, roughness 1, and metallic 0. The file readers and writers use them.</p>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>EXT</code>, <code>COV</code>, <code>PACKED</code>, <code>LOD_TREE</code></td><td>the bundle definitions</td></tr><tr><td><code>LAYOUTS</code></td><td>layout names to definitions</td></tr><tr><td><code>DEFAULT_PACKED_ENCODING</code></td><td><code>{ rgbMin: 0, rgbMax: 1, lnScaleMin: -12, lnScaleMax: 9 }</code></td></tr><tr><td><code>makeSplat()</code>, <code>makePbr()</code>, <code>makeExtSplat()</code>, <code>makeCovSplat()</code></td><td>new records</td></tr><tr><td><code>isExt(bundle)</code>, <code>isCov(bundle)</code>, <code>isPacked(bundle)</code></td><td>type guards by channel names and formats</td></tr><tr><td><code>layoutOf(bundle)</code></td><td>the layout of a bundle (<code>undefined</code> when it is none)</td></tr><tr><td><code>findBundle(bundles, name?)</code></td><td><code>{ name, layout }</code> of the splat bundle among any bundles (of an <code>ArrayData</code> or a <code>GpuArrays</code>): <code>name</code> when given, else the standard names, else any bundle of a layout</td></tr><tr><td><code>find(data, name?)</code>, <code>get(data, name?)</code></td><td><code>{ name, layout, bundle }</code> (<code>FoundSplats</code>); <code>get</code> throws when there is none</td></tr><tr><td><code>findLodTree(data)</code></td><td>the <code>lodTree</code> bundle, or <code>undefined</code></td></tr><tr><td><code>add(data, { layout?, encoding? })</code></td><td>adds an empty splat bundle named after its layout (default <code>extSplats</code>)</td></tr><tr><td><code>make(count, { layout?, encoding?, meta? })</code></td><td>a new <code>SplatData&lt;L&gt;</code> of <code>count</code> empty splats</td></tr><tr><td><code>convert(data, { layout, encoding? })</code></td><td>the data in another layout: <code>data</code> itself when it already is, else a new table that shares the arrays of every other bundle</td></tr><tr><td><code>load</code> / <code>store</code>, <code>loadPbr</code> / <code>storePbr</code>, <code>loadCenter</code></td><td>one splat's fields, as above</td></tr><tr><td><code>encoder(bundle)</code>, <code>decoder(bundle)</code></td><td>per-splat functions for loops</td></tr><tr><td><code>encodeExt</code> / <code>decodeExt</code>, <code>encodeCov</code> / <code>decodeCov</code>, <code>encodePacked</code> / <code>decodePacked</code></td><td>every word of one splat of one layout, with the same bits (<code>ExtSplat</code>, <code>CovSplat</code>, <code>Splat</code>)</td></tr><tr><td><code>toCov(splat, out)</code>, <code>fromCov(cov, out)</code></td><td>scales plus rotation to a covariance, and back (an eigendecomposition)</td></tr><tr><td><code>packedEncodingOf(bundle)</code></td><td>a packed bundle's encoding, defaults filled in</td></tr></tbody></table>
+<p>Types: <code>Splat</code>, <code>Pbr</code>, <code>ExtSplat</code>, <code>CovSplat</code>, <code>ExtSplats</code>, <code>CovSplats</code>, <code>PackedSplats</code> (typed bundles), <code>SplatBundle</code> (any of them), <code>SplatBundles</code>, <code>SplatLayout</code>, <code>SplatData&lt;L&gt;</code> (an <code>ArrayData</code> with layout <code>L</code>'s bundle), <code>SplatTarget</code> (<code>{ layout?, encoding? }</code>), <code>SplatReadOptions</code> (a target plus <code>progress</code>), <code>FoundSplats</code>, <code>BundleLike</code> (anything with named channels of formats), and <code>PackedEncoding</code>.</p>
+<h2 id="gpusplatreader-the-shader-side">GpuSplatReader: the shader side<a class="anchor" href="#gpusplatreader-the-shader-side">#</a></h2>
+<pre class="lang-ts"><code>// A GpuExtSplatReader on arrays.bundles.extSplats
+const reader = GpuSplatReader.for(&quot;extSplats&quot;).bind(arrays);
+
+// SplatNode: a TSL struct with the record's fields, plus index
+const splat = reader.loadSplat(index);
+
+// CovSplatNode: converted here; read directly from cov splats
+const cov = reader.loadCovSplat(index);
+
+// PbrNode (ext only)
+const pbr = reader.loadPbr(index);
+
+// A vec3; reads extA only
+const center = reader.loadCenter(index);
+
+// A bound reader for whichever layout the arrays hold
+const any = GpuSplatReader.from(arrays);
+if (any.layout === &quot;extSplats&quot;) any.loadPbr(index);</code></pre>
+<ul>
+<li>There are three readers: <code>GpuExtSplatReader</code>, <code>GpuCovSplatReader</code>, and <code>GpuPackedSplatReader</code> (which reads its encoding from the bundle's meta when bound). <code>AnyGpuSplatReader</code> is the union.</li>
+<li>Every reader has <code>loadSplat</code>, <code>loadCovSplat</code> (each converts from the form the layout stores), <code>loadCenter</code>, <code>loadRgb</code>, and <code>loadOpacity</code>; ext adds <code>loadPbr</code>. Each load fetches only the channels it needs, and reads zero past <code>count</code>.</li>
+<li><code>bind(arrays, name?)</code> binds the bundle named after the reader's layout, or else any bundle of that layout; pass <code>name</code> for another bundle. Bind again after the arrays' count changes, or after they are resized or swapped.</li>
+<li>Splat structs carry the <code>index</code> they were loaded from, so effects can key per-splat randomness on it.</li>
+<li>To draw stored splats, wrap a reader in a generator with <code>SplatGenerator.fromSplats({ layout })</code>, or use <code>SplatCollection.arrays(arrays)</code>, which does the wrapping (<a href="generators.html">Generators and modifiers</a>).</li>
+</ul>
+<p><code>GpuSplats</code> holds the struct constructors and the TSL codecs. This writer stores splats from a shader, baking a generator into arrays:</p>
+<pre class="lang-ts"><code>const writer = new GpuArrayWriter({
+  outputs: { extSplats: Splats.EXT },
+  write: (i, out) =&gt; {
+    const splat = generator.generateSplat(i);
+    const pbr = GpuSplats.Pbr(normal, roughness, metallic);
+    GpuSplats.storeExt(out.extSplats, splat, pbr);
+  },
+});
+
+arrays.write(writer, { at: 0, count });</code></pre>
+<table><thead><tr><th><code>GpuSplats</code> member</th><th>What it does</th></tr></thead><tbody><tr><td><code>Splat(center, scales, quaternion, rgb, opacity, index?)</code></td><td>a <code>SplatNode</code> (fields left out are zero)</td></tr><tr><td><code>CovSplat(center, xxyyzz, xyxzyz, rgb, opacity, normal, index?)</code></td><td>a <code>CovSplatNode</code>: the covariance's diagonal and off-diagonal as two <code>vec3</code>s</td></tr><tr><td><code>Pbr(normal, roughness, metallic)</code></td><td>a <code>PbrNode</code></td></tr><tr><td><code>decodeExt(a, b)</code>, <code>decodeExtPbr(a, b)</code>, <code>encodeExt(splat, pbr)</code></td><td>ext words (two <code>uvec4</code>)</td></tr><tr><td><code>decodeCov(a, b)</code>, <code>encodeCov(cov)</code></td><td>cov words</td></tr><tr><td><code>decodePacked(p, encoding?)</code>, <code>encodePacked(splat, encoding?)</code></td><td>packed words; <code>encoding</code> is a <code>PackedEncoding</code> or a TSL <code>vec4</code></td></tr><tr><td><code>storeExt(out, splat, pbr?)</code>, <code>storeCov(out, cov)</code>, <code>storePacked(out, splat, encoding?)</code></td><td>fill a writer's outputs for that layout</td></tr><tr><td><code>toCov(splat)</code>, <code>fromCov(cov)</code></td><td>convert between the forms</td></tr><tr><td><code>splatOf(generator, i)</code>, <code>covSplatOf(generator, i)</code></td><td>a generator's splat in the asked form, converted when the generator lacks it</td></tr><tr><td><code>withIndex(node, index)</code></td><td>a copy of a splat struct with its <code>index</code> set</td></tr><tr><td><code>normalOf(splat)</code></td><td>the unit axis of the smallest scale, rotated: a flat splat's normal</td></tr></tbody></table>
+<p>Types: <code>SplatNode</code>, <code>CovSplatNode</code>, and <code>PbrNode</code> (<code>StructNode&lt;Fields, Brand&gt;</code>): their <code>get()</code> accepts only their own field names, and the type checker rejects one kind of node where another is expected. More on writing TSL: <a href="shaders.html">Shaders</a>.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li><code>Splats.convert</code> returns the same object when no conversion is needed; do not assume a copy.</li>
+<li>Packed splats clamp colors and scales to their encoding's ranges. Check <code>encoding</code> for HDR colors or very small or large splats.</li>
+<li>GPU and CPU encodings give the same bits, except where float32 rounding on the GPU lands on the other side of a step from the CPU's float64: under 2% of ext and packed splats and about 7% of cov splats (correlations near 1) come out one code step off (<a href="encoding.html#cpu-and-gpu">Encodings</a>).</li>
+</ul>
+<div class="pager"><a class="prev" href="arraydata.html"><small>Previous</small>ArrayData</a><a class="next" href="encoding.html"><small>Next</small>Encodings</a></div>
+<p class="source">Source: <a href="../splats.md.html">docs/splats.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#layouts">Layouts</a>
+<a class="h2" href="#choosing-a-layout">Choosing a layout</a>
+<a class="h2" href="#records">Records</a>
+<a class="h2" href="#splats-the-cpu-side">Splats: the CPU side</a>
+<a class="h2" href="#gpusplatreader-the-shader-side">GpuSplatReader: the shader side</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

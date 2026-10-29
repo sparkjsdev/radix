@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Radix fx editor</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./fxedit.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../../node_modules/three/build/three.webgpu.js",
+          "three/webgpu": "../../../node_modules/three/build/three.webgpu.js",
+          "three/tsl": "../../../node_modules/three/build/three.tsl.js",
+          "three/examples/jsm/": "../../../node_modules/three/examples/jsm/",
+          "@sparkjsdev/radix": "../../../dist/radix.module.js",
+          "tweakpane": "../../../node_modules/tweakpane/dist/tweakpane.js"
+        }
+      }
+    </script>
+    <!-- UMD, not a module: window.ELK; layout.ts starts elk-worker.min.js from the same folder -->
+    <script src="../../../node_modules/elkjs/lib/elk-api.js"></script>
+  </head>
+  <body data-theme="glass" class="overlay">
+    <div id="app">
+      <section id="render-pane">
+        <div class="bar" id="render-bar">
+          <span class="brand">radix<b>fx</b></span>
+          <select id="scan" title="Scan"></select>
+          <div class="seg" id="place" title="Where the graph runs: world space stays put, object space moves with the scan">
+            <button type="button" data-place="world">world</button>
+            <button type="button" data-place="object">object</button>
+          </div>
+          <div class="seg" id="camera-mode" title="Camera: orbit around the scan, or fly through it">
+            <button type="button" data-mode="orbit">orbit</button>
+            <button type="button" data-mode="fly">fly</button>
+          </div>
+          <div class="seg" id="sort" title="Sort: on the GPU every frame (WebGPU), or on a worker a few frames late (the WebGL2 path)">
+            <button type="button" data-sort="gpu">gpu</button>
+            <button type="button" data-sort="cpu">cpu</button>
+          </div>
+          <button type="button" id="turntable" title="Spin the scan">spin</button>
+          <button type="button" id="hidpi" title="Render at the display's full pixel ratio (sharper, slower); off renders at pixel ratio 1">hi-dpi</button>
+        </div>
+        <div id="pane"></div>
+        <div id="status"></div>
+        <div id="veil"><div class="spinner"></div></div>
+      </section>
+      <div id="divider" title="Drag to resize"></div>
+      <section id="editor-pane">
+        <div class="bar" id="editor-bar">
+          <select id="example" title="Example graph"></select>
+          <div class="seg" id="themes" title="Theme (T)"></div>
+          <span class="spacer"></span>
+          <button type="button" id="add" title="Add a node (Tab)">+ node</button>
+          <button type="button" id="undo" title="Undo (Cmd/Ctrl+Z)" disabled>undo</button>
+          <button type="button" id="redo" title="Redo (Shift+Cmd/Ctrl+Z)" disabled>redo</button>
+          <button type="button" id="group" title="Group the selection (⌘G); with group cards selected, ungroup them (⇧⌘G)">group</button>
+          <button type="button" id="layout" title="Auto-layout (L)">layout</button>
+          <button type="button" id="fit" title="Fit to view (F)">fit</button>
+          <button type="button" id="flow" title="Flow preview (P)">flow</button>
+          <button type="button" id="copy" title="Copy the graph as JSON">json</button>
+          <button type="button" id="sound"></button>
+          <button type="button" id="keys-button" title="Controls and shortcuts (?)">?</button>
+        </div>
+        <div id="lesson">
+          <button type="button" id="lesson-toggle" title="Show or hide the lesson">i</button>
+          <div class="lesson-body"><b id="lesson-title"></b> <span id="lesson-text"></span> <a id="lesson-source" target="_blank" rel="noopener" hidden></a></div>
+        </div>
+        <div id="graph"></div>
+        <div id="errors" hidden></div>
+        <div id="hints"><b>?</b> all controls · drag from a port to wire · Tab adds a node · L tidies · P shows the flow · the eye probes a value · T switches theme</div>
+      </section>
+    </div>
+    <div id="keys" hidden>
+      <div class="keys-card" role="dialog" aria-label="Controls and shortcuts">
+        <div class="keys-title">Controls <span>Esc or ? to close</span></div>
+        <div class="keys-grid">
+          <section>
+            <h3>Graph</h3>
+            <dl>
+              <dt><kbd>Tab</kbd> or double-click</dt><dd>add a node (type to search)</dd>
+              <dt>drag from a port</dt><dd>wire it; drop on empty space to add a node that fits</dd>
+              <dt>drag a wire off an input</dt><dd>disconnect or rewire it</dd>
+              <dt>drag a node</dt><dd>move it (<kbd>Shift</kbd>-click adds to the selection)</dd>
+              <dt><kbd>Shift</kbd>-drag</dt><dd>box select</dd>
+              <dt><kbd>Delete</kbd></dt><dd>delete the selection (<kbd>⌘A</kbd> selects all)</dd>
+              <dt><kbd>⌘Z</kbd> <kbd>⇧⌘Z</kbd></dt><dd>undo, redo</dd>
+              <dt><kbd>L</kbd> <kbd>F</kbd></dt><dd>auto-layout, fit to view</dd>
+            </dl>
+            <h3>Groups (nodes made of nodes)</h3>
+            <dl>
+              <dt><kbd>⌘G</kbd> <kbd>⇧⌘G</kbd></dt><dd>group the selection, ungroup a group card</dd>
+              <dt>double-click a card, <kbd>Enter</kbd></dt><dd>open the group</dd>
+              <dt><kbd>Esc</kbd> <kbd>⌘↑</kbd> or the trail</dt><dd>back up a level</dd>
+              <dt>wire to a <b>+</b> port</dt><dd>give the group a new input or output</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Canvas</h3>
+            <dl>
+              <dt>drag empty space</dt><dd>pan (also <kbd>Space</kbd>-drag, middle-drag)</dd>
+              <dt>two-finger scroll</dt><dd>pan</dd>
+              <dt>pinch, mouse wheel, <kbd>⌘</kbd>-scroll</dt><dd>zoom</dd>
+            </dl>
+            <h3>See what happens</h3>
+            <dl>
+              <dt><kbd>P</kbd></dt><dd>flow preview: values run from inputs to the output</dd>
+              <dt>eye on an output</dt><dd>probe: the render shows that value as color</dd>
+              <dt><kbd>Esc</kbd></dt><dd>stop probing, clear the selection</dd>
+              <dt><kbd>T</kbd> <kbd>⇧T</kbd></dt><dd>next, previous theme</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Numbers</h3>
+            <dl>
+              <dt>drag sideways</dt><dd>change (<kbd>Shift</kbd> for fine steps)</dd>
+              <dt>click</dt><dd>type a value, <kbd>Enter</kbd> to apply</dd>
+            </dl>
+            <h3>Render (pointer over the scan)</h3>
+            <dl>
+              <dt>drag</dt><dd>orbit (fly: look around)</dd>
+              <dt>right-drag</dt><dd>pan (fly: orbit the point under the pointer, <kbd>Shift</kbd> pans)</dd>
+              <dt>wheel, middle-drag</dt><dd>zoom (fly: move forward, back)</dd>
+              <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <kbd>Q</kbd><kbd>E</kbd></dt><dd>move (<kbd>Shift</kbd> faster, <kbd>Caps Lock</kbd> on: 10x)</dd>
+              <dt>click the scan</dt><dd>trigger click effects (Shockwave, Sonar, Ripple, Spotlight…)</dd>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

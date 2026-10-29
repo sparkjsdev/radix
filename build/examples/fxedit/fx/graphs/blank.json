@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "blank",
+  "description": "Build your own. Press Tab (or double-click) for the node palette, drag from a port to wire it, press L to tidy up.",
+  "nodes": {
+    "center": { "type": "input.center", "position": [0, 140] },
+    "out": { "type": "splat.write", "position": [940, 100] }
+  },
+  "links": []
+}

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workers · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/workers.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/workers.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html" class="on">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="workers">Workers<a class="anchor" href="#workers">#</a></h1>
+<p><code>WorkerPool</code> runs <code>core/</code> functions on up to <code>size</code> workers. A worker is made only when a call needs one, so a pool that is never used starts no workers. Most apps don't use the pool directly: <code>loadSplats</code>, <code>writeSplats</code>, and the CPU sort use the shared pool (<code>WorkerPool.default</code>) or the shared sort pool (<code>SplatRenderer.sortPool</code>).</p>
+<p>Code: <code>src/worker/</code> (imports <code>core/</code> only): <code>WorkerPool.ts</code>, <code>coreWorker.ts</code> (the worker's handlers), <code>coreModule.ts</code> (what workers import), <code>splatFiles.ts</code>, and <code>splatSort.ts</code>.</p>
+<pre class="lang-ts"><code>const pool = new WorkerPool({ size: 2 });
+
+// Runs on the next free worker; callers queue in order
+const { splats } = await pool.call(&quot;loadSplats&quot;, { url }, { onProgress });
+// splats is a TransferableArrayData; ArrayData.fromTransferable(splats) rebuilds the table
+
+// One worker, held until released
+const lease = await pool.acquire();
+await lease.call(&quot;writeSplats&quot;, { data: splats, format: &quot;ply&quot; });
+lease.release();
+
+// Terminates the workers
+pool.dispose();</code></pre>
+<h2 id="workerpool-and-workerlease">WorkerPool and WorkerLease<a class="anchor" href="#workerpool-and-workerlease">#</a></h2>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new WorkerPool({ size? })</code></td><td>a pool of up to <code>size</code> workers (default 4), none made yet</td></tr><tr><td><code>WorkerPool.default</code></td><td>the shared pool, made on first use (still without workers)</td></tr><tr><td><code>WorkerPool.available</code></td><td>whether this context can make workers: a page can; Node and workers cannot</td></tr><tr><td><code>WorkerPool.coreUrl</code></td><td>a blob URL of <code>core/</code> as one ES module, the one the pool's workers run, for an app's own workers to <code>import()</code> (<a href="#your-own-workers-and-the-core-module">below</a>)</td></tr><tr><td><code>call(name, args, { onProgress?, signal? })</code></td><td>runs a handler on the next free worker (making one if the pool has room), and returns its result</td></tr><tr><td><code>acquire({ signal? })</code></td><td>a <code>WorkerLease</code>: one worker, held until <code>release()</code>; an abort while waiting for one rejects</td></tr><tr><td><code>workerCount</code></td><td>workers made so far, and alive</td></tr><tr><td><code>dispose()</code></td><td>terminates the workers (their pending calls reject) and rejects queued callers</td></tr><tr><td><code>lease.call(name, args, options?)</code>, <code>lease.release()</code></td><td>runs a handler on the leased worker; gives the worker back. A released lease throws on <code>call</code></td></tr></tbody></table>
+<p>Types: <code>WorkerCall</code> (the handler names), <code>WorkerArgs&lt;N&gt;</code> and <code>WorkerResult&lt;N&gt;</code> (a handler's argument and result), and <code>CallOptions</code> (<code>{ onProgress?, signal? }</code>).</p>
+<h2 id="handlers">Handlers<a class="anchor" href="#handlers">#</a></h2>
+<table><thead><tr><th>Handler</th><th>Arguments</th><th>Result</th></tr></thead><tbody><tr><td><code>loadSplats</code></td><td><code>{ url | bytes, name?, layout?, encoding?, sh?, coordinateSystem?, palette?, request? }</code> (<code>request</code>: <code>fetch</code> options, plain data)</td><td><code>{ splats, shPalette? }</code>: the table (<code>TransferableArrayData</code>), its SH bundle included, and the palette's table for RAD's clustered SH; <code>palette: false</code> expands it per splat instead</td></tr><tr><td><code>writeSplats</code></td><td><code>{ data, shPalette?, format, options? }</code></td><td><code>{ bytes, error, data, shPalette }</code>: the data's (and palette's) arrays come back even when encoding fails</td></tr><tr><td><code>sortKeys</code></td><td><code>{ keys, count, bits, ordering? }</code></td><td><code>{ ordering, visible, keys }</code>: the order, the visible count, and the keys, back for reuse</td></tr></tbody></table>
+<p>Pages call the wrappers instead: <code>loadSplats</code> / <code>loadSplatFile</code> / <code>writeSplats</code> (<a href="files.html">Splat files</a>) and <code>sortSplatKeys</code> (below).</p>
+<h2 id="sortsplatkeys">sortSplatKeys<a class="anchor" href="#sortsplatkeys">#</a></h2>
+<p><code>sortSplatKeys(keys, { bits, ordering?, worker? })</code> sorts splat sort keys back to front (<code>SortKeys.sort</code>) on a worker or on the current thread, with the same <code>worker</code> choices as <code>loadSplats</code>. It returns <code>SortedSplats</code>: <code>ordering</code> (splat indices back to front; its first <code>visible</code> have valid keys), <code>visible</code>, and <code>keys</code>. The keys and the order are transferred to the worker and back, so pass the previous <code>ordering</code> to reuse its array. <code>SplatView.sort</code> calls it (<a href="sorting.html#the-cpu-sort">Sorting</a>).</p>
+<h2 id="transfers-and-progress">Transfers and progress<a class="anchor" href="#transfers-and-progress">#</a></h2>
+<ul>
+<li>Arrays in arguments and results are transferred, not copied (<code>ArrayData.transferables</code> finds every <code>ArrayBuffer</code> in a value). The sender's arrays are detached until they come back, and <code>ArrayData.setFromTransferable</code> puts them back in place (<a href="arraydata.html#sending-to-workers">ArrayData</a>).</li>
+<li>A handler reports progress as <code>(fraction, stage)</code>. The worker posts it at most every 50 ms (and whenever the stage changes or it finishes), and never reports a lower fraction than before.</li>
+</ul>
+<h2 id="cancelling">Cancelling<a class="anchor" href="#cancelling">#</a></h2>
+<p>A call's <code>signal</code> (<code>CallOptions</code>) rejects the call with <code>signal.reason</code> as soon as it aborts. The pool then posts <code>{ id, cancel: true }</code>, and the worker aborts that call's own <code>AbortController</code>: <code>fetch</code> stops, and the handler's <code>progress</code> throws at its next report, so a decode stops there too. The worker stays, so a lease keeps working. A call aborted while it waits for a worker leaves the queue. A result that arrives after the abort is dropped.</p>
+<h2 id="failures">Failures<a class="anchor" href="#failures">#</a></h2>
+<ul>
+<li>A handler that throws rejects its call with the error's message; the worker stays.</li>
+<li>When a worker fails outside a handler (an uncaught error, or a message that cannot be read), its pending calls reject and the worker is replaced, so a waiting caller gets a new worker.</li>
+<li><code>dispose()</code> rejects pending and queued calls.</li>
+</ul>
+<h2 id="bundling">Bundling<a class="anchor" href="#bundling">#</a></h2>
+<p>The workers' code is one ES module in the bundle: <a href="../../src/worker/coreModule.ts.html"><code>worker/coreModule.ts</code></a> (<code>core/</code> plus <code>serveWorker</code> from <code>coreWorker.ts</code>), imported as a string (<code>import coreModule from &quot;./coreModule?module&amp;inline&quot;</code>, built by <a href="../../scripts/inline-worker-plugin.mjs.html"><code>scripts/inline-worker-plugin.mjs</code></a>, minified in the library build, since an app's minifier cannot shrink a string). <code>WorkerPool.coreUrl</code> is a blob URL of it, made on first use, and each pool worker starts from a one-line blob that imports <code>serveWorker</code> from that URL and calls it. Pages therefore need no separate worker file, and every worker loads the same code. A bundler other than this repo's esbuild setup needs the same <code>?module&amp;inline</code> import support. Pages need <code>worker-src blob:</code> if they set a Content Security Policy.</p>
+<h2 id="your-own-workers-and-the-core-module">Your own workers and the core module<a class="anchor" href="#your-own-workers-and-the-core-module">#</a></h2>
+<p>A page's own module worker gets no import map, so it cannot <code>import &quot;@sparkjsdev/radix&quot;</code>. It imports <code>core/</code> from <code>WorkerPool.coreUrl</code> instead: the module Radix's own workers run, already in the bundle, so no second file is loaded. The page hands the URL to the worker:</p>
+<pre class="lang-ts"><code>// Page
+const worker = new Worker(new URL(&quot;./myWorker.js&quot;, import.meta.url), { type: &quot;module&quot; });
+worker.postMessage({ coreUrl: WorkerPool.coreUrl });
+
+// myWorker.ts
+let core: Promise&lt;typeof import(&quot;@sparkjsdev/radix/core&quot;)&gt; | undefined;
+self.onmessage = async (event) =&gt; {
+  core ??= import(event.data.coreUrl);
+  const { SplatFiles, Encoding } = await core;
+  // ...
+};</code></pre>
+<p>The LCC example's decoders work this way (<a href="../../examples/lcc/LccDecoders.ts.html"><code>examples/lcc/LccDecoders.ts</code></a>, <code>lccWorker.ts</code>). The module also exports <code>serveWorker</code>, which an app's worker does not call.</p>
+<p><code>npm run build</code> also writes <code>dist/radix-core.module.js</code>: <code>core/</code> alone (formats, tables, codecs, the CPU encoder), with no imports at all, for Node and for pages that load workers without the library. Such a page maps it in its import map (<code>&quot;@sparkjsdev/radix/core&quot;: &quot;/dist/radix-core.module.js&quot;</code>) and hands <code>import.meta.resolve(&quot;@sparkjsdev/radix/core&quot;)</code> to its workers. The build fails if <code>core/</code> gains an import.</p>
+<h2 id="adding-a-handler">Adding a handler<a class="anchor" href="#adding-a-handler">#</a></h2>
+<p>To add a handler, add a function to <code>handlers</code> in <code>coreWorker.ts</code>. It receives its arguments and <code>{ progress, signal }</code> (<code>progress</code> throws once the call is cancelled), and its return value is transferred back. <code>WorkerCall</code>, <code>WorkerArgs</code>, and <code>WorkerResult</code> are derived from the handlers' types, so they include the new one.</p>
+<div class="pager"><a class="prev" href="rdx.html"><small>Previous</small>RDX files</a><a class="next" href="renderer.html"><small>Next</small>The renderer</a></div>
+<p class="source">Source: <a href="../workers.md.html">docs/workers.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#workerpool-and-workerlease">WorkerPool and WorkerLease</a>
+<a class="h2" href="#handlers">Handlers</a>
+<a class="h2" href="#sortsplatkeys">sortSplatKeys</a>
+<a class="h2" href="#transfers-and-progress">Transfers and progress</a>
+<a class="h2" href="#cancelling">Cancelling</a>
+<a class="h2" href="#failures">Failures</a>
+<a class="h2" href="#bundling">Bundling</a>
+<a class="h2" href="#your-own-workers-and-the-core-module">Your own workers and the core module</a>
+<a class="h2" href="#adding-a-handler">Adding a handler</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "name": "sway",
+  "nodes": {
+    "center": { "type": "input.center" },
+    "rgb": { "type": "input.rgb" },
+    "time": { "type": "input.time" },
+    "height": { "type": "field.axisGradient", "inputs": { "origin": [0, -1.5, 0], "axis": [0, 1, 0], "length": 3 } },
+    "heightClamp": { "type": "math.clamp", "inputs": { "low": 0, "high": 1 } },
+    "gust": { "type": "field.noise", "inputs": { "scale": 1.5 }, "options": { "octaves": 2 } },
+    "phase": { "type": "math.add" },
+    "wave": { "type": "math.sine", "inputs": { "frequency": 0.7, "amplitude": 0.1 } },
+    "bend": { "type": "math.mul" },
+    "offset": { "type": "math.vec3Scale", "inputs": { "v": [1, 0, 0.3] } },
+    "shape": { "type": "field.sdfBasic", "inputs": { "center": [-1, 0.5, 0], "radius": 1.6 }, "options": { "shape": "sphere" } },
+    "edge": { "type": "math.smoothstep", "inputs": { "low": -0.08, "high": 0.08 } },
+    "inside": { "type": "math.oneMinus" },
+    "shifted": { "type": "color.hsvAdjust", "inputs": { "hue": 0.35, "saturation": 1.6, "value": 1.2 } },
+    "recolor": { "type": "color.tint", "inputs": { "intensity": 1 } },
+    "out": { "type": "splat.write" }
+  },
+  "links": [
+    { "from": "center.value", "to": "height.position" },
+    { "from": "height.value", "to": "heightClamp.x" },
+    { "from": "center.value", "to": "gust.position" },
+    { "from": "time.seconds", "to": "phase.a" },
+    { "from": "gust.value", "to": "phase.b" },
+    { "from": "phase.value", "to": "wave.x" },
+    { "from": "wave.value", "to": "bend.a" },
+    { "from": "heightClamp.value", "to": "bend.b" },
+    { "from": "bend.value", "to": "offset.s" },
+    { "from": "center.value", "to": "shape.position" },
+    { "from": "shape.value", "to": "edge.x" },
+    { "from": "edge.value", "to": "inside.x" },
+    { "from": "rgb.value", "to": "shifted.rgb" },
+    { "from": "rgb.value", "to": "recolor.rgb" },
+    { "from": "shifted.value", "to": "recolor.color" },
+    { "from": "inside.value", "to": "recolor.amount" },
+    { "from": "offset.value", "to": "out.offset" },
+    { "from": "recolor.value", "to": "out.rgb" }
+  ],
+  "params": {
+    "Sway": "wave.amplitude",
+    "Frequency": "wave.frequency",
+    "Direction": "offset.v",
+    "Gust scale": "gust.scale",
+    "Mask center": "shape.center",
+    "Mask radius": "shape.radius",
+    "Hue shift": "shifted.hue",
+    "Saturation": "shifted.saturation"
+  }
+}

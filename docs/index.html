@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: Gaussian splats on WebGPU and WebGL2</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+.hero h1 { font-size: clamp(56px, 11vw, 132px); }
+.hero .ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 28px; }
+.hero .ctas a { text-decoration: none; padding: 11px 16px; border-radius: 11px; font-weight: 600; font-size: 14px; border: 1px solid #3a4256; background: #121620cc; color: var(--text); }
+.hero .ctas a.primary { background: var(--text); color: #0a0c11; border-color: var(--text); }
+.hero .ctas a:hover { filter: brightness(1.15); }
+
+/* One frame */
+.stripBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+#stripPlay { min-width: 92px; }
+.strip .st { cursor: pointer; }
+.strip { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 6px 0 4px; }
+.strip .st { flex: 1 0 120px; padding: 12px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); text-align: center; transition: all .35s; }
+.strip .st b { display: block; font-size: 14px; }
+.strip .st small { font: 11px var(--mono); color: var(--dim); }
+.strip .st.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 10px 30px -10px var(--c); transform: translateY(-3px); }
+.strip .st.once { border-style: dashed; }
+.strip .ar { flex: 0 0 22px; display: grid; place-items: center; color: var(--faint); }
+#stepText { min-height: 76px; font-size: 16px; color: #d3d7e1; margin: 12px 0 0; }
+#stepText code { font-size: 0.85em; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.stat b { display: block; font: 700 34px/1.1 system-ui, sans-serif; letter-spacing: -0.02em; background: linear-gradient(120deg, #fff, var(--c)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stat span { color: var(--dim); font-size: 14px; }
+
+/* The map */
+#layersSvg { width: 100%; height: auto; display: block; }
+#layersSvg .box { cursor: pointer; transition: opacity .2s; }
+#layersSvg .box rect { stroke-width: 2; }
+#layersSvg .box:hover rect { filter: brightness(1.25); }
+#layersSvg text { font-family: system-ui, sans-serif; }
+#layersSvg .forbid { opacity: 0; transition: opacity .3s; }
+#layersSvg.showForbid .forbid { opacity: 1; }
+#layerInfo ul { margin: 0; padding-left: 18px; font-size: 14px; }
+#layerInfo li { margin: 3px 0; }
+#layerInfo .pages { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+#layerInfo .pages a { font: 12px var(--mono); text-decoration: none; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+#layerInfo .pages a:hover { border-color: var(--c); }
+
+/* Status */
+.road { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.road div { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--line); background: var(--panel2); font-size: 14px; color: var(--dim); }
+.road div.done { border-color: #2f6b4a; }
+.road b { display: block; margin-bottom: 4px; color: var(--text); font-size: 15px; }
+.road b.yes { color: var(--worker); }
+</style>
+</head>
+<body data-root="" data-page="index.html">
+<div id="progress"></div>
+<nav id="nav"></nav>
+
+<header class="hero" id="top">
+  <canvas id="heroCanvas"></canvas>
+  <div class="inner">
+    <h1>Radix</h1>
+    <p class="lead">Radix draws 3D Gaussian splats in three.js, on WebGPU or on WebGL2 from the same shaders. Each frame it projects the splats of all objects in a scene, sorts them together, and draws them in one draw call.</p>
+    <p class="small">Several objects in one sort · four projection methods · splats generated in shaders · stereo XR · one table format from files to the GPU</p>
+    <div class="ctas">
+      <a class="primary" href="ref/quickstart.html">Quickstart</a>
+      <a href="why.html">Comparison with Spark</a>
+      <a href="ideas.html">Design ideas</a>
+      <a href="model.html">How the classes fit together</a>
+    </div>
+  </div>
+</header>
+
+<section id="frame" data-title="One frame">
+  <div class="eyebrow">Overview</div>
+  <h2>From a file to the screen</h2>
+  <p class="lede">A file is decoded once on a worker and uploaded once. Then each render projects the splats for the camera, sorts them back to front, and draws them. On WebGPU these steps all run on the GPU in the same frame. On WebGL2 the sort runs on a worker, and its result arrives a few frames later.</p>
+  <div class="panel reveal">
+    <div class="stripBar"><div class="chips" id="backend"></div><button class="btn" id="stripPlay" type="button"></button></div>
+    <div class="strip" id="strip" style="margin-top: 14px"></div>
+    <p id="stepText"></p>
+  </div>
+  <pre class="reveal">// WebGPU, or WebGL2 where WebGPU is missing
+const renderer = await createRenderer();
+
+// Decode on a worker, then upload to textures
+const data = await loadSplats("scene.spz");
+const splats = GpuArrays.fromData(renderer, data);
+
+const collection = new SplatCollection([SplatCollection.arrays(splats)]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.setAnimationLoop(() =&gt; renderer.render(scene, camera));</pre>
+  <p class="deeper">See also: <a href="ref/quickstart.html">Quickstart</a> <a href="ref/rendering.html#what-a-render-does">What a render does</a> <a href="pipeline.html">The pipeline</a></p>
+</section>
+
+<section id="doors" data-title="Pages">
+  <div class="eyebrow">Pages</div>
+  <h2>Where to start</h2>
+  <div class="next-cards reveal">
+    <a href="why.html" style="--c: var(--pink)"><em>5 minutes</em><b>Comparison with SparkJS</b><span>What Radix does differently, frame times measured against SparkJS, and the features Spark has that Radix lacks.</span></a>
+    <a href="ideas.html" style="--c: var(--core)"><em>8 minutes</em><b>Design ideas</b><span>Eight design ideas, each with an interactive example: twin tables, 32-byte splats, generators, words, sort keys, one sort, views, and the two backends.</span></a>
+    <a href="model.html" style="--c: var(--gpu)"><em>20 minutes</em><b>How the classes fit together</b><span>The classes and the data passed between them during a frame, with an interactive class map.</span></a>
+    <a href="ref/quickstart.html" style="--c: var(--worker)"><em>Reference</em><b>Quickstart and reference</b><span>A page that draws a file, explained line by line, and the reference for each class, option, and default.</span></a>
+  </div>
+  <div class="next-cards reveal">
+    <a href="data.html" style="--c: var(--core)"><em>In depth</em><b>The data</b><span>Tables, formats, texture layout, splat layouts, octahedral codes, writers, workers, and files, with interactive codecs.</span></a>
+    <a href="pipeline.html" style="--c: var(--wgpu)"><em>In depth</em><b>The pipeline</b><span>The four projection methods, stereo, sort keys, radix sort, compaction, the WebGL2 path, and how quads are built.</span></a>
+    <a href="multi-splat.html" style="--c: var(--pink)"><em>In depth</em><b>Drawing many objects</b><span>How one sort draws many objects, and why that takes collections, views, versioned orders, and releases.</span></a>
+    <a href="bench.html" style="--c: var(--yellow)"><em>Measured</em><b>Benchmarks</b><span>Radix, SparkJS, and PlayCanvas on the same five scans: frame times, vsync frame rates, and the full report.</span></a>
+  </div>
+</section>
+
+<section id="numbers" data-title="Key facts">
+  <div class="eyebrow">Key facts</div>
+  <h2>What a renderer does</h2>
+  <div class="stats reveal">
+    <div class="stat" style="--c: var(--pink)"><b>1 draw call</b><span>for the splats of all objects, sorted together so that overlapping objects blend correctly</span></div>
+    <div class="stat" style="--c: var(--gpu)"><b>0 readbacks</b><span>on WebGPU: compaction, the radix sort, and the indirect draw run on the GPU in the same frame</span></div>
+    <div class="stat" style="--c: var(--core)"><b>32 bytes</b><span>per splat with HDR color and PBR fields, or 16 bytes packed, with the same bits on the CPU, in files, and on the GPU</span></div>
+    <div class="stat" style="--c: var(--wgpu)"><b>4 methods</b><span>ewa, 3dgut, htgs, and raygs: classic splatting or ray evaluation, set per renderer</span></div>
+    <div class="stat" style="--c: var(--worker)"><b>9.2 ms</b><span>per frame for a 10M-splat interior scan on WebGPU (Apple M3 Max, 1920x1080); SparkJS takes 16.5 ms</span></div>
+    <div class="stat" style="--c: var(--yellow)"><b>2 backends</b><span>WebGPU and WebGL2, with the same TSL source and the same app code</span></div>
+  </div>
+  <p class="deeper">See also: <a href="why.html">The comparison</a> <a href="bench.html">Benchmarks</a> <a href="ref/performance.html">Performance</a></p>
+</section>
+
+<section id="map" data-title="Layers">
+  <div class="eyebrow">Layers</div>
+  <h2>Five layers; each imports only the layers below it</h2>
+  <p class="lede">All code is in <code>src/</code>, which imports nothing else from the project. Click a layer to see its classes and the pages about it. Beside them, <code>controls/</code> (<code>CameraControls</code>) imports only three.js, and nothing imports it.</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 480px">
+      <svg id="layersSvg" viewBox="0 0 760 460" role="img" aria-label="The layers of Radix">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8b93a7"/></marker>
+          <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f87171"/></marker>
+        </defs>
+        <g stroke="#8b93a7" stroke-width="2" fill="none" marker-end="url(#ah)">
+          <path d="M210 92 V126"/>
+          <path d="M100 92 C 100 104, 30 110, 30 220 C 30 250, 44 256, 58 256"/>
+          <path d="M60 166 C 18 166, 18 400, 56 400"/>
+          <path d="M210 202 V236"/>
+          <path d="M210 312 V356"/>
+          <path d="M560 312 V356"/>
+        </g>
+        <g class="forbid" stroke="#f87171" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#ahr)">
+          <path d="M362 275 H416"/>
+          <path d="M300 356 V316"/>
+          <path d="M300 238 V206"/>
+          <path d="M560 236 V96"/>
+          <text x="389" y="266" fill="#f87171" stroke="none" font-size="18" text-anchor="middle">✕</text>
+          <text x="318" y="340" fill="#f87171" stroke="none" font-size="18">✕</text>
+          <text x="318" y="228" fill="#f87171" stroke="none" font-size="18">✕</text>
+          <text x="578" y="170" fill="#f87171" stroke="none" font-size="18">✕</text>
+        </g>
+        <g class="box" data-layer="render"><rect x="60" y="20" width="640" height="72" rx="14" fill="#2a1424" stroke="#f472b6"/>
+          <text x="80" y="50" fill="#f472b6" font-size="20" font-weight="700">render/</text><text x="80" y="74" fill="#d9b0c8" font-size="13">collections, the splat renderer and its views, the projection, and the draw</text></g>
+        <g class="box" data-layer="wgpu"><rect x="60" y="130" width="300" height="72" rx="14" fill="#2a1a0e" stroke="#fb923c"/>
+          <text x="80" y="160" fill="#fb923c" font-size="20" font-weight="700">wgpu/</text><text x="80" y="184" fill="#c9b29f" font-size="13">WebGPU only: Wgpu* compute, sorting</text></g>
+        <g class="box" data-layer="gpu"><rect x="60" y="240" width="300" height="72" rx="14" fill="#1d1730" stroke="#a78bfa"/>
+          <text x="80" y="270" fill="#a78bfa" font-size="20" font-weight="700">gpu/</text><text x="80" y="294" fill="#bdb3d9" font-size="13">three.js on WebGPU and WebGL2</text></g>
+        <g class="box" data-layer="worker"><rect x="420" y="240" width="280" height="72" rx="14" fill="#0f2318" stroke="#4ade80"/>
+          <text x="440" y="270" fill="#4ade80" font-size="20" font-weight="700">worker/</text><text x="440" y="294" fill="#a7d3b5" font-size="13">a pool of Web Workers</text></g>
+        <g class="box" data-layer="core"><rect x="60" y="360" width="640" height="80" rx="14" fill="#0d2422" stroke="#2dd4bf"/>
+          <text x="80" y="392" fill="#2dd4bf" font-size="20" font-weight="700">core/</text><text x="80" y="418" fill="#9fd1c9" font-size="13">no three.js, no DOM: runs in browsers, workers, and Node</text></g>
+      </svg>
+      <label class="ctl"><input type="checkbox" id="forbidToggle"> show the imports ESLint forbids</label>
+    </div>
+    <div class="panel" id="layerInfo" style="flex: 1 1 280px"></div>
+  </div>
+  <p class="takeaway reveal"><code>core/</code> is the data and the math, <code>gpu/</code> puts that data in textures and reads and writes it in shaders, <code>wgpu/</code> adds compute and the GPU sort, <code>worker/</code> runs <code>core/</code> off the main thread, and <code>render/</code> projects and draws splats with all of them. Anything named <code>Wgpu*</code> needs WebGPU; everything else runs on WebGL2 too.</p>
+</section>
+
+<section id="status" data-title="Status">
+  <div class="eyebrow">Status</div>
+  <h2>Done and planned</h2>
+  <div class="road reveal">
+    <div class="done"><b class="yes">✓ Tables</b>ArrayData, bundles, formats, transfers, and swaps, the same on the CPU and the GPU</div>
+    <div class="done"><b class="yes">✓ Splat codecs</b>ext, cov, and packed layouts on the CPU and in TSL, with the same bits</div>
+    <div class="done"><b class="yes">✓ Files and workers</b>PLY (also compressed), SPZ, RAD, and RDX (chunked, range reads); a worker pool made on demand</div>
+    <div class="done"><b class="yes">✓ Projection</b>ewa, 3dgut, htgs, and raygs; mono and stereo; packed words</div>
+    <div class="done"><b class="yes">✓ Sorting</b>GPU radix sort and compaction in the frame; a CPU sort on a worker for WebGL2</div>
+    <div class="done"><b class="yes">✓ Scenes</b>collections of placed objects and generators, per-camera views, modifiers, and releases</div>
+    <div class="done"><b class="yes">✓ Output</b>HDR canvases, headroom tone mapping, and GPU profiling</div>
+    <div class="done"><b class="yes">✓ Spherical harmonics</b>degree 1 to 3 in SH bundles (ext, packed) or palettes (RAD's clustered SH, SOG's), read and written by every format, drawn from each view</div>
+    <div><b style="color: var(--core)">Level of detail</b>Building trees and choosing LoD subsets. Trees load and save today; the Doom, Quake, SOG and LCC examples choose subsets in example code.</div>
+    <div><b style="color: var(--wgpu)">Generators</b>A library of splat generators and effects.</div>
+    <div><b style="color: var(--pink)">Depth outputs</b>Soft and hard depth from the draw, for compositing with meshes.</div>
+  </div>
+  <p class="deeper">See also: <a href="ref/overview.html">The reference</a> <a href="ref/checks.html">Checks</a></p>
+</section>
+
+<footer>Radix docs · source: <code>docs/</code> · <a href="ref/overview.html">reference</a> · pages to try after <code>npm run build</code> and <code>npm run serve</code>: <code>/build/examples/splats/index.html</code>, <code>/build/examples/scenes/index.html</code>, <code>/build/examples/xr/index.html</code></footer>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- Hero: two clouds of splats drifting through each other ----------
+(() => {
+  const canvas = $("#heroCanvas"), ctx = canvas.getContext("2d");
+  let w, h, visible = true, mx = 0, my = 0;
+  const hues = [330, 168, 258, 25, 140];
+  const splats = Array.from({ length: 170 }, () => ({
+    x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, sx: 20 + Math.random() * 90, sy: 6 + Math.random() * 30,
+    a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.004, vx: (Math.random() - 0.5) * 0.00012, hue: hues[Math.floor(Math.random() * hues.length)] + Math.random() * 20, o: 0.12 + Math.random() * 0.3,
+  }));
+  const resize = () => { const d = Math.min(2, devicePixelRatio); w = canvas.width = innerWidth * d; h = canvas.height = canvas.clientHeight * d; };
+  resize();
+  addEventListener("resize", resize);
+  addEventListener("mousemove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; });
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
+  const frame = () => {
+    if (visible) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const d = w / innerWidth;
+      for (const s of splats) {
+        if (!reducedMotion) { s.a += s.va; s.x = (s.x + s.vx + 1) % 1; }
+        ctx.save();
+        ctx.translate(s.x * w + mx * 60 * s.z * d, s.y * h + my * 40 * s.z * d);
+        ctx.rotate(s.a);
+        ctx.scale(s.sx * s.z * d, s.sy * s.z * d);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        g.addColorStop(0, `hsla(${s.hue}, 85%, 62%, ${s.o})`);
+        g.addColorStop(1, `hsla(${s.hue}, 85%, 62%, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      const fade = ctx.createLinearGradient(0, h * 0.6, 0, h);
+      fade.addColorStop(0, "rgba(10,12,17,0)"); fade.addColorStop(1, "rgba(10,12,17,1)");
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, w, h);
+    }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+
+// ---------- One frame: the steps, lit in turn ----------
+(() => {
+  const STEPS = {
+    gpu: [
+      ["file", "loadSplats", "#4ade80", true, "<code>loadSplats</code> downloads and decodes the file on a worker into an <code>ArrayData</code>: one row per splat, 32 bytes each. Once per file."],
+      ["table", "GpuArrays", "#2dd4bf", true, "<code>GpuArrays.fromData</code> uploads the table into textures, one per channel, row for row. Once per file."],
+      ["project", "SplatRenderer", "#f472b6", false, "Each render generates the splats of each object, transforms them by the object's matrix, and projects them into a few 32-bit words and a sort key, in one compute pass."],
+      ["sort", "WgpuSplatSorter", "#fb923c", false, "Compaction drops culled splats, and a radix sort orders the rest back to front, on the GPU in the same frame. Nothing is read back."],
+      ["draw", "one draw call", "#a78bfa", false, "One indirect draw: 1024 quads per instance, each built from four vertex indices and the splat's words, blended back to front."],
+    ],
+    cpu: [
+      ["file", "loadSplats", "#4ade80", true, "Loading is the same as on WebGPU. The WebGL2 path differs only in the sort."],
+      ["table", "GpuArrays", "#2dd4bf", true, "The same textures, uploaded once."],
+      ["project", "SplatRenderer", "#f472b6", false, "Each render projects the splats in a fragment pass, from the same TSL source compiled to GLSL."],
+      ["keys", "SplatView.sort", "#60a5fa", false, "When the camera or the collection changed, a keys pass computes each splat's sort key, and the keys are read back."],
+      ["worker", "sortSplatKeys", "#4ade80", false, "A worker sorts the keys. The order arrives a few frames later; until then the view draws its last order, which still indexes the same splats."],
+      ["draw", "one draw call", "#a78bfa", false, "One draw call, in the applied order. With autoSort, the view runs this loop itself."],
+    ],
+  };
+  // Advances on its own while playing and on screen; clicking a step pauses
+  let mode = "gpu", step = 0, playing = !reducedMotion, visible = false, timer;
+  const render = () => {
+    const steps = STEPS[mode];
+    $("#strip").innerHTML = steps.map(([t, l, c, once], i) => `<div class="st${i === step ? " on" : ""}${once ? " once" : ""}" style="--c:${c}" data-i="${i}"><b>${t}</b><small>${l}</small></div>${i < steps.length - 1 ? '<div class="ar">→</div>' : ""}`).join("");
+    $("#stepText").innerHTML = steps[step][4];
+    $("#stripPlay").textContent = playing ? "❚❚ pause" : "▶ play";
+  };
+  const schedule = () => {
+    clearInterval(timer);
+    if (playing && visible) timer = setInterval(() => { step = (step + 1) % STEPS[mode].length; render(); }, 4000);
+  };
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; schedule(); }).observe($("#strip"));
+  $("#stripPlay").addEventListener("click", () => {
+    playing = !playing;
+    render(); schedule();
+  });
+  $("#backend").innerHTML = `<span class="chip on" data-v="gpu">WebGPU: the GPU sort</span><span class="chip" data-v="cpu">WebGL2: the CPU sort</span>`;
+  $("#backend").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    mode = c.dataset.v; step = 0;
+    $$(".chip", $("#backend")).forEach((x) => x.classList.toggle("on", x === c));
+    render(); schedule();
+  });
+  $("#strip").addEventListener("click", (e) => {
+    const st = e.target.closest(".st");
+    if (st) { step = Number(st.dataset.i); playing = false; render(); schedule(); }
+  });
+  render(); schedule();
+})();
+
+// ---------- The map: each layer's classes and pages ----------
+(() => {
+  const info = {
+    core: { color: "#2dd4bf", title: "core/", tag: "@sparkjsdev/radix/core · no three.js", text: "The data and the math. No three.js and no DOM, so it runs in pages, workers, and Node, and its checks run in Node.",
+      items: ["ArrayData, defineBundle, ArrayFormats, TextureLayout", "Splats, Encoding, SplatMath", "SortKeys", "SplatFiles, PlyFile, CompressedPlyFile, SpzFile, RadFile, RdxFile, Compression"],
+      pages: [["arraydata", "ArrayData"], ["splats", "Splats"], ["encoding", "Encodings"], ["files", "Files"], ["rdx", "RDX"]] },
+    gpu: { color: "#a78bfa", title: "gpu/", tag: "imports core/ and three", text: "Puts tables in textures, and reads and writes them in shaders. three.js WebGPURenderer, TSL only, on WebGPU or WebGL2.",
+      items: ["createRenderer, getGpuCaps, Hdr, GpuProfiler", "GpuArrays, GpuArrayReader, GpuArrayWriter", "GpuSplatReader, GpuSplats, GpuEncoding, GpuSortKeys", "SplatGenerator"],
+      pages: [["renderer", "The renderer"], ["gpu-arrays", "GPU arrays"], ["shaders", "Shaders"], ["generators", "Generators"]] },
+    wgpu: { color: "#fb923c", title: "wgpu/", tag: "imports gpu/, core/, three", text: "Compute shaders, WebGPU only. Every name starts with Wgpu, and these classes throw an error on WebGL2.",
+      items: ["WgpuCompute, WgpuComputeBatch, WgpuBuffer", "WgpuArrayWriter, WgpuArrayStore", "WgpuRadixSort, WgpuCompact", "WgpuSplatSorter"],
+      pages: [["wgpu", "WebGPU compute"], ["sorting", "Sorting"]] },
+    worker: { color: "#4ade80", title: "worker/", tag: "imports core/ only", text: "Runs core/ off the main thread. Workers are bundled inline and made only when a call needs one.",
+      items: ["loadSplats, writeSplats", "sortSplatKeys", "WorkerPool, WorkerLease"],
+      pages: [["workers", "Workers"], ["files", "Files"]] },
+    render: { color: "#f472b6", title: "render/", tag: "imports every layer but controls/", text: "The classes an app draws with: collections of objects, the renderer that projects, sorts, and draws them from any camera, and a view per viewpoint.",
+      items: ["SplatCollection (SplatObject)", "SplatRenderer", "SplatView (SplatOrder)", "SplatProjector: the program cache", "internal: the camera, params, transforms, and the four methods"],
+      pages: [["rendering", "Rendering"], ["params", "Params"], ["views", "Views"], ["lifetimes", "Lifetimes"], ["xr", "WebXR"], ["projection", "Projection"]] },
+  };
+  const show = (k) => {
+    const i = info[k];
+    $("#layerInfo").innerHTML = `<div class="eyebrow" style="color:${i.color}">${i.tag}</div><h3 style="margin:6px 0;color:${i.color}">${i.title}</h3>` +
+      `<p style="margin:0 0 10px;color:#cfd4df">${i.text}</p><ul style="color:var(--dim)">${i.items.map((x) => `<li>${x}</li>`).join("")}</ul>` +
+      `<div class="pages" style="--c:${i.color}">${i.pages.map(([p, t]) => `<a href="ref/${p}.html">${t}</a>`).join("")}</div>`;
+    $$("#layersSvg .box").forEach((b) => (b.style.opacity = b.dataset.layer === k ? 1 : 0.55));
+  };
+  $$("#layersSvg .box").forEach((b) => b.addEventListener("click", () => show(b.dataset.layer)));
+  $("#forbidToggle").addEventListener("change", (e) => $("#layersSvg").classList.toggle("showForbid", e.target.checked));
+  show("render");
+})();
+</script>
+</body>
+</html>

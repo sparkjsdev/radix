@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArrayData · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/arraydata.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/arraydata.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html" class="on">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="arraydata">ArrayData<a class="anchor" href="#arraydata">#</a></h1>
+<p><code>ArrayData</code> is the table every other part of Radix stores data in: splats, LoD trees, sort keys, draw orders, and any data of an app's own. Rows are elements and columns are typed-array channels, grouped into named bundles. A table can be sent to workers without copying, saved to RDX files, and uploaded to the GPU (<code>GpuArrays</code>) row for row.</p>
+<p>Code: <code>src/core/</code> (<code>formats.ts</code>, <code>bundles.ts</code>, <code>ArrayData.ts</code>, <code>layout.ts</code>), in <code>@sparkjsdev/radix/core</code>.</p>
+<pre class="lang-ts"><code>const POINTS = defineBundle({ position: &quot;float32x4&quot;, color: &quot;unorm8x4&quot; });
+
+const data = new ArrayData({ bundles: { points: POINTS }, count: 1000 });
+const { position, color } = data.bundles.points.channels;
+
+// position.data is a Float32Array of capacity * 4 floats, and color.data a
+// Uint8Array, where offset 4 is element 1
+position.data[0] = 1.5;
+color.data.set([255, 128, 0, 255], 4);</code></pre>
+<h2 id="formats">Formats<a class="anchor" href="#formats">#</a></h2>
+<p>A format is a scalar type, optionally with a component count: <code>&quot;uint32&quot;</code>, <code>&quot;uint32x4&quot;</code>, <code>&quot;unorm8x4&quot;</code>, <code>&quot;float16x2&quot;</code>.</p>
+<table><thead><tr><th>Scalar</th><th>CPU array</th><th>In a shader</th></tr></thead><tbody><tr><td><code>uint8</code>, <code>uint16</code>, <code>uint32</code></td><td><code>Uint8Array</code>, <code>Uint16Array</code>, <code>Uint32Array</code></td><td><code>uint</code>, <code>uvec2</code>, <code>uvec4</code></td></tr><tr><td><code>sint8</code>, <code>sint16</code>, <code>sint32</code></td><td><code>Int8Array</code>, <code>Int16Array</code>, <code>Int32Array</code></td><td><code>int</code>, <code>ivec2</code>, <code>ivec4</code></td></tr><tr><td><code>unorm8</code>, <code>snorm8</code></td><td><code>Uint8Array</code>, <code>Int8Array</code></td><td>normalized <code>float</code>, <code>vec2</code>, <code>vec4</code></td></tr><tr><td><code>float16</code></td><td><code>Uint16Array</code> (half-float bits)</td><td><code>float</code>, <code>vec2</code>, <code>vec4</code></td></tr><tr><td><code>float32</code></td><td><code>Float32Array</code></td><td><code>float</code>, <code>vec2</code>, <code>vec4</code></td></tr></tbody></table>
+<ul>
+<li>Formats with 1, 2, or 4 components can be stored on the GPU. Other counts (<code>&quot;uint32x5&quot;</code>, <code>&quot;float32x3&quot;</code>) stay on the CPU.</li>
+<li><code>ArrayFormats.info(format)</code> returns a <code>FormatInfo</code>: <code>scalar</code>, <code>components</code>, <code>scalarBytes</code>, <code>bytes</code>, <code>array</code> (the typed array class), and <code>gpu</code> (whether the GPU can store it).</li>
+<li><code>ArrayFormats.make(scalar, components)</code> builds a format from its parts.</li>
+<li>Types: <code>ArrayFormat</code>, <code>ScalarType</code>, <code>TypedArray</code>, <code>TypedArrayConstructor</code>, and <code>ArrayOf&lt;F&gt;</code> (the typed array of format <code>F</code>).</li>
+</ul>
+<h2 id="bundles">Bundles<a class="anchor" href="#bundles">#</a></h2>
+<p>A bundle is a named set of channels that are used together: a codec, a reader, or a file section binds to all of them at once. Its definition is plain data.</p>
+<pre class="lang-ts"><code>// The definition of Splats.EXT
+const EXT = defineBundle({ extA: &quot;uint32x4&quot;, extB: &quot;uint32x4&quot; });
+
+// 2 elements per GPU texel
+const PAIRS = defineBundle({ pair: &quot;uint32x2&quot; }, { packing: 2 });
+
+// Rebuilt after loading, so not saved to RDX
+const DERIVED = defineBundle({ data: &quot;uint32x5&quot; }, { serialize: false });</code></pre>
+<table><thead><tr><th><code>defineBundle(channels, options?)</code></th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>channels</code></td><td></td><td>maps channel names to formats. The names say what the bits mean; there is no type tag</td></tr><tr><td><code>packing</code></td><td>1</td><td>elements per GPU texel: 1, 2, or 4. The channel's components times the packing must be 1, 2, or 4. CPU arrays are the same for every packing</td></tr><tr><td><code>serialize</code></td><td><code>true</code></td><td>set to <code>false</code> for data rebuilt after loading, which RDX files then skip</td></tr></tbody></table>
+<ul>
+<li>The definition's type keeps the channel names and formats, so <code>data.bundles.extSplats.channels.extA.data</code> is typed as a <code>Uint32Array</code>.</li>
+<li><code>ArrayData.INDICES</code> (<code>{ index: &quot;uint32&quot; }</code>, packing 4) is the standard bundle for lists of element indices: draw orders, and subsets such as LoD subsets.</li>
+<li>Types: <code>BundleDef</code>, <code>BundleChannels</code>, and <code>Schema</code> (bundle names to definitions).</li>
+</ul>
+<h2 id="arraydata-1">ArrayData<a class="anchor" href="#arraydata-1">#</a></h2>
+<pre class="lang-ts"><code>const data = new ArrayData({
+  bundles: { extSplats: Splats.EXT },
+  count: 1000,
+}).addBundle(&quot;pairs&quot;, PAIRS);
+
+// A Uint32Array of capacity * 4
+data.bundles.extSplats.channels.extA.data;
+
+// Grows every bundle, keeping the contents
+data.ensureCapacity(5000);</code></pre>
+<p>Every bundle of one table has the same rows. A LoD tree with one node per splat is a bundle next to the splats; data with a different row count, such as a draw order, goes in a table of its own.</p>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new ArrayData({ bundles?, count?, capacity?, meta? })</code></td><td>a table of <code>count</code> valid rows (default 0). <code>capacity</code> defaults to <code>count</code> rounded up to a multiple of 4096 (<code>TextureLayout.alignCapacity</code>), which fills whole GPU texture rows</td></tr><tr><td><code>count</code>, <code>capacity</code></td><td>valid rows, and allocated rows</td></tr><tr><td><code>bundles</code></td><td>the bundles by name: each has <code>def</code>, <code>channels</code> (each <code>{ format, data }</code>), and <code>meta</code></td></tr><tr><td><code>meta</code></td><td>a plain object of the table's own (RDX saves it)</td></tr><tr><td><code>addBundle(name, def, { data?, meta? })</code></td><td>adds a bundle; returns the table with its type extended. Arrays in <code>data</code> that hold <code>capacity</code> elements are used as they are; shorter ones are copied into new arrays</td></tr><tr><td><code>removeBundle(name)</code></td><td>removes a bundle; returns whether it was there</td></tr><tr><td><code>setCapacity(n)</code></td><td>resizes every channel, keeping the contents; <code>count</code> is clamped</td></tr><tr><td><code>ensureCapacity(n)</code></td><td>grows to at least <code>n</code> (at least doubling, in whole rows); returns whether it grew</td></tr><tr><td><code>copyFrom(src, { bundles?, srcStart?, dstStart?, count? })</code></td><td>copies rows of the bundles both tables have (or <code>bundles</code>); grows as needed; <code>count = max(count, dstStart + count)</code></td></tr><tr><td><code>clone()</code></td><td>a deep copy</td></tr><tr><td><code>swap(other)</code></td><td>exchanges rows, capacity, bundles, and meta with <code>other</code> (double buffering)</td></tr><tr><td><code>toTransferable()</code>, <code>ArrayData.fromTransferable(t)</code>, <code>setFromTransferable(t)</code>, <code>ArrayData.transferables(value)</code></td><td>for sending to workers (below)</td></tr></tbody></table>
+<p>Types: <code>ArrayBundle&lt;D&gt;</code>, <code>ArrayBundles&lt;S&gt;</code>, <code>ArrayChannel&lt;F&gt;</code>, and <code>TransferableArrayData</code>.</p>
+<h2 id="sending-to-workers">Sending to workers<a class="anchor" href="#sending-to-workers">#</a></h2>
+<pre class="lang-ts"><code>// A plain object holding the same arrays
+const t = data.toTransferable();
+
+// Moves the buffers rather than copying them
+worker.postMessage(t, ArrayData.transferables(t));
+
+// In the worker
+const received = ArrayData.fromTransferable(t);</code></pre>
+<ul>
+<li>After sending, <code>data</code> holds detached arrays and must not be used until its arrays come back.</li>
+<li><code>data.setFromTransferable(back)</code> puts the returned arrays back into <code>data</code> in place. Bundles and channels with the same names and formats keep their objects, so references held elsewhere stay valid.</li>
+<li><code>ArrayData.transferables(value)</code> collects the <code>ArrayBuffer</code>s inside any value, for <code>postMessage</code>'s transfer list. <code>WorkerPool</code> uses it for every call (<a href="workers.html">Workers</a>).</li>
+</ul>
+<h2 id="double-buffering">Double buffering<a class="anchor" href="#double-buffering">#</a></h2>
+<p><code>a.swap(b)</code> exchanges the contents of two tables. An app can read a front table while it fills the back one, then swap them; <code>GpuArrays.swap</code> does the same on the GPU.</p>
+<h2 id="texturelayout">TextureLayout<a class="anchor" href="#texturelayout">#</a></h2>
+<p><code>TextureLayout</code> maps elements to texels of a 2D array texture: 1024 texels per row, a power-of-two height up to 4096, and 2 to 512 layers. The CPU side uses it to size capacities, and the GPU side for uploads, readbacks, copies, and shader addressing.</p>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>TextureLayout.for(texels)</code></td><td>the layout holding <code>texels</code> texels: <code>width</code>, <code>height</code>, <code>layers</code>, <code>xBits</code>, <code>yBits</code>, and <code>texels</code> (the total)</td></tr><tr><td><code>TextureLayout.alignCapacity(count)</code></td><td><code>count</code> rounded up to whole rows of 4-packed elements (multiples of 4096)</td></tr><tr><td><code>layout.spans(start, count)</code></td><td>the rectangles (<code>TexelSpan</code>: <code>x</code>, <code>y</code>, <code>layer</code>, <code>width</code>, <code>rows</code>, <code>offset</code>) that cover a range of texels</td></tr><tr><td><code>TextureLayout.copySpans(src, srcStart, dst, dstStart, count)</code></td><td>the rectangles (<code>CopySpan</code>) of a copy between two layouts</td></tr><tr><td><code>WIDTH</code>, <code>MAX_PACKING</code>, <code>ROW_ELEMENTS</code>, <code>MAX_HEIGHT</code>, <code>MAX_LAYERS</code></td><td>1024, 4, 4096, 4096, 512</td></tr></tbody></table>
+<p>The rule for the shape and the addressing formula are in <a href="gpu-arrays.html#texture-layout">GPU arrays</a>.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Capacities are multiples of 4096. A table of 10 rows allocates 4096.</li>
+<li>Arrays passed to a worker are detached until they come back. Hold on to the channel object (<code>bundle.channels.extA</code>) rather than its <code>data</code> array: <code>setFromTransferable</code> keeps channel objects of the same format but puts the returned arrays in them.</li>
+<li>Bundles with packing 2 or 4 need starts that are multiples of the packing when uploaded, copied, or read on the GPU.</li>
+</ul>
+<div class="pager"><a class="prev" href="controls.html"><small>Previous</small>Camera controls</a><a class="next" href="splats.html"><small>Next</small>Splats</a></div>
+<p class="source">Source: <a href="../arraydata.md.html">docs/arraydata.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#formats">Formats</a>
+<a class="h2" href="#bundles">Bundles</a>
+<a class="h2" href="#arraydata-1">ArrayData</a>
+<a class="h2" href="#sending-to-workers">Sending to workers</a>
+<a class="h2" href="#double-buffering">Double buffering</a>
+<a class="h2" href="#texturelayout">TextureLayout</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

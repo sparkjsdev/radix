@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>graph.ts · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../../docs/site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from examples/fxedit/fx/graph.ts by scripts/build-site.mjs -->
+<body data-root="../../../docs/" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details><summary>docs</summary><a href="../../../docs/api.md.html">api.md</a><a href="../../../docs/arraydata.md.html">arraydata.md</a><a href="../../../docs/checks.md.html">checks.md</a><a href="../../../docs/concepts.md.html">concepts.md</a><a href="../../../docs/controls.md.html">controls.md</a><a href="../../../docs/encoding.md.html">encoding.md</a><a href="../../../docs/files.md.html">files.md</a><a href="../../../docs/generators.md.html">generators.md</a><a href="../../../docs/gpu-arrays.md.html">gpu-arrays.md</a><a href="../../../docs/lifetimes.md.html">lifetimes.md</a><a href="../../../docs/multi-splat.md.html">multi-splat.md</a><a href="../../../docs/overview.md.html">overview.md</a><a href="../../../docs/params.md.html">params.md</a><a href="../../../docs/performance.md.html">performance.md</a><a href="../../../docs/projection.md.html">projection.md</a><a href="../../../docs/quickstart.md.html">quickstart.md</a><a href="../../../docs/rdx.md.html">rdx.md</a><a href="../../../docs/recipes.md.html">recipes.md</a><a href="../../../docs/renderer.md.html">renderer.md</a><a href="../../../docs/rendering.md.html">rendering.md</a><a href="../../../docs/sh.md.html">sh.md</a><a href="../../../docs/shaders.md.html">shaders.md</a><a href="../../../docs/site.js.html">site.js</a><a href="../../../docs/sorting.md.html">sorting.md</a><a href="../../../docs/splats.md.html">splats.md</a><a href="../../../docs/views.md.html">views.md</a><a href="../../../docs/wgpu.md.html">wgpu.md</a><a href="../../../docs/workers.md.html">workers.md</a><a href="../../../docs/xr.md.html">xr.md</a></details><details open><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../../doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../../doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../../doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../../doom/data.ts.html">data.ts</a><a href="../../doom/game.ts.html">game.ts</a><a href="../../doom/hud.ts.html">hud.ts</a><a href="../../doom/level.ts.html">level.ts</a><a href="../../doom/lighting.ts.html">lighting.ts</a><a href="../../doom/main.ts.html">main.ts</a><a href="../../doom/simWorker.ts.html">simWorker.ts</a><a href="../../doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../../film/audioStream.ts.html">audioStream.ts</a><a href="../../film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../../film/score.ts.html">score.ts</a><a href="../../film/scoreSink.ts.html">scoreSink.ts</a><a href="../../film/text.ts.html">text.ts</a><a href="../../film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../../fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../../fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../../fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../../fractals/demo/airScore.ts.html">airScore.ts</a><a href="../../fractals/demo/demo.ts.html">demo.ts</a><a href="../../fractals/demo/library.ts.html">library.ts</a><a href="../../fractals/demo/music.ts.html">music.ts</a><a href="../../fractals/demo/tune.ts.html">tune.ts</a><a href="../../fractals/demo/video.ts.html">video.ts</a></details><a href="../../fractals/attractors.ts.html">attractors.ts</a><a href="../../fractals/clouds.ts.html">clouds.ts</a><a href="../../fractals/device.ts.html">device.ts</a><a href="../../fractals/kind.ts.html">kind.ts</a><a href="../../fractals/main.ts.html">main.ts</a><a href="../../fractals/morph.ts.html">morph.ts</a><a href="../../fractals/motion.ts.html">motion.ts</a><a href="../../fractals/palettes.ts.html">palettes.ts</a><a href="../../fractals/presets.ts.html">presets.ts</a><a href="../../fractals/sample.ts.html">sample.ts</a><a href="../../fractals/shade.ts.html">shade.ts</a><a href="../../fractals/shots.ts.html">shots.ts</a><a href="../../fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../../fractals/surfaces.ts.html">surfaces.ts</a><a href="../../fractals/tree.ts.html">tree.ts</a></details><details open><summary>fxedit</summary><details open><summary>fx</summary><details><summary>nodes</summary><a href="nodes/color.ts.html">color.ts</a><a href="nodes/fields.ts.html">fields.ts</a><a href="nodes/index.ts.html">index.ts</a><a href="nodes/inputs.ts.html">inputs.ts</a><a href="nodes/iq.ts.html">iq.ts</a><a href="nodes/math.ts.html">math.ts</a><a href="nodes/splat.ts.html">splat.ts</a><a href="nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="graph.ts.html" class="on">graph.ts</a><a href="graphModifier.ts.html">graphModifier.ts</a><a href="index.ts.html">index.ts</a><a href="registry.ts.html">registry.ts</a><a href="types.ts.html">types.ts</a></details><a href="../GraphDoc.ts.html">GraphDoc.ts</a><a href="../GraphView.ts.html">GraphView.ts</a><a href="../catalog.ts.html">catalog.ts</a><a href="../checks.ts.html">checks.ts</a><a href="../controlsPane.ts.html">controlsPane.ts</a><a href="../editors.ts.html">editors.ts</a><a href="../framed.ts.html">framed.ts</a><a href="../juice.ts.html">juice.ts</a><a href="../layout.ts.html">layout.ts</a><a href="../main.ts.html">main.ts</a><a href="../palette.ts.html">palette.ts</a><a href="../preview.ts.html">preview.ts</a><a href="../settings.ts.html">settings.ts</a><a href="../sound.ts.html">sound.ts</a><a href="../springs.ts.html">springs.ts</a><a href="../themes.ts.html">themes.ts</a><a href="../wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../../lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../../lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../../lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../../lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../../lcc/LccScene.ts.html">LccScene.ts</a><a href="../../lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../../lcc/catalog.ts.html">catalog.ts</a><a href="../../lcc/collision.ts.html">collision.ts</a><a href="../../lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../../lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../../lcc/gui.ts.html">gui.ts</a><a href="../../lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../../lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../../lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../../lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../../lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../../lcc/main.ts.html">main.ts</a><a href="../../lcc/quickBar.ts.html">quickBar.ts</a><a href="../../lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../../mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../../mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../../mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../../mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../../mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../../quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../../quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../../quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../../quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../../quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../../quake/data.ts.html">data.ts</a><a href="../../quake/entities.ts.html">entities.ts</a><a href="../../quake/game.ts.html">game.ts</a><a href="../../quake/hud.ts.html">hud.ts</a><a href="../../quake/lighting.ts.html">lighting.ts</a><a href="../../quake/main.ts.html">main.ts</a><a href="../../quake/models.ts.html">models.ts</a><a href="../../quake/simWorker.ts.html">simWorker.ts</a><a href="../../quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../../scenes/main.ts.html">main.ts</a><a href="../../scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../../sogs/catalog.ts.html">catalog.ts</a><a href="../../sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../../sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../../sogs/gui.ts.html">gui.ts</a><a href="../../sogs/lod.ts.html">lod.ts</a><a href="../../sogs/lodStream.ts.html">lodStream.ts</a><a href="../../sogs/main.ts.html">main.ts</a><a href="../../sogs/quickBar.ts.html">quickBar.ts</a><a href="../../sogs/resident.ts.html">resident.ts</a><a href="../../sogs/sh.ts.html">sh.ts</a><a href="../../sogs/sog.ts.html">sog.ts</a><a href="../../sogs/validate.ts.html">validate.ts</a><a href="../../sogs/webp.ts.html">webp.ts</a><a href="../../sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../../spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../../spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../../spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../../spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../../spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../../spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../../spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../../spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../../spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../../spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../../spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../../spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../../spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../../spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../../spark/js/assets.ts.html">assets.ts</a><a href="../../spark/js/construct.ts.html">construct.ts</a><a href="../../spark/js/cube.ts.html">cube.ts</a><a href="../../spark/js/examples.ts.html">examples.ts</a><a href="../../spark/js/files.ts.html">files.ts</a><a href="../../spark/js/objects.ts.html">objects.ts</a><a href="../../spark/js/page.ts.html">page.ts</a><a href="../../spark/js/raycast.ts.html">raycast.ts</a><a href="../../spark/js/sdf.ts.html">sdf.ts</a><a href="../../spark/js/snow.ts.html">snow.ts</a><a href="../../spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../../spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../../spark/lofi/main.ts.html">main.ts</a><a href="../../spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../../spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../../spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../../spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../../spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../../spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../../spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../../spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../../spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../../spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../../spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../../spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../../spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../../spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../../spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../../spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../../spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../../spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../../spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../../spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../../spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../../spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../../splats/catalog.ts.html">catalog.ts</a><a href="../../splats/controlsPane.ts.html">controlsPane.ts</a><a href="../../splats/gui.ts.html">gui.ts</a><a href="../../splats/main.ts.html">main.ts</a><a href="../../splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../../spz/catalog.ts.html">catalog.ts</a><a href="../../spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../../xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../../../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../../../scripts/check-core.ts.html">check-core.ts</a><a href="../../../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../../../scripts/check-test.mjs.html">check-test.mjs</a><a href="../../../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../../../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../../../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../../../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../../../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../../../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../../../src/core/axes.ts.html">axes.ts</a><a href="../../../src/core/bundles.ts.html">bundles.ts</a><a href="../../../src/core/compress.ts.html">compress.ts</a><a href="../../../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../../../src/core/encoding.ts.html">encoding.ts</a><a href="../../../src/core/files.ts.html">files.ts</a><a href="../../../src/core/formats.ts.html">formats.ts</a><a href="../../../src/core/index.ts.html">index.ts</a><a href="../../../src/core/layout.ts.html">layout.ts</a><a href="../../../src/core/math.ts.html">math.ts</a><a href="../../../src/core/ply.ts.html">ply.ts</a><a href="../../../src/core/progress.ts.html">progress.ts</a><a href="../../../src/core/rad.ts.html">rad.ts</a><a href="../../../src/core/rdx.ts.html">rdx.ts</a><a href="../../../src/core/sh.ts.html">sh.ts</a><a href="../../../src/core/sort.ts.html">sort.ts</a><a href="../../../src/core/splats.ts.html">splats.ts</a><a href="../../../src/core/spz.ts.html">spz.ts</a><a href="../../../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../../../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../../../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../../../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../../../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../../../src/gpu/backend.ts.html">backend.ts</a><a href="../../../src/gpu/baseline.ts.html">baseline.ts</a><a href="../../../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../../../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../../../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../../../src/gpu/hdr.ts.html">hdr.ts</a><a href="../../../src/gpu/index.ts.html">index.ts</a><a href="../../../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../../../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../../../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../../../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../../../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../../../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../../../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../../../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../../../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../../../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../../../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../../../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../../../src/render/SplatView.ts.html">SplatView.ts</a><a href="../../../src/render/index.ts.html">index.ts</a><a href="../../../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../../../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../../../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../../../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../../../src/render/splatParams.ts.html">splatParams.ts</a><a href="../../../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../../../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../../../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../../../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../../../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../../../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../../../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../../../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../../../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../../../src/wgpu/index.ts.html">index.ts</a><a href="../../../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../../../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../../../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../../../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../../../src/worker/index.ts.html">index.ts</a><a href="../../../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../../../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../../../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../../../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../../../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>graph.ts</h1>
+<p class="path">examples/fxedit/fx/graph.ts · <a href="graph.ts">raw</a> · <a href="../../../build/examples/fxedit/index.html">open the example</a> · <a href="../../../build/examples/index.html">all examples</a> · <a href="../../../index.html">site home</a></p>
+<p class="outline">Exports: <a href="#L26">GraphNode</a><a href="#L35">GraphLink</a><a href="#L41">GraphLevel</a><a href="#L47">GraphGroup</a><a href="#L54">Graph</a><a href="#L63">NodeLookup</a><a href="#L68">GraphParam</a><a href="#L78">GROUP_PREFIX</a><a href="#L79">GROUP_INPUT</a><a href="#L80">GROUP_OUTPUT</a><a href="#L85">splitPort</a><a href="#L91">canLink</a><a href="#L101">valueFits</a><a href="#L111">zeroValue</a><a href="#L118">groupOf</a><a href="#L139">withGroups</a><a href="#L210">boundaryNode</a><a href="#L215">groupsInside</a><a href="#L227">instancePaths</a><a href="#L252">flattenGraph</a><a href="#L297">flatPort</a><a href="#L316">validate</a><a href="#L473">linkSources</a><a href="#L478">evaluationOrder</a><a href="#L501">outputNode</a><a href="#L506">isAbsent</a><a href="#L511">graphParams</a><a href="#L533">graphKey</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a>
+<a id="L199" href="#L199">199</a>
+<a id="L200" href="#L200">200</a>
+<a id="L201" href="#L201">201</a>
+<a id="L202" href="#L202">202</a>
+<a id="L203" href="#L203">203</a>
+<a id="L204" href="#L204">204</a>
+<a id="L205" href="#L205">205</a>
+<a id="L206" href="#L206">206</a>
+<a id="L207" href="#L207">207</a>
+<a id="L208" href="#L208">208</a>
+<a id="L209" href="#L209">209</a>
+<a id="L210" href="#L210">210</a>
+<a id="L211" href="#L211">211</a>
+<a id="L212" href="#L212">212</a>
+<a id="L213" href="#L213">213</a>
+<a id="L214" href="#L214">214</a>
+<a id="L215" href="#L215">215</a>
+<a id="L216" href="#L216">216</a>
+<a id="L217" href="#L217">217</a>
+<a id="L218" href="#L218">218</a>
+<a id="L219" href="#L219">219</a>
+<a id="L220" href="#L220">220</a>
+<a id="L221" href="#L221">221</a>
+<a id="L222" href="#L222">222</a>
+<a id="L223" href="#L223">223</a>
+<a id="L224" href="#L224">224</a>
+<a id="L225" href="#L225">225</a>
+<a id="L226" href="#L226">226</a>
+<a id="L227" href="#L227">227</a>
+<a id="L228" href="#L228">228</a>
+<a id="L229" href="#L229">229</a>
+<a id="L230" href="#L230">230</a>
+<a id="L231" href="#L231">231</a>
+<a id="L232" href="#L232">232</a>
+<a id="L233" href="#L233">233</a>
+<a id="L234" href="#L234">234</a>
+<a id="L235" href="#L235">235</a>
+<a id="L236" href="#L236">236</a>
+<a id="L237" href="#L237">237</a>
+<a id="L238" href="#L238">238</a>
+<a id="L239" href="#L239">239</a>
+<a id="L240" href="#L240">240</a>
+<a id="L241" href="#L241">241</a>
+<a id="L242" href="#L242">242</a>
+<a id="L243" href="#L243">243</a>
+<a id="L244" href="#L244">244</a>
+<a id="L245" href="#L245">245</a>
+<a id="L246" href="#L246">246</a>
+<a id="L247" href="#L247">247</a>
+<a id="L248" href="#L248">248</a>
+<a id="L249" href="#L249">249</a>
+<a id="L250" href="#L250">250</a>
+<a id="L251" href="#L251">251</a>
+<a id="L252" href="#L252">252</a>
+<a id="L253" href="#L253">253</a>
+<a id="L254" href="#L254">254</a>
+<a id="L255" href="#L255">255</a>
+<a id="L256" href="#L256">256</a>
+<a id="L257" href="#L257">257</a>
+<a id="L258" href="#L258">258</a>
+<a id="L259" href="#L259">259</a>
+<a id="L260" href="#L260">260</a>
+<a id="L261" href="#L261">261</a>
+<a id="L262" href="#L262">262</a>
+<a id="L263" href="#L263">263</a>
+<a id="L264" href="#L264">264</a>
+<a id="L265" href="#L265">265</a>
+<a id="L266" href="#L266">266</a>
+<a id="L267" href="#L267">267</a>
+<a id="L268" href="#L268">268</a>
+<a id="L269" href="#L269">269</a>
+<a id="L270" href="#L270">270</a>
+<a id="L271" href="#L271">271</a>
+<a id="L272" href="#L272">272</a>
+<a id="L273" href="#L273">273</a>
+<a id="L274" href="#L274">274</a>
+<a id="L275" href="#L275">275</a>
+<a id="L276" href="#L276">276</a>
+<a id="L277" href="#L277">277</a>
+<a id="L278" href="#L278">278</a>
+<a id="L279" href="#L279">279</a>
+<a id="L280" href="#L280">280</a>
+<a id="L281" href="#L281">281</a>
+<a id="L282" href="#L282">282</a>
+<a id="L283" href="#L283">283</a>
+<a id="L284" href="#L284">284</a>
+<a id="L285" href="#L285">285</a>
+<a id="L286" href="#L286">286</a>
+<a id="L287" href="#L287">287</a>
+<a id="L288" href="#L288">288</a>
+<a id="L289" href="#L289">289</a>
+<a id="L290" href="#L290">290</a>
+<a id="L291" href="#L291">291</a>
+<a id="L292" href="#L292">292</a>
+<a id="L293" href="#L293">293</a>
+<a id="L294" href="#L294">294</a>
+<a id="L295" href="#L295">295</a>
+<a id="L296" href="#L296">296</a>
+<a id="L297" href="#L297">297</a>
+<a id="L298" href="#L298">298</a>
+<a id="L299" href="#L299">299</a>
+<a id="L300" href="#L300">300</a>
+<a id="L301" href="#L301">301</a>
+<a id="L302" href="#L302">302</a>
+<a id="L303" href="#L303">303</a>
+<a id="L304" href="#L304">304</a>
+<a id="L305" href="#L305">305</a>
+<a id="L306" href="#L306">306</a>
+<a id="L307" href="#L307">307</a>
+<a id="L308" href="#L308">308</a>
+<a id="L309" href="#L309">309</a>
+<a id="L310" href="#L310">310</a>
+<a id="L311" href="#L311">311</a>
+<a id="L312" href="#L312">312</a>
+<a id="L313" href="#L313">313</a>
+<a id="L314" href="#L314">314</a>
+<a id="L315" href="#L315">315</a>
+<a id="L316" href="#L316">316</a>
+<a id="L317" href="#L317">317</a>
+<a id="L318" href="#L318">318</a>
+<a id="L319" href="#L319">319</a>
+<a id="L320" href="#L320">320</a>
+<a id="L321" href="#L321">321</a>
+<a id="L322" href="#L322">322</a>
+<a id="L323" href="#L323">323</a>
+<a id="L324" href="#L324">324</a>
+<a id="L325" href="#L325">325</a>
+<a id="L326" href="#L326">326</a>
+<a id="L327" href="#L327">327</a>
+<a id="L328" href="#L328">328</a>
+<a id="L329" href="#L329">329</a>
+<a id="L330" href="#L330">330</a>
+<a id="L331" href="#L331">331</a>
+<a id="L332" href="#L332">332</a>
+<a id="L333" href="#L333">333</a>
+<a id="L334" href="#L334">334</a>
+<a id="L335" href="#L335">335</a>
+<a id="L336" href="#L336">336</a>
+<a id="L337" href="#L337">337</a>
+<a id="L338" href="#L338">338</a>
+<a id="L339" href="#L339">339</a>
+<a id="L340" href="#L340">340</a>
+<a id="L341" href="#L341">341</a>
+<a id="L342" href="#L342">342</a>
+<a id="L343" href="#L343">343</a>
+<a id="L344" href="#L344">344</a>
+<a id="L345" href="#L345">345</a>
+<a id="L346" href="#L346">346</a>
+<a id="L347" href="#L347">347</a>
+<a id="L348" href="#L348">348</a>
+<a id="L349" href="#L349">349</a>
+<a id="L350" href="#L350">350</a>
+<a id="L351" href="#L351">351</a>
+<a id="L352" href="#L352">352</a>
+<a id="L353" href="#L353">353</a>
+<a id="L354" href="#L354">354</a>
+<a id="L355" href="#L355">355</a>
+<a id="L356" href="#L356">356</a>
+<a id="L357" href="#L357">357</a>
+<a id="L358" href="#L358">358</a>
+<a id="L359" href="#L359">359</a>
+<a id="L360" href="#L360">360</a>
+<a id="L361" href="#L361">361</a>
+<a id="L362" href="#L362">362</a>
+<a id="L363" href="#L363">363</a>
+<a id="L364" href="#L364">364</a>
+<a id="L365" href="#L365">365</a>
+<a id="L366" href="#L366">366</a>
+<a id="L367" href="#L367">367</a>
+<a id="L368" href="#L368">368</a>
+<a id="L369" href="#L369">369</a>
+<a id="L370" href="#L370">370</a>
+<a id="L371" href="#L371">371</a>
+<a id="L372" href="#L372">372</a>
+<a id="L373" href="#L373">373</a>
+<a id="L374" href="#L374">374</a>
+<a id="L375" href="#L375">375</a>
+<a id="L376" href="#L376">376</a>
+<a id="L377" href="#L377">377</a>
+<a id="L378" href="#L378">378</a>
+<a id="L379" href="#L379">379</a>
+<a id="L380" href="#L380">380</a>
+<a id="L381" href="#L381">381</a>
+<a id="L382" href="#L382">382</a>
+<a id="L383" href="#L383">383</a>
+<a id="L384" href="#L384">384</a>
+<a id="L385" href="#L385">385</a>
+<a id="L386" href="#L386">386</a>
+<a id="L387" href="#L387">387</a>
+<a id="L388" href="#L388">388</a>
+<a id="L389" href="#L389">389</a>
+<a id="L390" href="#L390">390</a>
+<a id="L391" href="#L391">391</a>
+<a id="L392" href="#L392">392</a>
+<a id="L393" href="#L393">393</a>
+<a id="L394" href="#L394">394</a>
+<a id="L395" href="#L395">395</a>
+<a id="L396" href="#L396">396</a>
+<a id="L397" href="#L397">397</a>
+<a id="L398" href="#L398">398</a>
+<a id="L399" href="#L399">399</a>
+<a id="L400" href="#L400">400</a>
+<a id="L401" href="#L401">401</a>
+<a id="L402" href="#L402">402</a>
+<a id="L403" href="#L403">403</a>
+<a id="L404" href="#L404">404</a>
+<a id="L405" href="#L405">405</a>
+<a id="L406" href="#L406">406</a>
+<a id="L407" href="#L407">407</a>
+<a id="L408" href="#L408">408</a>
+<a id="L409" href="#L409">409</a>
+<a id="L410" href="#L410">410</a>
+<a id="L411" href="#L411">411</a>
+<a id="L412" href="#L412">412</a>
+<a id="L413" href="#L413">413</a>
+<a id="L414" href="#L414">414</a>
+<a id="L415" href="#L415">415</a>
+<a id="L416" href="#L416">416</a>
+<a id="L417" href="#L417">417</a>
+<a id="L418" href="#L418">418</a>
+<a id="L419" href="#L419">419</a>
+<a id="L420" href="#L420">420</a>
+<a id="L421" href="#L421">421</a>
+<a id="L422" href="#L422">422</a>
+<a id="L423" href="#L423">423</a>
+<a id="L424" href="#L424">424</a>
+<a id="L425" href="#L425">425</a>
+<a id="L426" href="#L426">426</a>
+<a id="L427" href="#L427">427</a>
+<a id="L428" href="#L428">428</a>
+<a id="L429" href="#L429">429</a>
+<a id="L430" href="#L430">430</a>
+<a id="L431" href="#L431">431</a>
+<a id="L432" href="#L432">432</a>
+<a id="L433" href="#L433">433</a>
+<a id="L434" href="#L434">434</a>
+<a id="L435" href="#L435">435</a>
+<a id="L436" href="#L436">436</a>
+<a id="L437" href="#L437">437</a>
+<a id="L438" href="#L438">438</a>
+<a id="L439" href="#L439">439</a>
+<a id="L440" href="#L440">440</a>
+<a id="L441" href="#L441">441</a>
+<a id="L442" href="#L442">442</a>
+<a id="L443" href="#L443">443</a>
+<a id="L444" href="#L444">444</a>
+<a id="L445" href="#L445">445</a>
+<a id="L446" href="#L446">446</a>
+<a id="L447" href="#L447">447</a>
+<a id="L448" href="#L448">448</a>
+<a id="L449" href="#L449">449</a>
+<a id="L450" href="#L450">450</a>
+<a id="L451" href="#L451">451</a>
+<a id="L452" href="#L452">452</a>
+<a id="L453" href="#L453">453</a>
+<a id="L454" href="#L454">454</a>
+<a id="L455" href="#L455">455</a>
+<a id="L456" href="#L456">456</a>
+<a id="L457" href="#L457">457</a>
+<a id="L458" href="#L458">458</a>
+<a id="L459" href="#L459">459</a>
+<a id="L460" href="#L460">460</a>
+<a id="L461" href="#L461">461</a>
+<a id="L462" href="#L462">462</a>
+<a id="L463" href="#L463">463</a>
+<a id="L464" href="#L464">464</a>
+<a id="L465" href="#L465">465</a>
+<a id="L466" href="#L466">466</a>
+<a id="L467" href="#L467">467</a>
+<a id="L468" href="#L468">468</a>
+<a id="L469" href="#L469">469</a>
+<a id="L470" href="#L470">470</a>
+<a id="L471" href="#L471">471</a>
+<a id="L472" href="#L472">472</a>
+<a id="L473" href="#L473">473</a>
+<a id="L474" href="#L474">474</a>
+<a id="L475" href="#L475">475</a>
+<a id="L476" href="#L476">476</a>
+<a id="L477" href="#L477">477</a>
+<a id="L478" href="#L478">478</a>
+<a id="L479" href="#L479">479</a>
+<a id="L480" href="#L480">480</a>
+<a id="L481" href="#L481">481</a>
+<a id="L482" href="#L482">482</a>
+<a id="L483" href="#L483">483</a>
+<a id="L484" href="#L484">484</a>
+<a id="L485" href="#L485">485</a>
+<a id="L486" href="#L486">486</a>
+<a id="L487" href="#L487">487</a>
+<a id="L488" href="#L488">488</a>
+<a id="L489" href="#L489">489</a>
+<a id="L490" href="#L490">490</a>
+<a id="L491" href="#L491">491</a>
+<a id="L492" href="#L492">492</a>
+<a id="L493" href="#L493">493</a>
+<a id="L494" href="#L494">494</a>
+<a id="L495" href="#L495">495</a>
+<a id="L496" href="#L496">496</a>
+<a id="L497" href="#L497">497</a>
+<a id="L498" href="#L498">498</a>
+<a id="L499" href="#L499">499</a>
+<a id="L500" href="#L500">500</a>
+<a id="L501" href="#L501">501</a>
+<a id="L502" href="#L502">502</a>
+<a id="L503" href="#L503">503</a>
+<a id="L504" href="#L504">504</a>
+<a id="L505" href="#L505">505</a>
+<a id="L506" href="#L506">506</a>
+<a id="L507" href="#L507">507</a>
+<a id="L508" href="#L508">508</a>
+<a id="L509" href="#L509">509</a>
+<a id="L510" href="#L510">510</a>
+<a id="L511" href="#L511">511</a>
+<a id="L512" href="#L512">512</a>
+<a id="L513" href="#L513">513</a>
+<a id="L514" href="#L514">514</a>
+<a id="L515" href="#L515">515</a>
+<a id="L516" href="#L516">516</a>
+<a id="L517" href="#L517">517</a>
+<a id="L518" href="#L518">518</a>
+<a id="L519" href="#L519">519</a>
+<a id="L520" href="#L520">520</a>
+<a id="L521" href="#L521">521</a>
+<a id="L522" href="#L522">522</a>
+<a id="L523" href="#L523">523</a>
+<a id="L524" href="#L524">524</a>
+<a id="L525" href="#L525">525</a>
+<a id="L526" href="#L526">526</a>
+<a id="L527" href="#L527">527</a>
+<a id="L528" href="#L528">528</a>
+<a id="L529" href="#L529">529</a>
+<a id="L530" href="#L530">530</a>
+<a id="L531" href="#L531">531</a>
+<a id="L532" href="#L532">532</a>
+<a id="L533" href="#L533">533</a>
+<a id="L534" href="#L534">534</a>
+<a id="L535" href="#L535">535</a>
+<a id="L536" href="#L536">536</a>
+<a id="L537" href="#L537">537</a>
+<a id="L538" href="#L538">538</a>
+<a id="L539" href="#L539">539</a>
+<a id="L540" href="#L540">540</a>
+<a id="L541" href="#L541">541</a>
+<a id="L542" href="#L542">542</a>
+<a id="L543" href="#L543">543</a>
+<a id="L544" href="#L544">544</a>
+<a id="L545" href="#L545">545</a>
+<a id="L546" href="#L546">546</a>
+<a id="L547" href="#L547">547</a>
+<a id="L548" href="#L548">548</a>
+<a id="L549" href="#L549">549</a>
+<a id="L550" href="#L550">550</a>
+<a id="L551" href="#L551">551</a>
+<a id="L552" href="#L552">552</a>
+<a id="L553" href="#L553">553</a>
+<a id="L554" href="#L554">554</a>
+<a id="L555" href="#L555">555</a>
+<a id="L556" href="#L556">556</a>
+<a id="L557" href="#L557">557</a>
+<a id="L558" href="#L558">558</a>
+<a id="L559" href="#L559">559</a>
+<a id="L560" href="#L560">560</a>
+<a id="L561" href="#L561">561</a>
+<a id="L562" href="#L562">562</a></pre><pre class="lang-ts"><code>// Graphs of fx nodes as plain JSON, and what can be known about them without
+// a GPU: validation, evaluation order, the params, the structure key. No
+// three.js here (types only), so an editor or a worker can use it.
+//
+//   { version: 1, name?, description?,
+//     nodes: { id: { type, inputs?: { name: value }, options?: { name: value }, position?, note? } },
+//     links: [{ from: "node.output", to: "node.input" }],
+//     params?: { "Label": "node.input" },
+//     groups?: { name: { label?, description?, inputs: { port: InputDef }, outputs: { port: type },
+//                        nodes, links } } }
+//
+// Node ids are letters, digits, _ and -. Every input that is not linked is a
+// param (writable without rebuilding), except optional inputs without a value,
+// which are absent. `params` names the knobs a UI should show.
+//
+// Groups are nodes made of nodes. A node of type "group.&lt;name&gt;" is an
+// instance of groups[name]: its ports are the group's inputs and outputs.
+// Inside, one "group.input" node gives the instance's inputs as outputs and
+// one "group.output" node takes its outputs. Groups may use other groups (not
+// themselves). Instances share their group; per-instance values are the
+// instance's inputs. flattenGraph() expands every instance into plain nodes
+// named "instance/inner", keeping the instance's id for a pass-through of
+// its inputs, so the params of the top level keep their names.
+import { PORT_COMPONENTS, type InputDef, type NodeDef, type NodeSource, type PortType, type Value } from <a class="import" href="types.ts.html" title="examples/fxedit/fx/types.ts">"./types.js"</a>;
+
+export interface GraphNode {
+  type: string;
+  inputs?: Record&lt;string, Value&gt;;
+  options?: Record&lt;string, string | number&gt;;
+  // Editor layout and caption, ignored here
+  position?: [number, number];
+  note?: string;
+}
+
+export interface GraphLink {
+  from: string;
+  to: string;
+}
+
+// Nodes and links: the top of a graph or the inside of a group
+export interface GraphLevel {
+  nodes: Record&lt;string, GraphNode&gt;;
+  links: GraphLink[];
+  params?: Record&lt;string, string&gt;;
+}
+
+export interface GraphGroup extends GraphLevel {
+  label?: string;
+  description?: string;
+  inputs: Record&lt;string, InputDef&gt;;
+  outputs: Record&lt;string, PortType&gt;;
+}
+
+export interface Graph extends GraphLevel {
+  version: 1;
+  name?: string;
+  // What the graph does and where it comes from, for editors
+  description?: string;
+  source?: NodeSource;
+  groups?: Record&lt;string, GraphGroup&gt;;
+}
+
+export interface NodeLookup {
+  get(id: string): NodeDef | undefined;
+}
+
+// An unlinked, present input of a reachable node: a param named "node.input"
+export interface GraphParam {
+  node: string;
+  input: string;
+  name: string;
+  type: PortType;
+  value: Value;
+  // The input's definition (ranges for a UI)
+  def: InputDef;
+}
+
+export const GROUP_PREFIX = "group.";
+export const GROUP_INPUT = "group.input";
+export const GROUP_OUTPUT = "group.output";
+
+const NODE_ID = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+
+// "node.port" -&gt; [node, port]
+export function splitPort(port: string): [string, string] {
+  const dot = port.indexOf(".");
+  return dot &lt; 0 ? [port, ""] : [port.slice(0, dot), port.slice(dot + 1)];
+}
+
+// float broadcasts to vectors; color and vec3 are the same data
+export function canLink(from: PortType, to: PortType) {
+  if (from === to) {
+    return true;
+  }
+  if (from === "float") {
+    return to === "vec2" || to === "vec3" || to === "vec4" || to === "color";
+  }
+  return (from === "color" || from === "vec3") &amp;&amp; (to === "color" || to === "vec3");
+}
+
+export function valueFits(type: PortType, value: Value) {
+  if (type === "bool") {
+    return typeof value === "boolean" || typeof value === "number";
+  }
+  if (type === "float") {
+    return typeof value === "number" &amp;&amp; Number.isFinite(value);
+  }
+  return Array.isArray(value) &amp;&amp; value.length === PORT_COMPONENTS[type] &amp;&amp; value.every((v) =&gt; Number.isFinite(v));
+}
+
+export function zeroValue(type: PortType): Value {
+  return type === "bool" ? false : type === "float" ? 0 : new Array&lt;number&gt;(PORT_COMPONENTS[type]).fill(0);
+}
+
+// --- Groups ---
+
+// The group an instance type names ("group.ripple" -&gt; "ripple")
+export function groupOf(type: string): string | undefined {
+  return type.startsWith(GROUP_PREFIX) &amp;&amp; type !== GROUP_INPUT &amp;&amp; type !== GROUP_OUTPUT ? type.slice(GROUP_PREFIX.length).split(":")[0] : undefined;
+}
+
+// Whether a group uses a flag (time, click, camera) somewhere inside
+function groupUses(registry: NodeLookup, groups: Record&lt;string, GraphGroup&gt;, name: string, flag: "time" | "click" | "camera", seen = new Set&lt;string&gt;()): boolean {
+  if (seen.has(name) || !groups[name]) {
+    return false;
+  }
+  seen.add(name);
+  return Object.values(groups[name].nodes).some((node) =&gt; {
+    const inner = groupOf(node.type);
+    return inner ? groupUses(registry, groups, inner, flag, seen) : Boolean(registry.get(node.type)?.[flag]);
+  });
+}
+
+const passThrough = (inputs: Record&lt;string, unknown&gt;) =&gt; ({ ...inputs }) as Record&lt;string, never&gt;;
+
+// `registry` plus the node types groups make: instances ("group.&lt;name&gt;"),
+// and inside group `scope` its boundary nodes. flattenGraph() adds the
+// pass-throughs "group.&lt;name&gt;:in" and ":out".
+export function withGroups&lt;T extends NodeLookup&gt;(registry: T, groups: Record&lt;string, GraphGroup&gt; | undefined, scope?: string): NodeLookup &amp; { base: T } {
+  const cache = new Map&lt;string, NodeDef | undefined&gt;();
+  const make = (type: string): NodeDef | undefined =&gt; {
+    const all = groups ?? {};
+    const scoped = scope !== undefined ? all[scope] : undefined;
+    if (type === GROUP_INPUT || type === GROUP_OUTPUT) {
+      if (!scoped) {
+        return undefined;
+      }
+      const input = type === GROUP_INPUT;
+      return {
+        id: type,
+        label: input ? "Group inputs" : "Group outputs",
+        description: input ? "What the group is given: its inputs, as outputs to wire inside" : "What the group gives back: wire results into its outputs",
+        category: "group",
+        inputs: input ? {} : Object.fromEntries(Object.entries(scoped.outputs).map(([name, portType]) =&gt; [name, { type: portType, default: zeroValue(portType) }])),
+        outputs: input ? Object.fromEntries(Object.entries(scoped.inputs).map(([name, def]) =&gt; [name, def.type])) : {},
+        build: () =&gt; ({}),
+      };
+    }
+    const name = groupOf(type);
+    if (name === undefined) {
+      return registry.get(type);
+    }
+    const group = all[name];
+    if (!group) {
+      return undefined;
+    }
+    const suffix = type.slice(GROUP_PREFIX.length + name.length);
+    const outputInputs = Object.fromEntries(Object.entries(group.outputs).map(([port, portType]) =&gt; [port, { type: portType, default: zeroValue(portType) }]));
+    const flags = {
+      time: groupUses(registry, all, name, "time"),
+      click: groupUses(registry, all, name, "click"),
+      camera: groupUses(registry, all, name, "camera"),
+    };
+    if (suffix === ":in" || suffix === ":out") {
+      const inputs = suffix === ":in" ? group.inputs : outputInputs;
+      return {
+        id: type, label: group.label ?? name, category: "group", inputs,
+        outputs: Object.fromEntries(Object.entries(inputs).map(([port, def]) =&gt; [port, def.type])),
+        build: passThrough,
+      };
+    }
+    if (suffix !== "") {
+      return undefined;
+    }
+    return {
+      id: type,
+      label: group.label ?? name,
+      description: group.description,
+      category: "group",
+      inputs: group.inputs,
+      outputs: group.outputs,
+      ...flags,
+      build: () =&gt; {
+        throw new Error(`fx group ${name}: flatten the graph before building it`);
+      },
+    };
+  };
+  return {
+    base: registry,
+    get(type: string) {
+      if (!cache.has(type)) {
+        cache.set(type, make(type));
+      }
+      return cache.get(type);
+    },
+  };
+}
+
+// The id of a group's boundary node of `type` (group.input or group.output)
+export function boundaryNode(group: GraphGroup, type: string): string | undefined {
+  return Object.keys(group.nodes).find((id) =&gt; group.nodes[id].type === type);
+}
+
+// Group `name` uses these groups, directly or deeper (itself only in a cycle)
+export function groupsInside(groups: Record&lt;string, GraphGroup&gt;, name: string, found = new Set&lt;string&gt;()): Set&lt;string&gt; {
+  for (const node of Object.values(groups[name]?.nodes ?? {})) {
+    const inner = groupOf(node.type);
+    if (inner !== undefined &amp;&amp; !found.has(inner)) {
+      found.add(inner);
+      groupsInside(groups, inner, found);
+    }
+  }
+  return found;
+}
+
+// Every instance of group `name` as its flat id ("a/b"), through nested groups
+export function instancePaths(graph: Graph, name: string): string[] {
+  const paths: string[] = [];
+  const visit = (level: GraphLevel, prefix: string, depth: number) =&gt; {
+    if (depth &gt; 32) {
+      return;
+    }
+    for (const [id, node] of Object.entries(level.nodes)) {
+      const inner = groupOf(node.type);
+      if (inner === undefined || !graph.groups?.[inner]) {
+        continue;
+      }
+      if (inner === name) {
+        paths.push(prefix + id);
+      }
+      visit(graph.groups[inner], `${prefix}${id}/`, depth + 1);
+    }
+  };
+  visit(graph, "", 0);
+  return paths;
+}
+
+// The graph with every group instance expanded (the graph must be valid).
+// Instance m of group G becomes node m (type "group.G:in", m's inputs passed
+// through), G's inner nodes as "m/inner" and G's output node as
+// "m/&lt;its id&gt;" (type "group.G:out"); links into and out of m follow.
+export function flattenGraph(graph: Graph): Graph {
+  const groups = graph.groups ?? {};
+  if (!Object.values(graph.nodes).some((node) =&gt; groupOf(node.type) !== undefined)) {
+    return graph;
+  }
+  const nodes: Record&lt;string, GraphNode&gt; = {};
+  const links: GraphLink[] = [];
+  const expand = (level: GraphLevel, prefix: string, instance: string | undefined, groupName: string | undefined) =&gt; {
+    for (const [id, node] of Object.entries(level.nodes)) {
+      if (node.type === GROUP_INPUT) {
+        continue;
+      }
+      const inner = groupOf(node.type);
+      const flatId = prefix + id;
+      if (node.type === GROUP_OUTPUT) {
+        nodes[flatId] = { ...structuredClone(node), type: `${GROUP_PREFIX}${groupName}:out` };
+      } else if (inner !== undefined) {
+        nodes[flatId] = { ...structuredClone(node), type: `${GROUP_PREFIX}${inner}:in` };
+        expand(groups[inner], `${flatId}/`, flatId, inner);
+      } else {
+        nodes[flatId] = structuredClone(node);
+      }
+    }
+    for (const link of level.links) {
+      const [fromNode, fromPort] = splitPort(link.from);
+      const fromType = level.nodes[fromNode]?.type;
+      const fromGroup = fromType &amp;&amp; groupOf(fromType);
+      let from: string;
+      if (fromType === GROUP_INPUT) {
+        from = `${instance}.${fromPort}`;
+      } else if (fromGroup !== undefined &amp;&amp; fromGroup !== "") {
+        from = `${prefix}${fromNode}/${boundaryNode(groups[fromGroup], GROUP_OUTPUT)}.${fromPort}`;
+      } else {
+        from = prefix + link.from;
+      }
+      links.push({ from, to: prefix + link.to });
+    }
+  };
+  expand(graph, "", undefined, undefined);
+  return { ...graph, nodes, links };
+}
+
+// "node.port" at the level reached through `path` (instance ids from the
+// top) as a port of the flat graph: prefixed, and an instance's output read
+// from its group's output node
+export function flatPort(graph: Graph, path: string[], port: string): string {
+  let level: GraphLevel = graph;
+  for (const id of path) {
+    level = graph.groups?.[groupOf(level.nodes[id]?.type ?? "") ?? ""] ?? level;
+  }
+  const prefix = path.length ? `${path.join("/")}/` : "";
+  const [node, name] = splitPort(port);
+  const inner = groupOf(level.nodes[node]?.type ?? "");
+  const group = inner !== undefined ? graph.groups?.[inner] : undefined;
+  if (group) {
+    return `${prefix}${node}/${boundaryNode(group, GROUP_OUTPUT)}.${name}`;
+  }
+  return prefix + port;
+}
+
+// --- Validation ---
+
+// Every problem with the graph, as messages (empty: valid). Messages about
+// a group's inside start with "Group &lt;name&gt;: ".
+export function validate(graph: Graph, registry: NodeLookup): string[] {
+  const errors: string[] = [];
+  if (graph.version !== 1) {
+    errors.push(`Unsupported graph version ${String(graph.version)}`);
+  }
+  const groups = graph.groups ?? {};
+  for (const [name, group] of Object.entries(groups)) {
+    const say = (message: string) =&gt; errors.push(`Group ${name}: ${message}`);
+    if (!NODE_ID.test(name) || name === "input" || name === "output") {
+      say("use letters, digits, _ and - (not input or output) for group names");
+    }
+    if (groupsInside(groups, name).has(name)) {
+      say("contains itself");
+      continue;
+    }
+    for (const [port, def] of Object.entries(group.inputs ?? {})) {
+      if (!NODE_ID.test(port) || !(def.type in PORT_COMPONENTS) || !valueFits(def.type, def.default)) {
+        say(`bad input ${port}`);
+      }
+    }
+    for (const [port, type] of Object.entries(group.outputs ?? {})) {
+      if (!NODE_ID.test(port) || !(type in PORT_COMPONENTS)) {
+        say(`bad output ${port}`);
+      }
+    }
+    for (const type of [GROUP_INPUT, GROUP_OUTPUT]) {
+      const count = Object.values(group.nodes ?? {}).filter((node) =&gt; node.type === type).length;
+      if (count !== 1) {
+        say(`needs one ${type} node (found ${count})`);
+      }
+    }
+    validateLevel(group, withGroups(registry, groups, name), false).forEach(say);
+  }
+  errors.push(...validateLevel(graph, withGroups(registry, groups), true));
+  return errors;
+}
+
+// One level: the top (one output node, params) or a group's inside (no
+// output node; its boundary nodes resolve through `lookup`)
+function validateLevel(level: GraphLevel, lookup: NodeLookup, top: boolean): string[] {
+  const errors: string[] = [];
+  const defs = new Map&lt;string, NodeDef&gt;();
+  for (const [id, node] of Object.entries(level.nodes ?? {})) {
+    if (!NODE_ID.test(id)) {
+      errors.push(`Node id "${id}": use letters, digits, _ and -`);
+    }
+    const def = lookup.get(node.type);
+    if (!def) {
+      errors.push(`Node ${id}: unknown type ${node.type}`);
+      continue;
+    }
+    defs.set(id, def);
+    for (const [name, value] of Object.entries(node.options ?? {})) {
+      const option = def.options?.[name];
+      if (!option) {
+        errors.push(`Node ${id}: unknown option ${name}`);
+      } else if (typeof value !== typeof option.default || (option.choices &amp;&amp; !option.choices.includes(String(value)))) {
+        errors.push(`Node ${id}: bad value ${String(value)} for option ${name}`);
+      }
+    }
+    for (const [name, value] of Object.entries(node.inputs ?? {})) {
+      const input = def.inputs[name];
+      if (!input) {
+        errors.push(`Node ${id}: unknown input ${name}`);
+      } else if (!valueFits(input.type, value)) {
+        errors.push(`Node ${id}: value ${JSON.stringify(value)} does not fit input ${name} (${input.type})`);
+      }
+    }
+  }
+
+  const outputs = [...defs].filter(([, def]) =&gt; def.output).map(([id]) =&gt; id);
+  if (top &amp;&amp; outputs.length !== 1) {
+    errors.push(`A graph needs exactly one output node (found ${outputs.length})`);
+  } else if (!top &amp;&amp; outputs.length &gt; 0) {
+    errors.push(`Node ${outputs[0]}: the output node belongs at the top, not in a group`);
+  }
+
+  const linked = new Set&lt;string&gt;();
+  for (const link of level.links ?? []) {
+    const [fromNode, fromPort] = splitPort(link.from);
+    const [toNode, toPort] = splitPort(link.to);
+    const fromType = defs.get(fromNode)?.outputs[fromPort];
+    const toType = defs.get(toNode)?.inputs[toPort]?.type;
+    if (!fromType) {
+      errors.push(`Link ${link.from} -&gt; ${link.to}: no output ${link.from}`);
+    } else if (!toType) {
+      errors.push(`Link ${link.from} -&gt; ${link.to}: no input ${link.to}`);
+    } else if (!canLink(fromType, toType)) {
+      errors.push(`Link ${link.from} -&gt; ${link.to}: ${fromType} does not connect to ${toType}`);
+    }
+    if (linked.has(link.to)) {
+      errors.push(`Input ${link.to} has more than one link`);
+    }
+    linked.add(link.to);
+  }
+
+  const cycle = findCycle(level);
+  if (cycle) {
+    errors.push(`Cycle through ${cycle.join(" -&gt; ")}`);
+  }
+
+  for (const [label, port] of Object.entries(level.params ?? {})) {
+    const [node, input] = splitPort(port);
+    const def = defs.get(node)?.inputs[input];
+    if (!top) {
+      errors.push(`Param "${label}": groups advertise knobs as their inputs`);
+    } else if (!def) {
+      errors.push(`Param "${label}": no input ${port}`);
+    } else if (linked.has(port)) {
+      errors.push(`Param "${label}": ${port} is linked`);
+    } else if (def.optional &amp;&amp; level.nodes[node].inputs?.[input] === undefined) {
+      errors.push(`Param "${label}": optional input ${port} needs a value in the graph`);
+    }
+  }
+  return errors;
+}
+
+function findCycle(level: GraphLevel): string[] | undefined {
+  const upstream = new Map&lt;string, string[]&gt;();
+  for (const link of level.links ?? []) {
+    const to = splitPort(link.to)[0];
+    upstream.set(to, [...(upstream.get(to) ?? []), splitPort(link.from)[0]]);
+  }
+
+  const state = new Map&lt;string, "visiting" | "done"&gt;();
+  const path: string[] = [];
+  const visit = (id: string): string[] | undefined =&gt; {
+    if (state.get(id) === "done") {
+      return undefined;
+    }
+    if (state.get(id) === "visiting") {
+      return [...path.slice(path.indexOf(id)), id];
+    }
+    state.set(id, "visiting");
+    path.push(id);
+    for (const from of upstream.get(id) ?? []) {
+      const cycle = visit(from);
+      if (cycle) {
+        return cycle;
+      }
+    }
+    path.pop();
+    state.set(id, "done");
+    return undefined;
+  };
+  for (const id of Object.keys(level.nodes ?? {})) {
+    const cycle = visit(id);
+    if (cycle) {
+      return cycle;
+    }
+  }
+  return undefined;
+}
+
+// --- The built program (valid graphs; groups are flattened first) ---
+
+// Link feeding each linked input: "node.input" -&gt; "node.output"
+export function linkSources(level: GraphLevel): Map&lt;string, string&gt; {
+  return new Map(level.links.map((link) =&gt; [link.to, link.from]));
+}
+
+// Nodes the output depends on, each after its inputs, in the flat graph
+export function evaluationOrder(graph: Graph, registry: NodeLookup): string[] {
+  const flat = flattenGraph(graph);
+  const lookup = withGroups(registry, graph.groups);
+  const sources = linkSources(flat);
+  const order: string[] = [];
+  const seen = new Set&lt;string&gt;();
+  const visit = (id: string) =&gt; {
+    if (seen.has(id)) {
+      return;
+    }
+    seen.add(id);
+    for (const input of Object.keys(lookup.get(flat.nodes[id].type)!.inputs)) {
+      const from = sources.get(`${id}.${input}`);
+      if (from) {
+        visit(splitPort(from)[0]);
+      }
+    }
+    order.push(id);
+  };
+  visit(outputNode(flat, lookup));
+  return order;
+}
+
+export function outputNode(graph: GraphLevel, registry: NodeLookup): string {
+  return Object.keys(graph.nodes).find((id) =&gt; registry.get(graph.nodes[id].type)?.output)!;
+}
+
+// Whether an input of a reachable node is absent: optional, unlinked, no value
+export function isAbsent(graph: GraphLevel, def: NodeDef, node: string, input: string, sources = linkSources(graph)) {
+  return def.inputs[input].optional === true &amp;&amp; !sources.has(`${node}.${input}`) &amp;&amp; graph.nodes[node].inputs?.[input] === undefined;
+}
+
+// The params of a valid graph (flat names), in evaluation order
+export function graphParams(graph: Graph, registry: NodeLookup): GraphParam[] {
+  const flat = flattenGraph(graph);
+  const lookup = withGroups(registry, graph.groups);
+  const sources = linkSources(flat);
+  const params: GraphParam[] = [];
+  for (const node of evaluationOrder(graph, registry)) {
+    const def = lookup.get(flat.nodes[node].type)!;
+    for (const [input, inputDef] of Object.entries(def.inputs)) {
+      if (sources.has(`${node}.${input}`) || isAbsent(flat, def, node, input, sources)) {
+        continue;
+      }
+      const value = flat.nodes[node].inputs?.[input] ?? inputDef.default;
+      params.push({ node, input, name: `${node}.${input}`, type: inputDef.type, value: structuredClone(value), def: inputDef });
+    }
+  }
+  return params;
+}
+
+// Structure of a valid graph as a short string: reachable nodes, their types
+// and options, links and which inputs are absent (of the flat graph). Values
+// are left out, so every instance of a graph shares one program; node ids
+// are in, because the params are named after them.
+export function graphKey(graph: Graph, registry: NodeLookup): string {
+  const flat = flattenGraph(graph);
+  const lookup = withGroups(registry, graph.groups);
+  const sources = linkSources(flat);
+  const parts = evaluationOrder(graph, registry).map((node) =&gt; {
+    const def = lookup.get(flat.nodes[node].type)!;
+    const options = Object.keys(def.options ?? {}).sort().map((name) =&gt; `${name}=${flat.nodes[node].options?.[name] ?? def.options![name].default}`);
+    const inputs = Object.keys(def.inputs).map((input) =&gt; {
+      const from = sources.get(`${node}.${input}`);
+      return from ? `${input}&lt;${from}` : isAbsent(flat, def, node, input, sources) ? `${input}-` : input;
+    });
+    const ports = def.category === "group" ? `{${Object.entries(def.inputs).map(([p, d]) =&gt; `${p}:${d.type}`).join(",")}}` : "";
+    return `${node}:${def.id}${ports}(${options.join(",")})[${inputs.join(",")}]`;
+  });
+  return hash53(parts.join(";"));
+}
+
+// cyrb53 (public domain): 53-bit string hash as hex
+function hash53(text: string) {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i &lt; text.length; i += 1) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 &gt;&gt;&gt; 16), 2246822507) ^ Math.imul(h2 ^ (h2 &gt;&gt;&gt; 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 &gt;&gt;&gt; 16), 2246822507) ^ Math.imul(h1 ^ (h1 &gt;&gt;&gt; 13), 3266489909);
+  return (4294967296 * (2097151 &amp; h2) + (h1 &gt;&gt;&gt; 0)).toString(16);
+}</code></pre></div>
+</main>
+</div>
+<script src="../../../docs/site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>multi-splat.md · Radix sources</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* Two columns, the code taking the rest of the window (the docs' grid
+     stops at 1440px and adds a contents column from 1180px) */
+  .ref { max-width: none; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  @media (max-width: 760px) { .ref { grid-template-columns: minmax(0, 1fr); } }
+  .ref-side input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 6px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 13px var(--mono); }
+  .ref-side summary { cursor: pointer; color: var(--faint); font: 12px/1.8 var(--mono); white-space: nowrap; }
+  .ref-side details details { margin-left: 12px; }
+  .ref-side details a { padding-left: 18px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .path, .doc .outline { color: var(--faint); font: 13px var(--mono); margin: -10px 0 18px; }
+  .doc .outline { margin-top: -12px; line-height: 1.9; }
+  .doc .outline a { margin-right: 14px; white-space: nowrap; }
+  .code { display: flex; background: #0f131b; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  .code pre { margin: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+  .code .gutter { text-align: right; user-select: none; border-right: 1px solid var(--line); padding-right: 12px; }
+  .gutter a { color: var(--faint); text-decoration: none; }
+  .gutter a:target { color: var(--yellow); }
+  .code a.import { color: inherit; text-decoration: none; border-radius: 3px; }
+  .code a.import:hover { text-decoration: underline; background: #ffffff10; }
+</style>
+</head>
+<!-- Generated from docs/multi-splat.md by scripts/build-site.mjs -->
+<body data-root="" data-page="" data-section="source">
+<div class="ref">
+<nav class="ref-side">
+<input type="search" placeholder="Filter files" aria-label="Filter files">
+<details open><summary>docs</summary><a href="api.md.html">api.md</a><a href="arraydata.md.html">arraydata.md</a><a href="checks.md.html">checks.md</a><a href="concepts.md.html">concepts.md</a><a href="controls.md.html">controls.md</a><a href="encoding.md.html">encoding.md</a><a href="files.md.html">files.md</a><a href="generators.md.html">generators.md</a><a href="gpu-arrays.md.html">gpu-arrays.md</a><a href="lifetimes.md.html">lifetimes.md</a><a href="multi-splat.md.html" class="on">multi-splat.md</a><a href="overview.md.html">overview.md</a><a href="params.md.html">params.md</a><a href="performance.md.html">performance.md</a><a href="projection.md.html">projection.md</a><a href="quickstart.md.html">quickstart.md</a><a href="rdx.md.html">rdx.md</a><a href="recipes.md.html">recipes.md</a><a href="renderer.md.html">renderer.md</a><a href="rendering.md.html">rendering.md</a><a href="sh.md.html">sh.md</a><a href="shaders.md.html">shaders.md</a><a href="site.js.html">site.js</a><a href="sorting.md.html">sorting.md</a><a href="splats.md.html">splats.md</a><a href="views.md.html">views.md</a><a href="wgpu.md.html">wgpu.md</a><a href="workers.md.html">workers.md</a><a href="xr.md.html">xr.md</a></details><details><summary>examples</summary><details><summary>doom</summary><details><summary>lod</summary><a href="../examples/doom/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/doom/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/doom/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/doom/sim/DoomAudio.ts.html">DoomAudio.ts</a><a href="../examples/doom/sim/DoomSim.ts.html">DoomSim.ts</a><a href="../examples/doom/sim/doomkeys.ts.html">doomkeys.ts</a></details><a href="../examples/doom/data.ts.html">data.ts</a><a href="../examples/doom/game.ts.html">game.ts</a><a href="../examples/doom/hud.ts.html">hud.ts</a><a href="../examples/doom/level.ts.html">level.ts</a><a href="../examples/doom/lighting.ts.html">lighting.ts</a><a href="../examples/doom/main.ts.html">main.ts</a><a href="../examples/doom/simWorker.ts.html">simWorker.ts</a><a href="../examples/doom/things.ts.html">things.ts</a></details><details><summary>film</summary><a href="../examples/film/audioStream.ts.html">audioStream.ts</a><a href="../examples/film/gpuAudio.ts.html">gpuAudio.ts</a><a href="../examples/film/score.ts.html">score.ts</a><a href="../examples/film/scoreSink.ts.html">scoreSink.ts</a><a href="../examples/film/text.ts.html">text.ts</a><a href="../examples/film/timeline.ts.html">timeline.ts</a></details><details><summary>fractals</summary><details><summary>demo</summary><details><summary>tunes</summary><a href="../examples/fractals/demo/tunes/aurora.ts.html">aurora.ts</a><a href="../examples/fractals/demo/tunes/lumen.ts.html">lumen.ts</a><a href="../examples/fractals/demo/tunes/tidal.ts.html">tidal.ts</a></details><a href="../examples/fractals/demo/airScore.ts.html">airScore.ts</a><a href="../examples/fractals/demo/demo.ts.html">demo.ts</a><a href="../examples/fractals/demo/library.ts.html">library.ts</a><a href="../examples/fractals/demo/music.ts.html">music.ts</a><a href="../examples/fractals/demo/tune.ts.html">tune.ts</a><a href="../examples/fractals/demo/video.ts.html">video.ts</a></details><a href="../examples/fractals/attractors.ts.html">attractors.ts</a><a href="../examples/fractals/clouds.ts.html">clouds.ts</a><a href="../examples/fractals/device.ts.html">device.ts</a><a href="../examples/fractals/kind.ts.html">kind.ts</a><a href="../examples/fractals/main.ts.html">main.ts</a><a href="../examples/fractals/morph.ts.html">morph.ts</a><a href="../examples/fractals/motion.ts.html">motion.ts</a><a href="../examples/fractals/palettes.ts.html">palettes.ts</a><a href="../examples/fractals/presets.ts.html">presets.ts</a><a href="../examples/fractals/sample.ts.html">sample.ts</a><a href="../examples/fractals/shade.ts.html">shade.ts</a><a href="../examples/fractals/shots.ts.html">shots.ts</a><a href="../examples/fractals/sortWorker.ts.html">sortWorker.ts</a><a href="../examples/fractals/surfaces.ts.html">surfaces.ts</a><a href="../examples/fractals/tree.ts.html">tree.ts</a></details><details><summary>fxedit</summary><details><summary>fx</summary><details><summary>nodes</summary><a href="../examples/fxedit/fx/nodes/color.ts.html">color.ts</a><a href="../examples/fxedit/fx/nodes/fields.ts.html">fields.ts</a><a href="../examples/fxedit/fx/nodes/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/nodes/inputs.ts.html">inputs.ts</a><a href="../examples/fxedit/fx/nodes/iq.ts.html">iq.ts</a><a href="../examples/fxedit/fx/nodes/math.ts.html">math.ts</a><a href="../examples/fxedit/fx/nodes/splat.ts.html">splat.ts</a><a href="../examples/fxedit/fx/nodes/worldlabs.ts.html">worldlabs.ts</a></details><a href="../examples/fxedit/fx/graph.ts.html">graph.ts</a><a href="../examples/fxedit/fx/graphModifier.ts.html">graphModifier.ts</a><a href="../examples/fxedit/fx/index.ts.html">index.ts</a><a href="../examples/fxedit/fx/registry.ts.html">registry.ts</a><a href="../examples/fxedit/fx/types.ts.html">types.ts</a></details><a href="../examples/fxedit/GraphDoc.ts.html">GraphDoc.ts</a><a href="../examples/fxedit/GraphView.ts.html">GraphView.ts</a><a href="../examples/fxedit/catalog.ts.html">catalog.ts</a><a href="../examples/fxedit/checks.ts.html">checks.ts</a><a href="../examples/fxedit/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/fxedit/editors.ts.html">editors.ts</a><a href="../examples/fxedit/framed.ts.html">framed.ts</a><a href="../examples/fxedit/juice.ts.html">juice.ts</a><a href="../examples/fxedit/layout.ts.html">layout.ts</a><a href="../examples/fxedit/main.ts.html">main.ts</a><a href="../examples/fxedit/palette.ts.html">palette.ts</a><a href="../examples/fxedit/preview.ts.html">preview.ts</a><a href="../examples/fxedit/settings.ts.html">settings.ts</a><a href="../examples/fxedit/sound.ts.html">sound.ts</a><a href="../examples/fxedit/springs.ts.html">springs.ts</a><a href="../examples/fxedit/themes.ts.html">themes.ts</a><a href="../examples/fxedit/wires.ts.html">wires.ts</a></details><details><summary>lcc</summary><a href="../examples/lcc/CollisionStream.ts.html">CollisionStream.ts</a><a href="../examples/lcc/Lcc2Scene.ts.html">Lcc2Scene.ts</a><a href="../examples/lcc/Lcc2Streamer.ts.html">Lcc2Streamer.ts</a><a href="../examples/lcc/LccDecoders.ts.html">LccDecoders.ts</a><a href="../examples/lcc/LccScene.ts.html">LccScene.ts</a><a href="../examples/lcc/LccStreamer.ts.html">LccStreamer.ts</a><a href="../examples/lcc/catalog.ts.html">catalog.ts</a><a href="../examples/lcc/collision.ts.html">collision.ts</a><a href="../examples/lcc/collisionOverlay.ts.html">collisionOverlay.ts</a><a href="../examples/lcc/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/lcc/gui.ts.html">gui.ts</a><a href="../examples/lcc/lcc2Select.ts.html">lcc2Select.ts</a><a href="../examples/lcc/lccChunk.ts.html">lccChunk.ts</a><a href="../examples/lcc/lccDecode.ts.html">lccDecode.ts</a><a href="../examples/lcc/lccSh.tsl.ts.html">lccSh.tsl.ts</a><a href="../examples/lcc/lccWorker.ts.html">lccWorker.ts</a><a href="../examples/lcc/main.ts.html">main.ts</a><a href="../examples/lcc/quickBar.ts.html">quickBar.ts</a><a href="../examples/lcc/walk.ts.html">walk.ts</a></details><details><summary>mpm</summary><a href="../examples/mpm/BoxLines.ts.html">BoxLines.ts</a><a href="../examples/mpm/MpmSim.ts.html">MpmSim.ts</a><a href="../examples/mpm/ParticleSort.ts.html">ParticleSort.ts</a><a href="../examples/mpm/SplatCollider.ts.html">SplatCollider.ts</a><a href="../examples/mpm/main.ts.html">main.ts</a></details><details><summary>quake</summary><details><summary>lod</summary><a href="../examples/quake/lod/LodSelector.ts.html">LodSelector.ts</a><a href="../examples/quake/lod/lodTraversal.ts.html">lodTraversal.ts</a><a href="../examples/quake/lod/lodWorker.ts.html">lodWorker.ts</a></details><details><summary>sim</summary><a href="../examples/quake/sim/QuakeSim.ts.html">QuakeSim.ts</a><a href="../examples/quake/sim/quakekeys.ts.html">quakekeys.ts</a></details><a href="../examples/quake/data.ts.html">data.ts</a><a href="../examples/quake/entities.ts.html">entities.ts</a><a href="../examples/quake/game.ts.html">game.ts</a><a href="../examples/quake/hud.ts.html">hud.ts</a><a href="../examples/quake/lighting.ts.html">lighting.ts</a><a href="../examples/quake/main.ts.html">main.ts</a><a href="../examples/quake/models.ts.html">models.ts</a><a href="../examples/quake/simWorker.ts.html">simWorker.ts</a><a href="../examples/quake/world.ts.html">world.ts</a></details><details><summary>scenes</summary><a href="../examples/scenes/main.ts.html">main.ts</a><a href="../examples/scenes/scenes.ts.html">scenes.ts</a></details><details><summary>sogs</summary><a href="../examples/sogs/catalog.ts.html">catalog.ts</a><a href="../examples/sogs/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/sogs/gpuDecode.ts.html">gpuDecode.ts</a><a href="../examples/sogs/gui.ts.html">gui.ts</a><a href="../examples/sogs/lod.ts.html">lod.ts</a><a href="../examples/sogs/lodStream.ts.html">lodStream.ts</a><a href="../examples/sogs/main.ts.html">main.ts</a><a href="../examples/sogs/quickBar.ts.html">quickBar.ts</a><a href="../examples/sogs/resident.ts.html">resident.ts</a><a href="../examples/sogs/sh.ts.html">sh.ts</a><a href="../examples/sogs/sog.ts.html">sog.ts</a><a href="../examples/sogs/validate.ts.html">validate.ts</a><a href="../examples/sogs/webp.ts.html">webp.ts</a><a href="../examples/sogs/zip.ts.html">zip.ts</a></details><details><summary>spark</summary><details><summary>basic-xr</summary><a href="../examples/spark/basic-xr/main.ts.html">main.ts</a></details><details><summary>debug-color</summary><a href="../examples/spark/debug-color/main.ts.html">main.ts</a></details><details><summary>depth-of-field</summary><a href="../examples/spark/depth-of-field/main.ts.html">main.ts</a></details><details><summary>dynamic-lighting</summary><a href="../examples/spark/dynamic-lighting/main.ts.html">main.ts</a></details><details><summary>editor</summary><a href="../examples/spark/editor/main.ts.html">main.ts</a></details><details><summary>envmap</summary><a href="../examples/spark/envmap/main.ts.html">main.ts</a></details><details><summary>extsplats</summary><a href="../examples/spark/extsplats/main.ts.html">main.ts</a></details><details><summary>glsl</summary><a href="../examples/spark/glsl/main.ts.html">main.ts</a></details><details><summary>hello-world</summary><a href="../examples/spark/hello-world/carousel.ts.html">carousel.ts</a><a href="../examples/spark/hello-world/main.ts.html">main.ts</a></details><details><summary>interactive-deform</summary><a href="../examples/spark/interactive-deform/main.ts.html">main.ts</a></details><details><summary>interactive-holes</summary><a href="../examples/spark/interactive-holes/main.ts.html">main.ts</a></details><details><summary>interactive-ripples</summary><a href="../examples/spark/interactive-ripples/main.ts.html">main.ts</a></details><details><summary>interactivity</summary><a href="../examples/spark/interactivity/main.ts.html">main.ts</a></details><details><summary>js</summary><a href="../examples/spark/js/assets.ts.html">assets.ts</a><a href="../examples/spark/js/construct.ts.html">construct.ts</a><a href="../examples/spark/js/cube.ts.html">cube.ts</a><a href="../examples/spark/js/examples.ts.html">examples.ts</a><a href="../examples/spark/js/files.ts.html">files.ts</a><a href="../examples/spark/js/objects.ts.html">objects.ts</a><a href="../examples/spark/js/page.ts.html">page.ts</a><a href="../examples/spark/js/raycast.ts.html">raycast.ts</a><a href="../examples/spark/js/sdf.ts.html">sdf.ts</a><a href="../examples/spark/js/snow.ts.html">snow.ts</a><a href="../examples/spark/js/worldEffect.ts.html">worldEffect.ts</a><a href="../examples/spark/js/xr.ts.html">xr.ts</a></details><details><summary>lofi</summary><a href="../examples/spark/lofi/main.ts.html">main.ts</a><a href="../examples/spark/lofi/worlds.ts.html">worlds.ts</a></details><details><summary>mobile-joystick</summary><a href="../examples/spark/mobile-joystick/main.ts.html">main.ts</a></details><details><summary>multiple-splats</summary><a href="../examples/spark/multiple-splats/main.ts.html">main.ts</a></details><details><summary>multiple-viewpoints</summary><a href="../examples/spark/multiple-viewpoints/main.ts.html">main.ts</a></details><details><summary>particle-animation</summary><a href="../examples/spark/particle-animation/main.ts.html">main.ts</a></details><details><summary>particle-simulation</summary><a href="../examples/spark/particle-simulation/main.ts.html">main.ts</a></details><details><summary>procedural-splats</summary><a href="../examples/spark/procedural-splats/main.ts.html">main.ts</a></details><details><summary>raycasting</summary><a href="../examples/spark/raycasting/main.ts.html">main.ts</a></details><details><summary>render-cube-depth</summary><a href="../examples/spark/render-cube-depth/main.ts.html">main.ts</a></details><details><summary>splat-dissolve-effects</summary><a href="../examples/spark/splat-dissolve-effects/main.ts.html">main.ts</a></details><details><summary>splat-flow</summary><a href="../examples/spark/splat-flow/main.ts.html">main.ts</a></details><details><summary>splat-painter</summary><a href="../examples/spark/splat-painter/main.ts.html">main.ts</a></details><details><summary>splat-portal</summary><a href="../examples/spark/splat-portal/main.ts.html">main.ts</a></details><details><summary>splat-reveal-effects</summary><a href="../examples/spark/splat-reveal-effects/main.ts.html">main.ts</a></details><details><summary>splat-shader-effects</summary><a href="../examples/spark/splat-shader-effects/main.ts.html">main.ts</a></details><details><summary>splat-transitions</summary><details><summary>effects</summary><a href="../examples/spark/splat-transitions/effects/explosion.ts.html">explosion.ts</a><a href="../examples/spark/splat-transitions/effects/flow.ts.html">flow.ts</a><a href="../examples/spark/splat-transitions/effects/morph.ts.html">morph.ts</a><a href="../examples/spark/splat-transitions/effects/spheric.ts.html">spheric.ts</a></details><a href="../examples/spark/splat-transitions/main.ts.html">main.ts</a></details><details><summary>viewer</summary><a href="../examples/spark/viewer/main.ts.html">main.ts</a></details><details><summary>webxr</summary><a href="../examples/spark/webxr/main.ts.html">main.ts</a></details></details><details><summary>splats</summary><a href="../examples/splats/catalog.ts.html">catalog.ts</a><a href="../examples/splats/controlsPane.ts.html">controlsPane.ts</a><a href="../examples/splats/gui.ts.html">gui.ts</a><a href="../examples/splats/main.ts.html">main.ts</a><a href="../examples/splats/quickBar.ts.html">quickBar.ts</a></details><details><summary>spz</summary><a href="../examples/spz/catalog.ts.html">catalog.ts</a><a href="../examples/spz/main.ts.html">main.ts</a></details><details><summary>xr</summary><a href="../examples/xr/main.ts.html">main.ts</a></details></details><details><summary>scripts</summary><a href="../scripts/build-docs.mjs.html">build-docs.mjs</a><a href="../scripts/check-core.ts.html">check-core.ts</a><a href="../scripts/check-examples.mjs.html">check-examples.mjs</a><a href="../scripts/check-test.mjs.html">check-test.mjs</a><a href="../scripts/convert-large-ply.ts.html">convert-large-ply.ts</a><a href="../scripts/dev-link.mjs.html">dev-link.mjs</a><a href="../scripts/inline-worker-plugin.mjs.html">inline-worker-plugin.mjs</a></details><details><summary>src</summary><details><summary>controls</summary><a href="../src/controls/CameraControls.ts.html">CameraControls.ts</a><a href="../src/controls/index.ts.html">index.ts</a></details><details><summary>core</summary><a href="../src/core/ArrayData.ts.html">ArrayData.ts</a><a href="../src/core/axes.ts.html">axes.ts</a><a href="../src/core/bundles.ts.html">bundles.ts</a><a href="../src/core/compress.ts.html">compress.ts</a><a href="../src/core/compressedPly.ts.html">compressedPly.ts</a><a href="../src/core/encoding.ts.html">encoding.ts</a><a href="../src/core/files.ts.html">files.ts</a><a href="../src/core/formats.ts.html">formats.ts</a><a href="../src/core/index.ts.html">index.ts</a><a href="../src/core/layout.ts.html">layout.ts</a><a href="../src/core/math.ts.html">math.ts</a><a href="../src/core/ply.ts.html">ply.ts</a><a href="../src/core/progress.ts.html">progress.ts</a><a href="../src/core/rad.ts.html">rad.ts</a><a href="../src/core/rdx.ts.html">rdx.ts</a><a href="../src/core/sh.ts.html">sh.ts</a><a href="../src/core/sort.ts.html">sort.ts</a><a href="../src/core/splats.ts.html">splats.ts</a><a href="../src/core/spz.ts.html">spz.ts</a><a href="../src/core/zstd.ts.html">zstd.ts</a></details><details><summary>gpu</summary><a href="../src/gpu/GpuArrayReader.ts.html">GpuArrayReader.ts</a><a href="../src/gpu/GpuArrayWriter.ts.html">GpuArrayWriter.ts</a><a href="../src/gpu/GpuArrays.ts.html">GpuArrays.ts</a><a href="../src/gpu/GpuProfiler.ts.html">GpuProfiler.ts</a><a href="../src/gpu/backend.ts.html">backend.ts</a><a href="../src/gpu/baseline.ts.html">baseline.ts</a><a href="../src/gpu/createRenderer.ts.html">createRenderer.ts</a><a href="../src/gpu/encoding.tsl.ts.html">encoding.tsl.ts</a><a href="../src/gpu/gpuFormats.ts.html">gpuFormats.ts</a><a href="../src/gpu/hdr.ts.html">hdr.ts</a><a href="../src/gpu/index.ts.html">index.ts</a><a href="../src/gpu/math.tsl.ts.html">math.tsl.ts</a><a href="../src/gpu/sh.tsl.ts.html">sh.tsl.ts</a><a href="../src/gpu/sortKey.tsl.ts.html">sortKey.tsl.ts</a><a href="../src/gpu/splatAccess.ts.html">splatAccess.ts</a><a href="../src/gpu/splatGenerator.ts.html">splatGenerator.ts</a><a href="../src/gpu/splats.tsl.ts.html">splats.tsl.ts</a><a href="../src/gpu/textureIo.ts.html">textureIo.ts</a><a href="../src/gpu/tsl.ts.html">tsl.ts</a></details><details><summary>render</summary><a href="../src/render/SplatCollection.ts.html">SplatCollection.ts</a><a href="../src/render/SplatProjection.ts.html">SplatProjection.ts</a><a href="../src/render/SplatProjector.ts.html">SplatProjector.ts</a><a href="../src/render/SplatRenderer.ts.html">SplatRenderer.ts</a><a href="../src/render/SplatView.ts.html">SplatView.ts</a><a href="../src/render/index.ts.html">index.ts</a><a href="../src/render/projection.tsl.ts.html">projection.tsl.ts</a><a href="../src/render/projections.tsl.ts.html">projections.tsl.ts</a><a href="../src/render/splatCamera.ts.html">splatCamera.ts</a><a href="../src/render/splatDraw.ts.html">splatDraw.ts</a><a href="../src/render/splatParams.ts.html">splatParams.ts</a><a href="../src/render/splatTransform.tsl.ts.html">splatTransform.tsl.ts</a><a href="../src/render/viewIndex.ts.html">viewIndex.ts</a></details><details><summary>wgpu</summary><a href="../src/wgpu/WgpuArrayStore.ts.html">WgpuArrayStore.ts</a><a href="../src/wgpu/WgpuArrayWriter.ts.html">WgpuArrayWriter.ts</a><a href="../src/wgpu/WgpuBuffer.ts.html">WgpuBuffer.ts</a><a href="../src/wgpu/WgpuCompact.ts.html">WgpuCompact.ts</a><a href="../src/wgpu/WgpuCompute.ts.html">WgpuCompute.ts</a><a href="../src/wgpu/WgpuRadixSort.ts.html">WgpuRadixSort.ts</a><a href="../src/wgpu/WgpuSplatSorter.ts.html">WgpuSplatSorter.ts</a><a href="../src/wgpu/index.ts.html">index.ts</a><a href="../src/wgpu/workgroupScan.ts.html">workgroupScan.ts</a></details><details><summary>worker</summary><a href="../src/worker/WorkerPool.ts.html">WorkerPool.ts</a><a href="../src/worker/coreModule.ts.html">coreModule.ts</a><a href="../src/worker/coreWorker.ts.html">coreWorker.ts</a><a href="../src/worker/index.ts.html">index.ts</a><a href="../src/worker/modules.d.ts.html">modules.d.ts</a><a href="../src/worker/splatFiles.ts.html">splatFiles.ts</a><a href="../src/worker/splatSort.ts.html">splatSort.ts</a></details><a href="../src/index.ts.html">index.ts</a></details><details><summary>test/gpu</summary><a href="../test/gpu/controlsTests.ts.html">controlsTests.ts</a></details>
+</nav>
+<main class="doc">
+<h1>multi-splat.md</h1>
+<p class="path">docs/multi-splat.md · <a href="multi-splat.md.html">raw</a> · <a href="../build/examples/index.html">all examples</a> · <a href="../index.html">site home</a></p>
+<p class="outline">Headings: <a href="#L1">Multi-splat design</a><a href="#L24">The constraints</a><a href="#L26">1. Splats must be sorted together</a><a href="#L36">2. Each object has its own transform and its own generator</a><a href="#L47">3. Shader compilation is slow, and the same objects are drawn every frame</a><a href="#L56">4. Batching across objects is limited</a><a href="#L60">5. Compute runs before the frame's draws</a><a href="#L64">6. WebGL2 has no compute shaders, so its sort arrives late</a><a href="#L72">7. Several viewpoints</a><a href="#L76">8. Effects that apply to every splat</a><a href="#L80">How the model follows from the constraints</a><a href="#L82">`SplatCollection`: the collection an order is sorted for</a><a href="#L90">`SplatRenderer`: the settings every viewpoint shares</a><a href="#L94">`SplatView`: what one viewpoint changes</a><a href="#L103">`SplatOrder` and versions: using every finished sort</a><a href="#L129">On-demand rendering</a><a href="#L133">Object releases: freeing what an old collection still uses</a><a href="#L166">Modifiers and their spaces</a><a href="#L175">Dropped designs</a><a href="#L191">What this asks of an app</a></p>
+<div class="code"><pre class="gutter"><a id="L1" href="#L1">1</a>
+<a id="L2" href="#L2">2</a>
+<a id="L3" href="#L3">3</a>
+<a id="L4" href="#L4">4</a>
+<a id="L5" href="#L5">5</a>
+<a id="L6" href="#L6">6</a>
+<a id="L7" href="#L7">7</a>
+<a id="L8" href="#L8">8</a>
+<a id="L9" href="#L9">9</a>
+<a id="L10" href="#L10">10</a>
+<a id="L11" href="#L11">11</a>
+<a id="L12" href="#L12">12</a>
+<a id="L13" href="#L13">13</a>
+<a id="L14" href="#L14">14</a>
+<a id="L15" href="#L15">15</a>
+<a id="L16" href="#L16">16</a>
+<a id="L17" href="#L17">17</a>
+<a id="L18" href="#L18">18</a>
+<a id="L19" href="#L19">19</a>
+<a id="L20" href="#L20">20</a>
+<a id="L21" href="#L21">21</a>
+<a id="L22" href="#L22">22</a>
+<a id="L23" href="#L23">23</a>
+<a id="L24" href="#L24">24</a>
+<a id="L25" href="#L25">25</a>
+<a id="L26" href="#L26">26</a>
+<a id="L27" href="#L27">27</a>
+<a id="L28" href="#L28">28</a>
+<a id="L29" href="#L29">29</a>
+<a id="L30" href="#L30">30</a>
+<a id="L31" href="#L31">31</a>
+<a id="L32" href="#L32">32</a>
+<a id="L33" href="#L33">33</a>
+<a id="L34" href="#L34">34</a>
+<a id="L35" href="#L35">35</a>
+<a id="L36" href="#L36">36</a>
+<a id="L37" href="#L37">37</a>
+<a id="L38" href="#L38">38</a>
+<a id="L39" href="#L39">39</a>
+<a id="L40" href="#L40">40</a>
+<a id="L41" href="#L41">41</a>
+<a id="L42" href="#L42">42</a>
+<a id="L43" href="#L43">43</a>
+<a id="L44" href="#L44">44</a>
+<a id="L45" href="#L45">45</a>
+<a id="L46" href="#L46">46</a>
+<a id="L47" href="#L47">47</a>
+<a id="L48" href="#L48">48</a>
+<a id="L49" href="#L49">49</a>
+<a id="L50" href="#L50">50</a>
+<a id="L51" href="#L51">51</a>
+<a id="L52" href="#L52">52</a>
+<a id="L53" href="#L53">53</a>
+<a id="L54" href="#L54">54</a>
+<a id="L55" href="#L55">55</a>
+<a id="L56" href="#L56">56</a>
+<a id="L57" href="#L57">57</a>
+<a id="L58" href="#L58">58</a>
+<a id="L59" href="#L59">59</a>
+<a id="L60" href="#L60">60</a>
+<a id="L61" href="#L61">61</a>
+<a id="L62" href="#L62">62</a>
+<a id="L63" href="#L63">63</a>
+<a id="L64" href="#L64">64</a>
+<a id="L65" href="#L65">65</a>
+<a id="L66" href="#L66">66</a>
+<a id="L67" href="#L67">67</a>
+<a id="L68" href="#L68">68</a>
+<a id="L69" href="#L69">69</a>
+<a id="L70" href="#L70">70</a>
+<a id="L71" href="#L71">71</a>
+<a id="L72" href="#L72">72</a>
+<a id="L73" href="#L73">73</a>
+<a id="L74" href="#L74">74</a>
+<a id="L75" href="#L75">75</a>
+<a id="L76" href="#L76">76</a>
+<a id="L77" href="#L77">77</a>
+<a id="L78" href="#L78">78</a>
+<a id="L79" href="#L79">79</a>
+<a id="L80" href="#L80">80</a>
+<a id="L81" href="#L81">81</a>
+<a id="L82" href="#L82">82</a>
+<a id="L83" href="#L83">83</a>
+<a id="L84" href="#L84">84</a>
+<a id="L85" href="#L85">85</a>
+<a id="L86" href="#L86">86</a>
+<a id="L87" href="#L87">87</a>
+<a id="L88" href="#L88">88</a>
+<a id="L89" href="#L89">89</a>
+<a id="L90" href="#L90">90</a>
+<a id="L91" href="#L91">91</a>
+<a id="L92" href="#L92">92</a>
+<a id="L93" href="#L93">93</a>
+<a id="L94" href="#L94">94</a>
+<a id="L95" href="#L95">95</a>
+<a id="L96" href="#L96">96</a>
+<a id="L97" href="#L97">97</a>
+<a id="L98" href="#L98">98</a>
+<a id="L99" href="#L99">99</a>
+<a id="L100" href="#L100">100</a>
+<a id="L101" href="#L101">101</a>
+<a id="L102" href="#L102">102</a>
+<a id="L103" href="#L103">103</a>
+<a id="L104" href="#L104">104</a>
+<a id="L105" href="#L105">105</a>
+<a id="L106" href="#L106">106</a>
+<a id="L107" href="#L107">107</a>
+<a id="L108" href="#L108">108</a>
+<a id="L109" href="#L109">109</a>
+<a id="L110" href="#L110">110</a>
+<a id="L111" href="#L111">111</a>
+<a id="L112" href="#L112">112</a>
+<a id="L113" href="#L113">113</a>
+<a id="L114" href="#L114">114</a>
+<a id="L115" href="#L115">115</a>
+<a id="L116" href="#L116">116</a>
+<a id="L117" href="#L117">117</a>
+<a id="L118" href="#L118">118</a>
+<a id="L119" href="#L119">119</a>
+<a id="L120" href="#L120">120</a>
+<a id="L121" href="#L121">121</a>
+<a id="L122" href="#L122">122</a>
+<a id="L123" href="#L123">123</a>
+<a id="L124" href="#L124">124</a>
+<a id="L125" href="#L125">125</a>
+<a id="L126" href="#L126">126</a>
+<a id="L127" href="#L127">127</a>
+<a id="L128" href="#L128">128</a>
+<a id="L129" href="#L129">129</a>
+<a id="L130" href="#L130">130</a>
+<a id="L131" href="#L131">131</a>
+<a id="L132" href="#L132">132</a>
+<a id="L133" href="#L133">133</a>
+<a id="L134" href="#L134">134</a>
+<a id="L135" href="#L135">135</a>
+<a id="L136" href="#L136">136</a>
+<a id="L137" href="#L137">137</a>
+<a id="L138" href="#L138">138</a>
+<a id="L139" href="#L139">139</a>
+<a id="L140" href="#L140">140</a>
+<a id="L141" href="#L141">141</a>
+<a id="L142" href="#L142">142</a>
+<a id="L143" href="#L143">143</a>
+<a id="L144" href="#L144">144</a>
+<a id="L145" href="#L145">145</a>
+<a id="L146" href="#L146">146</a>
+<a id="L147" href="#L147">147</a>
+<a id="L148" href="#L148">148</a>
+<a id="L149" href="#L149">149</a>
+<a id="L150" href="#L150">150</a>
+<a id="L151" href="#L151">151</a>
+<a id="L152" href="#L152">152</a>
+<a id="L153" href="#L153">153</a>
+<a id="L154" href="#L154">154</a>
+<a id="L155" href="#L155">155</a>
+<a id="L156" href="#L156">156</a>
+<a id="L157" href="#L157">157</a>
+<a id="L158" href="#L158">158</a>
+<a id="L159" href="#L159">159</a>
+<a id="L160" href="#L160">160</a>
+<a id="L161" href="#L161">161</a>
+<a id="L162" href="#L162">162</a>
+<a id="L163" href="#L163">163</a>
+<a id="L164" href="#L164">164</a>
+<a id="L165" href="#L165">165</a>
+<a id="L166" href="#L166">166</a>
+<a id="L167" href="#L167">167</a>
+<a id="L168" href="#L168">168</a>
+<a id="L169" href="#L169">169</a>
+<a id="L170" href="#L170">170</a>
+<a id="L171" href="#L171">171</a>
+<a id="L172" href="#L172">172</a>
+<a id="L173" href="#L173">173</a>
+<a id="L174" href="#L174">174</a>
+<a id="L175" href="#L175">175</a>
+<a id="L176" href="#L176">176</a>
+<a id="L177" href="#L177">177</a>
+<a id="L178" href="#L178">178</a>
+<a id="L179" href="#L179">179</a>
+<a id="L180" href="#L180">180</a>
+<a id="L181" href="#L181">181</a>
+<a id="L182" href="#L182">182</a>
+<a id="L183" href="#L183">183</a>
+<a id="L184" href="#L184">184</a>
+<a id="L185" href="#L185">185</a>
+<a id="L186" href="#L186">186</a>
+<a id="L187" href="#L187">187</a>
+<a id="L188" href="#L188">188</a>
+<a id="L189" href="#L189">189</a>
+<a id="L190" href="#L190">190</a>
+<a id="L191" href="#L191">191</a>
+<a id="L192" href="#L192">192</a>
+<a id="L193" href="#L193">193</a>
+<a id="L194" href="#L194">194</a>
+<a id="L195" href="#L195">195</a>
+<a id="L196" href="#L196">196</a>
+<a id="L197" href="#L197">197</a>
+<a id="L198" href="#L198">198</a></pre><pre><code># Multi-splat design
+
+Radix draws many splat objects in one sort through collections, a renderer with per-viewpoint views, versioned orders, and object releases. What each part does is described in [rendering.md](rendering.md), [views.md](views.md), [lifetimes.md](lifetimes.md), and [projection.md](projection.md). This page explains why the parts exist: what each one is for, which constraint requires it, and which simpler designs were tried first and dropped. [multi-splat.html](multi-splat.html) covers the same material step by step, with interactive diagrams.
+
+The model (generators, immutable collections, a renderer with per-viewpoint views, versioned orders, and object releases) has more parts than drawing splats might seem to need. Each part addresses a constraint that a simpler design does not meet:
+
+- Overlapping splats blend correctly only when they are sorted together, so every object is projected into one shared set and drawn in one draw call.
+- WebGL2 has no compute shaders, so its sort runs on a worker and finishes a few frames late. An order is valid only for the exact collection of splats it was sorted for, and for one viewpoint.
+- Therefore that collection must be a value that can be stored and compared (a `SplatCollection`), each viewpoint must keep drawing an old collection while a new one is sorted (a `SplatView` per camera, `SplatOrder.version`), and nothing the old collection uses can be freed until nothing draws it (an object's `release`).
+- Shader compilation is slow, so programs are cached by generator, and a generator must be a program only, without its data.
+
+An app that targets only WebGPU needs little of this: it creates a `SplatRenderer` of a collection, adds it to the scene, and renders from any camera. The sort runs on the GPU in the same frame, so nothing depends on the camera between renders and no views are needed.
+
+```ts
+const collection = new SplatCollection([
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.render(scene, camera);
+```
+
+## The constraints
+
+### 1. Splats must be sorted together
+
+Gaussian splats are blended back to front. Two objects drawn in separate draw calls, each sorted separately, blend incorrectly wherever they overlap: one is drawn entirely over the other, even where their splats interleave in depth (for example a hand inside a cloud, or two scans of the same room). Therefore every object a renderer draws is projected into one shared set of projected splats, sorted as one list, and drawn in one draw call.
+
+A single draw call requires some settings to be the same for every splat in it:
+
+- **One method.** The four methods (`ewa`, `3dgut`, `htgs`, and `raygs`) store different words and decode them in different shaders. Mixing them in one draw would require a method tag per splat, the union of every word layout, and branches in both shader stages. The method is a property of the renderer, which owns the projected arrays and the draw material that the method determines.
+- **The params the draw reads.** `maxStdDev`, `minAlpha`, and `falloff` set the size and shading of the quads in the draw, so a splat projected with one value and drawn with another has the wrong size. These are `SplatViewParams`, one set per render (the renderer's, or a view's over them). Every param that only the projection reads (`lodInflate`, the blurs, clipping, pixel radius limits, `minContribution`, depth of field, and `sortGuard`) is in `SplatObjectParams`, with defaults on the renderer, overrides on a view, and overrides per object. `lodInflate` moved to `SplatObjectParams` once the projection handled it completely: the projection stores opacity 1 for an inflated splat, so the draw does not depend on it.
+- **`sortBits`.** The number of sort key bits (16, 24, or 32). Sort keys with different numbers of bits in one sort would be ordered incorrectly.
+
+### 2. Each object has its own transform and its own generator
+
+An object can be a file read from arrays, a subset of a file drawn through an index list, or a TSL function that generates splats in the shader (a ring, a particle system, or an effect). A typical subset is a Level-of-Detail (LoD) subset: the splats of a LoD tree chosen for the current camera. Radix does not build LoD trees itself: the app picks the subset and passes its index list (`SplatGenerator.indices`). Each object has its own world transform (its `matrixWorld`: object to world, such as an `Object3D`'s `matrixWorld`), which can change every frame.
+
+One shared set is possible because the projection's output never depends on an object's world transform. Every splat is first transformed into head space (the camera in mono, the XR rig's pose in stereo), and the words store head-relative data: a direction and distance from the head, a rotation and scales in head space, and 2D bounds per eye. The draw reads only the head-to-eye matrices. The sort key is the distance from the head. Therefore any mix of objects with any transforms projects into the same set and sorts correctly, for all four methods.
+
+The per-object transform is applied once per splat, during projection:
+
+- The CPU combines head x object in float64 and uploads one matrix, so objects far from the origin keep their precision.
+- A rotation times a uniform scale can be applied directly: it rotates the quaternions and multiplies the scales. Non-uniform scale, shear, and mirrors cannot (a mirror has no rotation quaternion), so they are applied to the covariance: Σ' = M Σ Mᵀ. `isUniformScale` selects the path on the CPU and sets a uniform flag, so dragging a gizmo into a non-uniform scale switches paths without compiling anything.
+
+### 3. Shader compilation is slow, and the same objects are drawn every frame
+
+Compiling a pipeline stalls the frame in which it happens, and a projection program is large (a generator, transforms, a modifier, and a method). A design that compiles every frame, or for every object every frame, is not usable. Therefore:
+
+- **Programs are cached statically by generator.** `SplatProjector` holds one program per generator, modifier (and cov modifier), method, eye count, pass (`full` or `keys`), and backend, shared by every renderer and view. The generator's identity is the cache key, so apps create generators once and keep them.
+- **A generator is a program; its data is bound per dispatch.** Before each object's dispatch, `generator.bind(object.data, context)` points the program's readers and uniforms at that object's data: anything its generator accepts, or `{ splats, indices?, shPalette? }` for the stored-splat template. Without this separation, every file and every LoD subset would be a new generator and a new compile. With it, one `SplatGenerator.fromSplats({ remap: "indices" })` program draws every file of a layout through any index list: a new LoD subset is new data, not a new program.
+- **The inputs every program shares are static uniforms** (the camera, the params, the object's transforms, and the generator context), set before each dispatch. This is safe because in three r186 each compute node and each render object has its own copy of a uniform's buffer, written when it is dispatched or encoded, and `renderer.compute` submits immediately. The checks confirm this by dispatching one program twice in a frame and drawing two renderers in one render.
+- **The modifier space is not in the cache key.** Moving a modifier from view space to world space, or to another frame, changes only the A and B matrices (below), so it compiles nothing.
+
+### 4. Batching across objects is limited
+
+Each object costs one dispatch. Running many objects in one program would reduce dispatches, but WebGPU's baseline allows 16 sampled textures per shader stage, and one stored splat file already uses 2 or more. Batching therefore has to happen in the data, not in the program: a splat atlas stores many objects together in one large `GpuArrays` (like a texture atlas), with a table of per-object matrices, read by a single generator. This fits the model as another generator. It is not built yet; one dispatch per object is sufficient for tens of objects.
+
+### 5. Compute runs before the frame's draws
+
+three.js submits each compute dispatch immediately, but submits a render's draws only when `render()` finishes. Two `SplatRenderer`s in one scene therefore both project and both sort before either one draws. If they shared a projected buffer or a sorter, both would draw the second renderer's results. Therefore each `SplatRenderer` owns its projected splats and its `WgpuSplatSorter`. Only things that are not written per draw are shared: the program cache, the uniforms, and the quad index buffer. Rendering one renderer from several cameras in separate `render()` calls works: each call submits its compute and then its draws, in order.
+
+### 6. WebGL2 has no compute shaders, so its sort arrives late
+
+On WebGPU the sort runs on the GPU in the same frame as the projection, so any collection is drawn immediately. On WebGL2 there is no compute shader to sort with. The fallback computes the sort keys on the GPU (in a fragment pass), reads them back asynchronously, and sorts them on a worker. Sorting never runs on the main thread, because a large sort would drop frames. The resulting order arrives several frames later.
+
+An order is a list of indices into the projected set: index 5,000 means "the 5,000th splat of this exact collection of objects, in this order, with these counts". If an object is added or removed, or changes its count or its LoD subset, the same indices refer to different splats, and drawing with the old order draws the wrong splats. A camera move is different: the order becomes slightly out of date, but every index still refers to the same splat, so a late order is still usable.
+
+The rest of the model follows from this constraint.
+
+### 7. Several viewpoints
+
+Two cameras (split screen, a mirror, a thumbnail, or an offline still) need two orders on WebGL2, because an order is sorted for one camera position. They can also draw different things: their own LoD subsets of the same file, or a different modifier. Most of what a renderer draws is the same for every viewpoint, though, and on WebGPU only the camera differs. Therefore a viewpoint holds only what is its own: its order, and any settings it changes. One XR stereo pair is a single viewpoint, because sort keys are distances from the head and an order is valid for every direction at one position.
+
+### 8. Effects that apply to every splat
+
+Effects such as depth coloring, normal coloring, and a wave in a gizmo's frame should apply to everything a renderer draws, like three.js's `scene.overrideMaterial`, without editing every generator. Switching between them each frame (RGB, then a depth thumbnail) should compile nothing after the first time.
+
+## How the model follows from the constraints
+
+### `SplatCollection`: the collection an order is sorted for
+
+Constraint 6 requires the collection of splats to be a value that can be stored, so that an order can record which collection it belongs to and a viewpoint can keep drawing that collection. A `SplatCollection` is an immutable collection of objects: it makes each object's generator, data, and count read-only on the object itself, without copying, and computes offsets once, so the order of its objects matters.
+
+- **Its identity is its version.** Any structural change (an object added or removed, a new count, or a new index list) is a new `SplatCollection`. Whether an order is for the collection being drawn is checked with `order.collection === collection`. No collection comparison is needed, and there is no counter to keep synchronized.
+- **Matrices and params stay live.** They don't change which splat an index refers to, so they are read every render: an object's `matrixWorld` (its world transform) can be an `Object3D.matrixWorld` or a function returning a matrix. Moving an object never creates a new collection, and an old collection that is drawn while a new one is sorted still shows each object at its current position.
+- **Splat objects are plain JavaScript objects.** Several renderers and views can share one collection, or build their own from the same generators and data.
+
+### `SplatRenderer`: the settings every viewpoint shares
+
+The scene mesh holds what is the same for every viewpoint: the collection, the method and draw params (constraint 1), per-object param defaults, the modifier (constraint 8), the sort mode, `autoSort`, and its own projected arrays and sorter (constraint 5). In each render it projects its collection for that render's camera, sorts it on the GPU or uses the viewpoint's CPU order, and draws. On WebGPU an app needs nothing more: one renderer can be rendered from any number of cameras.
+
+### `SplatView`: what one viewpoint changes
+
+A view is one viewpoint of a renderer, made on first use by `splatRenderer.viewFor(key)`, where the key is a camera or any value of the app's. It holds the viewpoint's CPU order (constraints 6 and 7) and any settings it changes; unset ones follow the renderer, field by field, and an object's params override both. A render draws the explicit `splatRenderer.view` if the app set one, else its camera's view, else the renderer's own settings.
+
+- **Keyed by camera, made when needed.** With the CPU sort every camera needs an order, so the renderer makes a view for each camera it renders; the app never has to point the renderer at the right view before each render. With the GPU sort no view is made unless the app asks for one.
+- **The app chooses the key.** Keying by the camera object breaks down when an app makes cameras anew (a clone per frame): each would make a view. `viewKey(camera)` maps a camera to its view's key (one key for all, or a stable id per viewpoint), and setting `splatRenderer.view` draws one view for every render. Past 32 views made by renders, the renderer warns.
+- **Explicit when the camera is not the viewpoint.** Some viewpoints are not one camera object: an XR page renders through the desktop camera, a stereo preview, and the XR camera, all one head. Others are one camera drawn twice with different settings (an RGB and a depth thumbnail). A view of the app's own key, set as `splatRenderer.view`, covers both.
+- **What a view cannot change.** The method decides the projected arrays and the draw material, and the sort mode decides between the renderer's GPU sorter and its views' orders, so both stay on the renderer. Two methods take two renderers.
+
+### `SplatOrder` and versions: using every finished sort
+
+In CPU mode a view draws `view.order.collection`, not the current collection. Setting `splatRenderer.collection` (or a view's `collection`) specifies what to draw next; the old collection is still drawn until an order for a newer one is applied. The first frames, before any order exists, draw nothing.
+
+```ts
+// The applied order's collection is still drawn
+splatRenderer.collection = next;
+
+// Sort keys of `next` computed on the GPU now, sorted on a worker
+const view = splatRenderer.viewFor(camera);
+const order = await view.sort(camera);
+
+// Drawn from now on, unless a later sort's order is shown
+view.apply(order);
+```
+
+Several rules for choosing which order to show were considered:
+
+- **Discard orders whose collection is no longer current (rejected).** While the scene keeps changing (a LoD subset recomputed as the camera moves, or objects streaming in), every order would be obsolete by the time it arrives, and nothing new would be shown until the scene stopped changing.
+- **Apply any order newer than the shown one**, even if the collection has changed since. The display advances by one sort at a time.
+- **"Newer" means started later.** `SplatOrder.version` counts the view's sorts in the order they started. Sorts can finish out of order (on a pool of several workers, a smaller collection finishes first). Once a later sort's order arrives or is applied, an earlier order can never be applied, so it is discarded immediately along with its collection: at most one finished order waits, and an app that never applies one keeps at most one old collection alive.
+- **The app runs the sort explicitly, or lets `autoSort` run it.** `sort` and `apply` are separate calls so an app can sort ahead of time and switch when it chooses (the offline still sorts once, then renders). `autoSort` runs the same loop automatically: one sort in flight per view, started when the collection, an object's world transform, or the camera changed, and each order applied as it arrives. Some changes are invisible to it, such as a generator whose splats moved through a uniform; `view.requestSort()` (or `splatRenderer.requestSort()` for every view) asks for a new sort in that case, also with `autoSort` off.
+- **One call creates an order.** Apps never handle sort keys themselves: `sort(camera)` runs the sort-keys-only pass, the readback, and the worker sort. The sort-keys pass is a separate cached program with one RGBA8 output, and it skips the projection, because nothing draws that projection.
+
+Sorts run on one worker pool shared by every renderer and view, `SplatRenderer.sortPool`, so views sort in parallel up to its size (`SplatRenderer.sortWorkers`, 4 by default), the number of parallel sorts stays bounded however many renderers and views a page has, and sorts never wait behind file loads in `WorkerPool.default`. It is created on the first CPU sort and makes workers as sorts need them. Alternatively, `sortWorker` points a renderer at a pool the app owns.
+
+### On-demand rendering
+
+An app that renders only when something changed needs to know when Radix has something new to show. With the GPU sort nothing happens between renders, so only the app's own changes matter, and the app knows about those. With the CPU sort an order lands between renders, and the next sort can only start in a render (it needs the render's camera). `onInvalidate(view?)` is called whenever Radix did or was asked to do something that needs a render: an order applied, or a sort requested. The loop then stops by itself: the order lands, the app renders, that render starts another sort only if the camera moved meanwhile, and rendering stops when nothing changes.
+
+### Object releases: freeing what an old collection still uses
+
+Because a viewpoint can keep drawing an old collection for several frames, and sorts can be in flight for collections the app has already replaced, the app cannot know when it is safe to free an index list or a file's arrays. Freeing something that an applied order still draws causes a crash or incorrect output on screen.
+
+A renderer's live collections are:
+
+- its `collection`, and its views' own collections;
+- each view's applied order's collection;
+- the collections of sorts in flight, and of orders that have arrived but are not applied yet and are newer than the shown one (they can still be applied). The tests found this case.
+
+Therefore an object can have a `release` callback, and Radix calls it once that object is in no live collection of any renderer:
+
+```ts
+const subset = SplatCollection.object({
+  generator: listed,
+  data: { splats, indices },
+  count: chosen.length,
+  matrixWorld,
+  // Return the LoD subset's index list to the pool; the splats stay
+  release: () =&gt; pool.push(indices),
+});
+splatRenderer.collection = new SplatCollection([subset]);
+```
+
+Radix determines only when to release, which is the part the app can't see. What to free, and how, is up to the app: Radix never looks inside `data` and frees nothing itself.
+
+- **The object is the unit.** The renderers track which objects their live collections hold, so nothing has to be inferred from data of unknown shape. An object listed in several collections, views, or renderers is released after the last of them.
+- **An object frees what it owns.** For LoD subsets that is the index list: the original splats behind every subset remain, and the app decides when to free them (when the model is removed and its objects are released). When one object draws a whole file, its release can free the file's arrays (the `/build/examples/splats/index.html` viewer does this).
+- **Synchronous, with no promises.** A release runs inside the call that retired the object's last live collection (`apply`, setting a collection, a sort finishing, or `dispose()`), after the bookkeeping, so it can set a collection.
+- **Generators' programs.** Garbage collection does not free GPU pipelines; `SplatProjector.dispose(generator)` does. An app that stops using a generator calls it once the generator's objects are released. Apps that create generators once never need to call it.
+
+The first design was a sweep that tracked the generators and data in live collections and freed whatever the app had released once nothing referenced it. Finding what an object uses required looking inside its data, which works only for data shapes Radix knows, and freeing shared resources for the app made Radix responsible for lifetimes it has no information about. Reference counts have the same problem, and the counts can also be wrong.
+
+### Modifiers and their spaces
+
+A renderer's `modifier(splat)` (or `covModifier(cov)`; a view can set its own, or `null` for none) is a TSL function applied to every splat it draws, before projection, so the draw material never changes. It is part of the program cache key, so define it once; switching between a few stored modifiers compiles nothing after the first frame of each.
+
+- **The space is selectable.** Depth and view-dependent normal coloring use view space, height coloring uses world space, an object-local wobble uses object space, and a wave anchored to a gizmo uses that gizmo's frame. Therefore the CPU splits object-to-head into A (object to the modifier's space) and B (that space to head), and the program runs generate, A, modifier, B, and project. Each space is another pair of matrices for the same program. With no modifier, A is the whole transform and B is skipped.
+- **Two forms, chosen once per program.** A splat is given as scales and a rotation (`generateSplat`) or as a covariance (`generateCovSplat`). `ewa` reads covariances, and the ray methods read scales and rotation. Converting to a covariance is cheap; converting back requires an eigendecomposition per splat. So instead of declaring a form, a generator implements one or both functions, and the program chooses, for each step, the form that step takes, avoiding conversions where possible. A modifier given in both forms runs in whichever form it receives.
+- **A context argument, in each step's own space.** A generator gets `context` (`viewOrigin`, `viewForward`, `objectToHead`, `headToObject`, `objectToWorld`) in the object's space, and a modifier gets the same members in its space. View-dependent color needs the camera in the object's space, which differs per object and per view. The examples first kept a camera in object data or in a global set before each render; both broke when one collection was drawn from two cameras. The renderer already sets each object's transform before its dispatch, so it sets the context uniforms there too, and the argument makes them explicit instead of a hidden global. Per-splat randomness still uses the `index` field of both splat structs. Through a remap it is the source index, so an effect stays on the same splat when a LoD subset changes. Time, light positions, and similar values are the app's own uniforms.
+- **Template modifiers are separate.** `SplatGenerator.fromSplats({ modifiers })` applies modifiers in object space as part of one generator, for effects that belong to the object rather than the viewpoint.
+
+## Dropped designs
+
+Each of these designs was considered while developing the model, and each fails one of the constraints above or asks more of the app:
+
+- **A `SplatProjector` instance per source with its own camera-and-model uniforms (the old API).** It works for one file. With many objects, each object needed its own projector and uniforms, and no programs could be shared.
+- **A public `ProjectedSplats` collection with `add(source, options)` called per object each frame, or a `collect` / `generate` callback on the renderer.** The app has to repeat the same calls every frame. On WebGL2 the renderer would also have to infer the collection by comparing this frame's calls with the previous frame's, and replay an old frame's calls while a new order is sorted. An explicit immutable collection replaces both the comparison and the replay.
+- **Collection version numbers kept by the renderer, and a `settled()` promise for safe disposal.** The collection object's identity is a simpler version, and object releases are synchronous.
+- **Reference counts, or a sweep that frees released data and generators for the app.** See object releases above.
+- **Views as the only holder of settings, with the renderer pointed at one before each render (`renderer.view = view`).** Every app, WebGPU-only ones too, had to create a view and switch the renderer's view before rendering another camera, though only the CPU order depends on the camera. The renderer now holds the shared settings, and views hold what differs, made per camera when the CPU sort needs them; `splatRenderer.view` remains for an explicit choice.
+- **One mesh per camera through `camera.layers`.** This duplicates buffers and scene nodes.
+- **A `SplatModifier` object with a context, a `colorOnly` flag, and per-object modifiers.** TSL already removes nodes that don't affect an output, so a color-only modifier costs nothing in the sort-keys pass. A per-object modifier is a generator wrapping another generator.
+- **A `form` field on generators, and a `SplatSubset` class.** The functions a generator implements already define its forms, and a subset (such as a LoD subset) is a remap of the index in `fromSplats`, by an index list or any TSL function.
+- **A static, shared `WgpuSplatSorter` and projected buffer.** It fails constraint 5.
+- **The modifier space in the program cache key.** It changes only matrices.
+- **Sorting on the shared worker pool, or on the main thread.** Large file loads would queue ahead of sorts, and a main-thread sort drops frames.
+
+## What this asks of an app
+
+- Create generators and modifier functions once and keep them. A new one every frame causes a compile every frame.
+- Change matrices and params in place; create a new `SplatCollection` when the collection of drawn objects changes.
+- Set `count` on every object, and free what an object owns in its `release`, not when replacing the collection.
+- If the app makes camera objects anew, set `viewKey` (or `view`) so they share views.
+- Dispose renderers that are no longer needed (their views go with them), and views of keys that are gone: their live collections keep their objects until then (a warning is logged for a renderer that is garbage-collected without being disposed).
+- On WebGL2 (or with `sortMode: "cpu"`), nothing is drawn for a few frames before the first order, and the old collection is drawn for a few frames after each change. `autoSort` handles the sorting, and `onInvalidate` tells an on-demand app when to render.</code></pre></div>
+</main>
+</div>
+<script src="site.js"></script>
+<script>
+  // The filter shows the files whose path matches and opens their folders
+  const filter = document.querySelector(".ref-side input");
+  const files = [...document.querySelectorAll(".ref-side a")];
+  const folders = [...document.querySelectorAll(".ref-side details")];
+  const initial = folders.map((folder) => folder.open);
+  filter.addEventListener("input", () => {
+    const text = filter.value.trim().toLowerCase();
+    files.forEach((a) => (a.hidden = Boolean(text) && !a.getAttribute("href").toLowerCase().includes(text)));
+    folders.forEach((folder, i) => {
+      const shown = folder.querySelector("a:not([hidden])") !== null;
+      folder.hidden = !shown;
+      folder.open = text ? shown : initial[i];
+    });
+  });
+</script>
+</body>
+</html>
