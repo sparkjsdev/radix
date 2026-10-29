@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checks · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/checks.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/checks.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html" class="on">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="checks">Checks<a class="anchor" href="#checks">#</a></h1>
+<p>Radix has three sets of checks: core checks in Node (no browser), GPU checks in the browser on both backends, and a check of these docs. Performance is measured separately, by the benchmarks at the end.</p>
+<table><thead><tr><th>What</th><th>Command</th><th>Needs</th></tr></thead><tbody><tr><td>core checks</td><td><code>npm run check:core</code></td><td>Node</td></tr><tr><td>GPU checks, both backends</td><td><code>npm run check:test</code> (<a href="../../scripts/check-test.mjs"><code>scripts/check-test.mjs</code></a>)</td><td><code>npm run build:test</code>, <code>npm run serve</code> and Chrome</td></tr><tr><td>GPU checks, one backend</td><td>open <code>http://localhost:8000/build/test/gpu/index.html?gpu=webgpu</code> or <code>?gpu=webgpu-gl</code></td><td><code>npm run build:test</code> and <code>npm run serve</code></td></tr><tr><td>example pages, both backends</td><td><code>npm run check:examples</code> (<a href="../../scripts/check-examples.mjs"><code>scripts/check-examples.mjs</code></a>)</td><td><code>npm run build</code>, <code>npm run serve</code> and Chrome</td></tr><tr><td>docs</td><td><code>npm run check:docs</code></td><td>Node</td></tr><tr><td>types</td><td><code>npm run typecheck</code> (<code>tsconfig.lib.json</code>, <code>tsconfig.core.json</code>, <code>tsconfig.examples.json</code>, <code>tsconfig.test.json</code>)</td><td>Node</td></tr><tr><td>lint</td><td><code>npm run lint</code> (the types, then <code>eslint .</code>)</td><td>Node</td></tr></tbody></table>
+<h2 id="checkcore-core-checks-in-node">check:core: core checks in Node<a class="anchor" href="#checkcore-core-checks-in-node">#</a></h2>
+<p><code>npm run check:core</code> (<a href="../../scripts/check-core.ts"><code>scripts/check-core.ts</code></a>) runs without a browser. It checks:</p>
+<ul>
+<li><code>ArrayData</code>: types, shared arrays, growth, copies, transfer, <code>swap</code>, and <code>setFromTransferable</code> keeping the existing objects.</li>
+<li>RDX: round trips of whole and chunked files, chunks read out of order, range reads, and chunked URLs.</li>
+<li>Codecs: every field stays within its bit budget (rounded octahedral normals within 0.06 degrees, and the generic and fixed-size codecs agree), and covariance round trips.</li>
+<li>Splat access: <code>Splats.loadCenter</code> matches <code>Splats.load</code> for every layout. <code>Splats.store</code> and <code>Splats.storePbr</code> each leave the other's bits unchanged, and together they produce the same words as <code>Splats.encodeExt</code> (likewise for the cov and packed layouts). <code>Splats.get</code> / <code>Splats.find</code> look up the splat bundle by explicit name, then by the standard names, then by formats.</li>
+<li>Layouts: <code>SplatFiles.decode</code> decodes every format into <code>packedSplats</code> with an encoding and into <code>covSplats</code>. The packed <code>encoding</code> is optional: the defaults apply when it is left out, partial fields are filled from the defaults, and an RDX file keeps its own encoding. <code>Splats.convert</code> returns data already in the layout unchanged, converts data in another layout, shares the other bundles, and renames a bundle without copying its arrays. <code>SplatData</code> typing is checked too.</li>
+<li>Types: <code>Splats.loadPbr</code> is refused for packed and cov bundles and for untyped ones, and accepted after <code>Splats.isExt</code>.</li>
+<li>Files:
+<ul>
+<li>PLY with and without PBR, point clouds, and SH degrees.</li>
+<li>Compressed PLY round trips in table and Morton order, and older SuperSplat files (without color ranges, with an <code>sh</code> element).</li>
+<li>SPZ versions 2, 3, and 4: PBR and the LoD tree round trip. SPZ 4 at SH degrees 0 and 4, with its records, unpacks to the same columns as version 3 and is detected by its <code>NGSP</code> header. Version 4 inside gzip reads as version 3 with SH degree 4.</li>
+<li>SPZ extension records: safe orbit, coordinate system (with and without conversion), and unknown types skipped.</li>
+<li><code>SpzFile.unpack</code> of streams in chunks of 1, 7, and random sizes gives the same columns, rejects early ends, and with <code>sh: false</code> stops before SPZ 4's SH stream.</li>
+<li>Tampered SPZ 4 files are rejected: table of contents, stream counts and sizes, trailing bytes, point counts, truncated and corrupt streams.</li>
+<li>RAD with several chunks and a LoD tree, format detection, and <code>SplatFiles.encode</code> / <code>decode</code> for every format.</li>
+<li>When <code>splats/spz4/</code> holds SharedTestModels' SPZ 4 samples: each against its gzip version, and the backpack against its PLY.</li>
+</ul></li>
+<li>zstd: Radix's encoder is read by fzstd and by Node's zstd, and Node's frames by fzstd, on random, skewed, RLE, and mixed data across block edges. A wrong size is refused.</li>
+<li>Axes: all 256 pairs of the 16 coordinate systems round trip; SH matches when seen from the converted direction; quaternions and permuted scales match M Σ Mᵀ; flips change only SH signs. <code>Axes.convert</code> on ext, cov, and packed tables (per-splat SH and a palette) matches converting one splat at a time.</li>
+<li>Spherical harmonics:
+<ul>
+<li>Each codec round trips at every degree within its budget: RMS color error at most 0.2 / 255 (ext) and 0.4 / 255 (packed), on values with ±5 outliers. Reading degrees 1 to 3 of a degree-4 entry equals a lower-degree encode.</li>
+<li><code>Sh.find</code> identifies each degree's channel set (<code>extShA</code>..<code>F</code>, <code>packedShA</code>..<code>E</code>) and rejects other names and partial sets.</li>
+<li>Palettes use power-of-two strides by default, and convert and expand.</li>
+<li>Every writer round trips through its reader: PLY, RDX, and RAD <code>f32</code> exactly; RAD <code>f16</code> and <code>s8</code>, compressed PLY, and SPZ within their steps. <code>sh: false</code> skips SH and records its degree.</li>
+<li>Degree 4 round trips through PLY (72 <code>f_rest</code>), SPZ, and RDX; compressed PLY and RAD keep its first 3 bands.</li>
+<li>Loading defaults to ext and takes a codec; RDX keeps its codec unless asked.</li>
+<li>RAD clustered SH written from a palette (<code>f32</code>, <code>f16</code>, and <code>s8</code> codes; labels over several chunks) reads back as that palette, in the <code>sh</code> codec or skipped. The PLY and RDX writers expand it per splat.</li>
+<li>A hand-built RAD in Spark's clustered layout (<code>s8</code> codes in chunk 0, <code>u16</code> then <code>u32</code> labels) reads as an ext palette of its codes; one with 70,000 entries expands to per-splat SH.</li>
+<li><code>Sh.evaluate</code> along the axes, and for bands 1 to 4 against real SH computed from associated Legendre polynomials.</li>
+<li>When <code>splats/grace-interior-10m-sh3.ply</code> and its SPZ copy exist: the SPZ reader against sampled records of the float PLY.</li>
+<li>When <code>splats/sh4/</code> holds <code>sparkling_water</code> and <code>scarf</code> (<code>.ply</code> and gzip version-4 <code>.spz</code>, CC0, from github.com/raymondyfei/SharedTestModels): each SPZ against its PLY at degree 4. Order and centers match, SH is within half of SPZ's 5-bit (band 1) or 4-bit step plus rounding, and no signs flip.</li>
+</ul></li>
+<li>Sort keys: keys are monotonic in distance and order splats back to front at 16, 24, and 32 bits, and non-finite distances give invalid keys. <code>SortKeys.sort</code> is stable, puts invalid keys last, and gives the same order at every key width. <code>ArrayData.INDICES</code> has the expected definition.</li>
+</ul>
+<p><code>tsconfig.core.json</code> also typechecks the script, so its <code>@ts-expect-error</code> lines test the types.</p>
+<h2 id="buildtestgpuindexhtml-gpu-checks-in-the-browser">/build/test/gpu/index.html: GPU checks in the browser<a class="anchor" href="#buildtestgpuindexhtml-gpu-checks-in-the-browser">#</a></h2>
+<p><code>/build/test/gpu/index.html?gpu=webgpu</code> and <code>?gpu=webgpu-gl</code> run the checks in <code>test/gpu/</code>: <code>tests.ts</code>, then <code>splatTests.ts</code>, <code>shTests.ts</code>, <code>wgpuTests.ts</code>, <code>renderTests.ts</code>, <code>sceneTests.ts</code>, and <code>controlsTests.ts</code>, with helpers in <code>renderUtils.ts</code>. <code>?run=0</code> loads the page without running them. The checks:</p>
+<ul>
+<li>Upload and readback for every GPU format, packed and unpacked.</li>
+<li>Ranges that start in the middle of a row, GPU copies, and capacity growth.</li>
+<li><code>GpuArrayReader</code> in a fragment shader, compared with the CPU data.</li>
+<li>The splat functions that fill <code>THREE.Vector3</code>, <code>Quaternion</code>, and <code>Color</code>.</li>
+<li>Splat readers against CPU decoding for every layout and load function, bound by their default bundle names, and <code>GpuSplatReader.from(arrays)</code> picking the layout.</li>
+<li><code>GpuSplats.store*</code> encoding against the CPU's bits, through the fragment writer and, on WebGPU, through the compute writer. Splats whose code is one step off must still decode within the encoder's budgets.</li>
+<li><code>GpuArrayWriter</code> ranges across rows and layers, packing 1, 2, and 4, <code>writeBatch</code>, and the writer's limits.</li>
+<li><code>GpuArrays.swap</code> with a rebound reader.</li>
+<li>Spherical harmonics (<code>shTests.ts</code>):
+<ul>
+<li><code>GpuShReader</code> decodes ext and packed SH like <code>Sh</code> on the CPU: per splat at degrees 1 to 4 of a degree-4 bundle, and through palettes of degree 3 (strides 4 and 3) and 4 (strides 8, and 6 or 5).</li>
+<li>The projection adds each object's SH from its own view origin, matching the same splats with that color baked in. Two placements are tested, one turned and scaled, and degree 4 per splat.</li>
+<li><code>objectParams.maxShDegree</code> caps the bands: 1 and 3 on degree-4 data, and 0 matches no SH.</li>
+<li>Palettes of both codecs draw in one collection.</li>
+<li>A RAD with clustered SH is written on a worker (the palette's arrays come back). <code>loadSplatFile</code> loads the same palette on a worker and on the page, and <code>loadSplats</code> expands it to the same per-splat SH on both.</li>
+<li>A <code>GpuShReader</code> in a custom remapped generator matches <code>fromSplats</code>.</li>
+</ul></li>
+<li>The projected word codecs: ewa's <code>depth20</code> within 2^-16 of the depth (clamped to 2^-14 to 2^18) and <code>angle12</code> within π / 8192; the ray methods' center within 5e-6 rad of its direction (octahedron corners, axes, and both sides of the fold included) with its distance, whatever the last head word holds below bit 24.</li>
+<li><code>createRenderer</code> with <code>profile</code>, <code>hdr</code>, and <code>directCanvas</code>.</li>
+<li><code>loadSplats</code> / <code>writeSplats</code> give the same results with every <code>worker</code> choice. A pool makes no workers until it is used, and the data comes back from a failed write. <code>loadSplats</code> into <code>packedSplats</code> with an encoding gives the same bits on a worker and on the current thread. A <code>signal</code> aborted before the load, or on its first progress report, rejects with its reason on a worker and here, and the pool then loads again; a load queued behind a lease leaves the queue when aborted. <code>request</code> reaches <code>fetch</code> here and goes to a worker, a <code>Headers</code> object too.</li>
+</ul>
+<p>WebGPU only (<code>wgpuTests.ts</code>). These are skipped on WebGL2, where <code>storage: true</code> must throw instead:</p>
+<ul>
+<li><code>WgpuBuffer</code> upload, read, clear, <code>copyFrom</code>, growing with <code>keep</code>, and an atomic counter.</li>
+<li><code>WgpuCompute</code> dispatched with 5M threads (more than 65535 workgroups), 2D workgroups, and an indirect buffer. <code>WgpuComputeBatch</code> in one pass and split.</li>
+<li><code>WgpuArrayWriter</code> for every storable format at packing 1, 2, and 4: a range across layers with <code>first</code>, a batch mixed with a fragment writer, and the same texels as the source and as the fragment writer.</li>
+<li>The compute writer's limits, and its refusal of arrays made without <code>storage</code> (also a type error, checked with <code>@ts-expect-error</code>).</li>
+<li><code>WgpuArrayStore</code> writing in reversed order, writing packed texels, and rebinding after <code>swap</code>.</li>
+<li>Storage arrays: upload, read, <code>copyFrom</code>, <code>swap</code>, and readers in fragment and compute shaders.</li>
+</ul>
+<p>Projection, sorting, and drawing (<code>renderTests.ts</code>; the WebGPU-only checks are skipped on WebGL2):</p>
+<ul>
+<li><code>WgpuRadixSort</code> against <code>SortKeys.sort</code> with 16-, 24-, and 32-bit keys, both scan tiers, and counts of 0, 1, around one block, and 70000 (WebGPU).</li>
+<li><code>WgpuCompact</code> with sort keys read from an RGBA8 texture, followed by <code>sortIndirect</code>, against <code>SortKeys.sort</code> (WebGPU).</li>
+<li>Every projection method on every splat layout with 1 and 2 eyes. The compute and fragment writers give the same words and sort keys (WebGPU). In stereo, with the head placed at one eye, that eye gives its mono words (WebGL2 compilers may round raygs' float c² a few ulps apart).</li>
+<li>A TSL generator that gives only splats, or only covariances, projects like the same splats read from arrays. Two objects of one collection at different offsets equal one object that holds both.</li>
+<li>ewa bounds against a CPU EWA reference, and ewa, 3dgut, and htgs bounds agreeing for small, distant splats.</li>
+<li>Culling behind the camera, off screen, and under <code>minAlpha</code>, with sort keys marked invalid only when <code>cullKeys</code> asks for it.</li>
+<li>Sort keys against <code>SortKeys.compute</code> at every sort key width, switched by the uniform alone.</li>
+<li><code>WgpuSplatSorter</code> against <code>SortKeys.sort</code> of the read-back sort keys, with its indirect arguments (WebGPU). <code>sortSplatKeys</code> on a worker and inline. A view's <code>sort</code> against <code>SortKeys.sort</code> of a full projection's sort keys.</li>
+<li>Rendered images: one splat gives a centered, symmetric falloff for every method. A small, far splat gives its exact falloff. Two splats blend back to front, and blend the other way with a reversed order. GPU and CPU orders give the same image (WebGPU). <code>Hdr</code> tone mapping leaves a frame below the knee unchanged. A negative color draws as black into a half-float target, never NaN. An opaque mesh in front of a splat hides it and one behind does not, with and without <code>logarithmicDepthBuffer</code>. A renderer that drew nothing before its splats arrived draws them correctly. A two-eye <code>ArrayCamera</code> matches the mono render of each eye.</li>
+<li><code>objectParams.sortGuard</code> drops the sort keys of splats beyond the widened view and behind the head, and drops none at 0.</li>
+</ul>
+<p>Collections, renderers, and views (<code>sceneTests.ts</code>):</p>
+<ul>
+<li><code>isUniformScale</code>: rotations times a uniform scale (and products of them) pass; shear, non-uniform scale, mirrors, and zero fail.</li>
+<li>An object's world transform (its <code>matrixWorld</code>: uniform, non-uniform, or mirrored) against the same splats pre-transformed by it on the CPU, for every method.</li>
+<li>The static uniforms: one program dispatched twice in a frame with two matrices gives the same result as each dispatch alone. Two <code>SplatRenderer</code>s in one render each draw their own splats.</li>
+<li>The program cache: one program per generator across frames and renderers. Two modifiers build 2 programs, then none. New data, a modifier space, or a moved frame build none. A disposed generator's programs are rebuilt. <code>SplatCollection.object</code> refuses data that does not match its generator's (<code>@ts-expect-error</code>).</li>
+<li>Form selection: a covariance-only generator is never diagonalized under ewa, and is diagonalized under 3dgut.</li>
+<li>Modifiers: the modifier that matches the form runs. A view-space depth modifier colors splats by depth. An identity modifier in each space projects like no modifier. A world height modifier colors objects by their world height.</li>
+<li><code>SplatGenerator.fromSplats</code>: an index list or a TSL remap gives the same result as reading those splats directly. New index lists compile nothing. In a subset drawn through an index list (such as a LoD subset), <code>splat.index</code> stays the index of the source splat. Modifiers run in turn.</li>
+<li>Views: a view's collection, <code>objectParams</code>, <code>null</code> modifier, and <code>sortBits</code> project like a renderer with those settings; its unset settings follow the renderer; <code>viewFor</code> returns the same view for a key; a disposed view leaves its renderer. A render draws the renderer's settings, its camera's view, or the explicit <code>view</code>; in gpu mode a render makes no view. <code>viewKey</code>: renders from cameras made anew share the view of their key; by default each camera makes one (cpu mode).</li>
+<li>The CPU sort: nothing is drawn before an order arrives. <code>apply</code> skips older versions. A newer order shows its own collection while the renderer's collection has moved on. A later landed order supersedes an earlier one. A switch to gpu mode drops the orders and releases their objects, and <code>apply</code> refuses in gpu mode.</li>
+<li>Object release: an object is released once, when no renderer's live collection holds it. Kept objects and other renderers still hold their objects. A view's own collection holds its objects until the view is disposed. <code>dispose()</code> releases the renderer's objects. A release may set a renderer's collection. Shown and in-flight collections (and landed collections not yet applied) hold their objects.</li>
+<li>Sort workers: cpu renderers and their views share <code>SplatRenderer.sortPool</code> (4 workers), sorting in parallel. A gpu renderer refuses <code>sort()</code>. A renderer with <code>sortWorker</code> sorts there instead. Both pools outlive their renderers. Disposing the renderer during a sort rejects the sort, keeps no sort key arrays or views, and leaves the shared pool working. A disposed renderer left in the scene draws nothing, makes no textures, and throws nothing, <code>prepare</code> too, in gpu and cpu modes; its <code>sortKeys</code> and a disposed pool reject.</li>
+<li><code>SplatRenderer</code> refuses a view that belongs to another renderer. A render that does not follow its <code>prepare</code> projects again (WebGPU).</li>
+<li>A camera in the other clip-space convention projects like one in the renderer's convention, and is left unchanged.</li>
+<li><code>autoSort</code> re-sorts on a lens change when a <code>sortGuard</code> is set, and does not without one. <code>requestSort()</code> makes it sort again; a request made while a sort is in flight starts one more sort after it finishes. With <code>autoSort: false</code>, a view sorts only when asked. <code>onInvalidate</code> is called for a request, for an applied order, and once for every view on the renderer's <code>requestSort()</code>.</li>
+</ul>
+<p><code>snorm8</code> is skipped on WebGL2, where it cannot be read back. <code>npm run check:test</code> runs the page headless on both backends and prints the failures and totals (it needs <code>npm run build:test</code> and <code>npm run serve</code>).</p>
+<h2 id="the-docs-check">The docs check<a class="anchor" href="#the-docs-check">#</a></h2>
+<p><code>npm run docs</code> (<a href="../../scripts/build-docs.mjs"><code>scripts/build-docs.mjs</code></a>) writes the HTML version of every page to <code>docs/ref/</code>, which is gitignored; <code>npm run build</code> runs it too. <code>npm run check:docs</code> (<code>--check</code>) writes the pages and fails when:</p>
+<ul>
+<li>a relative link or <code>#anchor</code> in any <code>.md</code> page or docs <code>.html</code> page does not resolve (anchors follow GitHub's heading ids);</li>
+<li>an export of a Radix <code>index.ts</code> appears on no <code>.md</code> page, in inline code or in a code block.</li>
+</ul>
+<h2 id="benchmarks">Benchmarks<a class="anchor" href="#benchmarks">#</a></h2>
+<p>Performance is measured by benchmarks rather than by the checks: <code>npm run bench:core</code> (core benchmarks in Node, on files in <code>splats/</code> or given with <code>--file</code>) and <code>npm run bench -- --matrix &lt;name&gt;</code> (<code>/build/test/bench/index.html</code> in headless Chrome, on the hosted samples). A summary of the results is in <a href="performance.html">Performance</a>. Radix is compared with SparkJS and PlayCanvas on the same scenes and camera paths in <a href="../bench.html">bench.html</a>, the summary, and <a href="../bench-report.html">bench-report.html</a>, every result.</p>
+<div class="pager"><a class="prev" href="api.html"><small>Previous</small>API index</a><span></span></div>
+<p class="source">Source: <a href="../checks.md">docs/checks.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#checkcore-core-checks-in-node">check:core: core checks in Node</a>
+<a class="h2" href="#buildtestgpuindexhtml-gpu-checks-in-the-browser">/build/test/gpu/index.html: GPU checks in the browser</a>
+<a class="h2" href="#the-docs-check">The docs check</a>
+<a class="h2" href="#benchmarks">Benchmarks</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: the data</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='8' cy='8' rx='7' ry='4' fill='%232dd4bf' transform='rotate(-30 8 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+pre .e { color: var(--red); }
+#progress { background: linear-gradient(90deg, var(--core), var(--gpu), var(--wgpu)); }
+.hero .inner { position: relative; max-width: 780px; padding: 24px; }
+.hero h1 { font-size: clamp(48px, 9vw, 104px); margin: 0; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(120deg, #fff, var(--core) 40%, var(--gpu) 70%, var(--wgpu)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: clamp(18px, 2.4vw, 23px); color: #cfd4df; margin: 22px 0 8px; text-shadow: 0 2px 20px #000; }
+
+section { max-width: 1080px; margin: 0 auto; padding: 90px 28px 40px; }
+section > .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+section > h2 { font-size: clamp(28px, 4vw, 42px); margin: 10px 0 12px; letter-spacing: -0.02em; line-height: 1.15; }
+section > p.lede { font-size: 18px; color: #c7ccd8; max-width: 760px; margin: 0 0 22px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 0; }
+.row { display: flex; gap: 18px; flex-wrap: wrap; }
+.row > * { flex: 1 1 300px; min-width: 0; }
+.takeaway { border-left: 3px solid var(--core); padding: 6px 14px; margin: 22px 0 0; color: #d6dae3; background: linear-gradient(90deg, #13202a, transparent); border-radius: 0 8px 8px 0; }
+.takeaway b { color: var(--core); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 12px/1 var(--mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--dim); cursor: pointer; user-select: none; transition: all .15s; }
+.chip:hover { color: var(--text); border-color: #3a4256; }
+.chip.on { color: #0a0c11; background: var(--text); border-color: var(--text); }
+button.btn { font: 600 13px/1 system-ui, sans-serif; padding: 9px 14px; border-radius: 9px; border: 1px solid #3a4256; background: #1d2333; color: var(--text); cursor: pointer; }
+button.btn:hover { background: #262e42; }
+button.btn.primary { background: var(--text); color: #0a0c11; border-color: var(--text); }
+label.ctl { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); margin: 8px 0; }
+label.ctl input[type=range] { flex: 1; accent-color: var(--core); }
+label.ctl output { font: 12px var(--mono); color: var(--text); min-width: 90px; text-align: right; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+.kv dt { color: var(--dim); } .kv dd { margin: 0; font-family: var(--mono); font-size: 13px; }
+.yes { color: var(--worker); } .no { color: var(--red); }
+.small { font-size: 13px; color: var(--dim); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* Layers */
+#layersSvg { width: 100%; height: auto; display: block; }
+#layersSvg .box { cursor: pointer; transition: opacity .2s; }
+#layersSvg .box rect { stroke-width: 2; }
+#layersSvg .box:hover rect { filter: brightness(1.25); }
+#layersSvg text { font-family: system-ui, sans-serif; }
+#layersSvg .forbid { opacity: 0; transition: opacity .3s; }
+#layersSvg.showForbid .forbid { opacity: 1; }
+
+/* Table */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0; font: 12px var(--mono); }
+.tbl th, .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tbl th, .tbl td.idx { white-space: nowrap; }
+.tbl thead th.bundle { font: 600 12px system-ui, sans-serif; border-bottom: 2px solid; }
+.tbl thead th.col { color: var(--dim); cursor: pointer; }
+.tbl thead th.col:hover { color: var(--text); }
+.tbl td.idx { color: var(--faint); }
+.tbl tr.spare td { background: repeating-linear-gradient(45deg, transparent 0 6px, #ffffff07 6px 12px); color: var(--faint); }
+.tbl tr.mark td { border-bottom: 2px dashed var(--yellow); }
+.tbl tr.mark.cap td { border-bottom-color: var(--pink); }
+.capbar { height: 18px; border-radius: 6px; background: #ffffff0c; position: relative; overflow: hidden; margin: 8px 0; }
+.capbar div { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--yellow), #f59e0b); transition: width .3s; }
+#growLog { font: 12px var(--mono); color: var(--dim); min-height: 20px; }
+
+/* Packing strip */
+.texels { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.texel { display: flex; gap: 2px; padding: 4px; border: 1px solid #3a4256; border-radius: 6px; background: #0f131b; }
+.texel span { width: 22px; height: 22px; border-radius: 3px; display: grid; place-items: center; font: 10px var(--mono); color: #0a0c11; }
+
+/* Layout */
+#layoutCanvas, #writeCanvas, #octCanvas, #sphereCanvas, #byteCanvas { display: block; width: 100%; height: auto; border-radius: 10px; }
+.bits { font: 13px var(--mono); display: flex; flex-wrap: wrap; gap: 1px; margin-top: 8px; }
+.bits span { width: 15px; text-align: center; border-radius: 2px; padding: 2px 0; }
+
+/* Flow */
+.flow { display: flex; gap: 0; align-items: stretch; overflow-x: auto; padding: 4px 0 10px; }
+.flow .node { flex: 1 0 118px; text-align: center; padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; transition: all .25s; position: relative; }
+.flow .node .ic { font-size: 22px; }
+.flow .node .t { font-weight: 600; font-size: 13px; margin-top: 4px; }
+.flow .node .l { font: 10px var(--mono); color: var(--dim); }
+.flow .node.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 30px -8px var(--c); transform: translateY(-3px); }
+.flow .arrow { flex: 0 0 22px; display: grid; place-items: center; color: var(--faint); }
+
+/* Bits */
+.word { display: flex; align-items: stretch; margin: 6px 0; gap: 10px; }
+.word .wl { width: 64px; font: 12px var(--mono); color: var(--dim); display: flex; align-items: center; }
+.word .wb { flex: 1; display: flex; height: 38px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+.word .f { display: flex; align-items: center; justify-content: center; font: 11px/1.1 var(--mono); color: #0a0c11; border-right: 1px solid #0a0c1155; cursor: help; text-align: center; overflow: hidden; transition: filter .15s; padding: 0 2px; }
+.word .f:hover { filter: brightness(1.25) saturate(1.2); }
+#bitInfo { min-height: 48px; font-size: 14px; color: #cfd4df; }
+.livebits { font: 12px var(--mono); word-break: break-all; }
+.livebits b { font-weight: 400; padding: 0 1px; border-radius: 2px; }
+
+/* Access */
+.fn { display: inline-flex; align-items: center; gap: 6px; font: 12px var(--mono); padding: 6px 10px; border-radius: 8px; margin: 3px; border: 1px solid var(--line); transition: all .2s; }
+.fn.ok { border-color: #2f6b4a; background: #102318; color: var(--worker); }
+.fn.bad { border-color: #5b2a2a; background: #1e1214; color: #a26a6a; text-decoration: line-through; }
+
+/* Buffers */
+.buffers { display: flex; gap: 24px; align-items: center; justify-content: center; position: relative; min-height: 190px; }
+.buf { width: 220px; height: 130px; border-radius: 14px; border: 2px solid; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: transform .6s cubic-bezier(.6,.0,.2,1); background: var(--panel2); position: relative; overflow: hidden; }
+.buf .fill { position: absolute; left: 0; bottom: 0; height: 100%; background: currentColor; opacity: .18; transition: width .2s linear; }
+.buf b { font-size: 20px; position: relative; } .buf small { color: var(--dim); position: relative; font: 11px var(--mono); }
+.tag { font: 11px var(--mono); padding: 3px 8px; border-radius: 6px; background: #1d2333; border: 1px solid var(--line); }
+.warn { color: var(--yellow); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+
+/* Workers */
+.pool { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.slot { height: 104px; border-radius: 12px; border: 1px dashed #343c50; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: var(--faint); position: relative; overflow: hidden; }
+.slot.live { border: 1px solid var(--worker); color: var(--text); background: #0f1d16; animation: pop .35s ease; }
+.slot.busy { box-shadow: 0 0 22px -6px var(--worker); }
+.slot .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--worker); width: 0; }
+.slot .lease { position: absolute; top: 6px; right: 8px; font: 10px var(--mono); color: var(--yellow); }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } }
+#queue { font: 12px var(--mono); color: var(--dim); min-height: 22px; }
+#workerLog { font: 12px var(--mono); color: var(--dim); height: 96px; overflow: auto; background: #0f131b; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+/* Files */
+.formats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.fmt { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--panel2); transition: all .3s; }
+.fmt h4 { margin: 0 0 4px; font-size: 18px; }
+.fmt.hit { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 10px 30px -10px var(--yellow); transform: translateY(-3px); }
+#drop { border: 2px dashed #3a4256; border-radius: 14px; padding: 26px; text-align: center; color: var(--dim); transition: all .2s; margin-top: 14px; }
+#drop.over { border-color: var(--yellow); color: var(--text); background: #1d1a0d; }
+
+/* RDX */
+.rdx { display: flex; gap: 4px; flex-wrap: wrap; margin: 12px 0; }
+.rdx div { padding: 10px 12px; border-radius: 8px; font: 12px var(--mono); color: #0a0c11; }
+
+/* Projection, sorting, and drawing */
+#projCanvas, #eyesCanvas, #radixCanvas, #compactCanvas, #twoSortCanvas, #quadCanvas { display: block; width: 100%; height: auto; border-radius: 10px; }
+.keyrow { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; margin: 5px 0; }
+.keyrow .lbl { font: 12px var(--mono); color: var(--dim); }
+.keyrow .bits span { width: 13px; font-size: 11px; }
+.meter { height: 14px; border-radius: 5px; background: #ffffff0c; position: relative; overflow: hidden; margin: 4px 0 10px; }
+.meter div { position: absolute; inset: 0 auto 0 0; border-radius: 5px; transition: width .3s; }
+.meter span { position: absolute; right: 6px; top: -1px; font: 11px var(--mono); color: var(--text); }
+.vi { display: flex; gap: 6px; margin: 6px 0 12px; }
+.vi span { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); display: grid; place-items: center; font: 15px var(--mono); cursor: pointer; background: var(--panel2); }
+.vi span.on { background: var(--text); color: #0a0c11; }
+.loop { display: flex; gap: 18px; flex-wrap: wrap; }
+.loop pre { flex: 1.4 1 420px; margin: 0; }
+.loop pre .ln { display: block; border-radius: 4px; padding: 0 4px; margin: 0 -4px; transition: background .15s; }
+.loop pre .ln[data-b] { cursor: default; }
+.loop pre .ln.on { background: #ffffff12; }
+.blocks { flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px; }
+.blocks div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel2); transition: all .2s; font-size: 13px; }
+.blocks div b { display: block; font: 600 13px var(--mono); }
+.blocks div small { color: var(--dim); }
+.blocks div.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 26px -10px var(--c); transform: translateX(-4px); }
+.blocks div.off { opacity: .35; }
+
+/* Roadmap */
+.road { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.road div { border-radius: 12px; padding: 16px; border: 1px solid var(--line); background: var(--panel2); }
+.road div.done { border-color: #2f6b4a; }
+.road b { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body data-root="" data-page="data.html">
+<div id="progress"></div>
+<nav id="nav"></nav>
+
+<header class="hero" id="top">
+  <canvas id="heroCanvas"></canvas>
+  <div class="inner">
+    <h1>The data</h1>
+    <p class="lead">Radix stores 3D Gaussian splats in tables of typed arrays. A table has the same layout and bits on the CPU, in workers, in files, and on the GPU.</p>
+    <p class="small">This page covers tables, formats, texture layout, splat layouts, typed access, writers, double buffering, workers, and files. The widgets run JavaScript ports of the codecs in <code>core/</code>.</p>
+    <div class="scroll">sections below ↓</div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="table" data-title="The table">
+  <div class="eyebrow">01 · The data model</div>
+  <h2>Data is stored in tables</h2>
+  <p class="lede">An <code>ArrayData</code> is a table. Each <b>row</b> is one element, such as a splat. Each <b>column</b> is a <b>channel</b>, one flat typed array. Channels that belong together form a named <b>bundle</b>, and all bundles have the same rows.</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 520px; overflow-x: auto">
+      <table class="tbl" id="arrTable"></table>
+    </div>
+    <div class="panel" style="flex: 1 1 260px">
+      <label class="ctl">count <input type="range" id="countSlider" min="0" max="20000" value="5000"><output id="countOut"></output></label>
+      <div class="capbar"><div id="capFill"></div></div>
+      <dl class="kv">
+        <dt>count</dt><dd id="kvCount"></dd>
+        <dt>capacity</dt><dd id="kvCap"></dd>
+        <dt>spare</dt><dd id="kvSpare"></dd>
+      </dl>
+      <p class="small">Capacity is always a multiple of 4096. 4096 elements fill whole 1024-wide texture rows at every packing, so CPU rows and GPU texels line up.</p>
+      <button class="btn" id="growBtn">ensureCapacity(count + 5000)</button>
+      <div id="growLog"></div>
+      <pre id="colCode">// click a column header</pre>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>Channel names:</b> a channel's name says what its bits are (<code>extA</code>, <code>covB</code>, <code>packed</code>), and code finds splat data by those names and formats. A bundle definition is plain data, so it can be sent to a worker with <code>postMessage</code> or saved in a file header unchanged.</p>
+  <p class="deeper">See also: <a href="ref/arraydata.html#arraydata">ArrayData</a> <a href="ref/arraydata.html#bundles">Bundles</a></p>
+</section>
+
+<!-- 2 -->
+<section id="formats" data-title="Formats">
+  <div class="eyebrow">02 · Column types</div>
+  <h2>Formats and packing</h2>
+  <p class="lede">A format is a scalar type with an optional component count, named like WebGPU vertex formats (<code>"uint32x4"</code>). <code>packing</code> puts 1, 2, or 4 elements in one texel. It only changes the GPU layout; CPU memory stays the same.</p>
+  <div class="row reveal">
+    <div class="panel">
+      <div class="small">scalar</div><div class="chips" id="scalarChips"></div>
+      <div class="small" style="margin-top: 10px">components</div><div class="chips" id="compChips"></div>
+      <div class="small" style="margin-top: 10px">packing</div><div class="chips" id="packChips"></div>
+      <div class="texels" id="texelStrip"></div>
+    </div>
+    <div class="panel">
+      <dl class="kv" id="fmtInfo"></dl>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/arraydata.html#formats">Formats</a></p>
+</section>
+
+<!-- 3 -->
+<section id="layout" data-title="Texture layout">
+  <div class="eyebrow">03 · On the GPU</div>
+  <h2>One array texture per channel</h2>
+  <p class="lede">On the GPU, <code>GpuArrays</code> holds the same table: each channel is a 2D array texture, a stack of equal layers that are 1024 texels wide. Width and height are powers of two, so a texel's address is found with shifts and masks only.</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 520px">
+      <canvas id="layoutCanvas" width="1000" height="330"></canvas>
+      <div class="bits" id="texelBits"></div>
+      <div class="legend"><span><i style="background: var(--pink)"></i>layer bits</span><span><i style="background: var(--gpu)"></i>y bits (log2 height)</span><span><i style="background: var(--core)"></i>x bits (10)</span></div>
+    </div>
+    <div class="panel" style="flex: 1 1 280px">
+      <label class="ctl">elements <input type="range" id="elemSlider" min="0" max="1000" value="560"><output id="elemOut"></output></label>
+      <div class="small">packing</div><div class="chips" id="layoutPack"></div>
+      <label class="ctl" style="margin-top: 12px">element <input type="range" id="pickSlider" min="0" max="1000" value="420"><output id="pickOut"></output></label>
+      <dl class="kv" id="layoutInfo" style="margin-top: 10px"></dl>
+      <pre>x     = t &amp; 1023
+y     = (t &gt;&gt; 10) &amp; (height - 1)
+layer = t &gt;&gt; (10 + log2(height))</pre>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>Layout rule:</b> the height is the largest power of two at or below half the number of rows (at most 4096), and there are 2 to 512 layers. Small data uses 2 to 4 layers. Past 4096 rows per layer, it adds one full layer at a time. The largest texture holds 2<sup>31</sup> texels.</p>
+  <p class="deeper">See also: <a href="ref/gpu-arrays.html#texture-layout">Texture layout</a> <a href="ref/arraydata.html#texturelayout">TextureLayout</a></p>
+</section>
+
+<!-- 4 -->
+<section id="splats" data-title="Splat bits">
+  <div class="eyebrow">04 · Splats</div>
+  <h2>Splat layouts: 16 or 32 bytes per splat</h2>
+  <p class="lede">A Gaussian splat has a center, three scales, a rotation, a color, and an opacity. Ext splats add PBR fields: a normal, roughness, and metallic. Three layouts, <code>extSplats</code>, <code>covSplats</code>, and <code>packedSplats</code>, pack these into 32-bit words, and each layout's name is also the name of the bundle that holds it. Hover over a field for its description.</p>
+  <div class="panel reveal">
+    <div class="chips" id="layoutTabs"></div>
+    <div id="wordRows" style="margin-top: 12px"></div>
+    <div id="bitInfo"></div>
+  </div>
+  <div class="row reveal" style="margin-top: 18px">
+    <div class="panel">
+      <h3 style="margin-top: 0">The layout is chosen at load time</h3>
+      <p style="margin: 0; color: #cfd4df">Files decode directly into the requested layout. Packed splats take an optional <code>encoding</code>, the color and scale ranges of their 8-bit codes; without it, the defaults apply. The rest of the program is the same for every layout.</p>
+    </div>
+    <pre style="flex: 1.4 1 420px; margin: 0">const data = await loadSplats(url, {
+  layout: settings.lowMemory ? "packedSplats" : "extSplats",
+  encoding: { rgbMin: -0.5, rgbMax: 1.5 }, // optional
+});
+
+// the same code for every layout, on the CPU:
+const { bundle } = Splats.get(data);
+
+// and on the GPU:
+const arrays = GpuArrays.fromData(renderer, data);
+const reader = GpuSplatReader.from(arrays);</pre>
+  </div>
+  <div class="row reveal" style="margin-top: 18px">
+    <div class="panel">
+      <h3 style="margin-top: 0">Live encoder</h3>
+      <p class="small">The page runs the same color, opacity, and half-float encoders as <code>core/encoding.ts</code>.</p>
+      <label class="ctl">r <input type="range" id="encR" min="-0.5" max="3" step="0.001" value="0.9"><output></output></label>
+      <label class="ctl">g <input type="range" id="encG" min="-0.5" max="3" step="0.001" value="0.45"><output></output></label>
+      <label class="ctl">b <input type="range" id="encB" min="-0.5" max="3" step="0.001" value="0.2"><output></output></label>
+      <label class="ctl">opacity <input type="range" id="encO" min="0" max="1.99" step="0.001" value="0.8"><output></output></label>
+      <label class="ctl">scale x <input type="range" id="encS" min="-4" max="1" step="0.001" value="-1.7"><output></output></label>
+    </div>
+    <div class="panel" id="encOut"></div>
+  </div>
+  <div class="row reveal" style="margin-top: 18px">
+    <div class="panel">
+      <h3 style="margin-top: 0">Spherical harmonics</h3>
+      <p class="small">Bands 1 to 4 (up to 24 RGB coefficients) sit in an SH bundle beside the splats. Band 0 is the base color above. <code>extSh</code> stores each coefficient in one shared-exponent word, like the base color. <code>packedSh</code> stores a scale byte per band, then one signed byte per value. Neither needs a range per file. The page runs the same codecs as <code>core/sh.ts</code>.</p>
+      <label class="ctl">coefficient r <input type="range" id="shR" min="-5" max="5" step="0.001" value="0.31"><output></output></label>
+      <label class="ctl">coefficient g <input type="range" id="shG" min="-5" max="5" step="0.001" value="-0.12"><output></output></label>
+      <label class="ctl">coefficient b <input type="range" id="shB" min="-5" max="5" step="0.001" value="0.05"><output></output></label>
+      <label class="ctl">band's largest |value| <input type="range" id="shMax" min="0.01" max="5" step="0.001" value="0.6"><output></output></label>
+    </div>
+    <div class="panel" id="shOut"></div>
+  </div>
+  <p class="takeaway reveal"><b>HDR color:</b> 8-bit magnitudes with three sign bits and a shared 5-bit exponent let colors go above 1 or below 0, which merged LoD nodes and lighting require. Opacity uses 128 for 1.0 so merged nodes can reach 255/128. The same word stores one spherical-harmonics coefficient in <code>extSh</code>. Palettes (RAD's clustered SH, SOG's) store each entry's texels side by side, and splats pick an entry by a 16-bit label (<a href="ref/sh.html">Spherical harmonics</a>).</p>
+  <p class="deeper">See also: <a href="ref/splats.html#layouts">Layouts</a> <a href="ref/encoding.html#the-fields">How each field is stored</a></p>
+</section>
+
+<!-- 5 -->
+<section id="oct" data-title="Octahedral">
+  <div class="eyebrow">05 · Compact directions</div>
+  <h2>Octahedral encoding maps the sphere to a square</h2>
+  <p class="lede">Normals and rotation axes are stored octahedrally: the sphere is projected onto an octahedron and unfolded into a square. Drag on either view to change the direction. The encoder rounds each coordinate to its code, with no search, and gives the same code on the CPU and the GPU.</p>
+  <div class="row reveal">
+    <div class="panel"><canvas id="sphereCanvas" width="320" height="320"></canvas><div class="small" style="text-align: center">direction <button class="btn" id="flipZ" style="padding: 4px 8px; margin-left: 6px">flip front / back</button></div></div>
+    <div class="panel"><canvas id="octCanvas" width="320" height="320"></canvas><div class="small" style="text-align: center">the unfolded square, colored by direction: +Z in the middle, −Z folded out to the corners</div></div>
+    <div class="panel">
+      <label class="ctl">bits <input type="range" id="octBits" min="3" max="12" value="5"><output></output></label>
+      <dl class="kv" id="octInfo"></dl>
+      <h4 style="margin: 16px 0 4px">As a rotation axis</h4>
+      <label class="ctl">angle <input type="range" id="rotAngle" min="0" max="180" step="0.1" value="1.5"><output></output></label>
+      <div id="rotInfo"></div>
+    </div>
+  </div>
+  <p class="takeaway reveal"><b>Rotation bits (10 + 10 + 12):</b> many splats are close to the identity rotation. For a small rotation the axis error is scaled by sin(angle / 2), so the angle's step determines the precision. With 12 bits, rotations under 2° decode within about 0.03°. Compare a small angle with a large one above.</p>
+  <p class="deeper">See also: <a href="ref/encoding.html#octahedral-directions">Octahedral directions</a> <a href="ref/encoding.html#quaternions-as-an-axis-and-an-angle">Quaternions</a></p>
+</section>
+
+<!-- 6 -->
+<section id="access" data-title="Typed access">
+  <div class="eyebrow">06 · Reading and writing splats</div>
+  <h2>The bundle's type determines the available functions</h2>
+  <p class="lede">Splat access functions take the bundle as their first argument, with no wrapper object around it. TypeScript uses the bundle's type to decide which functions apply. GPU readers use the same names, and the TSL codecs produce the same bits as the CPU codecs.</p>
+  <div class="row reveal">
+    <div class="panel">
+      <div class="small">the bundle is typed as</div>
+      <div class="chips" id="accessTabs"></div>
+      <h4 style="margin: 14px 0 4px">CPU (core/splats.ts)</h4><div id="cpuFns"></div>
+      <h4 style="margin: 14px 0 4px">GPU readers (gpu/splatAccess.ts)</h4><div id="gpuFns"></div>
+      <h4 style="margin: 14px 0 4px">Writer helpers</h4><div id="storeFns"></div>
+    </div>
+    <div class="panel"><pre id="accessCode" style="margin: 0"></pre>
+      <p class="small" style="margin-bottom: 0">The CPU and GPU use the same layouts. Shaders use the GPU's half-float pack and unpack and its sine and cosine, and round with floor(x + 0.5). Where 32-bit GPU math falls on the other side of a rounding boundary than the CPU's 64-bit math, a code differs by one step.</p></div>
+  </div>
+  <p class="deeper">See also: <a href="ref/splats.html#splats-the-cpu-side">Splats on the CPU</a> <a href="ref/splats.html#gpusplatreader-the-shader-side">In shaders</a></p>
+</section>
+
+<!-- 7 -->
+<section id="writers" data-title="Writers">
+  <div class="eyebrow">07 · Writing from shaders</div>
+  <h2>Writers: fragment, compute, and scatter</h2>
+  <p class="lede">Shaders write arrays through a writer. A writer takes a TSL function, <code>write(index, out)</code>, that fills one texel. The fragment writer draws quads and works on both backends. The compute writer in <code>wgpu/</code> takes the same arguments and writes the same texels in one dispatch. For writes to arbitrary indices, <code>WgpuArrayStore</code> stores at any index from any kernel.</p>
+  <div class="panel reveal">
+    <div class="chips" id="writeTabs"></div>
+    <canvas id="writeCanvas" width="1020" height="190" style="margin-top: 12px"></canvas>
+    <div class="row" style="margin-top: 6px">
+      <div><label class="ctl">at <input type="range" id="wAt" min="0" max="380" value="40"><output></output></label>
+        <label class="ctl">count <input type="range" id="wCount" min="1" max="384" value="250"><output></output></label></div>
+      <div><button class="btn primary" id="wRun">▶ run</button> <span id="wStats" class="small" style="margin-left: 8px"></span></div>
+    </div>
+    <pre id="writeCode"></pre>
+  </div>
+  <div class="panel reveal" style="margin-top: 14px; overflow-x: auto">
+    <table class="tbl">
+      <thead><tr><th></th><th style="color: var(--gpu)">GpuArrayWriter</th><th style="color: var(--wgpu)">WgpuArrayWriter</th><th style="color: var(--pink)">WgpuArrayStore</th></tr></thead>
+      <tbody>
+        <tr><td>backend</td><td>WebGPU and WebGL2</td><td>WebGPU</td><td>WebGPU</td></tr>
+        <tr><td>runs as</td><td>a render pass per layer, quads over rows</td><td>one dispatch, a thread per texel</td><td>inside any WgpuCompute kernel</td></tr>
+        <tr><td>writes</td><td>texels [at, at + count)</td><td>the same texels, same indices</td><td>any index (scatter)</td></tr>
+        <tr><td>limits</td><td>4 channels, 64 bytes per texel, renderable formats</td><td>4 channels, storable formats, <code>storage: true</code></td><td>storable formats, <code>storage: true</code></td></tr>
+        <tr><td>count</td><td colspan="2">count = max(count, at + count)</td><td>set by the kernel</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="takeaway reveal"><b>Either writer:</b> <code>arrays.write(writer, range)</code> takes either writer, and <code>writeBatch</code> groups items by kind, so one batch can contain fragment and compute writers.</p>
+  <p class="deeper">See also: <a href="ref/gpu-arrays.html#gpuarraywriter">GpuArrayWriter</a> <a href="ref/wgpu.html#wgpuarraywriter">WgpuArrayWriter</a> <a href="ref/wgpu.html#wgpuarraystore">WgpuArrayStore</a></p>
+</section>
+
+<!-- 8 -->
+<section id="swap" data-title="Double buffering">
+  <div class="eyebrow">08 · Separate read and write buffers</div>
+  <h2>Double buffering with swap</h2>
+  <p class="lede">A shader cannot read and write the same texture in one pass. Instead, read from the front buffer, write the next frame into the back buffer, then call <code>swap</code>. Readers hold texture references, so bind them again after a swap.</p>
+  <div class="panel reveal">
+    <div class="buffers">
+      <div class="buf" id="bufA" style="color: var(--blue)"><div class="fill" style="width: 100%"></div><b>arrays A</b><small id="bufAinfo">frame 1</small></div>
+      <div class="buf" id="bufB" style="color: var(--pink)"><div class="fill" style="width: 0%"></div><b>arrays B</b><small id="bufBinfo">empty</small></div>
+    </div>
+    <div style="text-align: center; margin: 6px 0 12px"><span class="tag" id="readerTag">reader → front (A)</span> <span class="tag" id="writerTag">writer → back (B)</span></div>
+    <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap">
+      <button class="btn" id="swWrite">write next frame into the back</button>
+      <button class="btn primary" id="swSwap">arrays.swap(back)</button>
+      <button class="btn" id="swBind">reader.bind(arrays)</button>
+    </div>
+    <p class="small" id="swNote" style="text-align: center"></p>
+  </div>
+  <p class="takeaway reveal"><b>CPU:</b> <code>ArrayData.swap</code> works the same way. When a worker hands arrays back, <code>setFromTransferable</code> adopts them in place, so references held elsewhere stay valid.</p>
+  <p class="deeper">See also: <a href="ref/arraydata.html#double-buffering">Double buffering</a> <a href="ref/gpu-arrays.html#gpuarrays">GpuArrays</a></p>
+</section>
+
+<!-- 9 -->
+<section id="workers" data-title="Workers">
+  <div class="eyebrow">09 · Off the main thread</div>
+  <h2>Workers are created on demand</h2>
+  <p class="lede"><code>WorkerPool</code> starts with zero workers and creates one only when a call needs it, up to its size. Arrays are passed in and out as transferables, so nothing is copied. In Node or Cloudflare, where there are no workers, the same call runs on the current thread.</p>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 480px">
+      <div class="pool" id="pool"></div>
+      <div id="queue" style="margin-top: 10px"></div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0">
+        <button class="btn primary" id="wkLoad">loadSplats("scene.spz")</button>
+        <button class="btn" id="wkWrite">writeSplats(data, "ply")</button>
+        <button class="btn" id="wkLease">acquire() a lease</button>
+      </div>
+      <div id="workerLog"></div>
+    </div>
+    <div class="panel" style="flex: 1 1 280px">
+      <div class="small">the <code>worker</code> option</div>
+      <div class="chips" id="workerChips"></div>
+      <p id="workerChoice" style="color: #cfd4df"></p>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/workers.html">Workers</a></p>
+</section>
+
+<!-- 10 -->
+<section id="files" data-title="Files">
+  <div class="eyebrow">10 · Loading and saving</div>
+  <h2>Splat files</h2>
+  <p class="lede"><code>loadSplats</code> reads PLY, SPZ, RAD, and RDX into the requested layout, <code>extSplats</code> by default (plus a <code>lodTree</code> bundle when the file has a tree), and <code>writeSplats</code> writes any layout to any of these formats. Files are recognised by their first bytes, and by the file name's extension when the bytes are not conclusive. Drop a file to detect its format. The file is read only in this browser page.</p>
+  <div class="formats reveal" id="formatCards"></div>
+  <div id="drop" class="reveal">drop any file here<div class="small" id="dropOut"></div></div>
+  <p class="deeper">See also: <a href="ref/files.html">Splat files</a></p>
+</section>
+
+<!-- 11 -->
+<section id="rdx" data-title="RDX">
+  <div class="eyebrow">11 · The native format</div>
+  <h2>RDX: the table, chunked and compressed</h2>
+  <p class="lede">An RDX file is a header followed by chunks of rows, in one file or split across files for streaming. A whole file can be read by seeking: chunk <em>i</em> starts at the header's length plus the sizes of the chunks before it, so one HTTP Range request fetches any chunk.</p>
+  <div class="rdx reveal">
+    <div style="background: var(--yellow)">header · count, chunkSize, bundles, chunk sizes</div>
+    <div style="background: var(--core)">chunk 0 · rows 0–65535</div><div style="background: #5eead4">chunk 1</div><div style="background: #99f6e4">chunk 2</div><div style="background: #ccfbf1">…</div>
+  </div>
+  <div class="row reveal">
+    <div class="panel" style="flex: 2 1 480px">
+      <canvas id="byteCanvas" width="900" height="250"></canvas>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px"><button class="btn primary" id="transposeBtn">byte-transpose</button><span class="small" id="gzOut"></span></div>
+    </div>
+    <div class="panel" style="flex: 1 1 260px">
+      <p style="margin-top: 0">Each channel's rows are <b>byte-transposed</b> before gzip: byte 0 of every element, then byte 1, and so on. Similar bytes end up next to each other and compress better: the high bytes of nearby half floats (their sign and exponent), the nearly constant alpha, and colors that change slowly.</p>
+      <p class="small">The sizes on the left are measured. The page gzips 4096 elements of <code>rgba</code> (<code>unorm8x4</code>) and <code>center</code> (<code>float16x3</code>) both ways, one payload per channel as in an RDX chunk, with your browser's <code>CompressionStream</code>.</p>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/rdx.html">RDX files</a></p>
+</section>
+
+<section id="next" data-title="Next">
+  <div class="eyebrow">More</div>
+  <h2>Related pages</h2>
+  <div class="next-cards">
+    <a href="pipeline.html" style="--c: var(--gpu)"><em>Next</em><b>The pipeline</b><span>How splats in these tables are projected, given sort keys, sorted on the GPU or a worker, and drawn.</span></a>
+    <a href="model.html" style="--c: var(--core)"><em>Overview</em><b>How it fits together</b><span>The classes and the data passed between them in one frame.</span></a>
+    <a href="ref/arraydata.html" style="--c: var(--pink)"><em>Reference</em><b>ArrayData and splats</b><span>Members and defaults, starting with ArrayData.</span></a>
+  </div>
+</section>
+
+<footer>Radix docs · <a href="index.html">home</a> · <a href="ref/overview.html">reference</a> · source: <code>docs/data.html</code></footer>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = (n) => n.toLocaleString("en-US");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const hsl = (h, s = 70, l = 62) => `hsl(${h} ${s}% ${l}%)`;
+
+// ---------- The codecs (ports of core/layout.ts and core/encoding.ts) ----------
+const TEXTURE_WIDTH = 1024, ROW_ELEMENTS = 4096;
+const alignCapacity = (n) => Math.max(1, Math.ceil(n / ROW_ELEMENTS)) * ROW_ELEMENTS;
+function textureLayout(texels) {
+  const rows = Math.max(1, Math.ceil(texels / TEXTURE_WIDTH));
+  const height = Math.min(4096, 2 ** Math.max(0, Math.floor(Math.log2(rows / 2))));
+  const layers = Math.max(2, Math.ceil(rows / height));
+  return { width: TEXTURE_WIDTH, height, layers, yBits: Math.log2(height), texels: TEXTURE_WIDTH * height * layers, fits: layers <= 512 };
+}
+const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+function toHalf(f) {
+  f32[0] = f;
+  const bits = u32[0], sign = (bits >>> 16) & 0x8000, exponent = (bits >>> 23) & 0xff, mantissa = bits & 0x7fffff;
+  if (exponent === 0xff) return sign | 0x7c00 | (mantissa ? 0x200 : 0);
+  const e = exponent - 127 + 15;
+  if (e >= 0x1f) return sign | 0x7c00;
+  if (e <= 0) {
+    const m = Math.abs(f32[0]) * 2 ** 24; let r = Math.floor(m); const fr = m - r;
+    if (fr > 0.5 || (fr === 0.5 && (r & 1))) r += 1;
+    return sign | r;
+  }
+  const half = sign | (e << 10) | (mantissa >> 13), rest = mantissa & 0x1fff;
+  return rest > 0x1000 || (rest === 0x1000 && (half & 1)) ? half + 1 : half;
+}
+function fromHalf(h) {
+  const sign = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+  if (e === 0) return sign * m * 2 ** -24;
+  if (e === 0x1f) return m ? NaN : sign * Infinity;
+  return sign * (1 + m / 1024) * 2 ** (e - 15);
+}
+const encodeLodOpacity = (o) => Math.max(0, Math.min(255, Math.round(o * 128)));
+function encodeExtRgb({ r, g, b }) {
+  const maxAbs = Math.max(Math.abs(r), Math.abs(g), Math.abs(b));
+  const base = Math.max(0, Math.min(31, (maxAbs > 0 ? Math.ceil(Math.log2(maxAbs)) : 0) + 15));
+  const unit = 2 ** (base - 15) / 255;
+  const mag = (v) => Math.min(255, Math.round(Math.abs(v) / unit));
+  const signs = (r < 0 ? 1 : 0) | (g < 0 ? 2 : 0) | (b < 0 ? 4 : 0);
+  return (mag(r) | (mag(g) << 8) | (mag(b) << 16) | (((base << 3) | signs) << 24)) >>> 0;
+}
+function decodeExtRgb(e) {
+  const unit = 2 ** (((e >>> 27) & 0x1f) - 15) / 255;
+  return { r: (e & 0xff) * unit * (e & 0x1000000 ? -1 : 1), g: ((e >>> 8) & 0xff) * unit * (e & 0x2000000 ? -1 : 1), b: ((e >>> 16) & 0xff) * unit * (e & 0x4000000 ? -1 : 1) };
+}
+function decodeOct(code, bits) {
+  if (code === 0) return { x: 0, y: 0, z: 0 };
+  const max = 2 ** bits - 1;
+  let x = ((code & max) / max) * 2 - 1, y = (((code >>> bits) & max) / max) * 2 - 1;
+  const z = 1 - Math.abs(x) - Math.abs(y), t = Math.max(-z, 0);
+  x += x >= 0 ? -t : t; y += y >= 0 ? -t : t;
+  const l = Math.hypot(x, y, z);
+  return { x: x / l, y: y / l, z: z / l };
+}
+function octProject(v) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  let px = v.x / l1, py = v.y / l1;
+  if (v.z < 0) [px, py] = [(1 - Math.abs(py)) * (px >= 0 ? 1 : -1), (1 - Math.abs(px)) * (py >= 0 ? 1 : -1)];
+  return { px, py };
+}
+function encodeOct(v, bits) {
+  const l1 = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+  if (!(l1 > 0)) return 0;
+  const { px, py } = octProject(v), max = 2 ** bits - 1;
+  const code = Math.round((px * 0.5 + 0.5) * max) | (Math.round((py * 0.5 + 0.5) * max) << bits);
+  return code === 0 ? max | (max << bits) : code;
+}
+function encodeQuat(q, axisBits, angleBits) {
+  const length = Math.hypot(q.x, q.y, q.z, q.w);
+  if (!(length > 0)) return 0;
+  const s = (q.w < 0 ? -1 : 1) / length, axis = { x: q.x * s, y: q.y * s, z: q.z * s };
+  const angle = 2 * Math.acos(Math.min(1, q.w * s));
+  return encodeOct(axis, axisBits) + Math.round((angle / Math.PI) * (2 ** angleBits - 1)) * 2 ** (2 * axisBits);
+}
+function decodeQuat(code, axisBits, angleBits) {
+  const size = 2 ** (2 * axisBits), a = decodeOct(code % size, axisBits);
+  const angle = ((Math.floor(code / size) % 2 ** angleBits) / (2 ** angleBits - 1)) * Math.PI, s = Math.sin(angle / 2);
+  return { x: a.x * s, y: a.y * s, z: a.z * s, w: Math.cos(angle / 2) };
+}
+const deg = (r) => (r * 180) / Math.PI;
+function quatAngle(a, b) {
+  const d = (k) => Math.hypot(a.x - k * b.x, a.y - k * b.y, a.z - k * b.z, a.w - k * b.w);
+  return deg(4 * Math.asin(Math.min(1, Math.min(d(1), d(-1)) / 2)));
+}
+const vecAngle = (a, b) => deg(2 * Math.asin(Math.min(1, Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) / 2)));
+
+function chips(container, items, initial, onPick) {
+  const el = typeof container === "string" ? $(container) : container;
+  el.innerHTML = items.map((it) => `<span class="chip" data-v="${it.value ?? it}">${it.label ?? it}</span>`).join("");
+  const pick = (v) => { $$(".chip", el).forEach((c) => c.classList.toggle("on", c.dataset.v === String(v))); onPick(v); };
+  el.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) pick(c.dataset.v); });
+  pick(initial);
+}
+
+// A canvas drawn at its on-screen size (CSS pixels, sharp on HiDPI)
+function fitCanvas(canvas, height) {
+  const dpr = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(height * dpr); canvas.style.height = `${height}px`;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W: w, H: height };
+}
+
+// ---------- Hero: drifting splats ----------
+(() => {
+  const canvas = $("#heroCanvas"), ctx = canvas.getContext("2d");
+  let w, h, splats, visible = true, mx = 0, my = 0;
+  const resize = () => { const d = Math.min(2, devicePixelRatio); w = canvas.width = innerWidth * d; h = canvas.height = canvas.clientHeight * d; };
+  const make = () => Array.from({ length: 150 }, () => ({
+    x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, sx: 20 + Math.random() * 90, sy: 6 + Math.random() * 30,
+    a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.004, vx: (Math.random() - 0.5) * 0.00012, hue: [168, 258, 25, 140, 320][Math.floor(Math.random() * 5)] + Math.random() * 20, o: 0.12 + Math.random() * 0.3,
+  }));
+  resize(); splats = make();
+  addEventListener("resize", resize);
+  addEventListener("mousemove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; });
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
+  const frame = () => {
+    if (visible) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const d = w / innerWidth;
+      for (const s of splats) {
+        if (!reducedMotion) { s.a += s.va; s.x = (s.x + s.vx + 1) % 1; }
+        ctx.save();
+        ctx.translate(s.x * w + mx * 60 * s.z * d, s.y * h + my * 40 * s.z * d);
+        ctx.rotate(s.a);
+        ctx.scale(s.sx * s.z * d, s.sy * s.z * d);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        g.addColorStop(0, `hsla(${s.hue}, 85%, 62%, ${s.o})`);
+        g.addColorStop(1, `hsla(${s.hue}, 85%, 62%, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      const fade = ctx.createLinearGradient(0, h * 0.6, 0, h);
+      fade.addColorStop(0, "rgba(10,12,17,0)"); fade.addColorStop(1, "rgba(10,12,17,1)");
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, w, h);
+    }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+
+// ---------- 2. Table ----------
+(() => {
+  const cols = [
+    { bundle: "extSplats", def: "Splats.EXT", color: "var(--core)", name: "extA", format: "uint32x4", comps: 4, array: "Uint32Array", what: "center · opacity · normal" },
+    { bundle: "extSplats", def: "Splats.EXT", color: "var(--core)", name: "extB", format: "uint32x4", comps: 4, array: "Uint32Array", what: "color · scales · rotation" },
+    { bundle: "extSh", def: "Sh.bundle(\"ext\", 3)", color: "var(--gpu)", name: "extShA", format: "uint32x4", comps: 4, array: "Uint32Array", what: "SH coefficients 0-3 (extShB, C, D: 4-14)" },
+    { bundle: "lodTree", def: "Splats.LOD_TREE", color: "var(--wgpu)", name: "node", format: "uint32x2", comps: 2, array: "Uint32Array", what: "children" },
+  ];
+  let count = 5000, capacity = alignCapacity(count);
+  const render = () => {
+    const spare = capacity - count;
+    const head = `<thead><tr><th></th><th class="bundle" colspan="2" style="color:var(--core);border-color:var(--core)">bundle "extSplats"</th><th class="bundle" style="color:var(--gpu);border-color:var(--gpu)">bundle "extSh"</th><th class="bundle" style="color:var(--wgpu);border-color:var(--wgpu)">bundle "lodTree"</th></tr>
+      <tr><th>element</th>${cols.map((c, i) => `<th class="col" data-i="${i}">${c.name} <span style="color:var(--faint)">${c.format}</span></th>`).join("")}</tr></thead>`;
+    const rowsOf = (i, cls = "") => `<tr class="${cls}"><td class="idx">${fmt(i)}</td>${cols.map((c) => `<td>${cls.includes("spare") ? "·" : c.what}</td>`).join("")}</tr>`;
+    let body = "";
+    const shown = Math.min(count, 3);
+    for (let i = 0; i < shown; i++) body += rowsOf(i);
+    if (count > 4) body += `<tr><td class="idx">⋮</td>${cols.map(() => "<td style='color:var(--faint)'>⋮</td>").join("")}</tr>`;
+    if (count > 3) body += rowsOf(count - 1, "mark");
+    else if (count > 0) body = body.replace(/<tr class="">(?![\s\S]*<tr class="">)/, '<tr class="mark">');
+    if (spare > 0) body += rowsOf(count, "spare") + `<tr class="spare"><td class="idx">⋮</td>${cols.map(() => "<td>⋮</td>").join("")}</tr>` + rowsOf(capacity - 1, "spare mark cap");
+    $("#arrTable").innerHTML = head + `<tbody>${body}</tbody>`;
+    $("#arrTable").insertAdjacentHTML("beforeend", `<caption style="caption-side:bottom;text-align:left;padding-top:8px" class="small"><span style="color:var(--yellow)">- - -</span> count &nbsp; <span style="color:var(--pink)">- - -</span> capacity</caption>`);
+    $("#countOut").textContent = fmt(count);
+    $("#kvCount").textContent = fmt(count);
+    $("#kvCap").textContent = `${fmt(capacity)} (${capacity / 4096} × 4096)`;
+    $("#kvSpare").textContent = fmt(spare);
+    $("#capFill").style.width = `${(count / capacity) * 100}%`;
+  };
+  $("#countSlider").addEventListener("input", (e) => { count = +e.target.value; capacity = Math.max(alignCapacity(count), count <= capacity ? capacity : 0); if (count > capacity) capacity = alignCapacity(count); render(); });
+  $("#growBtn").addEventListener("click", () => {
+    const want = count + 5000;
+    if (want > capacity) {
+      const next = alignCapacity(Math.max(want, capacity * 2));
+      $("#growLog").textContent = `grew ${fmt(capacity)} → ${fmt(next)} (at least doubling; contents kept)`;
+      capacity = next;
+    } else $("#growLog").textContent = `${fmt(want)} already fits; capacity unchanged`;
+    count = want;
+    $("#countSlider").max = Math.max(20000, capacity);
+    $("#countSlider").value = count;
+    render();
+  });
+  $("#arrTable").addEventListener("click", (e) => {
+    const th = e.target.closest("th.col"); if (!th) return;
+    const c = cols[+th.dataset.i];
+    $("#colCode").innerHTML = `data.bundles.${c.bundle}.channels.${c.name}.data
+// ${c.array}(capacity × ${c.comps}) = ${fmt(capacity * c.comps)} values
+// one flat column: element i at [i × ${c.comps}, i × ${c.comps} + ${c.comps})`;
+  });
+  render();
+})();
+
+// ---------- 3. Formats ----------
+(() => {
+  const S = {
+    uint8: { bytes: 1, arr: "Uint8Array", tsl: "uint", gpu: "8uint" }, sint8: { bytes: 1, arr: "Int8Array", tsl: "int", gpu: "8sint" },
+    unorm8: { bytes: 1, arr: "Uint8Array", tsl: "float", gpu: "8unorm" }, snorm8: { bytes: 1, arr: "Int8Array", tsl: "float", gpu: "8snorm" },
+    uint16: { bytes: 2, arr: "Uint16Array", tsl: "uint", gpu: "16uint" }, sint16: { bytes: 2, arr: "Int16Array", tsl: "int", gpu: "16sint" },
+    float16: { bytes: 2, arr: "Uint16Array (half bits)", tsl: "float", gpu: "16float" }, uint32: { bytes: 4, arr: "Uint32Array", tsl: "uint", gpu: "32uint" },
+    sint32: { bytes: 4, arr: "Int32Array", tsl: "int", gpu: "32sint" }, float32: { bytes: 4, arr: "Float32Array", tsl: "float", gpu: "32float" },
+  };
+  const vec = (base, n) => (n === 1 ? base : `${base === "uint" ? "u" : base === "int" ? "i" : ""}vec${n}`);
+  let scalar = "uint32", comps = 4, packing = 1;
+  const update = () => {
+    const s = S[scalar], format = comps === 1 ? scalar : `${scalar}x${comps}`, tc = comps * packing;
+    const texelFormat = tc === 1 ? scalar : `${scalar}x${tc}`, gpu = [1, 2, 4].includes(tc);
+    const webgpu = gpu ? `${["", "r", "rg", "", "rgba"][tc]}${s.gpu}` : "none";
+    const storable = gpu && (s.bytes === 4 || (tc === 4 && ["unorm8", "snorm8", "float16"].includes(scalar)));
+    const yn = (b, y, n) => `<span class="${b ? "yes" : "no"}">${b ? "✓ " + y : "✕ " + n}</span>`;
+    $("#fmtInfo").innerHTML = `
+      <dt>format</dt><dd style="color:var(--yellow)">"${format}"</dd>
+      <dt>CPU array</dt><dd>${s.arr}</dd>
+      <dt>bytes / element</dt><dd>${s.bytes * comps}</dd>
+      <dt>TSL type</dt><dd>${vec(s.tsl, comps)}${scalar.endsWith("norm8") ? " (normalized)" : ""}</dd>
+      <dt>texel format</dt><dd>${texelFormat}${packing > 1 ? ` (${packing} elements per texel)` : ""}</dd>
+      <dt>on the GPU</dt><dd>${yn(gpu, webgpu, "CPU only: a texel holds 1, 2, or 4 components")}</dd>
+      <dt>fragment writes</dt><dd>${yn(gpu && scalar !== "snorm8", "renderable", gpu ? "snorm8 is not renderable" : "not on the GPU")}</dd>
+      <dt>compute writes</dt><dd>${yn(storable, "storable", gpu ? "not a storage format three declares correctly" : "not on the GPU")}</dd>`;
+    const colors = [hsl(170), hsl(260), hsl(25), hsl(330)];
+    $("#texelStrip").innerHTML = gpu ? Array.from({ length: 4 }, (_, t) => `<div class="texel" title="texel ${t}">${Array.from({ length: packing }, (_, p) => Array.from({ length: comps }, (_, c) => `<span style="background:${colors[p]};opacity:${1 - c * 0.15}">${t * packing + p}</span>`).join("")).join("")}</div>`).join("") + `<span class="small" style="align-self:center">… texel t holds elements ${packing === 1 ? "t" : `${packing}t to ${packing}t + ${packing - 1}`}</span>` : `<span class="small no">${tc} components per texel do not fit a GPU texture</span>`;
+  };
+  chips("#scalarChips", Object.keys(S), scalar, (v) => { scalar = v; update(); });
+  chips("#compChips", [1, 2, 3, 4, 5], comps, (v) => { comps = +v; update(); });
+  chips("#packChips", [1, 2, 4], packing, (v) => { packing = +v; update(); });
+})();
+
+// ---------- 4. Texture layout ----------
+(() => {
+  const canvas = $("#layoutCanvas");
+  let packing = 1;
+  const elements = () => Math.round(10 ** (3 + (+$("#elemSlider").value / 1000) * 6)); // 1K to 1B
+  const draw = () => {
+    const n = elements(), texels = Math.ceil(n / packing), L = textureLayout(texels);
+    const pickFrac = +$("#pickSlider").value / 1000, element = Math.min(n - 1, Math.floor(pickFrac * n));
+    const t = Math.floor(element / packing);
+    const x = t & 1023, y = Math.floor(t / 1024) % L.height, layer = Math.floor(t / (1024 * L.height));
+    $("#elemOut").textContent = fmt(n);
+    $("#pickOut").textContent = fmt(element);
+    const padding = 1 - texels / L.texels;
+    $("#layoutInfo").innerHTML = L.fits ? `<dt>texels</dt><dd>${fmt(texels)}</dd><dt>layout</dt><dd>1024 × ${L.height} × ${L.layers} layers</dd><dt>padding</dt><dd>${(padding * 100).toFixed(1)}%</dd>
+      <dt>element ${fmt(element)}</dt><dd>texel ${fmt(t)}${packing > 1 ? `, slot ${element % packing}` : ""}</dd><dt>at</dt><dd>x ${x}, y ${y}, layer ${layer}</dd>` : `<dt class="no">too big</dt><dd class="no">${L.layers} layers &gt; 512 (2^31 texels max)</dd>`;
+
+    // Binary of t: layer | y | x
+    const layerBits = Math.max(1, Math.ceil(Math.log2(L.layers)));
+    const total = 10 + L.yBits + layerBits;
+    let bits = "";
+    for (let b = total - 1; b >= 0; b--) {
+      const v = Math.floor(t / 2 ** b) % 2, c = b < 10 ? "var(--core)" : b < 10 + L.yBits ? "var(--gpu)" : "var(--pink)";
+      bits += `<span style="background:${c}33;color:${c}">${v}</span>`;
+    }
+    $("#texelBits").innerHTML = `<span class="small" style="width:auto;margin-right:8px">t =</span>${bits}`;
+
+    // Stacked layers, the picked layer opened out
+    const { ctx, W, H } = fitCanvas(canvas, 300);
+    ctx.clearRect(0, 0, W, H);
+    if (!L.fits) return;
+    const shown = Math.min(L.layers, 10), lw = W * 0.3, lh = Math.max(10, Math.min(150, (lw * L.height) / 1024));
+    for (let i = shown - 1; i >= 0; i--) {
+      const ox = 4 + i * 9, oy = 60 + (shown - 1 - i) * 9;
+      const used = Math.max(0, Math.min(1, (texels - i * 1024 * L.height) / (1024 * L.height)));
+      ctx.fillStyle = i === layer ? "#2b2142" : "#171c28"; ctx.strokeStyle = i === layer ? "#a78bfa" : "#3a4256"; ctx.lineWidth = 1.5;
+      ctx.fillRect(ox, oy, lw, lh); ctx.strokeRect(ox, oy, lw, lh);
+      ctx.fillStyle = "rgba(45,212,191,0.35)"; ctx.fillRect(ox, oy, lw, lh * used);
+    }
+    ctx.fillStyle = "#98a1b4"; ctx.font = "13px system-ui";
+    ctx.fillText(`${L.layers} layer${L.layers > 1 ? "s" : ""}${L.layers > shown ? ` (${shown} drawn)` : ""}`, 4, 22);
+    ctx.fillStyle = "#2dd4bf"; ctx.fillText("teal: texels in use", 4, 40);
+
+    // The picked layer
+    const px = W * 0.47, py = 34, pw = W * 0.52, ph = Math.max(14, Math.min(220, (pw * L.height) / 1024));
+    ctx.fillStyle = "#171c28"; ctx.fillRect(px, py, pw, ph);
+    const layerTexels = 1024 * L.height, usedHere = Math.max(0, Math.min(layerTexels, texels - layer * layerTexels));
+    ctx.fillStyle = "rgba(45,212,191,0.3)";
+    const fullRows = Math.floor(usedHere / 1024);
+    ctx.fillRect(px, py, pw, (ph * fullRows) / L.height);
+    ctx.fillRect(px, py + (ph * fullRows) / L.height, (pw * (usedHere % 1024)) / 1024, ph / L.height);
+    ctx.strokeStyle = "#a78bfa"; ctx.strokeRect(px, py, pw, ph);
+    const dx = px + ((x + 0.5) / 1024) * pw, dy = py + ((y + 0.5) / L.height) * ph;
+    ctx.strokeStyle = "#f472b6"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(dx, py); ctx.lineTo(dx, py + ph); ctx.moveTo(px, dy); ctx.lineTo(px + pw, dy); ctx.stroke();
+    ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#98a1b4"; ctx.fillText(`layer ${layer}: 1024 × ${L.height}`, px, 22);
+    ctx.fillStyle = "#facc15"; ctx.fillText(`texel ${fmt(t)}  (x ${x}, y ${y})`, px, Math.min(H - 6, py + ph + 20));
+  };
+  chips("#layoutPack", [1, 2, 4], 1, (v) => { packing = +v; draw(); });
+  addEventListener("resize", draw);
+  $("#elemSlider").addEventListener("input", draw);
+  $("#pickSlider").addEventListener("input", draw);
+  draw();
+})();
+
+// ---------- 6. Splat bits ----------
+(() => {
+  const C = { center: hsl(200), normal: hsl(150), opacity: hsl(50, 90), rgb: hsl(0, 75), sign: hsl(330), exp: hsl(280), scale: hsl(30, 85), pbr: hsl(100), axis: hsl(260), angle: hsl(190), cov: hsl(20, 85), corr: hsl(340) };
+  const F = (name, bits, color, info) => ({ name, bits, color, info });
+  const half = (n, c, what) => F(n, 16, c, `${what}, as a 16-bit half float.`);
+  const centerWords = (A) => ["x", "y", "z"].map((k) => [`${A}.${k}`, [F(`center.${k}`, 32, C.center, `center.${k} as a full float32: the word is the float's bits, read through floatView.`)]]);
+  const aw = (A) => [`${A}.w`, [F("opacity", 8, C.opacity, "opacity byte: 128 = 1.0, up to 255/128 so merged LoD nodes can be denser."), F("normal v", 12, C.normal, "normal, octahedral v (12 bits). Code 0 for the whole normal means no normal."), F("normal u", 12, C.normal, "normal, octahedral u (12 bits). Worst error about 0.06°.")]];
+  const rgbWord = (B) => [`${B}.x`, [F("exp", 5, C.exp, "shared 5-bit exponent for the color: values above 1 (HDR) keep their range."), F("±", 3, C.sign, "3 sign bits: colors may be negative."), F("b", 8, C.rgb, "blue magnitude, 8 bits"), F("g", 8, C.rgb, "green magnitude, 8 bits"), F("r", 8, C.rgb, "red magnitude, 8 bits")]];
+  const L = {
+    ext: { label: "extSplats · 32 B", note: "Splats.EXT: extA, extB (uint32x4). Full float centers, HDR color, and PBR.", words: [
+      ...centerWords("extA"), aw("extA"), rgbWord("extB"),
+      ["extB.y", [half("ln sy", C.scale, "ln of scale y"), half("ln sx", C.scale, "ln of scale x")]],
+      ["extB.z", [F("metallic", 8, C.pbr, "metallic, 8 bits (PBR)"), F("roughness", 8, C.pbr, "roughness, 8 bits (PBR)"), half("ln sz", C.scale, "ln of scale z")]],
+      ["extB.w", [F("angle", 12, C.angle, "rotation angle 0..π in 12 bits, so small rotations near the identity keep their precision."), F("axis v", 10, C.axis, "rotation axis, octahedral v (10 bits)"), F("axis u", 10, C.axis, "rotation axis, octahedral u (10 bits)")]],
+    ] },
+    cov: { label: "covSplats · 32 B", note: "Splats.COV: covA, covB. A covariance instead of scales and a rotation, with no roughness or metallic.", words: [
+      ...centerWords("covA"), aw("covA"), rgbWord("covB"),
+      ["covB.y", [half("ln yy", C.cov, "ln of variance yy"), half("ln xx", C.cov, "ln of variance xx")]],
+      ["covB.z", [half("corr xy", C.corr, "correlation xy as sign · ln|c|, so values near ±1 keep their precision"), half("ln zz", C.cov, "ln of variance zz")]],
+      ["covB.w", [half("corr yz", C.corr, "correlation yz as sign · ln|c|"), half("corr xz", C.corr, "correlation xz as sign · ln|c|")]],
+    ] },
+    packed: { label: "packedSplats · 16 B", note: "Splats.PACKED: one uint32x4, 16 bytes. Half the memory, with color and scale ranges in meta.encoding.", words: [
+      ["packed.x", [F("opacity", 8, C.opacity, "opacity byte (255 = 1.0)"), F("b", 8, C.rgb, "blue, 8 bits within the bundle's rgbMin..rgbMax"), F("g", 8, C.rgb, "green, 8 bits"), F("r", 8, C.rgb, "red, 8 bits")]],
+      ["packed.y", [half("center.y", C.center, "center y"), half("center.x", C.center, "center x")]],
+      ["packed.z", [F("axis v", 8, C.axis, "rotation axis, octahedral v (8 bits)"), F("axis u", 8, C.axis, "rotation axis, octahedral u (8 bits)"), half("center.z", C.center, "center z")]],
+      ["packed.w", [F("angle", 8, C.angle, "rotation angle, 8 bits"), F("ln sz", 8, C.scale, "scale z, a log step within lnScaleMin..lnScaleMax"), F("ln sy", 8, C.scale, "scale y, log 8 bits"), F("ln sx", 8, C.scale, "scale x, log 8 bits")]],
+    ] },
+  };
+  chips("#layoutTabs", Object.keys(L).map((k) => ({ value: k, label: L[k].label })), "ext", (k) => {
+    $("#wordRows").innerHTML = L[k].words.map(([name, fields]) => `<div class="word"><div class="wl">${name}</div><div class="wb">${fields.map((f, i) => `<div class="f" data-w="${name}" data-i="${i}" style="flex:${f.bits};background:${f.color}">${f.bits >= 3 ? f.name : ""}</div>`).join("")}</div></div>`).join("") + `<div class="small" style="margin-left:74px">bit 31 on the left, bit 0 on the right</div>`;
+    $("#bitInfo").innerHTML = `<p class="small">${L[k].note} 1M splats: ${k === "packed" ? "16" : "32"} MB.</p>`;
+    $$("#wordRows .f").forEach((el) => el.addEventListener("mouseenter", () => {
+      const f = L[k].words.find(([n]) => n === el.dataset.w)[1][+el.dataset.i];
+      $("#bitInfo").innerHTML = `<b style="color:${f.color}">${el.dataset.w} · ${f.name}</b> <span class="mono small">${f.bits} bits</span><br>${f.info}`;
+    }));
+  });
+
+  const inputs = ["encR", "encG", "encB", "encO", "encS"].map((id) => $("#" + id));
+  const hex = (v) => "0x" + (v >>> 0).toString(16).padStart(8, "0");
+  const colored = (word, fields) => {
+    let s = "", b = 31;
+    for (const [bits, color] of fields) { for (let i = 0; i < bits; i++, b--) s += `<b style="background:${color}33;color:${color}">${(word >>> b) & 1}</b>`; s += " "; }
+    return s;
+  };
+  const update = () => {
+    const [r, g, b, o, ls] = inputs.map((i) => +i.value);
+    const scale = 10 ** ls;
+    inputs.forEach((i, k) => (i.nextElementSibling.textContent = k === 4 ? scale.toPrecision(4) : (+i.value).toFixed(3)));
+    const rgbWordV = encodeExtRgb({ r, g, b }), back = decodeExtRgb(rgbWordV);
+    const ob = encodeLodOpacity(o), sh = toHalf(Math.log(scale)), sBack = Math.exp(fromHalf(sh));
+    const swatch = (c) => `rgb(${[c.r, c.g, c.b].map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255)).join(",")})`;
+    $("#encOut").innerHTML = `<h3 style="margin-top:0">The bits</h3>
+      <div class="small">extB.x, rgb: <span class="mono">${hex(rgbWordV)}</span></div>
+      <div class="livebits">${colored(rgbWordV, [[5, C.exp], [3, C.sign], [8, C.rgb], [8, C.rgb], [8, C.rgb]])}</div>
+      <div style="display:flex;gap:10px;align-items:center;margin:8px 0">
+        <div style="width:34px;height:34px;border-radius:8px;background:${swatch({ r, g, b })}"></div>→<div style="width:34px;height:34px;border-radius:8px;background:${swatch(back)}"></div>
+        <span class="mono small">${back.r.toFixed(4)}, ${back.g.toFixed(4)}, ${back.b.toFixed(4)} · exponent ${((rgbWordV >>> 27) & 31) - 15}</span></div>
+      <div class="small">opacity byte (extA.w bits 24–31): <span class="mono">${ob}</span> → ${(ob / 128).toFixed(4)}</div>
+      <div class="small" style="margin-top:8px">ln(scale x) as a half (extB.y bits 0–15): <span class="mono">0x${sh.toString(16).padStart(4, "0")}</span></div>
+      <div class="livebits">${colored(sh << 16, [[1, C.sign], [5, C.exp], [10, C.scale]])}</div>
+      <div class="small">→ ${sBack.toPrecision(6)} (relative error ${(Math.abs(sBack / scale - 1) * 100).toFixed(4)}%)</div>`;
+  };
+  inputs.forEach((i) => i.addEventListener("input", update));
+  update();
+})();
+
+// ---------- 6b. Spherical harmonics ----------
+(() => {
+  const inputs = ["shR", "shG", "shB", "shMax"].map((id) => $(`#${id}`));
+  const hex = (v) => "0x" + (v >>> 0).toString(16).padStart(8, "0");
+  const C = { sign: "hsl(330 70% 65%)", exp: "hsl(280 70% 65%)", rgb: "hsl(0 75% 65%)", scale: "hsl(30 85% 60%)", code: "hsl(200 70% 65%)" };
+  const colored = (word, fields) => {
+    let s = "", b = 31;
+    for (const [bits, color] of fields) { for (let i = 0; i < bits; i++, b--) s += `<b style="background:${color}33;color:${color}">${(word >>> b) & 1}</b>`; s += " "; }
+    return s;
+  };
+  // packed's scale byte: the band's largest |value| as 2^((code - 192) / 16), rounded up
+  const scaleCode = (max) => {
+    if (!(max > 0)) return 0;
+    let code = Math.max(1, Math.min(255, Math.ceil(Math.log2(max) * 16) + 192));
+    while (code < 255 && 2 ** ((code - 192) / 16) < max) code++;
+    return code;
+  };
+  const update = () => {
+    const [r, g, b, bandMax] = inputs.map((i) => +i.value);
+    inputs.forEach((i) => (i.nextElementSibling.textContent = (+i.value).toFixed(3)));
+    const word = encodeExtRgb({ r, g, b }), back = decodeExtRgb(word);
+    const code = scaleCode(Math.max(bandMax, Math.abs(r), Math.abs(g), Math.abs(b)));
+    const scale = code ? 2 ** ((code - 192) / 16) : 0;
+    const q = (v) => (scale ? Math.max(-127, Math.min(127, Math.round((v / scale) * 127))) : 0);
+    const codes = [r, g, b].map(q), values = codes.map((c) => (c / 127) * scale);
+    const err = (a, x) => Math.abs(a - x).toExponential(1);
+    $("#shOut").innerHTML = `<h3 style="margin-top:0">The bits</h3>
+      <div class="small">extSh: one word per coefficient, <span class="mono">${hex(word)}</span></div>
+      <div class="livebits">${colored(word, [[5, C.exp], [3, C.sign], [8, C.rgb], [8, C.rgb], [8, C.rgb]])}</div>
+      <div class="small mono">→ ${back.r.toFixed(4)}, ${back.g.toFixed(4)}, ${back.b.toFixed(4)} (errors ${err(back.r, r)}, ${err(back.g, g)}, ${err(back.b, b)})</div>
+      <div class="small" style="margin-top:10px">packedSh: the band's scale byte <span class="mono">${code}</span> (largest |value| ${scale.toPrecision(4)}), then a signed byte per value</div>
+      <div class="livebits">${colored(((code << 24) | ((codes[0] & 255) << 16) | ((codes[1] & 255) << 8) | (codes[2] & 255)) >>> 0, [[8, C.scale], [8, C.code], [8, C.code], [8, C.code]])}</div>
+      <div class="small mono">→ ${values.map((v) => v.toFixed(4)).join(", ")} (errors ${err(values[0], r)}, ${err(values[1], g)}, ${err(values[2], b)})</div>
+      <div class="small" style="margin-top:10px">At degree 3: extSh 60 bytes per splat in 4 texels, packedSh 48 in 3; a degree-1 read fetches only the first texel of either.</div>`;
+  };
+  inputs.forEach((i) => i.addEventListener("input", update));
+  update();
+})();
+
+// ---------- 7. Octahedral ----------
+(() => {
+  const oct = $("#octCanvas"), octCtx = oct.getContext("2d"), sph = $("#sphereCanvas"), sphCtx = sph.getContext("2d");
+  const N = oct.width;
+  let dir = { x: 0.45, y: 0.55, z: 0.7 }, bits = 5;
+  const norm = (v) => { const l = Math.hypot(v.x, v.y, v.z) || 1; return { x: v.x / l, y: v.y / l, z: v.z / l }; };
+  dir = norm(dir);
+  // Background image: continuous decode of every pixel
+  const img = octCtx.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    let x = (i / (N - 1)) * 2 - 1, y = (1 - j / (N - 1)) * 2 - 1;
+    const z = 1 - Math.abs(x) - Math.abs(y), t = Math.max(-z, 0);
+    x += x >= 0 ? -t : t; y += y >= 0 ? -t : t;
+    const d = norm({ x, y, z }), k = (j * N + i) * 4;
+    img.data[k] = (d.x * 0.5 + 0.5) * 255; img.data[k + 1] = (d.y * 0.5 + 0.5) * 255; img.data[k + 2] = (d.z * 0.5 + 0.5) * 255; img.data[k + 3] = 255;
+  }
+  const toSquare = (u, v) => [u * (N - 1), (1 - v) * (N - 1)];
+  const draw = () => {
+    const max = 2 ** bits - 1, code = encodeOct(dir, bits), dec = decodeOct(code, bits);
+    const cu = code & max, cv = (code >>> bits) & max, { px, py } = octProject(dir);
+    octCtx.putImageData(img, 0, 0);
+    octCtx.fillStyle = "rgba(10,12,17,0.25)"; octCtx.fillRect(0, 0, N, N);
+    octCtx.strokeStyle = "rgba(255,255,255,0.45)"; octCtx.lineWidth = 1;
+    octCtx.beginPath(); octCtx.moveTo(N / 2, 0); octCtx.lineTo(N, N / 2); octCtx.lineTo(N / 2, N); octCtx.lineTo(0, N / 2); octCtx.closePath(); octCtx.stroke();
+    if (bits <= 6) {
+      octCtx.strokeStyle = "rgba(255,255,255,0.12)";
+      for (let k = 0; k <= max; k++) { const p = (k / max) * (N - 1); octCtx.beginPath(); octCtx.moveTo(p, 0); octCtx.lineTo(p, N); octCtx.moveTo(0, p); octCtx.lineTo(N, p); octCtx.stroke(); }
+    }
+    const [tx, ty] = toSquare(px * 0.5 + 0.5, py * 0.5 + 0.5), [qx, qy] = toSquare(cu / max, cv / max);
+    octCtx.strokeStyle = "#fff"; octCtx.beginPath(); octCtx.moveTo(tx, ty); octCtx.lineTo(qx, qy); octCtx.stroke();
+    octCtx.fillStyle = "#facc15"; octCtx.beginPath(); octCtx.arc(qx, qy, 6, 0, 7); octCtx.fill();
+    octCtx.strokeStyle = "#0a0c11"; octCtx.lineWidth = 2; octCtx.beginPath(); octCtx.arc(tx, ty, 5, 0, 7); octCtx.stroke();
+    octCtx.fillStyle = "#fff"; octCtx.beginPath(); octCtx.arc(tx, ty, 3.5, 0, 7); octCtx.fill();
+    octCtx.font = "600 16px system-ui"; octCtx.fillStyle = "rgba(255,255,255,0.85)"; octCtx.fillText("+Z", N / 2 - 12, N / 2 + 6); octCtx.fillText("−Z", 6, 20); octCtx.fillText("−Z", N - 30, N - 8);
+
+    // Sphere
+    const S = sph.width, R = S * 0.42, c = S / 2;
+    sphCtx.clearRect(0, 0, S, S);
+    const g = sphCtx.createRadialGradient(c - R * 0.35, c - R * 0.35, R * 0.1, c, c, R);
+    g.addColorStop(0, "#334063"); g.addColorStop(1, "#111522");
+    sphCtx.fillStyle = g; sphCtx.beginPath(); sphCtx.arc(c, c, R, 0, 7); sphCtx.fill();
+    sphCtx.strokeStyle = "#3a4256"; sphCtx.stroke();
+    sphCtx.strokeStyle = "rgba(255,255,255,0.08)";
+    for (let k = -2; k <= 2; k++) { sphCtx.beginPath(); sphCtx.ellipse(c, c, R, Math.abs(R * k * 0.33) + 0.5, 0, 0, 7); sphCtx.stroke(); sphCtx.beginPath(); sphCtx.ellipse(c, c, Math.abs(R * k * 0.33) + 0.5, R, 0, 0, 7); sphCtx.stroke(); }
+    const mark = (v, color, r, hollow) => {
+      const x = c + v.x * R, y = c - v.y * R;
+      sphCtx.globalAlpha = v.z < 0 ? 0.45 : 1;
+      sphCtx.beginPath(); sphCtx.arc(x, y, r, 0, 7);
+      if (hollow) { sphCtx.strokeStyle = color; sphCtx.lineWidth = 2; sphCtx.stroke(); } else { sphCtx.fillStyle = color; sphCtx.fill(); }
+      sphCtx.globalAlpha = 1;
+    };
+    sphCtx.strokeStyle = "#ffffff55"; sphCtx.beginPath(); sphCtx.moveTo(c, c); sphCtx.lineTo(c + dir.x * R, c - dir.y * R); sphCtx.stroke();
+    mark(dec, "#facc15", 6); mark(dir, "#fff", 5, true);
+    sphCtx.fillStyle = "#98a1b4"; sphCtx.font = "16px system-ui"; sphCtx.fillText(dir.z < 0 ? "back (z < 0)" : "front (z ≥ 0)", 8, 20);
+
+    const error = vecAngle(dir, dec);
+    $("#octBits").nextElementSibling.textContent = `${bits} + ${bits}`;
+    $("#octInfo").innerHTML = `<dt>direction</dt><dd>${[dir.x, dir.y, dir.z].map((v) => v.toFixed(3)).join(", ")}</dd><dt>code</dt><dd>u ${cu}, v ${cv} (${2 * bits} bits)</dd><dt>decoded</dt><dd style="color:var(--yellow)">${[dec.x, dec.y, dec.z].map((v) => v.toFixed(3)).join(", ")}</dd><dt>error</dt><dd>${error.toFixed(3)}°</dd>`;
+    drawRotation();
+  };
+  const drawRotation = () => {
+    const a = (+$("#rotAngle").value * Math.PI) / 180, s = Math.sin(a / 2);
+    const q = { x: dir.x * s, y: dir.y * s, z: dir.z * s, w: Math.cos(a / 2) };
+    const ext = quatAngle(q, decodeQuat(encodeQuat(q, 10, 12), 10, 12)), packed = quatAngle(q, decodeQuat(encodeQuat(q, 8, 8), 8, 8));
+    $("#rotAngle").nextElementSibling.textContent = `${(+$("#rotAngle").value).toFixed(1)}°`;
+    const bar = (v, color, label) => `<div class="small">${label}: <span class="mono" style="color:${color}">${v.toFixed(4)}°</span></div><div class="capbar" style="height:8px;margin:3px 0 8px"><div style="width:${Math.min(100, (v / 1.5) * 100)}%;background:${color}"></div></div>`;
+    $("#rotInfo").innerHTML = `<p class="small" style="margin:4px 0 8px">The rotation of this angle about the direction above, encoded and decoded:</p>${bar(ext, "var(--core)", "ext 10 + 10 + 12")}${bar(packed, "var(--wgpu)", "packed 8 + 8 + 8")}`;
+  };
+  const fromSphere = (e) => {
+    const r = sph.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width - 0.5) / 0.42, y = -((e.clientY - r.top) / r.height - 0.5) / 0.42;
+    const l = Math.hypot(x, y), nx = l > 1 ? x / l : x, ny = l > 1 ? y / l : y, z = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+    dir = norm({ x: nx, y: ny, z: dir.z < 0 ? -z : z }); draw();
+  };
+  const fromSquare = (e) => {
+    const r = oct.getBoundingClientRect();
+    let x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 2 - 1, y = (1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))) * 2 - 1;
+    const z = 1 - Math.abs(x) - Math.abs(y), t = Math.max(-z, 0);
+    x += x >= 0 ? -t : t; y += y >= 0 ? -t : t;
+    dir = norm({ x, y, z }); draw();
+  };
+  for (const [el, fn] of [[sph, fromSphere], [oct, fromSquare]]) {
+    let down = false;
+    el.addEventListener("pointerdown", (e) => { down = true; el.setPointerCapture(e.pointerId); fn(e); });
+    el.addEventListener("pointermove", (e) => down && fn(e));
+    el.addEventListener("pointerup", () => (down = false));
+    el.style.touchAction = "none"; el.style.cursor = "crosshair";
+  }
+  $("#flipZ").addEventListener("click", () => { dir = { ...dir, z: -dir.z }; draw(); });
+  $("#octBits").addEventListener("input", (e) => { bits = +e.target.value; draw(); });
+  $("#rotAngle").addEventListener("input", drawRotation);
+  draw();
+})();
+
+// ---------- 8. Typed access ----------
+(() => {
+  const T = {
+    ExtSplats: { cpu: ["load", "store", "loadCenter", "loadPbr", "storePbr"], gpu: ["loadSplat", "loadCovSplat", "loadCenter", "loadRgb", "loadOpacity", "loadPbr"], store: ["storeExt"], reader: "GpuExtSplatReader" },
+    CovSplats: { cpu: ["load", "store", "loadCenter"], gpu: ["loadSplat", "loadCovSplat", "loadCenter", "loadRgb", "loadOpacity"], store: ["storeCov"], reader: "GpuCovSplatReader" },
+    PackedSplats: { cpu: ["load", "store", "loadCenter"], gpu: ["loadSplat", "loadCovSplat", "loadCenter", "loadRgb", "loadOpacity"], store: ["storePacked"], reader: "GpuPackedSplatReader" },
+    ArrayBundle: { cpu: [], gpu: [], store: [], reader: null },
+  };
+  const ALL = { cpu: ["load", "store", "loadCenter", "loadPbr", "storePbr"], gpu: ["loadSplat", "loadCovSplat", "loadCenter", "loadRgb", "loadOpacity", "loadPbr"], store: ["storeExt", "storeCov", "storePacked"] };
+  const code = {
+    ExtSplats: `const s = data.bundles.extSplats; // ExtSplats
+Splats.load(s, i, splat); // ✓ any layout
+Splats.loadPbr(s, i, pbr); // ✓ ext only
+Splats.storePbr(s, i, pbr); // ✓ keeps the 3DGS bits
+
+// binds arrays.bundles.extSplats
+const reader = GpuSplatReader.for("extSplats").bind(arrays);
+reader.loadPbr(index); // ✓ a PbrNode`,
+    CovSplats: `const s = data.bundles.covSplats; // CovSplats
+Splats.load(s, i, splat); // ✓ diagonalized
+<span class="e">Splats.loadPbr(s, i, pbr); // ✕ not ExtSplats</span>
+
+const reader = GpuSplatReader.for("covSplats").bind(arrays);
+reader.loadCovSplat(index); // ✓ the covariance`,
+    PackedSplats: `const s = data.bundles.packedSplats; // 16 B
+Splats.load(s, i, splat); // ✓
+Splats.loadCenter(s, i, out); // ✓ one word
+<span class="e">Splats.loadPbr(s, i, pbr); // ✕ type error: no PBR</span>`,
+    ArrayBundle: `// an untyped ArrayBundle
+const b = loaded.bundles.whatever;
+<span class="e">Splats.load(b, i, splat); // ✕ not a SplatBundle yet</span>
+
+// narrow it first, or let Splats.get find it:
+if (Splats.isExt(b)) Splats.loadPbr(b, i, pbr);
+const { layout, bundle } = Splats.get(data);
+const reader = GpuSplatReader.from(arrays); // bound`,
+  };
+  chips("#accessTabs", Object.keys(T), "ExtSplats", (k) => {
+    const render = (kind, el) => ($(el).innerHTML = ALL[kind].map((f) => `<span class="fn ${T[k][kind].includes(f) ? "ok" : "bad"}">${f}</span>`).join(""));
+    render("cpu", "#cpuFns"); render("gpu", "#gpuFns"); render("store", "#storeFns");
+    $("#accessCode").innerHTML = code[k];
+  });
+})();
+
+// ---------- 9. Writers ----------
+(() => {
+  const canvas = $("#writeCanvas");
+  const W = 32, H = 4, LAYERS = 3, GAP = 1, OX = 2, OY = 30, LGAP = 16, ROWH = 26;
+  const TOTAL = W * H * LAYERS;
+  let mode = "fragment", schedule = [], start = 0, running = false, CELL = 10, LW = W * CELL;
+  const cellPos = (t) => { const layer = Math.floor(t / (W * H)), r = t % (W * H); return [OX + layer * (LW + LGAP) + (r % W) * CELL, OY + Math.floor(r / W) * ROWH]; };
+  const code = {
+    fragment: `const writer = new GpuArrayWriter({
+  outputs: { b: DEF },
+  write: (index, out) =&gt; out.b.v.assign(f(index)),
+});
+// WebGPU and WebGL2
+arrays.write(writer, { at, count, first: 0 });`,
+    compute: `const writer = new WgpuArrayWriter({
+  outputs: { b: DEF },
+  write: (index, out) =&gt; out.b.v.assign(f(index)),
+});
+// same call, same texels; arrays need storage: true
+arrays.write(writer, { at, count, first: 0 });`,
+    scatter: `const store = new WgpuArrayStore(DEF).bind(arrays, "b");
+
+const kernel = new WgpuCompute({
+  body: ({ index }) =&gt; {
+    If(index.lessThan(n), () =&gt; {
+      // any index: here reversed
+      store.store("v", at + n - 1 - index, f(index));
+    });
+  },
+});
+kernel.dispatch(renderer, n);
+
+// the kernel sets the count
+arrays.count = ...;`,
+  };
+  const build = () => {
+    const at = +$("#wAt").value, count = Math.min(+$("#wCount").value, TOTAL - at);
+    schedule = [];
+    if (mode === "fragment") {
+      const layerSize = W * H, first = Math.floor(at / layerSize), last = Math.floor((at + count - 1) / layerSize);
+      for (let l = first; l <= last; l++) {
+        const base = (l - first) * 1100, s = Math.max(at, l * layerSize), e = Math.min(at + count, (l + 1) * layerSize);
+        const r0 = Math.floor((s - l * layerSize) / W), r1 = Math.ceil((e - l * layerSize) / W);
+        schedule.push({ kind: "quad", layer: l, r0, r1, t0: base, t1: base + 900 });
+        for (let r = r0; r < r1; r++) for (let x = 0; x < W; x++) {
+          const t = l * layerSize + r * W + x, inside = t >= at && t < at + count;
+          schedule.push({ kind: inside ? "fill" : "discard", t, k: t - at, time: base + 150 + (r - r0) * 120 + x * 4 });
+        }
+      }
+      $("#wStats").innerHTML = `<b style="color:var(--gpu)">${last - first + 1} render pass${last > first ? "es" : ""}</b>, one per layer: a quad over rows, with texels outside the range discarded`;
+    } else {
+      const groups = Math.ceil(count / 8);
+      for (let g = 0; g < groups; g++) for (let k = 0; k < 8; k++) {
+        const i = g * 8 + k, time = Math.floor(g / 5) * 110 + k * 6;
+        if (i >= count) { schedule.push({ kind: "idle", time }); continue; }
+        const dest = mode === "scatter" ? at + count - 1 - i : at + i;
+        schedule.push({ kind: "fill", t: dest, k: i, time, src: mode === "scatter" ? at + i : null });
+      }
+      const idle = groups * 8 - count;
+      $("#wStats").innerHTML = mode === "compute" ? `<b style="color:var(--wgpu)">1 dispatch</b> across all layers: ${groups} workgroups of 8 here (64 in the real one), ${idle} spare thread${idle === 1 ? "" : "s"} stopped by the bounds check` : `<b style="color:var(--pink)">an app-defined kernel</b>: thread i writes element at + n - 1 - i (any index works)`;
+    }
+    start = performance.now(); running = true;
+  };
+  const frame = (now) => {
+    const t = now - start, at = +$("#wAt").value, count = Math.min(+$("#wCount").value, TOTAL - at);
+    const { ctx, W: CW, H: CH } = fitCanvas(canvas, OY + H * ROWH + 50);
+    CELL = (CW - 2 * OX - 2 * LGAP) / (LAYERS * W); LW = W * CELL;
+    ctx.clearRect(0, 0, CW, CH);
+    ctx.font = "13px system-ui"; ctx.fillStyle = "#98a1b4";
+    for (let l = 0; l < LAYERS; l++) ctx.fillText(`layer ${l}`, OX + l * (LW + LGAP), 20);
+    for (let c = 0; c < TOTAL; c++) {
+      const [x, y] = cellPos(c);
+      const inRange = c >= at && c < at + count;
+      ctx.fillStyle = inRange ? "#232a3b" : "#151a25";
+      ctx.fillRect(x, y, CELL - GAP, ROWH - GAP * 2);
+    }
+    let finished = true;
+    for (const ev of schedule) {
+      if (ev.kind === "quad") {
+        if (t >= ev.t0 && t <= ev.t1) {
+          const [x0, y0] = cellPos(ev.layer * W * H + ev.r0 * W);
+          ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 2; ctx.strokeRect(x0 - 2, y0 - 2, LW + 2, (ev.r1 - ev.r0) * ROWH + 2);
+          ctx.fillStyle = "#a78bfa"; ctx.fillText(`render pass, layer ${ev.layer}`, x0, OY + H * ROWH + 18);
+        }
+        if (t < ev.t1) finished = false;
+        continue;
+      }
+      if (t < ev.time) { finished = false; continue; }
+      if (ev.kind === "idle") continue;
+      const [x, y] = cellPos(ev.t);
+      if (ev.kind === "discard") {
+        const a = Math.max(0, 1 - (t - ev.time) / 500);
+        if (a > 0) { ctx.fillStyle = `rgba(248,113,113,${a * 0.8})`; ctx.fillRect(x, y, CELL - GAP, ROWH - GAP * 2); finished = false; }
+        continue;
+      }
+      ctx.fillStyle = hsl((ev.k / Math.max(1, count - 1)) * 280, 75, 60);
+      ctx.fillRect(x, y, CELL - GAP, ROWH - GAP * 2);
+      if (ev.src != null && t - ev.time < 350) {
+        const [sx, sy] = cellPos(ev.src);
+        ctx.strokeStyle = "rgba(244,114,182,0.6)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx + 4, sy + 4); ctx.quadraticCurveTo((sx + x) / 2, Math.min(sy, y) - 30, x + 4, y + 4); ctx.stroke();
+        finished = false;
+      }
+    }
+    ctx.fillStyle = "#5d6579"; ctx.fillText("color = the index passed to write() (first + k): red at the first element, through the spectrum to violet at the last", OX, CH - 6);
+    if (!finished) requestAnimationFrame(frame); else running = false;
+  };
+  const run = () => { const looping = running; build(); if (!looping) requestAnimationFrame(frame); };
+  addEventListener("resize", () => { if (!running) { running = true; requestAnimationFrame(frame); } });
+  chips("#writeTabs", [{ value: "fragment", label: "GpuArrayWriter · fragment" }, { value: "compute", label: "WgpuArrayWriter · compute" }, { value: "scatter", label: "WgpuArrayStore · scatter" }], "fragment", (v) => { mode = v; $("#writeCode").innerHTML = code[v]; run(); });
+  for (const id of ["#wAt", "#wCount"]) $(id).addEventListener("input", (e) => {
+    $("#wAt").max = TOTAL - 1; $("#wCount").max = TOTAL - +$("#wAt").value;
+    e.target.nextElementSibling.textContent = e.target.value;
+    $("#wAt").nextElementSibling.textContent = $("#wAt").value; $("#wCount").nextElementSibling.textContent = Math.min(+$("#wCount").value, TOTAL - +$("#wAt").value);
+    run();
+  });
+  $("#wAt").nextElementSibling.textContent = $("#wAt").value; $("#wCount").nextElementSibling.textContent = $("#wCount").value;
+  $("#wRun").addEventListener("click", run);
+  const firstView = new IntersectionObserver(([e]) => { if (e.isIntersecting) { firstView.disconnect(); run(); } }, { threshold: 0.5 });
+  firstView.observe(canvas);
+})();
+
+// ---------- 10. Double buffering ----------
+(() => {
+  let front = "A", frame = 1, backFilled = false, stale = false, filling = false;
+  const el = { A: $("#bufA"), B: $("#bufB") };
+  const render = () => {
+    const back = front === "A" ? "B" : "A";
+    el[front].style.transform = "translateX(0) scale(1.04)"; el[back].style.transform = "scale(0.96)";
+    el[front].style.order = 0; el[back].style.order = 1;
+    $(`#buf${front}info`).textContent = `front · frame ${frame}`;
+    $(`#buf${back}info`).textContent = backFilled ? `back · frame ${frame + 1} ready` : "back · empty";
+    $(".fill", el[front]).style.width = "100%";
+    if (!filling) $(".fill", el[back]).style.width = backFilled ? "100%" : "0%";
+    $("#readerTag").innerHTML = stale ? `<span class="warn">reader → still the old textures: bind again</span>` : `reader → front (${front})`;
+    $("#writerTag").textContent = `writer → back (${back})`;
+  };
+  $("#swWrite").addEventListener("click", () => {
+    if (filling || backFilled) return;
+    const back = front === "A" ? "B" : "A", fill = $(".fill", el[back]);
+    filling = true; let p = 0;
+    const tick = () => { p += 4; fill.style.width = `${p}%`; if (p < 100) requestAnimationFrame(tick); else { filling = false; backFilled = true; $("#swNote").textContent = "The next frame is in the back buffer. Swap the buffers."; render(); } };
+    tick();
+  });
+  $("#swSwap").addEventListener("click", () => {
+    if (!backFilled) { $("#swNote").textContent = "Write the next frame into the back buffer first."; return; }
+    front = front === "A" ? "B" : "A"; frame += 1; backFilled = false; stale = true;
+    $("#swNote").textContent = "Swapped without a copy: the two arrays exchanged their textures and counts. Readers still point at the old textures.";
+    render();
+  });
+  $("#swBind").addEventListener("click", () => { stale = false; $("#swNote").textContent = "The reader now reads the new front buffer."; render(); });
+  render();
+})();
+
+// ---------- 11. Workers ----------
+(() => {
+  const SIZE = 4, workers = [], queue = [];
+  let jobId = 0, lease = null;
+  const log = (s) => { const l = $("#workerLog"); l.innerHTML += `<div>${s}</div>`; l.scrollTop = l.scrollHeight; };
+  // Slots stay in the DOM so a new worker's pop animation plays once
+  const slots = Array.from({ length: SIZE }, () => $("#pool").appendChild(document.createElement("div")));
+  const render = () => {
+    slots.forEach((slot, i) => {
+      const w = workers[i];
+      slot.className = !w ? "slot" : `slot live${w.job ? " busy" : ""}`;
+      slot.innerHTML = !w ? "no worker" : `${w === lease ? '<span class="lease">leased</span>' : ""}<b>worker ${i + 1}</b><span class="small">${w.job ? w.job.name : "idle"}</span><div class="bar" style="width:${w.progress * 100}%"></div>`;
+    });
+    $("#queue").textContent = `${workers.length} worker${workers.length === 1 ? "" : "s"} created · ${queue.length ? `queue: ${queue.map((j) => "#" + j.id).join(", ")}` : "queue empty"}`;
+  };
+  const schedule = () => {
+    while (queue.length) {
+      let w = workers.find((w) => !w.job && w !== lease);
+      if (!w && workers.length < SIZE) { w = { job: null, progress: 0 }; workers.push(w); log(`created worker ${workers.length} for the first call that needed it`); }
+      if (!w) break;
+      run(w, queue.shift());
+    }
+    render();
+  };
+  const run = (w, job) => {
+    w.job = job; w.progress = 0;
+    log(`#${job.id} ${job.name} → worker ${workers.indexOf(w) + 1} (${job.dir})`);
+    const t0 = performance.now(), ms = 1400 + Math.random() * 900;
+    const tick = () => {
+      w.progress = Math.min(1, (performance.now() - t0) / ms); render();
+      if (w.progress < 1) return requestAnimationFrame(tick);
+      log(`<span class="yes">#${job.id} done</span>: ${job.back}`);
+      w.job = null; w.progress = 0; schedule();
+    };
+    tick();
+  };
+  $("#wkLoad").addEventListener("click", () => { queue.push({ id: ++jobId, name: "loadSplats", dir: "bytes transferred in", back: "ArrayData transferred back (no copy)" }); schedule(); });
+  $("#wkWrite").addEventListener("click", () => { queue.push({ id: ++jobId, name: "writeSplats", dir: "data's arrays transferred in", back: "bytes returned; data's arrays restored via setFromTransferable" }); schedule(); });
+  $("#wkLease").addEventListener("click", () => {
+    if (lease) { log("lease.release(): the worker goes back to the pool"); lease = null; $("#wkLease").textContent = "acquire() a lease"; schedule(); return; }
+    let w = workers.find((w) => !w.job);
+    if (!w && workers.length < SIZE) { w = { job: null, progress: 0 }; workers.push(w); log(`created worker ${workers.length} for the lease`); }
+    if (!w) { log("every worker is busy. WorkerPool's acquire() waits for one; this demo does not, so try again when a worker is idle"); return; }
+    lease = w; log(`acquired worker ${workers.indexOf(w) + 1}: lease.call() always runs there`); $("#wkLease").textContent = "lease.release()"; render();
+  });
+  render(); log("new WorkerPool({ size: 4 }): zero workers until a call needs one");
+  const choices = {
+    "(left out)": "Uses the shared pool where the page can create workers, otherwise this thread (Node, Cloudflare, or code already in a worker). This is the default.",
+    true: "Uses the shared pool (WorkerPool.default, which is also created on first use).",
+    false: "Runs on this thread, using the same core/ functions.",
+    pool: "Uses your own WorkerPool for this one call.",
+    lease: "Uses a WorkerLease: that specific worker, for calls that belong together.",
+  };
+  chips("#workerChips", Object.keys(choices), "(left out)", (k) => ($("#workerChoice").textContent = choices[k]));
+})();
+
+// ---------- 12. Files ----------
+(() => {
+  const F = [
+    { id: "ply", name: "PLY", c: "var(--blue)", magic: '"ply" text header', text: "Binary 3DGS PLY, RGB point clouds, and SuperSplat compressed PLY. Read and written (compressed PLY by CompressedPlyFile), with optional PBR fields." },
+    { id: "spz", name: "SPZ", c: "var(--worker)", magic: "gzip (1f 8b) or .spz", text: "Reads versions 1–3 and writes version 3. Optional PBR and LoD tree flags." },
+    { id: "rad", name: "RAD", c: "var(--wgpu)", magic: '"RAD0" / "RADC"', text: "Chunked columns in many encodings, and the LoD tree. Writes plain chunks." },
+    { id: "rdx", name: "RDX", c: "var(--gpu)", magic: '"RDXH"', text: "Radix's own format: any bundles, in chunks that are byte-transposed and gzipped." },
+  ];
+  $("#formatCards").innerHTML = F.map((f) => `<div class="fmt" data-f="${f.id}"><h4 style="color:${f.c}">${f.name}</h4><div class="mono small">${f.magic}</div><p style="margin:6px 0 0;font-size:14px;color:#cfd4df">${f.text}</p></div>`).join("");
+  const detect = (b, name) => {
+    const m = b.length >= 4 ? (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0 : 0;
+    if (m === 0x48584452) return "rdx";
+    if (m === 0x30444152 || m === 0x43444152) return "rad";
+    if (b[0] === 0x70 && b[1] === 0x6c && b[2] === 0x79) return "ply";
+    if ((b[0] === 0x1f && b[1] === 0x8b) || name.toLowerCase().endsWith(".spz")) return "spz";
+    return null;
+  };
+  const drop = $("#drop");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", async (e) => {
+    e.preventDefault(); drop.classList.remove("over");
+    const file = e.dataTransfer.files[0]; if (!file) return;
+    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer()), f = detect(bytes, file.name);
+    const hexs = [...bytes.slice(0, 8)].map((v) => v.toString(16).padStart(2, "0")).join(" ");
+    $$(".fmt").forEach((c) => c.classList.toggle("hit", c.dataset.f === f));
+    $("#dropOut").innerHTML = `<b>${file.name}</b> · first bytes <span class="mono">${hexs}</span> → ${f ? `<span class="yes">${f.toUpperCase()}</span>` : `<span class="no">not a splat file</span>`}`;
+  });
+})();
+
+// ---------- 13. RDX byte transpose ----------
+(() => {
+  const canvas = $("#byteCanvas");
+  // A splat-like table: rgba (unorm8x4) and center (float16x3, half bits),
+  // two channels, each saved (and transposed) on its own as RDX does
+  const N = 4096, rgba = new Uint8Array(N * 4), center = new Uint16Array(N * 3);
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const byte = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  for (let i = 0; i < N; i++) {
+    const a = i * 0.0061;
+    center.set([toHalf(Math.cos(a) * (3 + rnd())), toHalf(1.2 + rnd() * 0.4), toHalf(Math.sin(a) * (3 + rnd()))], i * 3);
+    rgba.set([byte(150 + 80 * Math.sin(a * 3) + rnd() * 30), byte(120 + 60 * Math.sin(a * 2 + 1) + rnd() * 30), byte(90 + 70 * Math.cos(a * 5) + rnd() * 30), byte(235 + rnd() * 20)], i * 4);
+  }
+  const transpose = (bytes, size) => {
+    const out = new Uint8Array(bytes.length);
+    for (let i = 0; i < N; i++) for (let b = 0; b < size; b++) out[b * N + i] = bytes[i * size + b];
+    return out;
+  };
+  const channels = [{ bytes: new Uint8Array(rgba.buffer), size: 4 }, { bytes: new Uint8Array(center.buffer), size: 6 }];
+  // The 10 byte columns of an element: rgba's 4, then center's 6 (little-endian halves)
+  const COLUMNS = [
+    ...["r", "g", "b", "a"].map((label, c) => ({ label: `rgba · ${label}`, channel: 0, at: c })),
+    ...["x", "y", "z"].flatMap((axis, c) => [{ label: `center · ${axis} lo`, channel: 1, at: c * 2 }, { label: `center · ${axis} hi`, channel: 1, at: c * 2 + 1 }]),
+  ];
+  const E = COLUMNS.length, GAP = 10, SHOW = 16;
+  const valueOf = (i, column) => channels[COLUMNS[column].channel].bytes[i * channels[COLUMNS[column].channel].size + COLUMNS[column].at];
+  const colorOf = (column, v) => {
+    if (column < 4) {
+      return column === 3 ? `hsl(0 0% ${8 + (v / 255) * 62}%)` : `hsl(${[0, 120, 215][column]} 70% ${6 + (v / 255) * 50}%)`;
+    }
+    return (column - 4) % 2 === 1 ? `hsl(${30 + (v % 16) * 2} 85% ${30 + (v / 255) * 40}%)` : `hsl(220 25% ${10 + (v / 255) * 55}%)`;
+  };
+  let on = false, anim = 1;
+  // Regions, top to bottom: title, column headers, the grid (row labels in
+  // the left column), the legend; a gap between the two channels
+  const draw = () => {
+    const { ctx, W, H } = fitCanvas(canvas, 380);
+    ctx.clearRect(0, 0, W, H);
+    const ox = 118, top = 60, legendH = 62, area = W - ox - 4, gridH = H - top - legendH - 8;
+    ctx.font = "13px system-ui"; ctx.fillStyle = "#98a1b4";
+    ctx.fillText(on ? "transposed, each channel on its own: one row per byte position" : "as stored: one row per element, 4 bytes of rgba beside 6 of center", 0, 16);
+
+    // Stored: SHOW rows (elements) x E columns; transposed: E rows x SHOW columns
+    const sw = (area - GAP) / E, sh = gridH / SHOW, tw = area / SHOW, th = (gridH - GAP) / E;
+    const columnX = (c) => ox + c * sw + (c >= 4 ? GAP : 0), rowY = (c) => top + c * th + (c >= 4 ? GAP : 0);
+    for (let i = 0; i < SHOW; i++) for (let c = 0; c < E; c++) {
+      const ax = columnX(c), ay = top + i * sh, bx = ox + i * tw, by = rowY(c);
+      const k = on ? anim : 1 - anim, x = ax + (bx - ax) * k, y = ay + (by - ay) * k;
+      const w = sw + (tw - sw) * k, h = sh + (th - sh) * k;
+      ctx.fillStyle = colorOf(c, valueOf(i, c));
+      ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+    }
+
+    if (anim === 1) {
+      ctx.font = "12px system-ui"; ctx.fillStyle = "#98a1b4";
+      if (on) {
+        ctx.fillText(`element 0 → ${SHOW - 1}`, ox, top - 8);
+        COLUMNS.forEach(({ label }, c) => ctx.fillText(label, 0, rowY(c) + th / 2 + 4));
+      } else {
+        ctx.fillText("rgba · unorm8x4", columnX(0) + 2, top - 24);
+        ctx.fillText("center · float16x3", columnX(4) + 2, top - 24);
+        ["r", "g", "b", "a"].forEach((label, c) => ctx.fillText(label, columnX(c) + sw / 2 - 3, top - 8));
+        ["x", "y", "z"].forEach((axis, c) => ctx.fillText(axis, columnX(4 + c * 2) + sw - 3, top - 8));
+        for (let i = 0; i < SHOW; i += 3) ctx.fillText(`element ${i}`, 0, top + i * sh + sh / 2 + 4);
+      }
+    }
+
+    const swatch = (y, colors, label) => {
+      colors.forEach((color, k) => { ctx.fillStyle = color; ctx.fillRect(ox + k * 14, y - 9, 12, 12); });
+      ctx.fillStyle = "#98a1b4"; ctx.fillText(label, ox + colors.length * 14 + 6, y + 1);
+    };
+    ctx.font = "12px system-ui";
+    swatch(H - 42, [colorOf(0, 200), colorOf(1, 200), colorOf(2, 200), colorOf(3, 220)], "rgba: one byte per channel, drawn in its color");
+    swatch(H - 24, [colorOf(5, 64)], "half float high byte: sign, exponent, top of the mantissa");
+    swatch(H - 6, [colorOf(4, 150)], "half float low byte: the rest of the mantissa");
+  };
+  addEventListener("resize", draw);
+  const animate = () => { anim = 0; const t0 = performance.now(); const tick = (now) => { anim = Math.min(1, (now - t0) / 700); draw(); if (anim < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+  $("#transposeBtn").addEventListener("click", () => { on = !on; $("#transposeBtn").textContent = on ? "undo transpose" : "byte-transpose"; animate(); });
+  draw();
+  (async () => {
+    if (!("CompressionStream" in window)) { $("#gzOut").textContent = "(this browser has no CompressionStream)"; return; }
+    const gz = async (bytes) => (await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()).byteLength;
+    const sum = (sizes) => sizes.reduce((total, size) => total + size, 0);
+    // One gzipped payload per channel, as in an RDX chunk
+    const a = sum(await Promise.all(channels.map(({ bytes }) => gz(bytes))));
+    const b = sum(await Promise.all(channels.map(({ bytes, size }) => gz(transpose(bytes, size)))));
+    $("#gzOut").innerHTML = `${fmt(N * 10)} bytes · gzip as stored <b>${fmt(a)}</b> · transposed <b class="yes">${fmt(b)}</b> (${Math.round((1 - b / a) * 100)}% smaller)`;
+  })();
+})();
+</script>
+</body>
+</html>

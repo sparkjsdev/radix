@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generators and modifiers · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/generators.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/generators.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html" class="on">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="generators-and-modifiers">Generators and modifiers<a class="anchor" href="#generators-and-modifiers">#</a></h1>
+<p>A generator is TSL code that makes splat <code>i</code> inside the projection's shader, so no intermediate splat arrays are written. A reader of stored splats is one kind of generator; a function that computes splats from their index is another. A modifier is a TSL function applied to each splat a renderer draws. This page also covers how objects are transformed and the program cache, which keeps changes to data, matrices, and params from recompiling.</p>
+<p>Code: <a href="../../src/gpu/splatGenerator.ts"><code>src/gpu/splatGenerator.ts</code></a> (<code>SplatGenerator</code>), <a href="../../src/render/splatTransform.tsl.ts"><code>src/render/splatTransform.tsl.ts</code></a> (transforms and modifier spaces), and <code>SplatProjector.ts</code> (the program cache).</p>
+<pre class="lang-ts"><code>const { cos, float, sin, uint, uniform, vec3, vec4 } = TSL;
+
+// The app's: time.value = seconds, each frame
+const time = uniform(0);
+
+const ring: SplatGenerator = {
+  generateSplat: (i) =&gt; {
+    const a = float(i).mul(0.002).add(time);
+    return GpuSplats.Splat(
+      vec3(cos(a), 0, sin(a)),
+      vec3(0.01),
+      vec4(0, 0, 0, 1),
+      vec3(1, 0.6, 0.2),
+      float(0.9),
+      uint(i),
+    );
+  },
+};
+
+splatRenderer.collection = new SplatCollection([
+  { generator: ring, count: 3142, matrixWorld: ringObject.matrixWorld },
+]);</code></pre>
+<h2 id="splatgenerator">SplatGenerator<a class="anchor" href="#splatgenerator">#</a></h2>
+<p>A generator is a plain object with one or both of:</p>
+<ul>
+<li><code>generateSplat(index, context)</code>: returns a <code>SplatNode</code> (scales and a rotation).</li>
+<li><code>generateCovSplat(index, context)</code>: returns a <code>CovSplatNode</code> (a covariance).</li>
+</ul>
+<p>and optionally <code>bind(data, context)</code>, which points the generator's inputs (readers, uniforms) at an object's data before that object's dispatch. <code>SplatGenerator&lt;Data&gt;</code> is the type; <code>Data</code> is what its objects' <code>data</code> must be. <code>AnySplatGenerator</code> accepts any data. A generator may ignore <code>context</code>; one that wraps another passes its own on (<code>base.generateSplat(i, context)</code>; left out, it defaults to <code>SplatGenerator.context</code>).</p>
+<h2 id="the-generator-context">The generator context<a class="anchor" href="#the-generator-context">#</a></h2>
+<p><code>context</code> describes the object being projected and the viewpoint. View-dependent effects (spherical harmonics, rim light, view-facing sprites, distance fades) read it, so object data never needs a camera. It is a <code>SplatGeneratorContext</code> of TSL nodes in the object's space:</p>
+<table><thead><tr><th>Member</th><th>Type</th><th>What it is</th></tr></thead><tbody><tr><td><code>viewOrigin</code></td><td>vec3</td><td>the head's position: the camera, or the eye pair's center in XR</td></tr><tr><td><code>viewForward</code></td><td>vec3</td><td>the head's viewing direction, unit</td></tr><tr><td><code>objectToHead</code>, <code>headToObject</code></td><td>mat4</td><td>the whole object-to-head transform and its inverse, whatever the modifier space</td></tr><tr><td><code>objectToWorld</code></td><td>mat4</td><td>the object's world matrix</td></tr></tbody></table>
+<p><code>bind(data, context)</code> gets the same members as three.js values (<code>SplatBindContext</code>: <code>Vector3</code>s and <code>Matrix4</code>s) for this object and render. A generator can use them for per-object CPU decisions, such as a LoD level or culling. A modifier also gets a context, in its own space (<a href="#modifiers">Modifiers</a>).</p>
+<p>The nodes are uniforms. The renderer sets them before each object's dispatch, along with the object's transform and params. three.js writes a dispatch's uniforms when it encodes that dispatch, so each object sees its own values. A splat is generated once for all eyes, so the view is the head, not each eye.</p>
+<p>Set the splat's <code>index</code> field (the last argument of <code>GpuSplats.Splat</code> and <code>CovSplat</code>): effects use it for per-splat randomness.</p>
+<h2 id="forms">Forms<a class="anchor" href="#forms">#</a></h2>
+<p>The four methods read one form each: <code>ewa</code> reads covariances, and the ray methods (<code>3dgut</code>, <code>htgs</code>, <code>raygs</code>) read scales and a rotation. A generator implements the forms it can, and the program converts when needed: splat to covariance is cheap, and covariance to splat is an eigendecomposition per splat. Forms are chosen once per program, for each step (the generator, the modifier, the projection), so a program converts only where the generator does not provide the form a step takes.</p>
+<h2 id="stored-splats-fromsplats">Stored splats: fromSplats<a class="anchor" href="#stored-splats-fromsplats">#</a></h2>
+<pre class="lang-ts"><code>// Make it once
+const listed = SplatGenerator.fromSplats({
+  layout: &quot;extSplats&quot;,
+  remap: &quot;indices&quot;,
+});
+
+// Upload the chosen splats' indices as an index list
+const nearest = SplatGenerator.indices(renderer, chosenIndices);
+const subset = SplatCollection.object({
+  generator: listed,
+  data: { splats, indices: nearest },
+  count: chosenIndices.length,
+  matrixWorld,
+});
+splatRenderer.collection = new SplatCollection([subset]);</code></pre>
+<p><code>SplatGenerator.fromSplats({ layout?, remap?, modifiers?, sh? })</code> returns a generator of stored splats. Splat <code>i</code> is the arrays' splat <code>remap(i)</code>, plus its SH color when <code>sh</code> is given, then each modifier in turn.</p>
+<table><thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>layout</code></td><td><code>&quot;extSplats&quot;</code></td><td>the layout of the arrays it reads</td></tr><tr><td><code>remap</code></td><td>none: <code>i</code> itself</td><td><code>&quot;indices&quot;</code>: entry <code>i</code> of an index list; or any TSL function of the index, such as <code>(i) =&gt; i.mul(uint(4))</code> for every fourth splat</td></tr><tr><td><code>modifiers</code></td><td><code>[]</code></td><td><code>SplatModifier</code>s applied in turn, in object space, as part of this generator</td></tr><tr><td><code>sh</code></td><td>none</td><td><code>{ codec, degree, palette? }</code> (<code>SplatShOptions</code>): the SH it reads, per splat or through a palette, seen from <code>context.viewOrigin</code> (<a href="sh.html">Spherical harmonics</a>)</td></tr></tbody></table>
+<p>Its objects' data is <code>StoredSplats</code>: <code>{ splats }</code>, plus <code>indices</code> with <code>remap: &quot;indices&quot;</code> and <code>shPalette</code> with an SH palette. One <code>fromSplats</code> generator serves all files of its kind and all index lists. A new file or subset only changes the data, so nothing recompiles.</p>
+<p><code>SplatGenerator.forArrays(arrays, { remap?, modifiers?, sh?, shPalette? })</code> returns the generator for given arrays. It finds their splat layout and SH storage (like <code>Splats.findBundle</code> and <code>Sh.find</code>) and returns a <code>fromSplats</code> generator shared by all arrays of the same kind, so loaded files draw their SH without extra code. <code>sh</code> caps the degree (0 or <code>false</code>: no SH). With <code>modifiers</code> it makes a new generator. <code>SplatCollection.arrays(arrays, { sh?, shPalette? })</code> uses it to make objects.</p>
+<p>Through a remap, a splat's <code>index</code> stays the stored splat's index, so effects stay on the same splat when a subset changes.</p>
+<h2 id="index-lists">Index lists<a class="anchor" href="#index-lists">#</a></h2>
+<p><code>SplatGenerator.indices(renderer, list, into?)</code> uploads a list of element indices as <code>GpuArrays</code> (the bundle <code>indices</code>, <code>ArrayData.INDICES</code>, 4 per texel). With <code>into</code>, it reuses those arrays, and their count becomes the list's.</p>
+<p>An index list draws a subset of stored splats:</p>
+<ul>
+<li>a <strong>LoD subset</strong>: the splats of a LoD tree that the app chose for the current camera;</li>
+<li>one object of a <strong>splat atlas</strong>: several objects stored together in one set of arrays;</li>
+<li>any selection: the splats in a box, the nearest ones, every visible one of a previous frame.</li>
+</ul>
+<p>Pool index lists and return them in each object's <code>release</code>, once nothing draws the object (<a href="lifetimes.html#object-releases">Lifetimes</a>; a full example: <a href="recipes.html#a-subset-chosen-per-camera">Recipes</a>).</p>
+<h2 id="custom-generators">Custom generators<a class="anchor" href="#custom-generators">#</a></h2>
+<p>A generator's TSL is built once per program. Values that change are uniforms, either the app's own or set by <code>bind(data)</code>. <code>bind</code> runs before each object's dispatch, so one program serves objects with different data:</p>
+<pre class="lang-ts"><code>// Set per object by bind
+const radius = uniform(1);
+
+const ring: SplatGenerator&lt;{ radius: number }&gt; = {
+  generateSplat: (i) =&gt; {
+    const a = float(i).mul(0.002).add(time);
+    const center = vec3(cos(a), 0, sin(a)).mul(radius);
+    return GpuSplats.Splat(
+      center,
+      vec3(0.01), // scales
+      vec4(0, 0, 0, 1), // quaternion
+      vec3(1, 0.6, 0.2), // rgb
+      float(0.9), // opacity
+      uint(i), // index
+    );
+  },
+  bind: ({ radius: r }) =&gt; (radius.value = r),
+};
+
+const inner = SplatCollection.object({
+  generator: ring,
+  data: { radius: 1 },
+  count: 3142,
+});
+const outer = SplatCollection.object({
+  generator: ring,
+  data: { radius: 2 },
+  count: 3142,
+  matrixWorld: tilted.matrixWorld,
+});
+splatRenderer.collection = new SplatCollection([inner, outer]);</code></pre>
+<ul>
+<li><code>SplatCollection.object</code> checks <code>data</code> against the generator's type at compile time.</li>
+<li>A generator may read anything a shader can: <code>GpuArrayReader</code>s bound in <code>bind</code>, <code>WgpuBuffer</code>s of a simulation, textures, uniforms. The particles of a compute simulation can be a generator that reads their buffers.</li>
+<li>A custom generator can draw stored spherical harmonics with a <code>GpuShReader</code> (the reader <code>fromSplats</code> uses): bind it in <code>bind</code>, and add <code>sh.color(index, context.viewOrigin, center)</code> to the splat's rgb (<a href="sh.html#in-your-own-generator">Spherical harmonics</a>).</li>
+<li>The GPU sort sees splats moved by a uniform in the same frame. The CPU sort does not: call <code>splatRenderer.requestSort()</code> when they have moved enough (<a href="sorting.html#the-cpu-sort">Sorting</a>).</li>
+</ul>
+<h2 id="modifiers">Modifiers<a class="anchor" href="#modifiers">#</a></h2>
+<pre class="lang-ts"><code>// A SplatModifier: a TSL function of a splat
+splatRenderer.modifier = (s) =&gt; {
+  const out = s.toVar();
+  // Color by depth, in view space
+  const depth = s.get(&quot;center&quot;).z.negate().div(10);
+  out.get(&quot;rgb&quot;).assign(vec3(depth));
+  return out;
+};
+
+// &quot;view&quot; (default) | &quot;world&quot; | &quot;object&quot; | a Matrix4
+splatRenderer.modifierSpace = &quot;view&quot;;</code></pre>
+<p>A renderer's <code>modifier(splat)</code>, or <code>covModifier(cov)</code> for the covariance form, runs on each splat it draws, after the object's transform and before the projection. Like three's <code>scene.overrideMaterial</code>, it changes what is drawn without editing any generator. A view can set its own, or <code>null</code> for none (<a href="views.html">Views and CPU orders</a>).</p>
+<ul>
+<li>When both are given, the one matching the generator's form runs; otherwise the program converts.</li>
+<li>Modifiers are part of the program cache key: make each one once and switch among them. After the first frame of each, switching compiles nothing.</li>
+<li>A modifier gets the splat and a context in its own space (<a href="#the-generator-context">the generator context</a>; for <code>&quot;world&quot;</code>, <code>viewOrigin</code> is the camera's world position). Time, light positions, and similar values are the app's own uniforms. Per-splat randomness comes from <code>index</code>.</li>
+<li><code>fromSplats({ modifiers })</code> applies modifiers in object space as part of one generator, for effects that belong to an object rather than to the viewpoint; they get the generator's context.</li>
+</ul>
+<p>Types: <code>SplatModifier</code> (<code>(splat: SplatNode, context?: SplatGeneratorContext) =&gt; SplatNode</code>) and <code>CovSplatModifier</code> (<code>(cov: CovSplatNode, context?) =&gt; CovSplatNode</code>).</p>
+<h3 id="modifier-spaces">Modifier spaces<a class="anchor" href="#modifier-spaces">#</a></h3>
+<table><thead><tr><th><code>modifierSpace</code></th><th>The modifier sees</th><th>Use it for</th></tr></thead><tbody><tr><td><code>&quot;view&quot;</code> (default)</td><td>head space: the camera at the origin, looking down -z</td><td>depth, view-dependent coloring, screen-space effects</td></tr><tr><td><code>&quot;world&quot;</code></td><td>world space</td><td>height coloring, effects anchored in the scene</td></tr><tr><td><code>&quot;object&quot;</code></td><td>each object's own space</td><td>an object-local wobble or deformation</td></tr><tr><td>a <code>Matrix4</code></td><td>the space of that frame (read every render), such as a gizmo's <code>matrixWorld</code></td><td>a wave or a cut anchored to a movable frame</td></tr></tbody></table>
+<p><code>ModifierSpace</code> is the type. The space changes only matrices, so one program serves all spaces and frames, and moving a frame compiles nothing.</p>
+<h2 id="transforms">Transforms<a class="anchor" href="#transforms">#</a></h2>
+<p>Splats arrive at the projection in head space (the camera in mono, the XR rig's pose in stereo). For each object, the CPU computes object to head in float64 and uploads one matrix, so objects far from the origin keep their precision. With a modifier, the transform splits around the modifier's space:</p>
+<ul>
+<li>no modifier: head × object;</li>
+<li><code>&quot;view&quot;</code>: head × object, then the modifier;</li>
+<li><code>&quot;object&quot;</code>: the modifier, then head × object;</li>
+<li><code>&quot;world&quot;</code> or a frame F: F⁻¹ × object, the modifier, then head × F.</li>
+</ul>
+<p>A matrix that is a rotation times a uniform scale is applied directly: it rotates the quaternion and multiplies the scales. Any other matrix (a non-uniform scale, a shear, a mirror) is applied to the covariance, Σ' = M Σ Mᵀ. The CPU tests each matrix (<code>G = MᵀM</code> within 1e-6 of <code>trace(G)/3 · I</code>, and <code>det M &gt; 0</code>) and sets a uniform flag, so dragging a gizmo into a non-uniform scale switches paths without compiling anything.</p>
+<p>In the world and frame paths, world coordinates far from the origin lose float32 precision; the view, object, and no-modifier paths do not.</p>
+<h2 id="the-program-cache">The program cache<a class="anchor" href="#the-program-cache">#</a></h2>
+<p><code>SplatProjector</code> keeps one program per generator, modifier, cov modifier, method, eye count, pass (<code>full</code>, or <code>keys</code> for the CPU sort), and backend, shared by every renderer and view. A program's inputs are uniforms set before each dispatch (the camera, the params, the object's transforms) and the inputs that <code>bind(data)</code> sets.</p>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>SplatProjector.programs</code></td><td>the number of programs compiled so far (for stats and tests)</td></tr><tr><td><code>SplatProjector.dispose(generator)</code></td><td>frees a generator's programs. Garbage collection does not free GPU pipelines; call this once a generator you stop using has no live objects (an object's <code>release</code> can)</td></tr></tbody></table>
+<p>Changing data, matrices, params, the modifier space, or a frame compiles nothing. A new generator or modifier compiles once per method and eye count.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Generators and modifiers made per frame compile per frame. Make them once.</li>
+<li>Each object costs one dispatch. Tens of objects are fine; for thousands, store them together (a splat atlas) and draw them as one object through one generator.</li>
+<li>WebGPU's baseline allows 16 sampled textures per shader stage, and one stored layout uses 2 or more: a generator that reads many arrays at once can run out.</li>
+</ul>
+<div class="pager"><a class="prev" href="params.html"><small>Previous</small>Params</a><a class="next" href="views.html"><small>Next</small>Views and CPU orders</a></div>
+<p class="source">Source: <a href="../generators.md">docs/generators.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#splatgenerator">SplatGenerator</a>
+<a class="h2" href="#the-generator-context">The generator context</a>
+<a class="h2" href="#forms">Forms</a>
+<a class="h2" href="#stored-splats-fromsplats">Stored splats: fromSplats</a>
+<a class="h2" href="#index-lists">Index lists</a>
+<a class="h2" href="#custom-generators">Custom generators</a>
+<a class="h2" href="#modifiers">Modifiers</a>
+<a class="h3" href="#modifier-spaces">Modifier spaces</a>
+<a class="h2" href="#transforms">Transforms</a>
+<a class="h2" href="#the-program-cache">The program cache</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

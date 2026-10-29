@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-splat design · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/multi-splat.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/multi-splat.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html" class="on">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="multi-splat-design">Multi-splat design<a class="anchor" href="#multi-splat-design">#</a></h1>
+<p>Radix draws many splat objects in one sort through collections, a renderer with per-viewpoint views, versioned orders, and object releases. What each part does is described in <a href="rendering.html">Rendering</a>, <a href="views.html">Views and CPU orders</a>, <a href="lifetimes.html">Lifetimes</a>, and <a href="projection.html">Projection</a>. This page explains why the parts exist: what each one is for, which constraint requires it, and which simpler designs were tried first and dropped. <a href="../multi-splat.html">multi-splat.html</a> covers the same material step by step, with interactive diagrams.</p>
+<p>The model (generators, immutable collections, a renderer with per-viewpoint views, versioned orders, and object releases) has more parts than drawing splats might seem to need. Each part addresses a constraint that a simpler design does not meet:</p>
+<ul>
+<li>Overlapping splats blend correctly only when they are sorted together, so every object is projected into one shared set and drawn in one draw call.</li>
+<li>WebGL2 has no compute shaders, so its sort runs on a worker and finishes a few frames late. An order is valid only for the exact collection of splats it was sorted for, and for one viewpoint.</li>
+<li>Therefore that collection must be a value that can be stored and compared (a <code>SplatCollection</code>), each viewpoint must keep drawing an old collection while a new one is sorted (a <code>SplatView</code> per camera, <code>SplatOrder.version</code>), and nothing the old collection uses can be freed until nothing draws it (an object's <code>release</code>).</li>
+<li>Shader compilation is slow, so programs are cached by generator, and a generator must be a program only, without its data.</li>
+</ul>
+<p>An app that targets only WebGPU needs little of this: it creates a <code>SplatRenderer</code> of a collection, adds it to the scene, and renders from any camera. The sort runs on the GPU in the same frame, so nothing depends on the camera between renders and no views are needed.</p>
+<pre class="lang-ts"><code>const collection = new SplatCollection([
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.render(scene, camera);</code></pre>
+<h2 id="the-constraints">The constraints<a class="anchor" href="#the-constraints">#</a></h2>
+<h3 id="1-splats-must-be-sorted-together">1. Splats must be sorted together<a class="anchor" href="#1-splats-must-be-sorted-together">#</a></h3>
+<p>Gaussian splats are blended back to front. Two objects drawn in separate draw calls, each sorted separately, blend incorrectly wherever they overlap: one is drawn entirely over the other, even where their splats interleave in depth (for example a hand inside a cloud, or two scans of the same room). Therefore every object a renderer draws is projected into one shared set of projected splats, sorted as one list, and drawn in one draw call.</p>
+<p>A single draw call requires some settings to be the same for every splat in it:</p>
+<ul>
+<li><strong>One method.</strong> The four methods (<code>ewa</code>, <code>3dgut</code>, <code>htgs</code>, and <code>raygs</code>) store different words and decode them in different shaders. Mixing them in one draw would require a method tag per splat, the union of every word layout, and branches in both shader stages. The method is a property of the renderer, which owns the projected arrays and the draw material that the method determines.</li>
+<li><strong>The params the draw reads.</strong> <code>maxStdDev</code>, <code>minAlpha</code>, and <code>falloff</code> set the size and shading of the quads in the draw, so a splat projected with one value and drawn with another has the wrong size. These are <code>SplatViewParams</code>, one set per render (the renderer's, or a view's over them). Every param that only the projection reads (<code>lodInflate</code>, the blurs, clipping, pixel radius limits, <code>minContribution</code>, depth of field, and <code>sortGuard</code>) is in <code>SplatObjectParams</code>, with defaults on the renderer, overrides on a view, and overrides per object. <code>lodInflate</code> moved to <code>SplatObjectParams</code> once the projection handled it completely: the projection stores opacity 1 for an inflated splat, so the draw does not depend on it.</li>
+<li><strong><code>sortBits</code>.</strong> The number of sort key bits (16, 24, or 32). Sort keys with different numbers of bits in one sort would be ordered incorrectly.</li>
+</ul>
+<h3 id="2-each-object-has-its-own-transform-and-its-own-generator">2. Each object has its own transform and its own generator<a class="anchor" href="#2-each-object-has-its-own-transform-and-its-own-generator">#</a></h3>
+<p>An object can be a file read from arrays, a subset of a file drawn through an index list, or a TSL function that generates splats in the shader (a ring, a particle system, or an effect). A typical subset is a Level-of-Detail (LoD) subset: the splats of a LoD tree chosen for the current camera. Radix does not build LoD trees itself: the app picks the subset and passes its index list (<code>SplatGenerator.indices</code>). Each object has its own world transform (its <code>matrixWorld</code>: object to world, such as an <code>Object3D</code>'s <code>matrixWorld</code>), which can change every frame.</p>
+<p>One shared set is possible because the projection's output never depends on an object's world transform. Every splat is first transformed into head space (the camera in mono, the XR rig's pose in stereo), and the words store head-relative data: a direction and distance from the head, a rotation and scales in head space, and 2D bounds per eye. The draw reads only the head-to-eye matrices. The sort key is the distance from the head. Therefore any mix of objects with any transforms projects into the same set and sorts correctly, for all four methods.</p>
+<p>The per-object transform is applied once per splat, during projection:</p>
+<ul>
+<li>The CPU combines head x object in float64 and uploads one matrix, so objects far from the origin keep their precision.</li>
+<li>A rotation times a uniform scale can be applied directly: it rotates the quaternions and multiplies the scales. Non-uniform scale, shear, and mirrors cannot (a mirror has no rotation quaternion), so they are applied to the covariance: Σ' = M Σ Mᵀ. <code>isUniformScale</code> selects the path on the CPU and sets a uniform flag, so dragging a gizmo into a non-uniform scale switches paths without compiling anything.</li>
+</ul>
+<h3 id="3-shader-compilation-is-slow-and-the-same-objects-are-drawn-every-frame">3. Shader compilation is slow, and the same objects are drawn every frame<a class="anchor" href="#3-shader-compilation-is-slow-and-the-same-objects-are-drawn-every-frame">#</a></h3>
+<p>Compiling a pipeline stalls the frame in which it happens, and a projection program is large (a generator, transforms, a modifier, and a method). A design that compiles every frame, or for every object every frame, is not usable. Therefore:</p>
+<ul>
+<li><strong>Programs are cached statically by generator.</strong> <code>SplatProjector</code> holds one program per generator, modifier (and cov modifier), method, eye count, pass (<code>full</code> or <code>keys</code>), and backend, shared by every renderer and view. The generator's identity is the cache key, so apps create generators once and keep them.</li>
+<li><strong>A generator is a program; its data is bound per dispatch.</strong> Before each object's dispatch, <code>generator.bind(object.data, context)</code> points the program's readers and uniforms at that object's data: anything its generator accepts, or <code>{ splats, indices?, shPalette? }</code> for the stored-splat template. Without this separation, every file and every LoD subset would be a new generator and a new compile. With it, one <code>SplatGenerator.fromSplats({ remap: &quot;indices&quot; })</code> program draws every file of a layout through any index list: a new LoD subset is new data, not a new program.</li>
+<li><strong>The inputs every program shares are static uniforms</strong> (the camera, the params, the object's transforms, and the generator context), set before each dispatch. This is safe because in three r186 each compute node and each render object has its own copy of a uniform's buffer, written when it is dispatched or encoded, and <code>renderer.compute</code> submits immediately. The checks confirm this by dispatching one program twice in a frame and drawing two renderers in one render.</li>
+<li><strong>The modifier space is not in the cache key.</strong> Moving a modifier from view space to world space, or to another frame, changes only the A and B matrices (below), so it compiles nothing.</li>
+</ul>
+<h3 id="4-batching-across-objects-is-limited">4. Batching across objects is limited<a class="anchor" href="#4-batching-across-objects-is-limited">#</a></h3>
+<p>Each object costs one dispatch. Running many objects in one program would reduce dispatches, but WebGPU's baseline allows 16 sampled textures per shader stage, and one stored splat file already uses 2 or more. Batching therefore has to happen in the data, not in the program: a splat atlas stores many objects together in one large <code>GpuArrays</code> (like a texture atlas), with a table of per-object matrices, read by a single generator. This fits the model as another generator. It is not built yet; one dispatch per object is sufficient for tens of objects.</p>
+<h3 id="5-compute-runs-before-the-frames-draws">5. Compute runs before the frame's draws<a class="anchor" href="#5-compute-runs-before-the-frames-draws">#</a></h3>
+<p>three.js submits each compute dispatch immediately, but submits a render's draws only when <code>render()</code> finishes. Two <code>SplatRenderer</code>s in one scene therefore both project and both sort before either one draws. If they shared a projected buffer or a sorter, both would draw the second renderer's results. Therefore each <code>SplatRenderer</code> owns its projected splats and its <code>WgpuSplatSorter</code>. Only things that are not written per draw are shared: the program cache, the uniforms, and the quad index buffer. Rendering one renderer from several cameras in separate <code>render()</code> calls works: each call submits its compute and then its draws, in order.</p>
+<h3 id="6-webgl2-has-no-compute-shaders-so-its-sort-arrives-late">6. WebGL2 has no compute shaders, so its sort arrives late<a class="anchor" href="#6-webgl2-has-no-compute-shaders-so-its-sort-arrives-late">#</a></h3>
+<p>On WebGPU the sort runs on the GPU in the same frame as the projection, so any collection is drawn immediately. On WebGL2 there is no compute shader to sort with. The fallback computes the sort keys on the GPU (in a fragment pass), reads them back asynchronously, and sorts them on a worker. Sorting never runs on the main thread, because a large sort would drop frames. The resulting order arrives several frames later.</p>
+<p>An order is a list of indices into the projected set: index 5,000 means &quot;the 5,000th splat of this exact collection of objects, in this order, with these counts&quot;. If an object is added or removed, or changes its count or its LoD subset, the same indices refer to different splats, and drawing with the old order draws the wrong splats. A camera move is different: the order becomes slightly out of date, but every index still refers to the same splat, so a late order is still usable.</p>
+<p>The rest of the model follows from this constraint.</p>
+<h3 id="7-several-viewpoints">7. Several viewpoints<a class="anchor" href="#7-several-viewpoints">#</a></h3>
+<p>Two cameras (split screen, a mirror, a thumbnail, or an offline still) need two orders on WebGL2, because an order is sorted for one camera position. They can also draw different things: their own LoD subsets of the same file, or a different modifier. Most of what a renderer draws is the same for every viewpoint, though, and on WebGPU only the camera differs. Therefore a viewpoint holds only what is its own: its order, and any settings it changes. One XR stereo pair is a single viewpoint, because sort keys are distances from the head and an order is valid for every direction at one position.</p>
+<h3 id="8-effects-that-apply-to-every-splat">8. Effects that apply to every splat<a class="anchor" href="#8-effects-that-apply-to-every-splat">#</a></h3>
+<p>Effects such as depth coloring, normal coloring, and a wave in a gizmo's frame should apply to everything a renderer draws, like three.js's <code>scene.overrideMaterial</code>, without editing every generator. Switching between them each frame (RGB, then a depth thumbnail) should compile nothing after the first time.</p>
+<h2 id="how-the-model-follows-from-the-constraints">How the model follows from the constraints<a class="anchor" href="#how-the-model-follows-from-the-constraints">#</a></h2>
+<h3 id="splatcollection-the-collection-an-order-is-sorted-for"><code>SplatCollection</code>: the collection an order is sorted for<a class="anchor" href="#splatcollection-the-collection-an-order-is-sorted-for">#</a></h3>
+<p>Constraint 6 requires the collection of splats to be a value that can be stored, so that an order can record which collection it belongs to and a viewpoint can keep drawing that collection. A <code>SplatCollection</code> is an immutable collection of objects: it makes each object's generator, data, and count read-only on the object itself, without copying, and computes offsets once, so the order of its objects matters.</p>
+<ul>
+<li><strong>Its identity is its version.</strong> Any structural change (an object added or removed, a new count, or a new index list) is a new <code>SplatCollection</code>. Whether an order is for the collection being drawn is checked with <code>order.collection === collection</code>. No collection comparison is needed, and there is no counter to keep synchronized.</li>
+<li><strong>Matrices and params stay live.</strong> They don't change which splat an index refers to, so they are read every render: an object's <code>matrixWorld</code> (its world transform) can be an <code>Object3D.matrixWorld</code> or a function returning a matrix. Moving an object never creates a new collection, and an old collection that is drawn while a new one is sorted still shows each object at its current position.</li>
+<li><strong>Splat objects are plain JavaScript objects.</strong> Several renderers and views can share one collection, or build their own from the same generators and data.</li>
+</ul>
+<h3 id="splatrenderer-the-settings-every-viewpoint-shares"><code>SplatRenderer</code>: the settings every viewpoint shares<a class="anchor" href="#splatrenderer-the-settings-every-viewpoint-shares">#</a></h3>
+<p>The scene mesh holds what is the same for every viewpoint: the collection, the method and draw params (constraint 1), per-object param defaults, the modifier (constraint 8), the sort mode, <code>autoSort</code>, and its own projected arrays and sorter (constraint 5). In each render it projects its collection for that render's camera, sorts it on the GPU or uses the viewpoint's CPU order, and draws. On WebGPU an app needs nothing more: one renderer can be rendered from any number of cameras.</p>
+<h3 id="splatview-what-one-viewpoint-changes"><code>SplatView</code>: what one viewpoint changes<a class="anchor" href="#splatview-what-one-viewpoint-changes">#</a></h3>
+<p>A view is one viewpoint of a renderer, made on first use by <code>splatRenderer.viewFor(key)</code>, where the key is a camera or any value of the app's. It holds the viewpoint's CPU order (constraints 6 and 7) and any settings it changes; unset ones follow the renderer, field by field, and an object's params override both. A render draws the explicit <code>splatRenderer.view</code> if the app set one, else its camera's view, else the renderer's own settings.</p>
+<ul>
+<li><strong>Keyed by camera, made when needed.</strong> With the CPU sort every camera needs an order, so the renderer makes a view for each camera it renders; the app never has to point the renderer at the right view before each render. With the GPU sort no view is made unless the app asks for one.</li>
+<li><strong>The app chooses the key.</strong> Keying by the camera object breaks down when an app makes cameras anew (a clone per frame): each would make a view. <code>viewKey(camera)</code> maps a camera to its view's key (one key for all, or a stable id per viewpoint), and setting <code>splatRenderer.view</code> draws one view for every render. Past 32 views made by renders, the renderer warns.</li>
+<li><strong>Explicit when the camera is not the viewpoint.</strong> Some viewpoints are not one camera object: an XR page renders through the desktop camera, a stereo preview, and the XR camera, all one head. Others are one camera drawn twice with different settings (an RGB and a depth thumbnail). A view of the app's own key, set as <code>splatRenderer.view</code>, covers both.</li>
+<li><strong>What a view cannot change.</strong> The method decides the projected arrays and the draw material, and the sort mode decides between the renderer's GPU sorter and its views' orders, so both stay on the renderer. Two methods take two renderers.</li>
+</ul>
+<h3 id="splatorder-and-versions-using-every-finished-sort"><code>SplatOrder</code> and versions: using every finished sort<a class="anchor" href="#splatorder-and-versions-using-every-finished-sort">#</a></h3>
+<p>In CPU mode a view draws <code>view.order.collection</code>, not the current collection. Setting <code>splatRenderer.collection</code> (or a view's <code>collection</code>) specifies what to draw next; the old collection is still drawn until an order for a newer one is applied. The first frames, before any order exists, draw nothing.</p>
+<pre class="lang-ts"><code>// The applied order's collection is still drawn
+splatRenderer.collection = next;
+
+// Sort keys of `next` computed on the GPU now, sorted on a worker
+const view = splatRenderer.viewFor(camera);
+const order = await view.sort(camera);
+
+// Drawn from now on, unless a later sort's order is shown
+view.apply(order);</code></pre>
+<p>Several rules for choosing which order to show were considered:</p>
+<ul>
+<li><strong>Discard orders whose collection is no longer current (rejected).</strong> While the scene keeps changing (a LoD subset recomputed as the camera moves, or objects streaming in), every order would be obsolete by the time it arrives, and nothing new would be shown until the scene stopped changing.</li>
+<li><strong>Apply any order newer than the shown one</strong>, even if the collection has changed since. The display advances by one sort at a time.</li>
+<li><strong>&quot;Newer&quot; means started later.</strong> <code>SplatOrder.version</code> counts the view's sorts in the order they started. Sorts can finish out of order (on a pool of several workers, a smaller collection finishes first). Once a later sort's order arrives or is applied, an earlier order can never be applied, so it is discarded immediately along with its collection: at most one finished order waits, and an app that never applies one keeps at most one old collection alive.</li>
+<li><strong>The app runs the sort explicitly, or lets <code>autoSort</code> run it.</strong> <code>sort</code> and <code>apply</code> are separate calls so an app can sort ahead of time and switch when it chooses (the offline still sorts once, then renders). <code>autoSort</code> runs the same loop automatically: one sort in flight per view, started when the collection, an object's world transform, or the camera changed, and each order applied as it arrives. Some changes are invisible to it, such as a generator whose splats moved through a uniform; <code>view.requestSort()</code> (or <code>splatRenderer.requestSort()</code> for every view) asks for a new sort in that case, also with <code>autoSort</code> off.</li>
+<li><strong>One call creates an order.</strong> Apps never handle sort keys themselves: <code>sort(camera)</code> runs the sort-keys-only pass, the readback, and the worker sort. The sort-keys pass is a separate cached program with one RGBA8 output, and it skips the projection, because nothing draws that projection.</li>
+</ul>
+<p>Sorts run on one worker pool shared by every renderer and view, <code>SplatRenderer.sortPool</code>, so views sort in parallel up to its size (<code>SplatRenderer.sortWorkers</code>, 4 by default), the number of parallel sorts stays bounded however many renderers and views a page has, and sorts never wait behind file loads in <code>WorkerPool.default</code>. It is created on the first CPU sort and makes workers as sorts need them. Alternatively, <code>sortWorker</code> points a renderer at a pool the app owns.</p>
+<h3 id="on-demand-rendering">On-demand rendering<a class="anchor" href="#on-demand-rendering">#</a></h3>
+<p>An app that renders only when something changed needs to know when Radix has something new to show. With the GPU sort nothing happens between renders, so only the app's own changes matter, and the app knows about those. With the CPU sort an order lands between renders, and the next sort can only start in a render (it needs the render's camera). <code>onInvalidate(view?)</code> is called whenever Radix did or was asked to do something that needs a render: an order applied, or a sort requested. The loop then stops by itself: the order lands, the app renders, that render starts another sort only if the camera moved meanwhile, and rendering stops when nothing changes.</p>
+<h3 id="object-releases-freeing-what-an-old-collection-still-uses">Object releases: freeing what an old collection still uses<a class="anchor" href="#object-releases-freeing-what-an-old-collection-still-uses">#</a></h3>
+<p>Because a viewpoint can keep drawing an old collection for several frames, and sorts can be in flight for collections the app has already replaced, the app cannot know when it is safe to free an index list or a file's arrays. Freeing something that an applied order still draws causes a crash or incorrect output on screen.</p>
+<p>A renderer's live collections are:</p>
+<ul>
+<li>its <code>collection</code>, and its views' own collections;</li>
+<li>each view's applied order's collection;</li>
+<li>the collections of sorts in flight, and of orders that have arrived but are not applied yet and are newer than the shown one (they can still be applied). The tests found this case.</li>
+</ul>
+<p>Therefore an object can have a <code>release</code> callback, and Radix calls it once that object is in no live collection of any renderer:</p>
+<pre class="lang-ts"><code>const subset = SplatCollection.object({
+  generator: listed,
+  data: { splats, indices },
+  count: chosen.length,
+  matrixWorld,
+  // Return the LoD subset's index list to the pool; the splats stay
+  release: () =&gt; pool.push(indices),
+});
+splatRenderer.collection = new SplatCollection([subset]);</code></pre>
+<p>Radix determines only when to release, which is the part the app can't see. What to free, and how, is up to the app: Radix never looks inside <code>data</code> and frees nothing itself.</p>
+<ul>
+<li><strong>The object is the unit.</strong> The renderers track which objects their live collections hold, so nothing has to be inferred from data of unknown shape. An object listed in several collections, views, or renderers is released after the last of them.</li>
+<li><strong>An object frees what it owns.</strong> For LoD subsets that is the index list: the original splats behind every subset remain, and the app decides when to free them (when the model is removed and its objects are released). When one object draws a whole file, its release can free the file's arrays (the <code>/build/examples/splats/index.html</code> viewer does this).</li>
+<li><strong>Synchronous, with no promises.</strong> A release runs inside the call that retired the object's last live collection (<code>apply</code>, setting a collection, a sort finishing, or <code>dispose()</code>), after the bookkeeping, so it can set a collection.</li>
+<li><strong>Generators' programs.</strong> Garbage collection does not free GPU pipelines; <code>SplatProjector.dispose(generator)</code> does. An app that stops using a generator calls it once the generator's objects are released. Apps that create generators once never need to call it.</li>
+</ul>
+<p>The first design was a sweep that tracked the generators and data in live collections and freed whatever the app had released once nothing referenced it. Finding what an object uses required looking inside its data, which works only for data shapes Radix knows, and freeing shared resources for the app made Radix responsible for lifetimes it has no information about. Reference counts have the same problem, and the counts can also be wrong.</p>
+<h3 id="modifiers-and-their-spaces">Modifiers and their spaces<a class="anchor" href="#modifiers-and-their-spaces">#</a></h3>
+<p>A renderer's <code>modifier(splat)</code> (or <code>covModifier(cov)</code>; a view can set its own, or <code>null</code> for none) is a TSL function applied to every splat it draws, before projection, so the draw material never changes. It is part of the program cache key, so define it once; switching between a few stored modifiers compiles nothing after the first frame of each.</p>
+<ul>
+<li><strong>The space is selectable.</strong> Depth and view-dependent normal coloring use view space, height coloring uses world space, an object-local wobble uses object space, and a wave anchored to a gizmo uses that gizmo's frame. Therefore the CPU splits object-to-head into A (object to the modifier's space) and B (that space to head), and the program runs generate, A, modifier, B, and project. Each space is another pair of matrices for the same program. With no modifier, A is the whole transform and B is skipped.</li>
+<li><strong>Two forms, chosen once per program.</strong> A splat is given as scales and a rotation (<code>generateSplat</code>) or as a covariance (<code>generateCovSplat</code>). <code>ewa</code> reads covariances, and the ray methods read scales and rotation. Converting to a covariance is cheap; converting back requires an eigendecomposition per splat. So instead of declaring a form, a generator implements one or both functions, and the program chooses, for each step, the form that step takes, avoiding conversions where possible. A modifier given in both forms runs in whichever form it receives.</li>
+<li><strong>A context argument, in each step's own space.</strong> A generator gets <code>context</code> (<code>viewOrigin</code>, <code>viewForward</code>, <code>objectToHead</code>, <code>headToObject</code>, <code>objectToWorld</code>) in the object's space, and a modifier gets the same members in its space. View-dependent color needs the camera in the object's space, which differs per object and per view. The examples first kept a camera in object data or in a global set before each render; both broke when one collection was drawn from two cameras. The renderer already sets each object's transform before its dispatch, so it sets the context uniforms there too, and the argument makes them explicit instead of a hidden global. Per-splat randomness still uses the <code>index</code> field of both splat structs. Through a remap it is the source index, so an effect stays on the same splat when a LoD subset changes. Time, light positions, and similar values are the app's own uniforms.</li>
+<li><strong>Template modifiers are separate.</strong> <code>SplatGenerator.fromSplats({ modifiers })</code> applies modifiers in object space as part of one generator, for effects that belong to the object rather than the viewpoint.</li>
+</ul>
+<h2 id="dropped-designs">Dropped designs<a class="anchor" href="#dropped-designs">#</a></h2>
+<p>Each of these designs was considered while developing the model, and each fails one of the constraints above or asks more of the app:</p>
+<ul>
+<li><strong>A <code>SplatProjector</code> instance per source with its own camera-and-model uniforms (the old API).</strong> It works for one file. With many objects, each object needed its own projector and uniforms, and no programs could be shared.</li>
+<li><strong>A public <code>ProjectedSplats</code> collection with <code>add(source, options)</code> called per object each frame, or a <code>collect</code> / <code>generate</code> callback on the renderer.</strong> The app has to repeat the same calls every frame. On WebGL2 the renderer would also have to infer the collection by comparing this frame's calls with the previous frame's, and replay an old frame's calls while a new order is sorted. An explicit immutable collection replaces both the comparison and the replay.</li>
+<li><strong>Collection version numbers kept by the renderer, and a <code>settled()</code> promise for safe disposal.</strong> The collection object's identity is a simpler version, and object releases are synchronous.</li>
+<li><strong>Reference counts, or a sweep that frees released data and generators for the app.</strong> See object releases above.</li>
+<li><strong>Views as the only holder of settings, with the renderer pointed at one before each render (<code>renderer.view = view</code>).</strong> Every app, WebGPU-only ones too, had to create a view and switch the renderer's view before rendering another camera, though only the CPU order depends on the camera. The renderer now holds the shared settings, and views hold what differs, made per camera when the CPU sort needs them; <code>splatRenderer.view</code> remains for an explicit choice.</li>
+<li><strong>One mesh per camera through <code>camera.layers</code>.</strong> This duplicates buffers and scene nodes.</li>
+<li><strong>A <code>SplatModifier</code> object with a context, a <code>colorOnly</code> flag, and per-object modifiers.</strong> TSL already removes nodes that don't affect an output, so a color-only modifier costs nothing in the sort-keys pass. A per-object modifier is a generator wrapping another generator.</li>
+<li><strong>A <code>form</code> field on generators, and a <code>SplatSubset</code> class.</strong> The functions a generator implements already define its forms, and a subset (such as a LoD subset) is a remap of the index in <code>fromSplats</code>, by an index list or any TSL function.</li>
+<li><strong>A static, shared <code>WgpuSplatSorter</code> and projected buffer.</strong> It fails constraint 5.</li>
+<li><strong>The modifier space in the program cache key.</strong> It changes only matrices.</li>
+<li><strong>Sorting on the shared worker pool, or on the main thread.</strong> Large file loads would queue ahead of sorts, and a main-thread sort drops frames.</li>
+</ul>
+<h2 id="what-this-asks-of-an-app">What this asks of an app<a class="anchor" href="#what-this-asks-of-an-app">#</a></h2>
+<ul>
+<li>Create generators and modifier functions once and keep them. A new one every frame causes a compile every frame.</li>
+<li>Change matrices and params in place; create a new <code>SplatCollection</code> when the collection of drawn objects changes.</li>
+<li>Set <code>count</code> on every object, and free what an object owns in its <code>release</code>, not when replacing the collection.</li>
+<li>If the app makes camera objects anew, set <code>viewKey</code> (or <code>view</code>) so they share views.</li>
+<li>Dispose renderers that are no longer needed (their views go with them), and views of keys that are gone: their live collections keep their objects until then (a warning is logged for a renderer that is garbage-collected without being disposed).</li>
+<li>On WebGL2 (or with <code>sortMode: &quot;cpu&quot;</code>), nothing is drawn for a few frames before the first order, and the old collection is drawn for a few frames after each change. <code>autoSort</code> handles the sorting, and <code>onInvalidate</code> tells an on-demand app when to render.</li>
+</ul>
+<div class="pager"><a class="prev" href="projection.html"><small>Previous</small>Projection</a><a class="next" href="performance.html"><small>Next</small>Performance</a></div>
+<p class="source">Source: <a href="../multi-splat.md">docs/multi-splat.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#the-constraints">The constraints</a>
+<a class="h3" href="#1-splats-must-be-sorted-together">1. Splats must be sorted together</a>
+<a class="h3" href="#2-each-object-has-its-own-transform-and-its-own-generator">2. Each object has its own transform and its own generator</a>
+<a class="h3" href="#3-shader-compilation-is-slow-and-the-same-objects-are-drawn-every-frame">3. Shader compilation is slow, and the same objects are drawn every frame</a>
+<a class="h3" href="#4-batching-across-objects-is-limited">4. Batching across objects is limited</a>
+<a class="h3" href="#5-compute-runs-before-the-frames-draws">5. Compute runs before the frame's draws</a>
+<a class="h3" href="#6-webgl2-has-no-compute-shaders-so-its-sort-arrives-late">6. WebGL2 has no compute shaders, so its sort arrives late</a>
+<a class="h3" href="#7-several-viewpoints">7. Several viewpoints</a>
+<a class="h3" href="#8-effects-that-apply-to-every-splat">8. Effects that apply to every splat</a>
+<a class="h2" href="#how-the-model-follows-from-the-constraints">How the model follows from the constraints</a>
+<a class="h3" href="#splatcollection-the-collection-an-order-is-sorted-for">SplatCollection: the collection an order is sorted for</a>
+<a class="h3" href="#splatrenderer-the-settings-every-viewpoint-shares">SplatRenderer: the settings every viewpoint shares</a>
+<a class="h3" href="#splatview-what-one-viewpoint-changes">SplatView: what one viewpoint changes</a>
+<a class="h3" href="#splatorder-and-versions-using-every-finished-sort">SplatOrder and versions: using every finished sort</a>
+<a class="h3" href="#on-demand-rendering">On-demand rendering</a>
+<a class="h3" href="#object-releases-freeing-what-an-old-collection-still-uses">Object releases: freeing what an old collection still uses</a>
+<a class="h3" href="#modifiers-and-their-spaces">Modifiers and their spaces</a>
+<a class="h2" href="#dropped-designs">Dropped designs</a>
+<a class="h2" href="#what-this-asks-of-an-app">What this asks of an app</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

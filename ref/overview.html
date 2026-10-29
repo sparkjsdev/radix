@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/overview.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/overview.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html" class="on">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="overview">Overview<a class="anchor" href="#overview">#</a></h1>
+<p>Radix draws 3D Gaussian splats with three.js's <code>WebGPURenderer</code>, on WebGPU or on its WebGL2 fallback, from one set of TSL shaders. It keeps data in tables of typed arrays (<code>ArrayData</code>) that have the same layout on the CPU, in workers, in files, and on the GPU (<code>GpuArrays</code>), so a splat takes the same 32 bytes in each of them.</p>
+<p>Import it as <code>@sparkjsdev/radix</code> (everything) or as <code>@sparkjsdev/radix/core</code> (only the CPU code, which doesn't use three.js and so runs in workers and in Node). The code is in <code>src/</code>; it imports no other <code>src/</code> folder.</p>
+<h2 id="a-first-page">A first page<a class="anchor" href="#a-first-page">#</a></h2>
+<pre class="lang-ts"><code>import * as THREE from &quot;three&quot;;
+import {
+  CameraControls,
+  GpuArrays,
+  SplatCollection,
+  SplatRenderer,
+  createRenderer,
+  loadSplats,
+} from &quot;@sparkjsdev/radix&quot;;
+
+// WebGPU, or WebGL2 where WebGPU is missing
+const renderer = await createRenderer();
+renderer.setSize(innerWidth, innerHeight);
+document.body.append(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 1000);
+camera.position.set(0, 0, 3);
+const controls = new CameraControls({
+  canvas: renderer.domElement,
+  object: camera,
+  settings: { mode: &quot;orbit&quot; },
+});
+
+// Fetch and decode the file on a worker, then upload it to textures
+const data = await loadSplats(&quot;scene.spz&quot;);
+const splats = GpuArrays.fromData(renderer, data);
+
+// A collection of one object, drawn by a SplatRenderer in the scene
+const collection = new SplatCollection([SplatCollection.arrays(splats)]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.setAnimationLoop(() =&gt; {
+  controls.update();
+  renderer.render(scene, camera);
+});</code></pre>
+<p>Each render projects every splat for the camera, sorts all of them back to front, and draws them in one draw call. With WebGPU the sort runs on the GPU in the same frame. With WebGL2 it runs on a worker and arrives a few frames later. <a href="quickstart.html">Quickstart</a> explains each line.</p>
+<h2 id="the-layers">The layers<a class="anchor" href="#the-layers">#</a></h2>
+<p>Each layer imports only the layers above it in this table:</p>
+<table><thead><tr><th>Layer</th><th>Import</th><th>Runs on</th><th>Contents</th></tr></thead><tbody><tr><td><code>core/</code></td><td><code>@sparkjsdev/radix/core</code></td><td>no three.js: the browser, workers, and Node</td><td>tables, bundles, formats; splat layouts and codecs; spherical harmonics codecs and palettes; sort keys; PLY (standard and compressed), SPZ (gzip and SPZ 4), RAD, and RDX files; coordinate systems</td></tr><tr><td><code>gpu/</code></td><td><code>@sparkjsdev/radix</code></td><td>three.js <code>WebGPURenderer</code> on WebGPU or WebGL2, TSL shaders only</td><td><code>createRenderer</code>; tables in textures; readers and writers; splat and SH codecs in TSL; generators</td></tr><tr><td><code>wgpu/</code></td><td><code>@sparkjsdev/radix</code></td><td>WebGPU only (<code>Wgpu*</code>), on top of <code>gpu/</code></td><td>compute kernels and buffers; compute writers; radix sort, compaction, <code>WgpuSplatSorter</code></td></tr><tr><td><code>worker/</code></td><td><code>@sparkjsdev/radix</code></td><td>a pool of workers over <code>core/</code>, made on first use</td><td><code>loadSplats</code>, <code>writeSplats</code>, <code>sortSplatKeys</code>, <code>WorkerPool</code></td></tr><tr><td><code>render/</code></td><td><code>@sparkjsdev/radix</code></td><td>all of the above together; nothing imports it</td><td><code>SplatCollection</code>, <code>SplatRenderer</code>, <code>SplatView</code>; the projection and the draw</td></tr><tr><td><code>controls/</code></td><td><code>@sparkjsdev/radix</code></td><td>three.js only; nothing imports it</td><td><code>CameraControls</code>: orbit and fly</td></tr></tbody></table>
+<p>Anything named <code>Wgpu*</code> needs WebGPU. Everything else also runs on WebGL2.</p>
+<h2 id="where-to-start">Where to start<a class="anchor" href="#where-to-start">#</a></h2>
+<table><thead><tr><th>To...</th><th>Read</th></tr></thead><tbody><tr><td>draw a splat file</td><td><a href="quickstart.html">Quickstart</a>, <a href="rendering.html">Rendering</a>, <a href="params.html">Params</a></td></tr><tr><td>look up a term</td><td><a href="concepts.html">Concepts</a></td></tr><tr><td>draw several objects, move them, or generate splats in a shader</td><td><a href="rendering.html">Rendering</a>, <a href="generators.html">Generators and modifiers</a>, <a href="recipes.html">Recipes</a></td></tr><tr><td>draw from several cameras, or support WebGL2</td><td><a href="views.html">Views and CPU orders</a>, <a href="sorting.html">Sorting</a>, <a href="lifetimes.html">Lifetimes</a></td></tr><tr><td>render in VR</td><td><a href="xr.html">WebXR and stereo</a></td></tr><tr><td>write an effect for every splat</td><td><a href="generators.html#modifiers">Generators and modifiers</a>, <a href="shaders.html">Shaders</a></td></tr><tr><td>load, save, or convert files</td><td><a href="files.html">Splat files</a>, <a href="rdx.html">RDX files</a>, <a href="workers.html">Workers</a></td></tr><tr><td>draw view-dependent color (spherical harmonics)</td><td><a href="sh.html">Spherical harmonics</a></td></tr><tr><td>keep data of your own on the GPU, or run compute</td><td><a href="arraydata.html">ArrayData</a>, <a href="gpu-arrays.html">GPU arrays</a>, <a href="wgpu.html">WebGPU compute</a></td></tr><tr><td>understand why it works this way</td><td><a href="multi-splat.html">Multi-splat design</a>, <a href="projection.html">Projection</a></td></tr><tr><td>make it faster</td><td><a href="performance.html">Performance</a></td></tr><tr><td>compare it with SparkJS or PlayCanvas</td><td><a href="../why.html">why.html</a>, <a href="../bench.html">bench.html</a></td></tr><tr><td>find any export</td><td><a href="api.html">API index</a></td></tr></tbody></table>
+<h2 id="naming">Naming<a class="anchor" href="#naming">#</a></h2>
+<ul>
+<li><code>core/</code> classes are plain JavaScript and have no prefix (<code>Splats</code>, <code>Encoding</code>, <code>SortKeys</code>). Their shader versions are in <code>gpu/</code>, start with <code>Gpu</code>, and have the same method names and bit layouts (<code>GpuSplats</code>, <code>GpuEncoding</code>, <code>GpuSortKeys</code>). <code>Wgpu*</code> classes need WebGPU. <code>render/</code> classes start with <code>Splat</code>.</li>
+<li>Methods of <code>Gpu*</code> and <code>Wgpu*</code> readers, writers, and stores build shader code (TSL nodes). Methods of <code>GpuArrays</code> and <code>WgpuBuffer</code> move data.</li>
+<li>Most functions are static methods of a class. The plain functions are the entry points: <code>createRenderer</code>, <code>getGpuCaps</code>, <code>defineBundle</code>, <code>loadSplats</code>, <code>writeSplats</code>, and <code>sortSplatKeys</code>.</li>
+<li>The names of fixed-size codecs give the total bits of their code: <code>encodeOct24</code> (a 12 + 12 bit octahedral direction), <code>encodeQuatOct32</code> (a 10 + 10 bit axis and a 12-bit angle), and <code>encodeQuatOct24</code> (8 + 8 and 8).</li>
+</ul>
+<h2 id="pages">Pages<a class="anchor" href="#pages">#</a></h2>
+<h3 id="start-here">Start here<a class="anchor" href="#start-here">#</a></h3>
+<ul>
+<li><a href="overview.html">Overview</a>: this page</li>
+<li><a href="quickstart.html">Quickstart</a>: a page that draws a file, explained step by step, and the first things to change</li>
+<li><a href="concepts.html">Concepts</a>: definitions of the terms the docs use</li>
+<li><a href="recipes.html">Recipes</a>: short solutions to common tasks (several objects, subsets, effects, split screens, stills, exports)</li>
+</ul>
+<h3 id="drawing-splats">Drawing splats<a class="anchor" href="#drawing-splats">#</a></h3>
+<ul>
+<li><a href="rendering.html">Rendering</a>: <code>SplatCollection</code>, <code>SplatObject</code>, and <code>SplatRenderer</code>: what a render does, and each option and member</li>
+<li><a href="params.html">Params</a>: the projection and draw params, their defaults, and where to set them</li>
+<li><a href="generators.html">Generators and modifiers</a>: <code>SplatGenerator</code>, <code>fromSplats</code>, index lists, modifiers and their spaces, transforms, and the program cache</li>
+<li><a href="views.html">Views and CPU orders</a>: <code>SplatView</code>: per-viewpoint settings, view keys, and the CPU sort's orders</li>
+<li><a href="sorting.html">Sorting</a>: sort keys, the GPU sort, the CPU sort, and <code>sortGuard</code></li>
+<li><a href="lifetimes.html">Lifetimes</a>: on-demand rendering, object releases, and disposal</li>
+<li><a href="xr.html">WebXR and stereo</a>: stereo projection and WebXR on both backends</li>
+<li><a href="controls.html">Camera controls</a>: <code>CameraControls</code>: orbit and fly for pointer, touch, keys, gamepads, and XR</li>
+</ul>
+<h3 id="data-and-files">Data and files<a class="anchor" href="#data-and-files">#</a></h3>
+<ul>
+<li><a href="arraydata.html">ArrayData</a>: formats, bundles, <code>ArrayData</code>, transfers to workers, swapping, and texture layout</li>
+<li><a href="splats.html">Splats</a>: the <code>extSplats</code>, <code>covSplats</code>, and <code>packedSplats</code> layouts, on the CPU and in shaders</li>
+<li><a href="encoding.html">Encodings</a>: how each splat field is stored, and the codecs other formats can reuse</li>
+<li><a href="sh.html">Spherical harmonics</a>: spherical harmonics: the codecs (ext, packed), per-splat bundles and palettes (RAD's clustered SH, SOG's), loading, writing, and drawing them, and their costs</li>
+<li><a href="files.html">Splat files</a>: PLY, SPZ, RAD, and RDX files: <code>loadSplats</code>, <code>writeSplats</code>, and <code>SplatFiles</code></li>
+<li><a href="rdx.html">RDX files</a>: RDX files, whole or chunked, loaded over HTTP range requests</li>
+<li><a href="workers.html">Workers</a>: <code>WorkerPool</code>, leases, transfers, and progress</li>
+</ul>
+<h3 id="gpu">GPU<a class="anchor" href="#gpu">#</a></h3>
+<ul>
+<li><a href="renderer.html">The renderer</a>: <code>createRenderer</code>, device limits, <code>getGpuCaps</code>, HDR output, and <code>GpuProfiler</code></li>
+<li><a href="gpu-arrays.html">GPU arrays</a>: <code>GpuArrays</code>, <code>GpuArrayReader</code>, and <code>GpuArrayWriter</code></li>
+<li><a href="shaders.html">Shaders</a>: writing TSL against Radix: splat structs, readers, codecs, and patterns</li>
+<li><a href="wgpu.html">WebGPU compute</a>: WebGPU compute: kernels, buffers, compute writers and stores, radix sort, and compaction</li>
+</ul>
+<h3 id="internals-and-design">Internals and design<a class="anchor" href="#internals-and-design">#</a></h3>
+<ul>
+<li><a href="projection.html">Projection</a>: how a renderer projects splats: the four methods, the camera, the projected words, and the draw</li>
+<li><a href="multi-splat.html">Multi-splat design</a>: why the render model has collections, views, versioned orders, and releases</li>
+<li><a href="performance.html">Performance</a>: where the time goes, and the settings that change it</li>
+</ul>
+<h3 id="reference">Reference<a class="anchor" href="#reference">#</a></h3>
+<ul>
+<li><a href="api.html">API index</a>: all exports, in alphabetical order</li>
+<li><a href="checks.html">Checks</a>: the tests, and how to run them and the benchmarks</li>
+</ul>
+<h2 id="in-a-browser">In a browser<a class="anchor" href="#in-a-browser">#</a></h2>
+<p><code>npm run build</code> (or <code>npm run docs</code> alone) writes these pages as HTML to <code>ref/</code>, and the docs site links to them. Start at <a href="../index.html">index.html</a>. Run <code>npm run serve</code> and open <code>http://localhost:8000/docs/</code>: the pages also open from disk in Chrome, but some editor previews do not follow links between <code>file://</code> pages. The site has these pages of its own:</p>
+<ul>
+<li><a href="../index.html">index.html</a>: the front page, with a summary of Radix and a map of its layers</li>
+<li><a href="../why.html">why.html</a>: a comparison with SparkJS</li>
+<li><a href="../bench.html">bench.html</a> and <a href="../bench-report.html">bench-report.html</a>: benchmarks against SparkJS and PlayCanvas, a summary and every result</li>
+<li><a href="../ideas.html">ideas.html</a>: the main design ideas, with interactive examples</li>
+<li><a href="../model.html">model.html</a>: how the classes fit together, frame by frame</li>
+<li><a href="../data.html">data.html</a> and <a href="../pipeline.html">pipeline.html</a>: detailed pages on the data and the render pipeline</li>
+<li><a href="../multi-splat.html">multi-splat.html</a>: the multi-splat render model, step by step</li>
+</ul>
+<div class="pager"><span></span><a class="next" href="quickstart.html"><small>Next</small>Quickstart</a></div>
+<p class="source">Source: <a href="../overview.md">docs/overview.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#a-first-page">A first page</a>
+<a class="h2" href="#the-layers">The layers</a>
+<a class="h2" href="#where-to-start">Where to start</a>
+<a class="h2" href="#naming">Naming</a>
+<a class="h2" href="#pages">Pages</a>
+<a class="h3" href="#start-here">Start here</a>
+<a class="h3" href="#drawing-splats">Drawing splats</a>
+<a class="h3" href="#data-and-files">Data and files</a>
+<a class="h3" href="#gpu">GPU</a>
+<a class="h3" href="#internals-and-design">Internals and design</a>
+<a class="h3" href="#reference">Reference</a>
+<a class="h2" href="#in-a-browser">In a browser</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

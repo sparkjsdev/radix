@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: drawing many splat objects</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+/* Pass flow */
+.flow { display: flex; align-items: stretch; overflow-x: auto; padding: 4px 0 8px; }
+.flow .node { flex: 1 0 96px; text-align: center; padding: 10px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); transition: all .25s; }
+.flow .node .t { font-weight: 600; font-size: 13px; }
+.flow .node .l { font: 10px var(--mono); color: var(--dim); }
+.flow .node.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 26px -10px var(--c); transform: translateY(-3px); }
+.flow .arrow { flex: 0 0 20px; display: grid; place-items: center; color: var(--faint); }
+
+/* Frames strip */
+.frames { display: grid; grid-template-columns: 110px repeat(var(--n), 1fr); gap: 3px; align-items: center; font: 11px var(--mono); }
+.frames .who { color: var(--dim); }
+.frames .cell { height: 26px; border-radius: 5px; background: #ffffff08; display: grid; place-items: center; color: #0a0c11; transition: background .3s; overflow: hidden; white-space: nowrap; }
+.frames .head { height: 18px; background: none; color: var(--faint); }
+
+/* Slots of a projected collection */
+.slots { display: flex; flex-wrap: wrap; gap: 3px; margin: 8px 0; }
+.slot { width: 30px; height: 30px; border-radius: 6px; display: grid; place-items: center; font: 11px var(--mono); color: #0a0c11; transition: all .25s; position: relative; }
+.slot.empty { background: #ffffff0a; color: var(--faint); }
+.slot.hot { transform: translateY(-4px); box-shadow: 0 6px 16px -6px #fff; }
+.slot.bad { outline: 2px solid var(--red); outline-offset: 1px; }
+.slot.ghost { opacity: .25; }
+.seglabels { display: flex; gap: 3px; font: 11px var(--mono); color: var(--dim); }
+
+/* Program cache */
+.counter { font: 600 44px/1 var(--mono); }
+#compileLog { font: 12.5px/1.7 var(--mono); color: var(--dim); max-height: 190px; overflow: auto; margin-top: 8px; }
+#compileLog .new { color: var(--yellow); } #compileLog .free { color: var(--worker); } #compileLog .bad { color: var(--red); }
+.cachegrid { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.cachegrid span { font: 11px var(--mono); padding: 4px 7px; border-radius: 6px; background: #1d2333; border: 1px solid var(--line); transition: all .4s; }
+.cachegrid span.fresh { background: var(--yellow); color: #0a0c11; border-color: var(--yellow); }
+
+/* Collection badge */
+.badge { display: inline-flex; align-items: center; gap: 8px; font: 600 14px var(--mono); padding: 8px 12px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); transition: all .3s; }
+.badge.flash { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 0 26px -6px var(--yellow); }
+.entrylist { font: 13px var(--mono); margin: 8px 0; }
+.entrylist div { padding: 5px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel2); margin: 4px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.entrylist .lock { color: var(--faint); } .entrylist .live { color: var(--worker); }
+
+/* Chain diagram */
+.chain { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.chain .box { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); font: 12.5px var(--mono); text-align: center; min-width: 88px; transition: all .3s; }
+.chain .box b { display: block; font: 600 13px system-ui, sans-serif; margin-bottom: 2px; }
+.chain .box.mat { border-color: var(--gpu); color: var(--gpu); }
+.chain .box.mod { border-color: var(--pink); color: var(--pink); }
+.chain .box.off { opacity: .3; }
+.chain .ar { color: var(--faint); }
+</style>
+</head>
+<body data-root="" data-page="multi-splat.html">
+<div id="progress"></div>
+<nav id="nav"></nav>
+
+<header class="hero" id="top">
+  <canvas id="heroCanvas"></canvas>
+  <div class="inner">
+    <h1>Drawing many<br>splat objects</h1>
+    <p class="lead">How Radix projects, sorts, and draws several splat objects together, and why the API uses collections, a renderer with per-viewpoint views, orders, and object releases, on WebGPU and on the WebGL2 fallback.</p>
+    <p class="small">Each part builds on the previous one. For reference: <a href="ref/multi-splat.html">the design notes</a>, and the API in <a href="ref/rendering.html">rendering</a>, <a href="ref/views.html">views</a>, and <a href="ref/lifetimes.html">lifetimes</a>.</p>
+    <div class="scroll">scroll ↓</div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="goal" data-title="One sort">
+  <div class="eyebrow">01 · Why one sort</div>
+  <h2>Overlapping objects must be sorted together</h2>
+  <p class="lede">A scene can contain several splat objects: loaded files, Level-of-Detail (LoD) subsets of files (the splats of a LoD tree chosen for the current camera, drawn through an index list), and splats generated in a shader. Each object has its own transform, and some move every frame. Splats are semi-transparent and must be blended back to front. Where two objects overlap, their splats have to be sorted as one list.</p>
+  <div class="panel reveal">
+    <div class="chips" id="blendMode"></div>
+    <canvas class="fig" id="blendCanvas" style="margin-top: 12px"></canvas>
+    <label class="ctl">move the ring along z <input type="range" id="blendDepth" min="-100" max="100" value="0"><output id="blendDepthOut"></output></label>
+    <p class="small" id="blendNote" style="margin: 0"></p>
+  </div>
+  <p>If each object is sorted and drawn separately, the object drawn second covers the first everywhere, including where it is behind it. If all splats are sorted together, every splat is blended in the correct order.</p>
+  <p class="takeaway reveal"><b>Requirement:</b> all objects drawn by a renderer are projected into one shared collection, sorted once, and drawn with one draw call. The rest of the design follows from this requirement and from one limitation of WebGL2: it can't sort on the GPU (part 5).</p>
+  <p class="deeper">See also: <a href="ref/rendering.html">Rendering</a> <a href="ref/sorting.html">Sorting</a></p>
+</section>
+
+<!-- 2 -->
+<section id="webgpu" data-title="WebGPU only">
+  <div class="eyebrow">02 · WebGPU</div>
+  <h2>What a WebGPU-only app needs</h2>
+  <p class="lede">On WebGPU the sort runs on the GPU in the same frame as the projection and the draw. Each render draws the renderer's current collection, from whichever camera it is given.</p>
+<pre>const collection = new SplatCollection([
+  // a loaded file
+  SplatCollection.arrays(scan, { matrixWorld: scanObject.matrixWorld }),
+  // splats generated in a shader
+  { generator: sparkles, count: 5000, matrixWorld: emitter.matrixWorld },
+]);
+const splatRenderer = new SplatRenderer({ renderer, collection });
+scene.add(splatRenderer);
+
+renderer.render(scene, camera);
+// projected and sorted again
+renderer.render(scene, otherCamera);
+
+// drawn on the next frame
+splatRenderer.collection = new SplatCollection([/* other objects */]);</pre>
+  <div class="panel reveal">
+    <div class="small" style="margin-bottom: 8px">Each frame on WebGPU. A new collection is drawn on the next frame.</div>
+    <div class="flow" id="gpuFlow"></div>
+    <div class="frames" id="gpuFrames" style="--n: 12; margin-top: 10px"></div>
+    <div class="btns"><button class="btn primary" id="gpuChange">change the collection</button></div>
+  </div>
+  <p>A WebGPU-only app does not need to handle:</p>
+  <ul>
+    <li><b>Views.</b> Nothing depends on the camera between renders, so one renderer draws any number of cameras. A view is needed only to draw one viewpoint differently (part 9).</li>
+    <li><b>Orders and versions.</b> The GPU sorts the current collection every frame.</li>
+    <li><b>Sort workers.</b> A renderer in GPU mode doesn't create one.</li>
+    <li><b>Delayed releases.</b> An object's <code>release</code> runs as soon as a new collection no longer contains it.</li>
+  </ul>
+  <p class="takeaway reveal"><b>Two classes:</b> <code>SplatCollection</code> holds what to draw, and <code>SplatRenderer</code> draws it with the settings every viewpoint shares. The following parts explain what else is needed when the same app also runs on WebGL2: orders, and a <code>SplatView</code> per camera to hold them.</p>
+  <p class="deeper">See also: <a href="ref/rendering.html#splatrenderer">SplatRenderer</a> <a href="ref/quickstart.html">Quickstart</a></p>
+</section>
+
+<!-- 3 -->
+<section id="objects" data-title="One collection">
+  <div class="eyebrow">03 · Objects</div>
+  <h2>Objects are projected into one collection</h2>
+  <p class="lede">A <code>SplatCollection</code> holds <b>objects</b>. Each object has a <b>generator</b> (the shader code that produces splat i), the generator's data, a splat count, and a <code>matrixWorld</code>: the object's world transform (object to world, for example an <code>Object3D</code>'s <code>matrixWorld</code>). Each render, the renderer runs one GPU pass per object and writes its output at the object's offset in one shared projected collection.</p>
+  <div class="panel reveal">
+    <div class="small">Objects in the collection (click to toggle)</div>
+    <div class="chips" id="entryChips" style="margin-top: 6px"></div>
+    <div class="seglabels" id="entryLabels" style="margin-top: 12px"></div>
+    <div class="slots" id="entrySlots"></div>
+    <div class="btns"><button class="btn primary" id="entryPlay">▶ run the passes</button></div>
+    <p class="small" id="entryNote" style="margin: 0"></p>
+  </div>
+  <p>Before projection, each splat is transformed into camera space (head space in XR). The projected output is stored relative to the camera: a direction, a distance, and a screen-space shape. It does not depend on the object's world transform. Objects with different world transforms can therefore share one collection, and the sort key, the distance from the camera, is comparable across all objects.</p>
+  <p>Settings that the draw reads must be the same for the whole collection: the projection method, the number of sort key bits (<code>sortBits</code>: 16, 24, or 32), <code>maxStdDev</code>, <code>minAlpha</code>, and <code>falloff</code>. These are set on the renderer (a view can set its own params for its renders; the method stays the renderer's). Settings used only during projection can differ per object: blur, depth of field, and <code>sortGuard</code>. The renderer's <code>objectParams</code> holds their defaults, a view's can override them, and <code>object.params</code> overrides both.</p>
+  <p class="takeaway reveal"><b>Transforms:</b> rotations with uniform scale use a fast path. Non-uniform scale, shear, and mirroring are applied to the splat's covariance. A uniform flag selects the path, so changing a world transform never rebuilds a program.</p>
+  <p class="deeper">See also: <a href="ref/rendering.html#splatcollection">SplatCollection</a> <a href="ref/generators.html#transforms">Transforms</a></p>
+</section>
+
+<!-- 4 -->
+<section id="programs" data-title="Program cache">
+  <div class="eyebrow">04 · Program cache</div>
+  <h2>Programs are cached and data is passed in</h2>
+  <p class="lede">Each object's pass is a GPU program that generates the splat, transforms it, optionally applies a modifier, and projects it. Building a program can take long enough to drop frames, so Radix caches programs and reuses them. Values that change often are passed to the program as bound data or uniforms.</p>
+  <div class="panel reveal">
+    <div class="row">
+      <div style="flex: 0 0 170px"><div class="small">programs built</div><div class="counter" id="compileCount">0</div><div class="small" id="compileState" style="margin-top: 8px"></div></div>
+      <div>
+        <div class="small">Click an action to see whether it builds programs. The collection has two generators: <code>fromSplats</code> (files) and <code>sparkles</code>.</div>
+        <div class="btns" id="compileBtns"></div>
+      </div>
+    </div>
+    <div class="cachegrid" id="cacheGrid"></div>
+    <div id="compileLog"></div>
+  </div>
+  <p>Programs are cached by generator, modifier, projection method, eye count, and backend. Only changes to these build new programs. Loading another file, using a new index list, moving an object, or changing blur, depth of field, or the drawn SH degree does not.</p>
+  <p>Before each object's pass the renderer sets that object's uniforms: its transform, its params, and the generator context (the view origin and the object's transforms in its own space), which every generator receives as an argument. Three.js writes each pass's uniforms when the pass is encoded, so one program draws any number of objects, each with its own values: this is how spherical harmonics are seen from the right place for every object and every camera.</p>
+  <p>Objects are not combined into one pass because each object binds its own textures, and a shader stage can bind at most 16. Combining many objects into one pass would require storing their data together in shared arrays (a splat atlas, like a texture atlas), which a generator could read in the future.</p>
+  <p class="takeaway reveal"><b>Create generators once.</b> A generator is a program; its data is bound before each pass. A single <code>fromSplats({ remap: "indices" })</code> generator can draw every file of a layout through any index list. A new LoD subset is new data, not a new program.</p>
+  <p class="deeper">See also: <a href="ref/generators.html#the-program-cache">The program cache</a> <a href="ref/generators.html">Generators</a></p>
+</section>
+
+<!-- 5 -->
+<section id="webgl2" data-title="WebGL2">
+  <div class="eyebrow">05 · WebGL2</div>
+  <h2>On WebGL2, sort orders arrive late</h2>
+  <p class="lede">WebGL2 has no compute shaders, so the sort can't run on the GPU. Radix computes the sort keys on the GPU, reads them back, and sorts them on a worker thread. This takes several frames.</p>
+  <div class="panel reveal">
+    <label class="ctl">sort duration <input type="range" id="lateMs" min="3" max="10" value="5"><output id="lateMsOut"></output></label>
+    <div class="frames" id="lateFrames" style="--n: 16"></div>
+    <div class="legend"><span><i style="background: var(--gpu)"></i>sort keys computed on the GPU</span><span><i style="background: var(--blue)"></i>readback</span><span><i style="background: var(--worker)"></i>sort on a worker</span><span><i style="background: var(--yellow)"></i>drawn with the new order</span></div>
+  </div>
+  <p>Until the new order arrives, the renderer draws with the previous order. Splats are still projected every frame, so their positions are current; only the draw order is a few frames old, which is rarely visible.</p>
+  <h3>An order is only valid for one collection</h3>
+  <p>An order is a list of positions in the projected collection, for example: draw position 7, then 2, then 4. Position 7 refers to a splat in one particular collection of objects.</p>
+  <div class="panel reveal">
+    <div class="chips" id="orderMode"></div>
+    <div class="seglabels" id="orderLabels" style="margin-top: 12px"></div>
+    <div class="slots" id="orderList"></div>
+    <div class="small">The order (made for the old collection) and the splat each position refers to:</div>
+    <div class="slots" id="orderUse"></div>
+    <p class="small" id="orderNote" style="margin: 0"></p>
+  </div>
+  <p class="takeaway reveal"><b>Orders and collections:</b> each order records the collection it was made for, and Radix keeps drawing that collection until a newer order is available. Parts 6 and 7 describe how.</p>
+  <p class="deeper">See also: <a href="ref/sorting.html#the-cpu-sort">The CPU sort</a></p>
+</section>
+
+<!-- 6 -->
+<section id="collection" data-title="Collections">
+  <div class="eyebrow">06 · SplatCollection</div>
+  <h2>Collections are immutable</h2>
+  <p class="lede"><code>SplatCollection</code> is the collection of objects an order belongs to. A collection can't be modified after it is created, so checking whether an order belongs to a collection is an object comparison. To draw a different set of objects, create a new collection.</p>
+  <div class="panel reveal">
+    <div class="row">
+      <div>
+        <div><label class="check"><input type="checkbox" data-obj="butterfly" checked> butterfly</label><label class="check"><input type="checkbox" data-obj="ring" checked> ring</label><label class="check"><input type="checkbox" data-obj="subset"> LoD subset</label></div>
+        <label class="ctl">butterfly position <input type="range" id="mapMove" min="-50" max="50" value="0"><output id="mapMoveOut"></output></label>
+        <div class="entrylist" id="mapEntries"></div>
+      </div>
+      <div style="flex: 0 1 300px">
+        <div class="badge" id="mapBadge"></div>
+        <p class="small" id="mapNote"></p>
+      </div>
+    </div>
+  </div>
+  <ul>
+    <li><b>Locked on each object:</b> generator, data, and count. These determine which splat each position refers to, so they can't change while an order uses them.</li>
+    <li><b>Live on each object:</b> matrixWorld, params, and release. These are read every render. Moving an object doesn't require a new collection, and an older collection that is still drawn uses the current matrices.</li>
+    <li>The lock is applied to the object itself; nothing is copied. The same object can be used in several collections, views, and renderers. The order of objects matters: it decides each object's offset.</li>
+  </ul>
+  <p class="takeaway reveal"><b>Versioning:</b> the collection object is its own version. No separate counter is needed.</p>
+  <p class="deeper">See also: <a href="ref/rendering.html#splatcollection">SplatCollection</a></p>
+</section>
+
+<!-- 7 -->
+<section id="orders" data-title="Orders">
+  <div class="eyebrow">07 · SplatOrder</div>
+  <h2>Which order is shown</h2>
+  <p class="lede">On WebGL2 each camera gets a view (<code>splatRenderer.viewFor(camera)</code>, made for every camera the renderer renders) that holds its order. <code>view.sort(camera)</code> returns an order for the collection that was current when the sort started, and <code>view.apply(order)</code> draws with it. <code>autoSort</code> does both automatically: one sort at a time per view, and a new sort whenever the camera, an object, or the collection has changed, or when the app calls <code>requestSort()</code>.</p>
+<pre>const view = splatRenderer.viewFor(camera);
+// order.collection: the collection it was made for
+const order = await view.sort(camera);
+// draws order.collection with this order from now on
+view.apply(order);
+
+// sort again at the next render (also with autoSort off)
+view.requestSort();</pre>
+  <h3>Orders over time</h3>
+  <p>The chart follows one view for 120 frames with <code>autoSort</code>, and each color is one collection. The app sets a new collection at a fixed interval (top row), for example because it recomputes a LoD subset as the camera moves. Each bar in the middle is one sort, in the color of the collection it sorts: it starts with the latest collection and takes a number of frames. When it finishes, its order is applied and the bottom row, the collection actually drawn, switches to that color (the thin line). The bottom row is the top row delayed by the sorts; collections that change while a sort runs are skipped.</p>
+  <div class="panel reveal">
+    <label class="ctl">collection changes every <input type="range" id="simEvery" min="1" max="30" value="6"><output id="simEveryOut"></output></label>
+    <label class="ctl">sort duration <input type="range" id="simLatency" min="1" max="12" value="5"><output id="simLatencyOut"></output></label>
+    <label class="ctl">duration varies by up to <input type="range" id="simJitter" min="0" max="6" value="0"><output id="simJitterOut"></output></label>
+    <canvas class="fig" id="simCanvas" style="margin-top: 10px"></canvas>
+    <div class="legend"><span><i style="background: var(--core)"></i>#n: one collection (one color each)</span><span><i style="background: #2dd4bf73"></i>sort still running</span></div>
+    <p class="small" id="simNote" style="margin-bottom: 0"></p>
+  </div>
+  <ul>
+    <li>An order is applied as soon as it finishes, even if the collection has changed again during the sort. Waiting for an order that matches the current collection would never succeed while the collection changes faster than a sort completes.</li>
+    <li>Newer means started later: <code>order.version</code> counts the view's sorts in the order they start.</li>
+    <li>With more than one sort in flight (manual <code>view.sort()</code> calls on a pool of several workers), sorts can finish out of order. An order that finishes after the order of a later sort was applied is discarded. At most one finished order waits to be applied.</li>
+    <li><code>autoSort</code> keeps one sort in flight. Each new sort uses the latest collection and camera, so no worker time goes to orders that would be discarded.</li>
+    <li><code>requestSort()</code> (on a view, or on the renderer for every view) asks for a new sort when something changed that <code>autoSort</code> can't detect, such as splats produced by a generator moving or a generator's uniform changing. With <code>autoSort: false</code> it is the only trigger. If a sort is in flight, the new sort starts when it finishes, because the running sort may have read its sort keys before the change.</li>
+    <li>An app that renders on demand passes <code>onInvalidate</code>: it is called when an order is applied (and on <code>requestSort()</code>), so the app renders the frame that shows it.</li>
+  </ul>
+  <p class="takeaway reveal"><b>Delay:</b> a camera's first renders draw nothing until its first order arrives. After that, the display is at most one sort behind the latest change.</p>
+  <p class="deeper">See also: <a href="ref/views.html#orders">Orders</a> <a href="ref/views.html#autosort">autoSort</a></p>
+</section>
+
+<!-- 8 -->
+<section id="release" data-title="Releases">
+  <div class="eyebrow">08 · Object releases</div>
+  <h2>When old data can be freed</h2>
+  <p class="lede">On WebGL2 an old collection can still be drawn or sorted after the app has replaced it. The app can't determine on its own when an index list or a file is no longer in use. Freeing it too early causes incorrect rendering or errors.</p>
+  <p>On WebGPU, a renderer's only <b>live</b> collections are its current <code>collection</code> and its views' own collections. On WebGL2, its live collections also include each view's collection currently drawn and any collections being sorted. An object's <code>release</code> callback runs once no live collection of any renderer contains that object.</p>
+<pre>// Once: a generator that reads stored splats through an index list,
+// and a pool of index lists
+const listed = SplatGenerator.fromSplats({ remap: "indices" });
+const pool = [];
+
+// Each time the app picks a new LoD subset: `chosen` holds the indices
+// of the splats to draw, written into a pooled index list if there is one
+const indices = SplatGenerator.indices(renderer, chosen, pool.pop());
+const subset = SplatCollection.object({
+  generator: listed,
+  // the file's splat arrays (kept) and this subset's index list
+  data: { splats, indices },
+  count: chosen.length,
+  matrixWorld: model.matrixWorld,
+  // once nothing draws or sorts it: back to the pool
+  release: () => pool.push(indices),
+});
+splatRenderer.collection = new SplatCollection([subset]);</pre>
+  <div class="panel reveal">
+    <label class="ctl">collection changes every <input type="range" id="relEvery" min="1" max="20" value="2"><output id="relEveryOut"></output></label>
+    <label class="ctl">sort duration <input type="range" id="relLatency" min="1" max="12" value="5"><output id="relLatencyOut"></output></label>
+    <canvas class="fig" id="relCanvas"></canvas>
+    <div class="legend"><span><i style="background: var(--gpu)"></i>WebGPU: index lists in use</span><span><i style="background: var(--core)"></i>WebGL2: index lists in use</span></div>
+    <p class="small" id="relNote" style="margin-bottom: 0"></p>
+  </div>
+  <ul>
+    <li>Radix only calls the release callback. It doesn't inspect object data or free anything itself. The callback can free arrays, return them to a pool, or do nothing.</li>
+    <li>An object should only free data it owns, such as a LoD subset's index list. A file shared by several LoD subsets is freed by the app when it no longer needs it.</li>
+    <li>To share an object's lifetime between collections, views, or renderers, use the same object in each. Its release runs after the last of them stops using it.</li>
+    <li>Dispose renderers that are no longer needed (their views go with them). If a renderer is garbage-collected without <code>dispose()</code>, a warning is logged and its objects are released.</li>
+  </ul>
+  <p class="takeaway reveal"><b>Backend difference:</b> on WebGPU only the current collections are live, so a release runs as soon as a collection is replaced. On WebGL2 the same code releases a few frames later, and a pool needs a few more index lists.</p>
+  <p class="deeper">See also: <a href="ref/lifetimes.html#object-releases">Object releases</a></p>
+</section>
+
+<!-- 9 -->
+<section id="views" data-title="Views">
+  <div class="eyebrow">09 · SplatRenderer and SplatView</div>
+  <h2>Shared settings, and a view per viewpoint</h2>
+  <p class="lede">Most of what a renderer draws is the same from every camera: the collection, the method, the params, and the modifier. These are the <code>SplatRenderer</code>'s. A WebGL2 order is only valid for one camera position, though, and two cameras may draw different LoD subsets of the same data. That per-viewpoint part is a <code>SplatView</code>: <code>splatRenderer.viewFor(camera)</code> makes one on first use, holding the camera's order and any settings it changes.</p>
+  <div class="panel reveal">
+    <svg viewBox="0 0 860 250" style="width: 100%; display: block">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8b93a7"/></marker></defs>
+      <g font-family="ui-monospace, Menlo, monospace" font-size="13">
+        <rect x="20" y="95" width="170" height="60" rx="12" fill="#171c28" stroke="#facc15"/><text x="105" y="122" text-anchor="middle" fill="#facc15">SplatCollection</text><text x="105" y="141" text-anchor="middle" fill="#98a1b4" font-size="11">the renderer's collection</text>
+        <rect x="260" y="85" width="240" height="80" rx="12" fill="#171c28" stroke="#e8eaf0"/><text x="380" y="114" text-anchor="middle" fill="#e8eaf0">SplatRenderer</text><text x="380" y="134" text-anchor="middle" fill="#98a1b4" font-size="11">method, params, modifier,</text><text x="380" y="150" text-anchor="middle" fill="#98a1b4" font-size="11">sort: shared by every camera</text>
+        <rect x="590" y="25" width="250" height="75" rx="12" fill="#171c28" stroke="#f472b6"/><text x="715" y="53" text-anchor="middle" fill="#f472b6">view of leftCamera</text><text x="715" y="73" text-anchor="middle" fill="#98a1b4" font-size="11">no settings of its own;</text><text x="715" y="89" text-anchor="middle" fill="#98a1b4" font-size="11">its order (WebGL2 only)</text>
+        <rect x="590" y="150" width="250" height="75" rx="12" fill="#171c28" stroke="#f472b6"/><text x="715" y="178" text-anchor="middle" fill="#f472b6">view of rightCamera</text><text x="715" y="198" text-anchor="middle" fill="#98a1b4" font-size="11">its own collection and modifier;</text><text x="715" y="214" text-anchor="middle" fill="#98a1b4" font-size="11">its order (WebGL2 only)</text>
+        <g stroke="#8b93a7" stroke-width="1.6" fill="none" marker-end="url(#ah)"><path d="M190 125 L 258 125"/><path d="M500 115 C 545 115, 550 62, 588 62"/><path d="M500 135 C 545 135, 550 188, 588 188"/></g>
+      </g>
+    </svg>
+  </div>
+<pre>// the renderer's settings
+renderer.render(scene, leftCamera);
+
+// the camera's view: its collection and modifier over the rest
+splatRenderer.viewFor(rightCamera, { collection: rightSubset, modifier: tint });
+renderer.render(scene, rightCamera);
+
+// an explicit view: the same camera, drawn differently
+splatRenderer.view = splatRenderer.viewFor("depth", { modifier: depthColor });
+renderer.render(scene, leftCamera);
+// back to choosing by camera
+splatRenderer.view = undefined;</pre>
+  <ul>
+    <li>A render draws <code>splatRenderer.view</code> if the app set one, otherwise the view of its camera, otherwise the renderer's own settings. With the CPU sort the renderer makes a view for every camera it renders, because each camera needs its own order; with the GPU sort it makes none.</li>
+    <li>An app that makes camera objects anew (a clone per frame) would make a view for each one. <code>splatRenderer.viewKey = (camera) =&gt; key</code> maps cameras to view keys (one key for all of them, or a stable id per viewpoint), and setting <code>splatRenderer.view</code> draws one view for every render. The renderer warns once renders have made more than 32 views.</li>
+    <li>Unset settings follow the renderer, field by field. A view can't change the method or the sort mode: the method decides the projected arrays and the draw, so two methods take two renderers.</li>
+    <li>A view of the app's own key covers a viewpoint that is not one camera object: an XR page renders through the desktop camera, a stereo preview, and the XR camera, all one head.</li>
+    <li>An XR stereo pair is one viewpoint. Sort keys are distances from the head, so one order is valid for both eyes.</li>
+    <li>All renderers and views share compiled programs. Two <code>SplatRenderer</code>s drawn in one <code>render()</code> each have their own projected collection and sorter, because three.js runs all compute work of a frame before its draws.</li>
+  </ul>
+  <p class="deeper">See also: <a href="ref/views.html">Views</a> <a href="ref/views.html#view-keys">View keys</a></p>
+</section>
+
+<!-- 10 -->
+<section id="modifiers" data-title="Modifiers">
+  <div class="eyebrow">10 · Modifiers</div>
+  <h2>Applying an effect to all splats</h2>
+  <p class="lede">A renderer's <code>modifier</code> (or a view's own, or <code>null</code> for none) is a TSL function applied to every splat it draws, similar to three.js's <code>overrideMaterial</code>. Examples are depth coloring, normal visualization, and wave displacement. The modifier runs in a selectable space. Changing the space only changes matrices, not the program.</p>
+  <div class="panel reveal">
+    <div class="chips" id="spaceChips"></div>
+    <div class="chain" id="spaceChain"></div>
+    <p class="small" id="spaceNote" style="margin: 0"></p>
+  </div>
+  <ul>
+    <li>Each new modifier builds one program per generator, once. Switching between modifiers that were already used builds nothing.</li>
+    <li>Splats exist in two forms: scales with a rotation, or a covariance. You can provide <code>modifier</code>, <code>covModifier</code>, or both; the program converts between forms only where necessary.</li>
+  </ul>
+  <p class="deeper">See also: <a href="ref/generators.html#modifiers">Modifiers and their spaces</a></p>
+</section>
+
+<!-- 11 -->
+<section id="both" data-title="Both backends">
+  <div class="eyebrow">11 · Both backends</div>
+  <h2>Running the same app on WebGPU and WebGL2</h2>
+  <p class="lede">The same app code runs on both backends. The difference is how quickly changes appear. In this example, the app adds and removes splat objects over time (streaming in parts of a scene, say), so each change is a new collection, while the camera orbits.</p>
+  <div class="panel reveal">
+    <canvas class="fig" id="bothCanvas"></canvas>
+    <label class="ctl">an object added or removed every <input type="range" id="bothEvery" min="10" max="90" value="40"><output id="bothEveryOut"></output></label>
+    <label class="ctl">WebGL2 sort duration <input type="range" id="bothLatency" min="2" max="30" value="12"><output id="bothLatencyOut"></output></label>
+    <div class="legend"><span><i style="background: transparent; outline: 1.5px dashed #8b93a7"></i>added by the app, not drawn yet</span><span><i style="background: var(--red)"></i>removed by the app, still drawn</span></div>
+    <p class="small" id="bothNote" style="margin-bottom: 0"></p>
+  </div>
+  <table class="stbl reveal">
+    <tr><th></th><th>WebGPU</th><th>WebGL2</th></tr>
+    <tr><td>objects added or removed (a new collection)</td><td class="ok">drawn or gone on the next frame</td><td class="meh">when the sort started after the change finishes, a few frames later</td></tr>
+    <tr><td>a collection changed every frame</td><td class="ok">every change drawn</td><td class="meh">one change drawn per sort; the ones in between are skipped</td></tr>
+    <tr><td>first frames of a new camera</td><td class="ok">drawn immediately</td><td class="meh">empty until its first order arrives</td></tr>
+    <tr><td>views</td><td class="ok">only to draw a viewpoint differently</td><td class="meh">one per camera (made by the renderer)</td></tr>
+    <tr><td>camera movement</td><td class="ok">exact order every frame</td><td class="meh">positions current, order a few frames old</td></tr>
+    <tr><td>index lists a pool needs (part 8)</td><td class="ok">2: the one in use, and the next one, filled before the old one is released</td><td class="meh">a few more: the drawn one and the ones being sorted are in use too</td></tr>
+    <tr><td>extra threads</td><td class="ok">none</td><td class="meh">a pool per renderer, a worker per sort in flight</td></tr>
+  </table>
+<pre>// WebGPU, else WebGL2
+const renderer = await createRenderer();
+
+// sortMode: "gpu" on WebGPU, "cpu" on WebGL2
+const splatRenderer = new SplatRenderer({
+  renderer,
+  collection,
+  onInvalidate,
+});
+scene.add(splatRenderer);
+
+// autoSort is on by default
+renderer.render(scene, camera);</pre>
+  <p class="takeaway reveal"><b>One code path:</b> write the app with collections and object releases as if WebGL2 support were required, and let the renderer make the views it needs. On WebGPU this adds no cost, and on WebGL2 the same code works with a delay of a few frames.</p>
+  <p class="deeper">See also: <a href="ref/recipes.html#one-code-path-for-both-backends">One code path for both backends</a></p>
+</section>
+
+<!-- 12 -->
+<section id="dropped" data-title="Alternatives">
+  <div class="eyebrow">12 · Alternatives</div>
+  <h2>Simpler designs that were rejected</h2>
+  <p class="lede">Each of these designs was considered and rejected because it violates one of the requirements above.</p>
+  <div id="dropped-list"></div>
+  <p class="deeper">See also: <a href="ref/multi-splat.html#dropped-designs">Dropped designs</a></p>
+</section>
+
+<!-- 13 -->
+<section id="asks" data-title="Usage">
+  <div class="eyebrow">13 · Usage</div>
+  <h2>Requirements for apps</h2>
+  <ul class="checklist">
+    <li>Create generators and modifier functions once and reuse them. Creating new ones every frame builds new programs every frame.</li>
+    <li>Move objects by changing their matrices. Create a new <code>SplatCollection</code> only when the set of objects changes.</li>
+    <li>Set <code>count</code> on every object. Free data an object owns in its <code>release</code> callback, not when replacing the collection.</li>
+    <li>If the app makes camera objects anew (a clone per frame), set <code>viewKey</code> (or <code>view</code>) so they share views.</li>
+    <li>Call <code>dispose()</code> on renderers that are no longer needed, and on views of cameras or keys that are gone.</li>
+    <li>On WebGL2, a new camera draws nothing until its first order arrives, and collection changes appear a few frames late. <code>autoSort</code> handles sorting automatically, and <code>onInvalidate</code> tells an on-demand app when to render.</li>
+  </ul>
+  <p class="deeper">See also: <a href="ref/multi-splat.html#what-this-asks-of-an-app">What this asks of an app</a> <a href="ref/lifetimes.html">Lifetimes</a></p>
+</section>
+
+<footer>Radix docs · <a href="index.html">home</a> · <a href="model.html">how it fits together</a> · <a href="pipeline.html">the pipeline</a> · <a href="ref/multi-splat.html">multi-splat design notes</a> · source: <code>docs/multi-splat.html</code></footer>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const COLORS = { pink: "#f472b6", teal: "#2dd4bf", yellow: "#facc15", violet: "#a78bfa", blue: "#60a5fa", green: "#4ade80", orange: "#fb923c", red: "#f87171" };
+
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function chips(container, items, initial, onPick) {
+  const el = typeof container === "string" ? $(container) : container;
+  el.innerHTML = items.map((it) => `<span class="chip" data-v="${it.value}">${it.label}</span>`).join("");
+  const pick = (v) => { $$(".chip", el).forEach((c) => c.classList.toggle("on", c.dataset.v === String(v))); onPick(v); };
+  el.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) pick(c.dataset.v); });
+  pick(initial);
+}
+
+function fitCanvas(canvas, height) {
+  const dpr = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(height * dpr); canvas.style.height = `${height}px`;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, W: w, H: height };
+}
+
+function splatAt(ctx, x, y, rx, ry, angle, color, alpha) {
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(angle); ctx.scale(rx, ry);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  g.addColorStop(0, hexA(color, alpha));
+  g.addColorStop(0.55, hexA(color, alpha * 0.75));
+  g.addColorStop(1, hexA(color, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+// ---------- Hero: two clouds of splats drifting through each other ----------
+(() => {
+  const canvas = $("#heroCanvas"), ctx = canvas.getContext("2d");
+  let w, h, visible = true, t = 0;
+  const random = rng(7);
+  const splats = Array.from({ length: 170 }, (_, i) => ({
+    group: i % 2, u: random(), v: random() * 2 - 1, z: random(), a: random() * Math.PI, sx: 18 + random() * 70, sy: 6 + random() * 22, o: 0.18 + random() * 0.3,
+  }));
+  const resize = () => { const d = Math.min(2, devicePixelRatio); w = canvas.width = innerWidth * d; h = canvas.height = canvas.clientHeight * d; };
+  resize();
+  addEventListener("resize", resize);
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
+  const frame = () => {
+    if (visible) {
+      if (!reducedMotion) t += 0.0025;
+      ctx.clearRect(0, 0, w, h);
+      const d = w / innerWidth;
+      const placed = splats.map((s) => {
+        const dir = s.group ? 1 : -1;
+        const x = ((s.u + dir * t * 0.25) % 1 + 1) % 1;
+        const y = 0.5 + s.v * 0.28 + Math.sin(x * 6.3 + s.group * 2) * 0.08;
+        const depth = s.group ? s.z : 1 - s.z;
+        return { s, x: x * w, y: y * h, depth };
+      }).sort((a, b) => b.depth - a.depth);
+      for (const { s, x, y, depth } of placed) {
+        const k = (1.4 - depth * 0.8) * d;
+        splatAt(ctx, x, y, s.sx * k, s.sy * k, s.a + t * (s.group ? 1 : -1), s.group ? COLORS.teal : COLORS.pink, s.o);
+      }
+      const fade = ctx.createLinearGradient(0, h * 0.6, 0, h);
+      fade.addColorStop(0, "rgba(10,12,17,0)"); fade.addColorStop(1, "rgba(10,12,17,1)");
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, w, h);
+    }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+
+// ---------- 1. Sorted together or per object ----------
+// Two splat objects in 3D, seen from far away (nearly orthographic, so a
+// move along z changes depth, not size): a sphere of pink splats and a teal
+// ring through it. Each splat is shaded by a light from the upper left, in
+// a few levels, each drawn from a cached sprite; splats are drawn far to near.
+(() => {
+  const canvas = $("#blendCanvas");
+  const random = rng(3);
+  const light = [-0.5, 0.6, 0.62], LEVELS = 6;
+  const sprites = new Map();
+  const spriteOf = (base, level) => {
+    const key = `${base}${level}`;
+    if (!sprites.has(key)) {
+      const lit = 0.45 + (0.55 * level) / (LEVELS - 1);
+      const n = parseInt(base.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.min(255, Math.round(v * lit)));
+      const sprite = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
+      const g = sprite.getContext("2d"), grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, `rgba(${c}, 0.9)`); grad.addColorStop(0.55, `rgba(${c}, 0.68)`); grad.addColorStop(1, `rgba(${c}, 0)`);
+      g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+      sprites.set(key, sprite);
+    }
+    return sprites.get(key);
+  };
+  const levelOf = (normal) => Math.round(Math.max(0, normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2]) * (LEVELS - 1));
+  // A sphere: splats on and just under the surface
+  const sphere = Array.from({ length: 170 }, () => {
+    const z = random() * 2 - 1, t = random() * Math.PI * 2, r = Math.sqrt(1 - z * z);
+    const n = [r * Math.cos(t), r * Math.sin(t), z];
+    const depth = 0.9 + random() * 0.1;
+    return { group: 0, p: n.map((v) => v * 0.8 * depth), size: 0.16 + random() * 0.08, a: random() * Math.PI, sprite: spriteOf(COLORS.pink, levelOf(n)) };
+  });
+  // A ring of radius 1.25, tilted toward the camera so one side is near and one far
+  const tilt = 1.05, turn = 0.35;
+  const ring = Array.from({ length: 120 }, () => {
+    const u = random() * Math.PI * 2, v = random() * Math.PI * 2, tube = 0.1;
+    let p = [(1.25 + tube * Math.cos(v)) * Math.cos(u), (1.25 + tube * Math.cos(v)) * Math.sin(u), tube * Math.sin(v)];
+    let n = [Math.cos(v) * Math.cos(u), Math.cos(v) * Math.sin(u), Math.sin(v)];
+    const rot = (q) => {
+      const y1 = q[1] * Math.cos(tilt) - q[2] * Math.sin(tilt), z1 = q[1] * Math.sin(tilt) + q[2] * Math.cos(tilt);
+      return [q[0] * Math.cos(turn) + z1 * Math.sin(turn), y1, -q[0] * Math.sin(turn) + z1 * Math.cos(turn)];
+    };
+    p = rot(p); n = rot(n);
+    return { group: 1, p, size: 0.11 + random() * 0.05, a: random() * Math.PI, sprite: spriteOf(COLORS.teal, levelOf(n)) };
+  });
+  let mode = "together", pending = false;
+  const draw = () => {
+    pending = false;
+    const { ctx, W, H } = fitCanvas(canvas, 300);
+    ctx.clearRect(0, 0, W, H);
+    // The ring's z offset: at +-2 it is wholly in front of or behind the sphere
+    const offset = (Number($("#blendDepth").value) / 100) * 2;
+    const camera = 20, f = H * 6.4;
+    const place = (s) => {
+      const distance = camera - s.p[2] - (s.group ? offset : 0);
+      return { s, x: W / 2 + (f * s.p[0]) / distance, y: H / 2 - (f * s.p[1]) / distance, distance, r: (f * s.size) / distance };
+    };
+    const placed = [sphere.map(place), ring.map(place)];
+    const byFar = (a, b) => b.distance - a.distance;
+    const order = mode === "together" ? [...placed[0], ...placed[1]].sort(byFar) : [...placed[0].sort(byFar), ...placed[1].sort(byFar)];
+    for (const { s, x, y, r } of order) {
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(s.a); ctx.scale(r * 1.3, r * 0.8);
+      ctx.drawImage(s.sprite, -1, -1, 2, 2);
+      ctx.restore();
+    }
+    ctx.fillStyle = "#98a1b4"; ctx.font = "12px ui-monospace, Menlo, monospace";
+    ctx.fillText("pink: a sphere of splats", 12, 20);
+    ctx.fillText("teal: a ring of splats around it", 12, 38);
+    $("#blendDepthOut").textContent = offset === 0 ? "z 0" : `z ${offset > 0 ? "+" : ""}${offset.toFixed(2)} (${offset > 0 ? "nearer" : "farther"})`;
+    const where = offset >= 1.9 ? "wholly in front of" : offset <= -1.9 ? "wholly behind" : "through";
+    $("#blendNote").textContent = mode === "together"
+      ? `One sort for both objects: the blending is correct wherever the ring is. The ring is now ${where} the sphere.`
+      : `One sort per object, the ring drawn second: it covers the sphere everywhere, even where it is behind it. The ring is now ${where} the sphere.`;
+  };
+  const schedule = () => {
+    if (!pending) {
+      pending = true;
+      requestAnimationFrame(draw);
+    }
+  };
+  chips("#blendMode", [{ value: "together", label: "one sort for both objects (Radix)" }, { value: "apart", label: "one sort per object" }], "together", (v) => { mode = v; draw(); });
+  $("#blendDepth").addEventListener("input", schedule);
+  addEventListener("resize", draw);
+})();
+
+// ---------- 2. WebGPU: every frame draws the current collection ----------
+(() => {
+  const steps = [["project", "every object", COLORS.pink], ["sort", "on the GPU", COLORS.orange], ["draw", "one call", "#e8eaf0"]];
+  $("#gpuFlow").innerHTML = steps.map(([t, l, c], i) => `<div class="node" style="--c:${c}" data-i="${i}"><div class="t">${t}</div><div class="l">${l}</div></div>${i < steps.length - 1 ? '<div class="arrow">→</div>' : ""}`).join("");
+  // One frame is three steps: project (the frame takes the current
+  // collection), sort, then draw (the frame shows what it projected)
+  const N = 12, colors = [COLORS.violet, COLORS.teal, COLORS.yellow, COLORS.pink];
+  let step = 0, wanted = Array(N).fill(-1), drawn = Array(N).fill(-1), listId = 0;
+  const row = (label, values) => `<div class="who">${label}</div>${values.map((m) => `<div class="cell" style="background:${m < 0 ? "#ffffff08" : colors[m % colors.length]}">${m < 0 ? "" : "#" + (m + 1)}</div>`).join("")}`;
+  const render = () => {
+    const head = `<div class="who">frame</div>${Array.from({ length: N }, (_, i) => `<div class="cell head">${i + 1}</div>`).join("")}`;
+    $("#gpuFrames").innerHTML = head + row("collection", wanted) + row("drawn", drawn);
+  };
+  const tick = () => {
+    const frame = Math.floor(step / 3), i = frame % N, phase = step % 3;
+    if (i === 0 && phase === 0) {
+      wanted = Array(N).fill(-1);
+      drawn = Array(N).fill(-1);
+    }
+    if (phase === 0) wanted[i] = listId;
+    if (phase === 2) drawn[i] = wanted[i];
+    $$("#gpuFlow .node").forEach((n) => n.classList.toggle("on", Number(n.dataset.i) === phase));
+    step += 1;
+    render();
+  };
+  $("#gpuChange").addEventListener("click", () => { listId += 1; });
+  render();
+  let visible = false;
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe($("#gpuFrames"));
+  setInterval(() => visible && !reducedMotion && tick(), 260);
+  if (reducedMotion) for (let k = 0; k < N * 3; k += 1) tick();
+})();
+
+// ---------- 3. Objects side by side in one collection ----------
+(() => {
+  const ENTRIES = [
+    { name: "scan (file)", count: 9, color: COLORS.pink },
+    { name: "sparkles (generator)", count: 5, color: COLORS.yellow },
+    { name: "scan LoD subset (index list)", count: 6, color: COLORS.teal },
+  ];
+  const on = new Set([0, 1, 2]);
+  let playing = false;
+  const listed = () => ENTRIES.map((e, i) => ({ ...e, i })).filter((e) => on.has(e.i));
+  const render = (filled = Infinity, hot = -1) => {
+    const collection = listed();
+    let offset = 0;
+    const labels = [], slots = [];
+    collection.forEach((e, k) => {
+      labels.push(`<div style="width:${e.count * 33 - 3}px; border-top: 2px solid ${e.color}; padding-top: 2px">offset ${offset}</div>`);
+      for (let j = 0; j < e.count; j += 1) {
+        const at = offset + j, done = k < filled;
+        slots.push(`<div class="slot ${done ? "" : "empty"} ${k === hot ? "hot" : ""}" style="${done ? `background:${e.color}` : ""}">${at}</div>`);
+      }
+      offset += e.count;
+    });
+    $("#entryLabels").innerHTML = labels.join("");
+    $("#entrySlots").innerHTML = slots.join("") || '<span class="small">no objects: nothing is drawn</span>';
+    $("#entryNote").textContent = `${collection.length} ${collection.length === 1 ? "object" : "objects"}, ${collection.length} ${collection.length === 1 ? "pass" : "passes"}, ${offset} splats in one collection, followed by one sort and one draw.`;
+  };
+  const renderChips = () => {
+    $("#entryChips").innerHTML = ENTRIES.map((e, i) => `<span class="chip ${on.has(i) ? "on" : ""}" data-i="${i}" style="${on.has(i) ? `background:${e.color}; border-color:${e.color}` : ""}">${e.name}: ${e.count}</span>`).join("");
+  };
+  $("#entryChips").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c || playing) return;
+    const i = Number(c.dataset.i);
+    on.has(i) ? on.delete(i) : on.add(i);
+    renderChips(); render();
+  });
+  $("#entryPlay").addEventListener("click", async () => {
+    if (playing) return;
+    playing = true;
+    const n = listed().length;
+    for (let k = 0; k <= n; k += 1) {
+      render(k, k < n ? k : -1);
+      $("#entryNote").textContent = k < n ? `Pass ${k + 1}: ${listed()[k].name}, written at its offset.` : "All passes done. The collection is sorted once and drawn once.";
+      await new Promise((r) => setTimeout(r, 750));
+    }
+    playing = false;
+    render();
+  });
+  renderChips(); render();
+})();
+
+// ---------- 4. The program cache ----------
+(() => {
+  const state = { method: "ewa", eyes: 1, modifier: "none", generators: ["fromSplats", "sparkles"], extra: 0 };
+  const cache = new Set();
+  let built = 0;
+  const log = [];
+  const keysNow = () => state.generators.map((g) => `${g} · ${state.modifier} · ${state.method} · ${state.eyes} eye${state.eyes > 1 ? "s" : ""}`);
+  const ensure = () => {
+    const fresh = keysNow().filter((k) => !cache.has(k));
+    fresh.forEach((k) => cache.add(k));
+    built += fresh.length;
+    return fresh;
+  };
+  const write = (text, kind) => { log.unshift(`<div class="${kind}">${text}</div>`); log.length = Math.min(log.length, 30); };
+  const render = (fresh = []) => {
+    $("#compileCount").textContent = built;
+    $("#compileState").innerHTML = `method <b>${state.method}</b><br>eyes <b>${state.eyes}</b><br>modifier <b>${state.modifier}</b>`;
+    $("#cacheGrid").innerHTML = [...cache].map((k) => `<span class="${fresh.includes(k) ? "fresh" : ""}">${k}</span>`).join("");
+    $("#compileLog").innerHTML = log.join("");
+  };
+  const act = (label, change, explain) => {
+    change();
+    const fresh = ensure();
+    const why = explain ?? (fresh.length ? "combination not built before" : "already built, reused");
+    write(`${label}: ${fresh.length ? `built ${fresh.length}` : "nothing built"} (${why})`, fresh.length ? (label.startsWith("new generator") ? "bad" : "new") : "free");
+    render(fresh);
+  };
+  const ACTIONS = [
+    ["load another file", () => {}, "same fromSplats program, new data"],
+    ["new LoD subset", () => {}, "an index list is data"],
+    ["move an object", () => {}, "matrices are uniforms"],
+    ["more blur", () => {}, "params are uniforms"],
+    ["modifier: depth", () => { state.modifier = "depth"; }],
+    ["modifier: none", () => { state.modifier = "none"; }],
+    ["method: raygs", () => { state.method = "raygs"; }],
+    ["method: ewa", () => { state.method = "ewa"; }],
+    ["enter XR", () => { state.eyes = 2; }],
+    ["leave XR", () => { state.eyes = 1; }],
+    ["new generator every frame", () => { state.extra += 1; state.generators = ["fromSplats", `sparkles${state.extra}`]; }, "each generator object is a separate program; create generators once"],
+  ];
+  $("#compileBtns").innerHTML = ACTIONS.map(([label], i) => `<button class="btn ${label.startsWith("new generator") ? "warn" : ""}" data-i="${i}">${label}</button>`).join("");
+  $("#compileBtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b) act(...ACTIONS[Number(b.dataset.i)]);
+  });
+  const fresh = ensure();
+  write(`first frame: built ${fresh.length}, one per generator`, "new");
+  render(fresh);
+})();
+
+// ---------- 5a. A WebGL2 sort over frames ----------
+(() => {
+  const N = 16;
+  const render = () => {
+    const latency = Number($("#lateMs").value);
+    $("#lateMsOut").textContent = `${latency} frames (1 sort keys, 1 readback, ${Math.max(1, latency - 2)} worker)`;
+    // One frame of sort keys on the GPU, one of readback, the rest on the worker
+    const read = 1, sort = Math.max(1, latency - 2);
+    const rows = { gpu: Array(N).fill(""), read: Array(N).fill(""), worker: Array(N).fill(""), shown: Array(N).fill("") };
+    let start = 1, order = 0;
+    while (start < N) {
+      rows.gpu[start] = COLORS.violet;
+      for (let f = start + 1; f <= start + read && f < N; f += 1) rows.read[f] = COLORS.blue;
+      for (let f = start + read + 1; f <= start + read + sort && f < N; f += 1) rows.worker[f] = COLORS.green;
+      const lands = start + read + sort + 1;
+      order += 1;
+      for (let f = lands; f < N; f += 1) rows.shown[f] = order;
+      start = lands;
+    }
+    const head = `<div class="who">frame</div>${Array.from({ length: N }, (_, i) => `<div class="cell head">${i + 1}</div>`).join("")}`;
+    const row = (name, cells) => `<div class="who">${name}</div>${cells.map((c) => `<div class="cell" style="${c ? `background:${c}` : ""}"></div>`).join("")}`;
+    const shown = `<div class="who">order drawn</div>${rows.shown.map((o) => `<div class="cell" style="background:${o ? (o % 2 ? COLORS.yellow : "#fde68a") : "#ffffff08"}; color:${o ? "#0a0c11" : "#5d6579"}">${o || "none"}</div>`).join("")}`;
+    $("#lateFrames").innerHTML = head + row("sort keys (GPU)", rows.gpu) + row("readback", rows.read) + row("worker", rows.worker) + shown;
+  };
+  $("#lateMs").addEventListener("input", render);
+  render();
+})();
+
+// ---------- 5b. An order on another collection ----------
+(() => {
+  const A = { name: "A", count: 5, color: COLORS.pink }, B = { name: "B", count: 4, color: COLORS.teal }, C = { name: "C", count: 3, color: COLORS.yellow };
+  const oldList = [A, B], newList = [C, A, B];
+  const owners = (collection) => collection.flatMap((e) => Array.from({ length: e.count }, (_, j) => ({ e, j })));
+  const order = [7, 2, 5, 0, 8, 3, 6, 1, 4];
+  const labels = (collection) => collection.map((e) => `<div style="width:${e.count * 33 - 3}px; border-top: 2px solid ${e.color}; padding-top: 2px">${e.name}</div>`).join("");
+  let mode = "old";
+  const render = () => {
+    const collection = mode === "old" ? oldList : newList;
+    $("#orderLabels").innerHTML = labels(collection);
+    const own = owners(collection);
+    $("#orderList").innerHTML = own.map(({ e }, i) => `<div class="slot" style="background:${e.color}">${i}</div>`).join("");
+    const meant = owners(oldList);
+    $("#orderUse").innerHTML = order.map((p) => {
+      const now = mode === "kept" ? meant[p] : own[p];
+      const bad = now.e !== meant[p].e || now.j !== meant[p].j;
+      return `<div class="slot ${bad ? "bad" : ""}" style="background:${now.e.color}" title="position ${p}">${p}</div>`;
+    }).join("");
+    const wrong = order.filter((p) => mode === "new" && (own[p].e !== meant[p].e || own[p].j !== meant[p].j)).length;
+    $("#orderNote").innerHTML = mode === "old"
+      ? "The order was made for this collection (A, then B). Each position refers to the splat it was sorted for."
+      : mode === "new"
+        ? `C was added at the front. With the new collection, ${wrong} of ${order.length} positions refer to different splats (red), and C's splats are not in the order.`
+        : "Radix keeps drawing the old collection (A, then B) with its order until an order for the new collection arrives.";
+  };
+  chips("#orderMode", [{ value: "old", label: "collection the order was made for" }, { value: "new", label: "C added at the front, old order reused" }, { value: "kept", label: "old collection kept (Radix)" }], "old", (v) => { mode = v; render(); });
+})();
+
+// ---------- 6. Collection identity ----------
+(() => {
+  let id = 1, lastKey = "";
+  const flash = () => { const b = $("#mapBadge"); b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 700); };
+  const render = (why) => {
+    const objs = $$("[data-obj]").filter((c) => c.checked).map((c) => c.dataset.obj);
+    const key = objs.join(",");
+    const changed = key !== lastKey && lastKey !== "";
+    if (changed) { id += 1; flash(); }
+    lastKey = key;
+    const x = Number($("#mapMove").value) / 100;
+    $("#mapMoveOut").textContent = `x = ${x.toFixed(2)}`;
+    const COUNTS = { butterfly: "546,112", ring: "4,000", subset: "163,833" };
+    const GENS = { butterfly: "fromSplats", ring: "ring", subset: "fromSplats (indices)" };
+    const NAMES = { butterfly: "butterfly", ring: "ring", subset: "LoD subset" };
+    $("#mapEntries").innerHTML = objs.length ? objs.map((o) => `<div><b>${NAMES[o]}</b><span class="lock">generator ${GENS[o]} · count ${COUNTS[o]} 🔒</span><span class="live">matrixWorld${o === "butterfly" ? ` x ${x.toFixed(2)}` : ""} · params · release ✎</span></div>`).join("") : '<div class="small">no objects</div>';
+    $("#mapBadge").innerHTML = `collection <span style="color: var(--yellow)">#${id}</span>`;
+    $("#mapNote").textContent = why === "move"
+      ? `Still collection #${id}. Matrices are read every render, so positions keep their meaning. On WebGL2, autoSort starts a new sort because the object moved, and the current order remains usable until it finishes.`
+      : changed
+        ? `New collection #${id}. WebGPU draws it on the next frame. WebGL2 keeps drawing the collection of the current order until an order for #${id} arrives.`
+        : `Collection #${id}. Changing the listed objects creates a new collection; moving the butterfly does not.`;
+  };
+  $$("[data-obj]").forEach((c) => c.addEventListener("change", () => render("collection")));
+  $("#mapMove").addEventListener("input", () => render("move"));
+  render("start");
+})();
+
+// ---------- 7. Orders over time ----------
+// autoSort: a new collection every `every` frames; one sort in flight,
+// started when the latest collection is newer than the last one sorted; it
+// takes `latency` frames, varied by up to `jitter`, and its order is
+// applied when it finishes.
+function simulateOrders({ frames, every, latency, jitter }) {
+  const random = rng(11);
+  let latest = 1, shown = 0, started = 0, running = null;
+  const sorts = [], rows = [];
+  for (let f = 0; f < frames; f += 1) {
+    if (f > 0 && f % every === 0) latest += 1;
+    if (running && running.end <= f) {
+      running.applied = true;
+      shown = running.v;
+      running = null;
+    }
+    if (!running && latest > started) {
+      const duration = Math.max(1, latency + Math.round((random() * 2 - 1) * jitter));
+      running = { v: latest, start: f, end: f + duration, applied: false };
+      sorts.push(running);
+      started = latest;
+    }
+    rows.push({ f, latest, shown });
+  }
+  return { rows, sorts };
+}
+
+// ---------- 8. Index lists in use (one sort in flight) ----------
+function simulate({ frames, every, latency }) {
+  let wanted = 1, shown = 0, inflight = null;
+  const rows = [];
+  for (let f = 0; f < frames; f += 1) {
+    if (f > 0 && f % every === 0) wanted += 1;
+    if (inflight && f >= inflight.done) {
+      shown = Math.max(shown, inflight.v);
+      inflight = null;
+    }
+    if (!inflight && shown !== wanted) inflight = { v: wanted, done: f + latency };
+    const live = new Set([wanted, shown, inflight?.v].filter((v) => v > 0)).size;
+    rows.push({ f, wanted, shown, inflight: inflight?.v, live });
+  }
+  return { rows };
+}
+
+(() => {
+  const canvas = $("#simCanvas"), FRAMES = 120;
+  const draw = () => {
+    const every = Number($("#simEvery").value), latency = Number($("#simLatency").value), jitter = Number($("#simJitter").value);
+    const frames = (n) => `${n} frame${n === 1 ? "" : "s"}`;
+    $("#simEveryOut").textContent = frames(every);
+    $("#simLatencyOut").textContent = frames(latency);
+    $("#simJitterOut").textContent = jitter ? `± ${frames(jitter)}` : "fixed";
+    const { rows, sorts } = simulateOrders({ frames: FRAMES, every, latency, jitter });
+
+    // One color per collection
+    const PALETTE = [COLORS.teal, COLORS.pink, COLORS.yellow, COLORS.violet, COLORS.orange, COLORS.blue, COLORS.green, COLORS.red];
+    const colorOf = (c) => PALETTE[(c - 1) % PALETTE.length];
+    const rowH = 26, laneH = 24, gap = 16, top = 14, pad = 86;
+    const lanesTop = top + rowH + gap, drawnTop = lanesTop + laneH + gap;
+    const { ctx, W, H } = fitCanvas(canvas, drawnTop + rowH + 24);
+    ctx.clearRect(0, 0, W, H);
+    const w = W - pad - 10, x = (f) => pad + (f / FRAMES) * w;
+    ctx.font = "11px ui-monospace, Menlo, monospace";
+
+    // A row of runs: frames with the same collection as one labeled segment
+    const runs = (y, valueOf, label) => {
+      ctx.fillStyle = "#98a1b4"; ctx.fillText(label, 2, y + 17);
+      let start = 0;
+      for (let f = 1; f <= FRAMES; f += 1) {
+        if (f < FRAMES && valueOf(rows[f]) === valueOf(rows[start])) continue;
+        const c = valueOf(rows[start]), x0 = x(start), x1 = x(f);
+        ctx.fillStyle = c ? colorOf(c) : "#ffffff08";
+        ctx.beginPath(); ctx.roundRect(x0 + 0.5, y, Math.max(1, x1 - x0 - 1), rowH, 4); ctx.fill();
+        if (x1 - x0 > 24) {
+          ctx.fillStyle = c ? "#0a0c11" : "#5d6579";
+          ctx.fillText(c ? `#${c}` : "none", x0 + 5, y + 17);
+        }
+        start = f;
+      }
+    };
+    runs(top, (r) => r.latest, "collection");
+    runs(drawnTop, (r) => r.shown, "drawn");
+
+    // Sorts, in the color of the collection they sort; each points to where
+    // the drawn row takes its order
+    ctx.fillStyle = "#98a1b4"; ctx.fillText("sorts", 2, lanesTop + 16);
+    for (const s of sorts) {
+      const color = colorOf(s.v);
+      const x0 = x(s.start), x1 = x(Math.min(s.end, FRAMES));
+      ctx.beginPath(); ctx.roundRect(x0 + 1, lanesTop + 2, Math.max(3, x1 - x0 - 2), laneH - 6, 4);
+      ctx.fillStyle = s.applied ? color : hexA(color, 0.45); ctx.fill();
+      if (x1 - x0 > 26) {
+        ctx.fillStyle = "#0a0c11";
+        ctx.fillText(`#${s.v}`, x0 + 5, lanesTop + 15);
+      }
+      if (s.applied) {
+        ctx.strokeStyle = hexA(color, 0.6); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x1, lanesTop + laneH - 4); ctx.lineTo(x1, drawnTop); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = "#5d6579"; ctx.fillText("frames →", W - 80, H - 6);
+
+    const applied = sorts.filter((s) => s.applied).length, skipped = rows[FRAMES - 1].latest - sorts.length;
+    const behind = rows.reduce((sum, r) => sum + (r.latest - r.shown), 0) / FRAMES;
+    $("#simNote").innerHTML = `${rows[FRAMES - 1].latest} collections, ${sorts.length} sorts started, ${applied} applied; ${skipped} collections skipped (they changed while a sort ran). On average the drawn collection is ${behind.toFixed(1)} collections behind the latest one.`;
+  };
+  ["#simEvery", "#simLatency", "#simJitter"].forEach((sel) => $(sel).addEventListener("input", draw));
+  addEventListener("resize", draw);
+  draw();
+})();
+
+(() => {
+  const canvas = $("#relCanvas"), FRAMES = 120;
+  const draw = () => {
+    const every = Number($("#relEvery").value), latency = Number($("#relLatency").value);
+    $("#relEveryOut").textContent = `${every} frame${every > 1 ? "s" : ""}`;
+    $("#relLatencyOut").textContent = `${latency} frame${latency > 1 ? "s" : ""}`;
+    const gl = simulate({ frames: FRAMES, every, latency });
+    const { ctx, W, H } = fitCanvas(canvas, 190);
+    ctx.clearRect(0, 0, W, H);
+    const pad = 40, top = 14, h = H - 40, w = W - pad - 10, maxLive = 4;
+    ctx.strokeStyle = "#262c3c"; ctx.strokeRect(pad, top, w, h);
+    ctx.fillStyle = "#5d6579"; ctx.font = "11px ui-monospace, Menlo, monospace";
+    for (let k = 1; k <= 3; k += 1) { const y = top + h - (k / maxLive) * h; ctx.fillText(String(k), pad - 16, y + 4); ctx.strokeStyle = "#1b2130"; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(pad + w, y); ctx.stroke(); }
+    const bar = (rows, key, color, offset) => {
+      rows.forEach((r, i) => {
+        const v = typeof key === "function" ? key(r) : r[key];
+        ctx.fillStyle = color;
+        ctx.fillRect(pad + (i / FRAMES) * w + offset, top + h - (v / maxLive) * h, w / FRAMES / 2 - 0.5, (v / maxLive) * h);
+      });
+    };
+    bar(gl.rows, () => 1, hexA(COLORS.violet, 0.85), 0);
+    bar(gl.rows, "live", hexA(COLORS.teal, 0.85), w / FRAMES / 2);
+    ctx.fillStyle = "#5d6579"; ctx.fillText("index lists", 2, top + 10); ctx.fillText("frames →", W - 80, top + h + 16);
+    const most = Math.max(...gl.rows.map((r) => r.live));
+    $("#relNote").textContent = `On WebGPU 1 index list is in use; a release runs when the collection is replaced. The next list is filled before the old one is released, so a pool of 2 avoids new allocations. On WebGL2 up to ${most} index lists are in use (those of the current collection, the drawn collection, and the collection being sorted), so a pool of ${most + 1} avoids new allocations.`;
+  };
+  ["#relEvery", "#relLatency"].forEach((s) => $(s).addEventListener("input", draw));
+  addEventListener("resize", draw);
+  draw();
+})();
+
+// ---------- 10. Modifier spaces ----------
+(() => {
+  const SPACES = {
+    none: { a: "head × object", b: null, note: "No modifier: a single transform from object space to camera space." },
+    view: { a: "head × object", b: "identity", note: "View space: for depth coloring and view-dependent effects." },
+    world: { a: "object", b: "head", note: "World space: for height coloring and other effects fixed in the scene. Objects far from the origin lose some floating-point precision." },
+    object: { a: "identity", b: "head × object", note: "Object space: for effects that move with the object." },
+    frame: { a: "F⁻¹ × object", b: "head × F", note: "Frame F (for example a gizmo's matrixWorld): for effects attached to another object. Moving F only changes the two matrices." },
+  };
+  const render = (space) => {
+    const s = SPACES[space];
+    const boxes = [
+      `<div class="box"><b>generate</b>splat i</div>`,
+      `<div class="ar">→</div>`,
+      `<div class="box mat"><b>A</b>${s.a}</div>`,
+      `<div class="ar">→</div>`,
+      `<div class="box mod ${s.b ? "" : "off"}"><b>modifier</b>${s.b ? space + " space" : "none"}</div>`,
+      `<div class="ar">→</div>`,
+      `<div class="box mat ${s.b ? "" : "off"}"><b>B</b>${s.b ?? "skipped"}</div>`,
+      `<div class="ar">→</div>`,
+      `<div class="box"><b>project</b>head space</div>`,
+    ];
+    $("#spaceChain").innerHTML = boxes.join("");
+    $("#spaceNote").textContent = `${s.note} Matrices are combined on the CPU in double precision and uploaded as uniforms.`;
+  };
+  chips("#spaceChips", Object.keys(SPACES).map((k) => ({ value: k, label: k === "none" ? "no modifier" : k === "frame" ? "a frame F" : k })), "view", render);
+})();
+
+// ---------- 11. Objects added and removed, on both backends ----------
+// Six places in a circle; the app adds or removes an object every `every`
+// frames (a new collection each time). WebGPU draws the app's collection;
+// WebGL2 draws the collection of its last applied order, one sort in flight.
+(() => {
+  const canvas = $("#bothCanvas"), SLOTS = 6, colors = [COLORS.pink, COLORS.teal, COLORS.yellow, COLORS.violet, COLORS.orange, COLORS.blue];
+  const random = rng(5);
+  const shapes = Array.from({ length: SLOTS }, () => Array.from({ length: 60 }, () => {
+    const a = random() * Math.PI * 2, r = Math.sqrt(random()) * 0.11;
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.8, z: (random() - 0.5) * 0.12, a: random() * Math.PI, s: 0.02 + random() * 0.025 };
+  }));
+  // Which object each change adds or removes, in turn
+  const SCRIPT = [0, 2, 4, 1, 0, 3, 5, 2, 4, 1, 3, 5];
+  let frame = 0, visible = false, angle = 0;
+  let app = new Set([1, 3]), drawn = new Set(app), inflight = null, changes = 0;
+  const panel = (ctx, x0, w, h, title, set, ghosts, removed) => {
+    ctx.fillStyle = "#98a1b4"; ctx.fillText(title, x0 + 10, 18);
+    const cx = x0 + w / 2, cy = h / 2 + 10, f = Math.min(w, h) * 2.4;
+    const splats = [];
+    for (let i = 0; i < SLOTS; i += 1) {
+      // Around a circle seen from slightly above: far objects sit higher
+      const a = (i / SLOTS) * Math.PI * 2 + angle;
+      const ox = Math.cos(a) * 0.38, oz = Math.sin(a) * 0.38, oy = -oz * 0.35;
+      const near = 2.2 - oz;
+      if (ghosts.has(i)) {
+        ctx.setLineDash([3, 3]); ctx.strokeStyle = hexA(colors[i], 0.8); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(cx + (f * ox) / near, cy - (f * oy) / near, (f * 0.13) / near, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (!set.has(i)) continue;
+      for (const p of shapes[i]) {
+        const distance = near - p.z;
+        splats.push({ x: cx + (f * (ox + p.x)) / distance, y: cy - (f * (oy + p.y)) / distance, r: (f * p.s) / distance, distance, a: p.a, color: colors[i] });
+      }
+      if (removed.has(i)) {
+        const mx = cx + (f * ox) / near, my = cy - (f * (oy + 0.15)) / near;
+        ctx.strokeStyle = COLORS.red; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mx - 5, my - 5); ctx.lineTo(mx + 5, my + 5); ctx.moveTo(mx + 5, my - 5); ctx.lineTo(mx - 5, my + 5); ctx.stroke();
+      }
+    }
+    splats.sort((p, q) => q.distance - p.distance).forEach((p) => splatAt(ctx, p.x, p.y, p.r * 1.4, p.r, p.a, p.color, 0.85));
+  };
+  const step = () => {
+    const every = Number($("#bothEvery").value), latency = Number($("#bothLatency").value);
+    $("#bothEveryOut").textContent = `${every} frames`;
+    $("#bothLatencyOut").textContent = `${latency} frames`;
+    if (frame > 0 && frame % every === 0) {
+      const slot = SCRIPT[changes % SCRIPT.length];
+      app = new Set(app);
+      app.has(slot) ? app.delete(slot) : app.add(slot);
+      changes += 1;
+    }
+    if (inflight && frame >= inflight.done) {
+      drawn = inflight.collection;
+      inflight = null;
+    }
+    if (!inflight && [...app].join() !== [...drawn].join()) inflight = { collection: app, done: frame + latency };
+    if (!reducedMotion) angle += 0.006;
+    frame += 1;
+
+    const { ctx, W, H } = fitCanvas(canvas, 240);
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "12px ui-monospace, Menlo, monospace";
+    const waiting = new Set([...app].filter((i) => !drawn.has(i)));
+    const stale = new Set([...drawn].filter((i) => !app.has(i)));
+    panel(ctx, 0, W / 2, H, "WebGPU: the app's collection", app, new Set(), new Set());
+    ctx.strokeStyle = "#262c3c"; ctx.beginPath(); ctx.moveTo(W / 2, 10); ctx.lineTo(W / 2, H - 10); ctx.stroke();
+    panel(ctx, W / 2, W / 2, H, "WebGL2: the collection of the last order", drawn, waiting, stale);
+    const sorting = inflight ? `a sort is running (${inflight.done - frame + 1} frames left)` : "no sort running";
+    $("#bothNote").textContent = `WebGPU draws every change on the next frame. WebGL2 draws the collection its last applied order was sorted for: an added object appears, and a removed one disappears, when a sort started after the change finishes. Now: ${waiting.size} waiting to appear, ${stale.size} removed but still drawn; ${sorting}. Both draw every object at its current position.`;
+  };
+  new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
+  const loop = () => { if (visible && !reducedMotion) step(); requestAnimationFrame(loop); };
+  step();
+  loop();
+  ["#bothEvery", "#bothLatency"].forEach((s) => $(s).addEventListener("input", () => reducedMotion && step()));
+  addEventListener("resize", step);
+})();
+
+// ---------- 12. Dropped designs ----------
+(() => {
+  const DROPPED = [
+    ["One sort per object", "Overlapping objects are blended in the wrong order (part 1)."],
+    ["Calling add(object) on the renderer every frame", "The app repeats the same calls every frame. On WebGL2 the renderer would also have to compare each frame's calls with earlier ones and replay old frames while a new order is sorted. An immutable collection avoids both (part 6)."],
+    ["Version numbers maintained by the renderer", "The collection object already serves as the version, and an object comparison can't get out of sync (part 6)."],
+    ["Showing an order only if its collection is still current", "While the collection keeps changing, every order is outdated when it finishes, so the display never updates (part 7)."],
+    ["Reference counting, or Radix freeing data itself", "Counts are error-prone when the same array is used by several objects, collections, and renderers. Freeing data automatically would require inspecting data of any shape. Object releases only report when an object is no longer used (part 8)."],
+    ["Views holding every setting, with the renderer pointed at one before each render", "Every app, WebGPU-only ones too, had to make a view and switch the renderer to it before rendering another camera, though only the CPU order depends on the camera. The renderer now holds the shared settings, and it makes the per-camera views the CPU sort needs (part 9)."],
+    ["One mesh per camera", "It duplicates buffers and scene nodes, and every mesh would need the same settings (part 9)."],
+    ["One projected collection and sorter shared by all renderers", "three.js runs all compute work of a frame before its draws, so two renderers in one render would both draw the second renderer's results (part 9)."],
+    ["A new program for each file, LoD subset, or frame", "Building programs is slow. Programs are cached by generator and modifier, and files, index lists, and matrices are passed as data (part 4)."],
+    ["Sorting on the main thread, or in the shared worker pool", "A large sort on the main thread drops frames, and in the shared pool sorts would wait behind file loads. All renderers sort on one sort pool of their own, <code>SplatRenderer.sortPool</code> (part 5)."],
+  ];
+  $("#dropped-list").innerHTML = DROPPED.map(([q, a]) => `<div class="q reveal"><button>${q}</button><div class="a">${a}</div></div>`).join("");
+  $$("#dropped-list .q").forEach((q) => { q.classList.add("in"); $("button", q).addEventListener("click", () => q.classList.toggle("open")); });
+})();
+</script>
+</body>
+</html>

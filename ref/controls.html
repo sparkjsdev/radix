@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera controls · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/controls.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/controls.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html" class="on">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="camera-controls">Camera controls<a class="anchor" href="#camera-controls">#</a></h1>
+<p><code>CameraControls</code> moves a camera (or any object that carries one) from the pointer, touch, keyboard, gamepads, and WebXR controllers, with one <code>update()</code> call per frame. Its two modes, orbit and fly, share one state, so switching between them does not move the view. It is based on Spark's SparkControls, and adds a double-press slide.</p>
+<p>Code: <a href="../../src/controls/CameraControls.ts"><code>src/controls/CameraControls.ts</code></a> (imports three.js only; nothing else in Radix imports it).</p>
+<pre class="lang-ts"><code>const controls = new CameraControls({
+  canvas: renderer.domElement,
+  object: camera,
+  storageKey: &quot;my-page&quot;,
+  settings: { mode: &quot;orbit&quot; },
+});
+// Face a point and orbit around it
+controls.lookAt(new THREE.Vector3(0, 0, 0));
+
+renderer.setAnimationLoop(() =&gt; {
+  controls.update(); // true when the camera moved
+  renderer.render(scene, camera);
+});</code></pre>
+<h2 id="modes-and-state">Modes and state<a class="anchor" href="#modes-and-state">#</a></h2>
+<p>The state is the object's pose plus <code>distance</code>. The orbit target lies that distance in front of the object (<code>getTarget()</code>). Fly mode turns about the camera; orbit mode turns about the target. Switching modes (<code>controls.mode = &quot;fly&quot;</code>, or the F key) keeps the pose. Movement is in the object's parent frame, and turns are about <code>object.up</code>.</p>
+<table><thead><tr><th>Input</th><th>fly</th><th>orbit</th></tr></thead><tbody><tr><td>left drag, one finger</td><td>look</td><td>orbit around the target</td></tr><tr><td>double press, then drag</td><td>slide sideways, forward, and back</td><td>the same</td></tr><tr><td>right drag, two fingers</td><td>pan (the scene follows the pointer)</td><td>pan, scaled by the distance</td></tr><tr><td>wheel, middle drag, pinch</td><td>move forward and back</td><td>zoom between <code>minDistance</code> and <code>maxDistance</code></td></tr><tr><td>WASD / arrows, Q E, PgUp PgDn</td><td>move; move down / up</td><td>the same</td></tr><tr><td>Insert Delete, Home End</td><td>turn; look up / down</td><td>orbit</td></tr><tr><td>gamepad</td><td>left stick moves, right stick looks, LB / RB move down / up, LT slow, RT fast</td><td>the same</td></tr></tbody></table>
+<ul>
+<li>Shift applies <code>fastMultiplier</code>, Ctrl <code>slowMultiplier</code>, and Caps Lock (while on) <code>capsMultiplier</code>, to keys and sticks.</li>
+<li>Keys are ignored while an input, textarea, or select has focus, and released when the window loses focus.</li>
+<li>Inertia is set per input (<code>settings.inertia</code>, in seconds). Keys and sticks ease to and from full speed. Pointer looks, pans, and slides keep gliding after release, in both modes: the glide starts at the drag's average speed over its last 100 ms, so a short pause before letting go still glides (more slowly), and a longer pause does not.</li>
+<li><code>pointerLock</code> (fly mode): a click captures the pointer, which then looks without a button held. A click or Esc releases it.</li>
+<li><code>pick</code>: an async lookup of the point under the pointer (for example, a depth readback). While it is set, a right drag in fly mode orbits that point (Shift + right drag pans).</li>
+<li>WebXR (<code>xr: renderer.xr</code>, <code>rig</code>): while presenting, the left stick moves the rig along the head's horizontal facing, the left trigger and grip move it down and up, the right stick turns it about the head, and the right trigger and grip make movement fast and slow.</li>
+</ul>
+<h2 id="members">Members<a class="anchor" href="#members">#</a></h2>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new CameraControls({ canvas, object, settings?, storageKey?, xr?, rig? })</code></td><td><code>settings</code>: the page's defaults over <code>CameraControls.DEFAULTS</code>. <code>storageKey</code>: saves this page's settings apart from other pages'. <code>xr</code>: <code>renderer.xr</code>. <code>rig</code>: the object the XR sticks move (default the object's parent)</td></tr><tr><td><code>update()</code></td><td>applies the input since the last call; whether the object moved</td></tr><tr><td><code>mode</code></td><td><code>&quot;fly&quot;</code> or <code>&quot;orbit&quot;</code> (<code>CameraControlsMode</code>); settable</td></tr><tr><td><code>lookAt(target)</code></td><td>faces a point and sets <code>distance</code> to it</td></tr><tr><td><code>getTarget(out?)</code></td><td>the orbit target: <code>distance</code> in front of the object</td></tr><tr><td><code>distance</code></td><td>the orbit radius (default 2)</td></tr><tr><td><code>object</code></td><td>the moved object; settable</td></tr><tr><td><code>enabled</code></td><td><code>false</code> ignores input (a gizmo drag sets it)</td></tr><tr><td><code>settings</code></td><td>the current settings; assigning changes them without saving</td></tr><tr><td><code>set(partial)</code></td><td>changes and saves settings</td></tr><tr><td><code>save({ personal? })</code></td><td>saves the current settings</td></tr><tr><td><code>reset({ personal? })</code></td><td>forgets saved settings: the page's, and with <code>personal: true</code> the personal ones too</td></tr><tr><td><code>onChange</code></td><td>called after settings change (by <code>set</code>, <code>reset</code>, or the mode key)</td></tr><tr><td><code>pick</code></td><td><code>(x, y) =&gt; Promise&lt;Vector3 | undefined&gt;</code>: the point under a canvas position, in CSS pixels</td></tr><tr><td><code>xr</code>, <code>rig</code></td><td>as in the constructor</td></tr><tr><td><code>dispose()</code></td><td>removes the event listeners</td></tr></tbody></table>
+<h2 id="settings">Settings<a class="anchor" href="#settings">#</a></h2>
+<table><thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>mode</code></td><td><code>&quot;fly&quot;</code></td><td>the starting mode</td></tr><tr><td><code>moveSpeed</code></td><td>1</td><td>keys and sticks: meters per second</td></tr><tr><td><code>lookSpeed</code></td><td>2</td><td>keys and sticks: radians per second</td></tr><tr><td><code>pointerLookSpeed</code></td><td>0.003</td><td>radians per pixel dragged</td></tr><tr><td><code>pointerPanSpeed</code></td><td>0.002</td><td>meters per pixel panned or slid (orbit: per unit of distance)</td></tr><tr><td><code>zoomSpeed</code></td><td>0.0015</td><td>per wheel unit (a notch is about 100): meters (fly), or a factor of exp(zoomSpeed) (orbit)</td></tr><tr><td><code>minDistance</code>, <code>maxDistance</code></td><td>0.05, 1000</td><td>the orbit zoom range</td></tr><tr><td><code>fastMultiplier</code>, <code>slowMultiplier</code>, <code>capsMultiplier</code></td><td>5, 0.2, 10</td><td>Shift, Ctrl, and Caps Lock</td></tr><tr><td><code>invertLookX</code>, <code>invertLookY</code></td><td><code>true</code> on touch screens</td><td>touch screens drag the scene rather than the view</td></tr><tr><td><code>invertPan</code>, <code>invertZoom</code>, <code>invertStickY</code></td><td><code>false</code></td><td></td></tr><tr><td><code>pointerLock</code></td><td><code>false</code></td><td>fly mode: a click captures the pointer</td></tr><tr><td><code>inertia</code></td><td>0.15 s each</td><td><code>{ look, move, pointerLook, pointerMove }</code> (<code>CameraControlsInertia</code>): keys and sticks ramp, pointer glide; 0 for none</td></tr><tr><td><code>modeKey</code></td><td><code>&quot;KeyF&quot;</code></td><td>the key that switches mode (<code>&quot;&quot;</code> for none)</td></tr><tr><td><code>doublePress</code></td><td>300</td><td>milliseconds between two presses that make the second drag slide (0: never)</td></tr><tr><td><code>stickDeadZone</code></td><td>0.1</td><td></td></tr><tr><td><code>xrMoveSpeed</code>, <code>xrTurnSpeed</code></td><td>1, 4</td><td>XR sticks</td></tr></tbody></table>
+<p><code>controls.settings</code> starts from <code>CameraControls.DEFAULTS</code>, then the page's <code>settings</code>, then the saved settings.</p>
+<ul>
+<li><strong>Personal settings</strong> (the inversions, pointer lock, inertia, and pointer look speed) are saved in <code>localStorage</code> under <code>radix-controls</code> and apply on every page.</li>
+<li><strong>Page settings</strong> (the rest) are saved under <code>radix-controls:&lt;storageKey&gt;</code>, only where they differ from the page's defaults. Without a <code>storageKey</code>, only the personal settings persist.</li>
+</ul>
+<p>Types: <code>CameraControlsSettings</code>, <code>CameraControlsInertia</code>, <code>CameraControlsMode</code>, and <code>XrInput</code> (the part of <code>renderer.xr</code> the controls read: <code>isPresenting</code> and <code>getSession()</code>).</p>
+<p><code>/build/examples/splats/index.html</code> binds every setting in its panel (<a href="../../examples/splats/controlsPane.ts"><code>examples/splats/controlsPane.ts</code></a>). The checks are in <a href="../../test/gpu/controlsTests.ts"><code>test/gpu/controlsTests.ts</code></a>.</p>
+<div class="pager"><a class="prev" href="xr.html"><small>Previous</small>WebXR and stereo</a><a class="next" href="arraydata.html"><small>Next</small>ArrayData</a></div>
+<p class="source">Source: <a href="../controls.md">docs/controls.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#modes-and-state">Modes and state</a>
+<a class="h2" href="#members">Members</a>
+<a class="h2" href="#settings">Settings</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

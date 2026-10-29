@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendering · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/rendering.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/rendering.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html" class="on">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="rendering">Rendering<a class="anchor" href="#rendering">#</a></h1>
+<p>Three classes draw splats. A <code>SplatObject</code> is one thing to draw. A <code>SplatCollection</code> lists the objects drawn together. A <code>SplatRenderer</code> is the <code>THREE.Mesh</code> that draws a collection: add it to a scene and render from any camera. An app that targets only WebGPU needs only these three. Views (<a href="views.html">Views and CPU orders</a>) are for drawing a viewpoint with different settings, and for the WebGL2 path.</p>
+<p>Code: <a href="../../src/render/SplatCollection.ts"><code>src/render/SplatCollection.ts</code></a> and <code>SplatRenderer.ts</code>. The reasons for this design: <a href="multi-splat.html">Multi-splat design</a>.</p>
+<pre class="lang-ts"><code>const model = new THREE.Object3D();
+scene.add(model);
+
+const collection = new SplatCollection([
+  SplatCollection.arrays(splats, { matrixWorld: model.matrixWorld }),
+]);
+const splatRenderer = new SplatRenderer({
+  renderer,
+  collection,
+  method: &quot;raygs&quot;,
+});
+scene.add(splatRenderer);
+
+renderer.render(scene, camera);
+// Projected and sorted again for this camera
+renderer.render(scene, otherCamera);</code></pre>
+<h2 id="what-a-render-does">What a render does<a class="anchor" href="#what-a-render-does">#</a></h2>
+<p>In each render, the renderer's <code>onBeforeRender</code>:</p>
+<ol>
+<li><strong>Projects</strong> the collection for the render's camera: every object, one dispatch each, into the renderer's projected arrays. Each splat is generated (read from arrays, or computed), transformed by its object's <code>matrixWorld</code> into head space, run through the renderer's modifier if there is one, and projected into a few words plus a sort key (<a href="projection.html">Projection</a>). An XR <code>ArrayCamera</code>'s two eyes share one projection.</li>
+<li><strong>Orders</strong> the splats back to front (<a href="sorting.html">Sorting</a>):
+<ul>
+<li><code>sortMode: &quot;gpu&quot;</code> (WebGPU's default): <code>WgpuSplatSorter</code> compacts and sorts them in the same frame, and the draw is indirect. Nothing is read back, so a new collection or camera draws in the same render.</li>
+<li><code>sortMode: &quot;cpu&quot;</code> (WebGL2, or chosen on WebGPU): the applied order of the render's view, which draws the collection that order was sorted for. Nothing is drawn until an order is applied; <code>autoSort</code> sorts and applies orders by itself (<a href="views.html">Views and CPU orders</a>).</li>
+</ul></li>
+<li><strong>Draws</strong> every visible splat as a quad, in one draw call (<a href="projection.html#the-draw">Projection</a>). Colors are clamped at 0 there: stored colors may be negative (LoD merges and spherical harmonics leave them so), and a negative one would decode to NaN or darken a float target.</li>
+</ol>
+<p>With the GPU sort nothing depends on the camera between renders, so one renderer draws any number of cameras, viewports, and render targets. Changes take effect at the next render: set <code>collection</code> to change what is drawn, and the settings to change how.</p>
+<h2 id="splatobject">SplatObject<a class="anchor" href="#splatobject">#</a></h2>
+<p>One thing to draw: <code>count</code> splats of a generator, placed in the world by <code>matrixWorld</code>.</p>
+<table><thead><tr><th>Field</th><th>What it is</th></tr></thead><tbody><tr><td><code>generator</code></td><td>the <code>SplatGenerator</code> that makes each splat: a reader of stored splats, or TSL code (<a href="generators.html">Generators and modifiers</a>)</td></tr><tr><td><code>data</code></td><td>what <code>generator.bind</code> receives before this object's dispatch (with the generator context): <code>{ splats, indices?, shPalette? }</code> for <code>fromSplats</code>, anything for an app's own generator, or nothing</td></tr><tr><td><code>count</code></td><td>the number of splats; always given</td></tr><tr><td><code>matrixWorld</code></td><td>the object's world transform (object to world): a <code>Matrix4</code> such as an <code>Object3D</code>'s <code>matrixWorld</code>, or a function returning one; read every render. Default: the identity</td></tr><tr><td><code>params</code></td><td>object params over the view's and the renderer's (<code>Partial&lt;SplatObjectParams&gt;</code>; <a href="params.html">Params</a>)</td></tr><tr><td><code>release</code></td><td>runs once this object is in no live collection of any renderer: free what the object owns there (<a href="lifetimes.html#object-releases">Lifetimes</a>)</td></tr></tbody></table>
+<p>A collection locks <code>generator</code>, <code>data</code>, and <code>count</code> on the object itself (they become read-only properties). <code>matrixWorld</code>, <code>params</code>, and <code>release</code> stay live and can be reassigned at any time. When the same thing is drawn in several collections, views, or renderers, list the same object in each.</p>
+<p>Matrices made of a rotation and a uniform scale take the fast path. Any other matrix (a non-uniform scale, a shear, a mirror) is applied to each splat's covariance, without compiling anything new (<a href="generators.html#transforms">Generators and modifiers</a>).</p>
+<h2 id="splatcollection">SplatCollection<a class="anchor" href="#splatcollection">#</a></h2>
+<p>An immutable, ordered list of objects: which splats to draw.</p>
+<pre class="lang-ts"><code>const collection = new SplatCollection([
+  // Stored splats
+  SplatCollection.arrays(fileA, { matrixWorld: a.matrixWorld }),
+  SplatCollection.arrays(fileB, {
+    matrixWorld: b.matrixWorld,
+    params: { blurAmount: 0 },
+  }),
+  // Splats made in a shader
+  { generator: ring, count: 4000, matrixWorld: ringObject.matrixWorld },
+]);</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>new SplatCollection(objects)</code></td><td>a collection of objects, in order; locks each object's <code>generator</code>, <code>data</code>, and <code>count</code></td></tr><tr><td><code>objects</code></td><td>the objects as <code>MappedObject</code>s: <code>{ object, offset }</code>, where <code>offset</code> is the object's first splat in the projected arrays</td></tr><tr><td><code>count</code></td><td>splats in all</td></tr><tr><td><code>SplatCollection.arrays(arrays, rest?)</code></td><td>an object for splat arrays, drawn with their spherical harmonics. It uses one shared generator per kind (<code>SplatGenerator.forArrays</code>), so every file of a kind runs one program. <code>count</code> defaults to <code>arrays.count</code>. <code>rest</code> sets <code>matrixWorld</code>, <code>params</code>, <code>release</code>, <code>count</code>, <code>sh</code> (caps the degree; 0 or <code>false</code>: no SH), and <code>shPalette</code> (an SH palette's arrays, <a href="sh.html">Spherical harmonics</a>)</td></tr><tr><td><code>SplatCollection.object(object)</code></td><td>returns the object unchanged, but checks its <code>data</code> against its generator's type at compile time</td></tr><tr><td><code>SplatCollection.matrixWorldOf(object)</code></td><td>the object's world transform this render, or the identity</td></tr><tr><td><code>SplatCollection.EMPTY</code></td><td>the empty collection (a renderer's default)</td></tr></tbody></table>
+<p><strong>A collection object is a version.</strong> A change in which objects it lists, their order, or their counts needs a new collection. Matrices and params are not part of it: moving an object never needs a new collection. On the CPU sort an order indexes the projected splats of one exact collection, which is why collections are immutable (<a href="multi-splat.html#6-webgl2-has-no-compute-shaders-so-its-sort-arrives-late">Multi-splat design</a>).</p>
+<p>Types: <code>SplatObject&lt;Data&gt;</code>, <code>AnySplatObject</code> (an object of any data), and <code>MappedObject</code>.</p>
+<h2 id="splatrenderer">SplatRenderer<a class="anchor" href="#splatrenderer">#</a></h2>
+<pre class="lang-ts"><code>const splatRenderer = new SplatRenderer({
+  renderer,
+  collection,
+  method: &quot;ewa&quot;,
+  objectParams: { blurAmount: 0.2 },
+});</code></pre>
+<table><thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>renderer</code></td><td></td><td>the <code>WebGPURenderer</code> (from <code>createRenderer</code>)</td></tr><tr><td><code>collection</code></td><td><code>SplatCollection.EMPTY</code></td><td>what every viewpoint draws unless its view sets its own</td></tr><tr><td><code>method</code></td><td><code>&quot;ewa&quot;</code></td><td><code>&quot;ewa&quot;</code>, <code>&quot;3dgut&quot;</code>, <code>&quot;htgs&quot;</code>, or <code>&quot;raygs&quot;</code> (<code>ProjectionMethod</code>; <a href="projection.html#methods">Projection</a>)</td></tr><tr><td><code>sortBits</code></td><td>24</td><td>sort key bits: 16, 24, or 32 (<a href="sorting.html#sort-keys">Sorting</a>)</td></tr><tr><td><code>params</code></td><td><a href="params.html">the defaults</a></td><td>the view params every splat of a render shares (<code>maxStdDev</code>, <code>minAlpha</code>, <code>falloff</code>); given fields override the defaults</td></tr><tr><td><code>objectParams</code></td><td><a href="params.html">the defaults</a></td><td>the object param defaults; given fields override them</td></tr><tr><td><code>modifier</code>, <code>covModifier</code></td><td>none</td><td>a TSL function run on every splat, in splat or covariance form (<a href="generators.html#modifiers">Generators and modifiers</a>)</td></tr><tr><td><code>modifierSpace</code></td><td><code>&quot;view&quot;</code></td><td>where the modifier runs: <code>&quot;view&quot;</code>, <code>&quot;world&quot;</code>, <code>&quot;object&quot;</code>, or a <code>Matrix4</code> (a frame's <code>matrixWorld</code>)</td></tr><tr><td><code>sortMode</code></td><td><code>&quot;gpu&quot;</code> on WebGPU, else <code>&quot;cpu&quot;</code></td><td>the GPU sort every render, or each view's applied CPU order</td></tr><tr><td><code>autoSort</code></td><td><code>{ distance: 0, angle: 0 }</code></td><td>the CPU sort's automatic loop, or <code>false</code> (<a href="views.html#autosort">Views and CPU orders</a>)</td></tr><tr><td><code>sortWorker</code></td><td><code>SplatRenderer.sortPool</code></td><td>a <code>WorkerPool</code> or <code>WorkerLease</code> for CPU sorts (<a href="sorting.html#the-cpu-sort">Sorting</a>)</td></tr><tr><td><code>viewKey</code></td><td><code>(camera) =&gt; camera</code></td><td>the key of the view a render from a camera draws (<a href="views.html#view-keys">Views and CPU orders</a>)</td></tr><tr><td><code>onInvalidate</code></td><td>none</td><td><code>(view?) =&gt; void</code>, called when Radix has something new to show (<a href="lifetimes.html#on-demand-rendering">Lifetimes</a>)</td></tr></tbody></table>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>collection</code>, <code>method</code>, <code>sortBits</code>, <code>modifier</code>, <code>covModifier</code>, <code>modifierSpace</code>, <code>autoSort</code>, <code>sortWorker</code>, <code>viewKey</code>, <code>onInvalidate</code></td><td>the options above, settable at any time</td></tr><tr><td><code>params</code>, <code>objectParams</code></td><td>complete objects, changed in place: <code>splatRenderer.objectParams.blurAmount = 0.5</code></td></tr><tr><td><code>sortMode</code></td><td>settable; switching to <code>&quot;gpu&quot;</code> drops every view's orders</td></tr><tr><td><code>viewFor(key, options?)</code></td><td>the view of <code>key</code>, made on first use; <code>options</code> are set on it (<a href="views.html">Views and CPU orders</a>)</td></tr><tr><td><code>views</code></td><td>the views made so far, by key (a <code>ReadonlyMap</code>)</td></tr><tr><td><code>view</code></td><td>the view every render draws, when set (for example one XR head drawn through several cameras)</td></tr><tr><td><code>requestSort()</code></td><td>sort every view again at its next render, and call <code>onInvalidate()</code> (CPU sort)</td></tr><tr><td><code>prepare(camera)</code></td><td>projects and sorts for <code>camera</code> now, outside a render; the next render draws that instead of projecting again. Use it to keep WebGL2 timer queries from nesting</td></tr><tr><td><code>phase</code></td><td><code>(name, run) =&gt; run()</code> wrapper for the <code>&quot;project&quot;</code> and <code>&quot;sort&quot;</code> steps, for example <code>GpuProfiler.phase</code></td></tr><tr><td><code>readSortedCount()</code></td><td>the GPU sort's visible count of the latest render (a readback)</td></tr><tr><td><code>dispose()</code></td><td>frees the renderer's arrays, sorter, material, and views, and releases objects only it held</td></tr><tr><td><code>SplatRenderer.sortPool</code></td><td>static: the <code>WorkerPool</code> every renderer's CPU sorts share, all views of all renderers without a <code>sortWorker</code>. Made on first use, starting workers as sorts need them; it lives with the page</td></tr><tr><td><code>SplatRenderer.sortWorkers</code></td><td>static: the shared pool's size, 4 by default. It is read when the pool is made, at the first CPU sort, so set it before then</td></tr></tbody></table>
+<p>The settings a render uses resolve field by field: the view's when it sets one, else the renderer's (<a href="views.html#how-settings-resolve">Views and CPU orders</a>). <code>method</code> and <code>sortMode</code> belong to the renderer only, because the method decides the projected arrays and the draw material. Drawing with two methods takes two renderers.</p>
+<h2 id="several-renderers">Several renderers<a class="anchor" href="#several-renderers">#</a></h2>
+<p>Two renderers drawn in one render each keep their own projected splats and sorter, because a frame's compute runs before its draws: shared buffers would draw the second renderer's results twice. The quad index buffer, the param uniforms, and the program cache are shared. Splats of different renderers are not sorted together, so use one renderer for everything that overlaps.</p>
+<h2 id="gotchas">Gotchas<a class="anchor" href="#gotchas">#</a></h2>
+<ul>
+<li>Each renderer sorts only its own splats: objects that overlap must be in the same renderer's collection to blend correctly.</li>
+<li>A collection made per frame is fine on WebGPU, but on the CPU sort each new collection needs a new sort before it shows. Make a new collection only when the set of objects changes.</li>
+<li><code>frustumCulled</code> is off: the projection culls splats itself.</li>
+<li>Splats are depth tested against what is drawn before them (opaque meshes) but write no depth. Each quad sits at its splat center's depth, so a splat crossing a mesh is hidden or shown whole. That depth is stored in steps of 1.5e-5 to 3e-5 of the distance (<a href="projection.html#words">Projection</a>), and works the same with a logarithmic depth buffer (<code>createRenderer({ logarithmicDepthBuffer: true })</code>).</li>
+<li><code>dispose()</code> renderers you no longer need. A renderer that is garbage-collected undisposed logs a warning, and its objects are released at that point.</li>
+</ul>
+<div class="pager"><a class="prev" href="recipes.html"><small>Previous</small>Recipes</a><a class="next" href="params.html"><small>Next</small>Params</a></div>
+<p class="source">Source: <a href="../rendering.md">docs/rendering.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#what-a-render-does">What a render does</a>
+<a class="h2" href="#splatobject">SplatObject</a>
+<a class="h2" href="#splatcollection">SplatCollection</a>
+<a class="h2" href="#splatrenderer">SplatRenderer</a>
+<a class="h2" href="#several-renderers">Several renderers</a>
+<a class="h2" href="#gotchas">Gotchas</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

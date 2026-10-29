@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The renderer · Radix docs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<!-- Generated from docs/renderer.md by scripts/build-docs.mjs; edit the .md -->
+<body data-root="../" data-page="ref/renderer.html">
+<div class="ref">
+<nav class="ref-side">
+<h4>Start here</h4><a href="overview.html">Overview</a><a href="quickstart.html">Quickstart</a><a href="concepts.html">Concepts</a><a href="recipes.html">Recipes</a>
+<h4>Drawing splats</h4><a href="rendering.html">Rendering</a><a href="params.html">Params</a><a href="generators.html">Generators and modifiers</a><a href="views.html">Views and CPU orders</a><a href="sorting.html">Sorting</a><a href="lifetimes.html">Lifetimes</a><a href="xr.html">WebXR and stereo</a><a href="controls.html">Camera controls</a>
+<h4>Data and files</h4><a href="arraydata.html">ArrayData</a><a href="splats.html">Splats</a><a href="encoding.html">Encodings</a><a href="sh.html">Spherical harmonics</a><a href="files.html">Splat files</a><a href="rdx.html">RDX files</a><a href="workers.html">Workers</a>
+<h4>GPU</h4><a href="renderer.html" class="on">The renderer</a><a href="gpu-arrays.html">GPU arrays</a><a href="shaders.html">Shaders</a><a href="wgpu.html">WebGPU compute</a>
+<h4>Internals and design</h4><a href="projection.html">Projection</a><a href="multi-splat.html">Multi-splat design</a><a href="performance.html">Performance</a>
+<h4>Reference</h4><a href="api.html">API index</a><a href="checks.html">Checks</a>
+</nav>
+<main class="doc">
+<h1 id="the-renderer">The renderer<a class="anchor" href="#the-renderer">#</a></h1>
+<p><code>createRenderer</code> returns an initialized three.js <code>WebGPURenderer</code> set up the way Radix expects: WebGPU when the browser has it and the WebGL2 backend otherwise, with the device limits that about 95% of devices support. This page also covers <code>getGpuCaps</code>, HDR output (<code>Hdr</code>), and GPU timing (<code>GpuProfiler</code>).</p>
+<p>Code: <a href="../../src/gpu/createRenderer.ts"><code>src/gpu/createRenderer.ts</code></a>, <code>baseline.ts</code>, <code>hdr.ts</code>, and <code>GpuProfiler.ts</code>.</p>
+<pre class="lang-ts"><code>const renderer = await createRenderer({ antialias: false });
+const caps = getGpuCaps(renderer);
+console.log(caps.backend); // &quot;webgpu&quot; or &quot;webgpu-gl&quot;</code></pre>
+<p>Shaders in Radix are written in TSL (three.js Shading Language) only, with no raw WGSL or GLSL, so the same code runs on both backends (<a href="shaders.html">Shaders</a>).</p>
+<h2 id="createrenderer">createRenderer<a class="anchor" href="#createrenderer">#</a></h2>
+<p>An option passed to the call takes precedence over its URL parameter. An option left out comes from its URL parameter, or else from its default. A page that wants its own default and still wants the URL to override it reads the parameter and passes the value itself.</p>
+<table><thead><tr><th>Option</th><th>URL</th><th>Default</th><th>What it does</th></tr></thead><tbody><tr><td><code>backend</code></td><td><code>?gpu=webgpu | webgpu-gl</code></td><td><code>&quot;auto&quot;</code></td><td><code>&quot;webgpu&quot;</code>, <code>&quot;webgpu-gl&quot;</code> (the WebGL2 backend), or <code>&quot;auto&quot;</code>: WebGPU when available</td></tr><tr><td><code>canvas</code></td><td></td><td>a new canvas</td><td>the canvas to draw into</td></tr><tr><td><code>antialias</code></td><td></td><td>three's default</td><td>MSAA</td></tr><tr><td><code>hdr</code></td><td><code>?hdr=1 | auto</code></td><td>off</td><td>an rgba16float canvas with extended tone mapping (WebGPU): <code>true</code>, <code>&quot;auto&quot;</code> (when the display reports high dynamic range), or <code>false</code>. <code>getGpuCaps(renderer).hdr</code> tells whether it was enabled</td></tr><tr><td><code>profile</code></td><td><code>?profile=1</code></td><td>off</td><td>timestamp queries plus a <code>GpuProfiler</code> as <code>renderer.inspector</code></td></tr><tr><td><code>timing</code></td><td><code>?timing=1</code></td><td>off</td><td>timestamp queries only</td></tr><tr><td><code>multiview</code></td><td><code>?multiview=1</code></td><td>off</td><td>both XR eyes in one draw where supported (<code>OVR_multiview2</code> on WebGL2)</td></tr><tr><td><code>directCanvas</code></td><td><code>?direct=0</code></td><td>on</td><td>draws straight to the canvas, without three's linear target and output pass: materials write sRGB-encoded colors themselves</td></tr><tr><td><code>xr</code></td><td></td><td>off</td><td>enables <code>renderer.xr</code> before init: the WebGPU adapter must be requested XR-compatible for the WebXR / WebGPU binding</td></tr><tr><td><code>limits</code></td><td></td><td></td><td>WebGPU limits added to or replacing the baselines below: a number (capped at the adapter's) or <code>&quot;adapter&quot;</code> for the adapter's full limit (<code>LimitRequest</code>)</td></tr><tr><td><code>logarithmicDepthBuffer</code></td><td></td><td>off</td><td>a logarithmic depth buffer, for scenes from centimeters to kilometers. Splats get it too: three derives a material's depth from its clip-space position when it has its own vertex shader</td></tr></tbody></table>
+<ul>
+<li>If WebGPU was asked for (<code>?gpu=webgpu</code>) and device creation fails, three falls back to WebGL2 by itself and Radix logs a warning.</li>
+<li>On WebGL2, timer queries cannot nest, so only <code>profile</code> keeps them (its phases render outside the frame's passes); <code>timing</code> alone has no effect there.</li>
+<li>On WebGL2, <code>createRenderer</code> enables <code>EXT_color_buffer_float</code> (float render targets and readback; it warns when the extension is missing) and <code>EXT_float_blend</code>, and logs which parameters fall below the WebGL2 baseline.</li>
+</ul>
+<h2 id="device-baselines">Device baselines<a class="anchor" href="#device-baselines">#</a></h2>
+<p>On WebGPU, <code>createRenderer</code> asks for these limits above WebGPU's defaults. Each is capped at what the adapter offers, so the request never fails. Each value is met by about 95% of devices or more (web3dsurvey.com, Sep 2026). Design WebGPU code against these, not against the development machine.</p>
+<table><thead><tr><th>Limit</th><th>Default</th><th>Baseline</th></tr></thead><tbody><tr><td><code>maxTextureDimension1D</code>, <code>maxTextureDimension2D</code></td><td>8192</td><td>16384</td></tr><tr><td><code>maxTextureArrayLayers</code></td><td>256</td><td>2048</td></tr><tr><td><code>maxBufferSize</code></td><td>256 MiB</td><td>1 GiB</td></tr><tr><td><code>maxStorageBufferBindingSize</code></td><td>128 MiB</td><td>256 MiB (98%; 1 GiB: 92%)</td></tr><tr><td><code>maxComputeWorkgroupStorageSize</code></td><td>16 KiB</td><td>32 KiB</td></tr><tr><td><code>maxColorAttachmentBytesPerSample</code></td><td>32</td><td>64</td></tr><tr><td><code>maxStorageBuffersPerShaderStage</code>, <code>...InVertexStage</code>, <code>...InFragmentStage</code></td><td>8</td><td>10</td></tr></tbody></table>
+<p>Kept at the default because the next tier is under 95%: 4 storage textures per stage, 256 compute invocations per workgroup, 16 sampled textures per stage, 16 inter-stage variables, 4 bind groups. Optional features at or above 95%: <code>timestamp-query</code>, <code>indirect-first-instance</code>, <code>depth32float-stencil8</code>, <code>rg11b10ufloat-renderable</code>, <code>depth-clip-control</code>, and <code>bgra8unorm-storage</code>; <code>shader-f16</code>, <code>float32-filterable</code>, <code>float32-blendable</code>, <code>subgroups</code>, and texture compression need a fallback.</p>
+<p>WebGL2 parameters to design against: 8192 texture size, 512 array layers, 4 draw buffers, 16 texture units per stage, 16 KiB uniform blocks, 15 varying vectors, 16 vertex attributes, and 4 MSAA samples. <code>snorm8</code> is not renderable there (<code>EXT_render_snorm</code> is at 80%).</p>
+<h2 id="getgpucaps">getGpuCaps<a class="anchor" href="#getgpucaps">#</a></h2>
+<p><code>getGpuCaps(renderer)</code> returns a <code>GpuCaps</code>:</p>
+<table><thead><tr><th>Field</th><th>WebGPU</th><th>WebGL2</th></tr></thead><tbody><tr><td><code>backend</code></td><td><code>&quot;webgpu&quot;</code></td><td><code>&quot;webgpu-gl&quot;</code></td></tr><tr><td><code>compute</code></td><td><code>true</code></td><td><code>false</code></td></tr><tr><td><code>maxTextureSize</code>, <code>maxTextureLayers</code>, <code>maxColorAttachments</code></td><td>the device's limits</td><td>the context's parameters</td></tr><tr><td><code>maxTexturesPerStage</code></td><td>sampled textures per stage</td><td>the smaller of fragment and vertex texture units</td></tr><tr><td><code>maxStorageTexturesPerStage</code>, <code>maxStorageBuffersPerStage</code>, <code>maxWorkgroupStorage</code></td><td>the device's limits</td><td>0</td></tr><tr><td><code>float32Blendable</code>, <code>float32Filterable</code></td><td>the features</td><td><code>EXT_float_blend</code>, <code>OES_texture_float_linear</code></td></tr><tr><td><code>subgroups</code></td><td>the feature</td><td><code>false</code></td></tr><tr><td><code>multiview</code></td><td><code>&quot;webgpu&quot;</code> or <code>false</code></td><td><code>&quot;ovr&quot;</code> or <code>false</code></td></tr><tr><td><code>hdr</code></td><td><code>Hdr.canvasSupports(renderer)</code></td><td><code>false</code></td></tr></tbody></table>
+<p>Types: <code>GpuBackend</code> (<code>&quot;webgpu&quot; | &quot;webgpu-gl&quot;</code>), <code>CreateRendererOptions</code>, <code>LimitRequest</code>, and <code>GpuCaps</code>.</p>
+<h2 id="hdr-output">HDR output<a class="anchor" href="#hdr-output">#</a></h2>
+<p>HDR output has two independent parts:</p>
+<ul>
+<li><strong>The HDR canvas</strong> (WebGPU only): <code>createRenderer({ hdr })</code> configures an rgba16float canvas with extended tone mapping, so values above 1 show brighter than SDR white on HDR displays (Chrome 129+). The canvas stays sRGB-encoded, so colors drawn to it blend as on an SDR canvas.</li>
+<li><strong>Headroom tone mapping</strong> (both backends): <code>Hdr.useToneMapping(renderer)</code> renders into three's float frame target and compresses the finished frame into <code>[0, headroom]</code> in its output pass. Values below the knee are unchanged, values above it follow a smooth shoulder, and colors past the headroom fade to white instead of clipping per channel. Headroom 1 is SDR tone mapping.</li>
+</ul>
+<pre class="lang-ts"><code>const renderer = await createRenderer({ hdr: &quot;auto&quot; });
+// Headroom 4 on an HDR canvas, else 1
+const tone = Hdr.useToneMapping(renderer);
+
+// Uniforms: change them any time
+tone.headroom.value = settings.headroom;
+// Restores three's tone mapping
+tone.enabled = false;</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>Hdr.displaySupports()</code></td><td>whether the display reports high dynamic range</td></tr><tr><td><code>Hdr.canvasSupports(renderer)</code></td><td>whether the canvas can show the extended range (WebGPU, an rgba16float canvas, and a browser that kept the extended mode)</td></tr><tr><td><code>Hdr.setOutput(renderer, extended)</code></td><td>switches an HDR canvas between extended and standard range without recreating anything; <code>false</code> when the canvas cannot</td></tr><tr><td><code>Hdr.useToneMapping(renderer, { headroom?, knee?, whiten?, enabled? })</code></td><td>the renderer's tone mapping (one per renderer; later calls return it with the options applied). Returns an <code>HdrToneMapping</code></td></tr><tr><td><code>HdrToneMapping.headroom</code></td><td>the brightest linear value the output may reach: 1 for SDR, the display's headroom otherwise (a uniform; default 4 on an HDR canvas, else 1)</td></tr><tr><td><code>HdrToneMapping.knee</code></td><td>the fraction of the headroom kept unchanged before the shoulder (a uniform; default 0.75)</td></tr><tr><td><code>HdrToneMapping.whiten</code></td><td>how fast colors past the headroom fade to white; 0 never (a uniform; default 0.5)</td></tr><tr><td><code>HdrToneMapping.exposure</code></td><td><code>renderer.toneMappingExposure</code></td></tr><tr><td><code>HdrToneMapping.enabled</code></td><td>turns the pass on and off; on sets <code>toneMapping</code> and an sRGB output color space, off restores the previous ones</td></tr></tbody></table>
+<p>Splats blend sRGB-encoded colors, as they were trained. The tone mapping pass decodes them first, and three encodes its result, so below the knee the frame is the same as without tone mapping. There is no web API for a display's actual headroom yet; pick one (about 2 to 8 on current HDR laptops and monitors) or make it a setting.</p>
+<h2 id="gpuprofiler">GpuProfiler<a class="anchor" href="#gpuprofiler">#</a></h2>
+<p><code>GpuProfiler</code> records GPU and CPU milliseconds per named phase. GPU times come from three's timestamp queries (WebGPU <code>timestamp-query</code>, or <code>EXT_disjoint_timer_query_webgl2</code> on WebGL2); CPU times wrap the phase's code. <code>createRenderer({ profile: true })</code> installs one as <code>renderer.inspector</code>.</p>
+<pre class="lang-ts"><code>const profiler = renderer.inspector as GpuProfiler;
+// &quot;project&quot; and &quot;sort&quot; get their own rows
+splatRenderer.phase = (name, run) =&gt; profiler.phase(name, run);
+
+renderer.setAnimationLoop(async () =&gt; {
+  profiler.beginFrame();
+  profiler.label = &quot;draw&quot;;
+  renderer.render(scene, camera);
+  // ms per phase, averaged; undefined if nothing resolved
+  const report = await profiler.collect();
+  // &quot;GPU draw 2.31, project 0.09 | CPU ... ms&quot;
+  if (report) console.log(GpuProfiler.format(report));
+});</code></pre>
+<table><thead><tr><th>Member</th><th>What it does</th></tr></thead><tbody><tr><td><code>beginFrame()</code></td><td>starts a frame; times are averaged over frames</td></tr><tr><td><code>label</code></td><td>the phase of the passes recorded from now on (default <code>&quot;other&quot;</code>)</td></tr><tr><td><code>phase(name, fn)</code></td><td>runs <code>fn</code> with its passes labeled <code>name</code>, and records its CPU time</td></tr><tr><td><code>mark(name, ms)</code></td><td>records CPU milliseconds for a phase, such as an async worker round trip</td></tr><tr><td><code>collect()</code></td><td>resolves pending queries: a <code>GpuProfile</code> (<code>gpu</code> and <code>cpu</code>: ms per phase per frame; <code>frames</code>: resolved frames), or <code>undefined</code> when nothing new resolved</td></tr><tr><td><code>GpuProfiler.format(profile)</code></td><td>one line of text, phases sorted by time</td></tr><tr><td><code>active</code></td><td>whether the renderer tracks timestamps; settable between frames (not inside a render: WebGL2 timer queries must end as they began). CPU phases are timed either way</td></tr><tr><td><code>supported</code></td><td>whether the device has timestamp queries</td></tr></tbody></table>
+<p>Timestamps resolve a frame or two late. Chrome quantizes them to 100 µs unless WebGPU developer features are on (<code>--enable-webgpu-developer-features</code>).</p>
+<div class="pager"><a class="prev" href="workers.html"><small>Previous</small>Workers</a><a class="next" href="gpu-arrays.html"><small>Next</small>GPU arrays</a></div>
+<p class="source">Source: <a href="../renderer.md">docs/renderer.md</a></p>
+</main>
+<nav class="ref-toc">
+<h4>On this page</h4>
+<a class="h2" href="#createrenderer">createRenderer</a>
+<a class="h2" href="#device-baselines">Device baselines</a>
+<a class="h2" href="#getgpucaps">getGpuCaps</a>
+<a class="h2" href="#hdr-output">HDR output</a>
+<a class="h2" href="#gpuprofiler">GpuProfiler</a>
+</nav>
+</div>
+<script src="../site.js"></script>
+</body>
+</html>

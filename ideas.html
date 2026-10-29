@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix: design ideas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cellipse cx='6' cy='8' rx='5' ry='3' fill='%23f472b6' transform='rotate(-30 6 8)'/%3E%3Cellipse cx='10' cy='8' rx='5' ry='3' fill='%232dd4bf' fill-opacity='.8' transform='rotate(30 10 8)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+<style>
+.hero { height: auto; min-height: calc(72vh - var(--top)); }
+.hero h1 { font-size: clamp(46px, 8vw, 96px); background: linear-gradient(120deg, #fff, var(--core) 40%, var(--gpu) 70%, var(--pink)); -webkit-background-clip: text; background-clip: text; }
+section { padding-top: 70px; }
+.idea { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 26px; align-items: start; }
+@media (max-width: 860px) { .idea { grid-template-columns: 1fr; } }
+.idea .panel { margin: 0; }
+canvas.fig { height: 220px; }
+
+/* 1. Twin tables */
+.twin { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rows { font: 11px var(--mono); }
+.rows div { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 3px; margin: 2px 0; cursor: pointer; }
+.rows span { padding: 3px 5px; border-radius: 4px; background: #ffffff08; }
+.rows div.on span { background: var(--core); color: #0a0c11; }
+.rows .i { color: var(--faint); background: none !important; }
+.tex { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.tex span { aspect-ratio: 1; border-radius: 3px; background: #ffffff0c; display: grid; place-items: center; font: 9px var(--mono); color: var(--faint); }
+.tex span.on { background: var(--gpu); color: #0a0c11; }
+.tex + .small { margin-top: 6px; }
+
+/* 2. Words */
+.word { display: flex; align-items: stretch; margin: 6px 0; gap: 10px; }
+.word .wl { width: 56px; font: 12px var(--mono); color: var(--dim); display: flex; align-items: center; }
+.word .wb { flex: 1; display: flex; height: 34px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+.word .f { display: flex; align-items: center; justify-content: center; font: 10.5px/1.1 var(--mono); color: #0a0c11; border-right: 1px solid #0a0c1155; cursor: help; text-align: center; overflow: hidden; padding: 0 2px; }
+.word .f:hover { filter: brightness(1.25); }
+#wordInfo { min-height: 44px; font-size: 14px; color: #cfd4df; margin-top: 8px; }
+
+/* 4. Projected words */
+.bytes { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 10px; }
+.bytes span { width: 34px; height: 30px; border-radius: 5px; display: grid; place-items: center; font: 10px var(--mono); color: #0a0c11; }
+
+/* 5. Keys */
+.bits { font: 12px var(--mono); display: flex; flex-wrap: wrap; gap: 1px; margin: 4px 0 10px; }
+.bits span { width: 13px; text-align: center; border-radius: 2px; padding: 2px 0; background: #ffffff0c; color: var(--faint); }
+.bits span.one { background: var(--wgpu); color: #0a0c11; }
+.bits span.off { opacity: .25; }
+.keyrow { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; }
+.keyrow .lbl { font: 12px var(--mono); color: var(--dim); }
+
+/* 7. Views */
+.resolve { font: 13px var(--mono); width: 100%; border-collapse: collapse; }
+.resolve td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.resolve td.from { color: var(--dim); font-size: 11px; text-align: right; }
+.resolve tr.own td { color: var(--yellow); }
+
+/* 8. Backends */
+.lanes { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; align-items: center; font: 12px var(--mono); }
+.lanes .who { color: var(--dim); }
+.lanes .track { display: flex; gap: 3px; }
+.lanes .track span { flex: 1; height: 28px; border-radius: 6px; display: grid; place-items: center; color: #0a0c11; font-size: 11px; }
+</style>
+</head>
+<body data-root="" data-page="ideas.html">
+<div id="progress"></div>
+<nav id="nav"></nav>
+
+<header class="hero" id="top">
+  <div class="inner">
+    <h1>Design ideas</h1>
+    <p class="lead">Eight design ideas in Radix. Each has a small interactive example and a link to the page that covers it in full.</p>
+    <p class="small">About eight minutes. For the classes and how they connect, see <a href="model.html">how the classes fit together</a>.</p>
+  </div>
+</header>
+
+<section id="twins" data-title="Twin tables">
+  <div class="eyebrow">Idea 1</div>
+  <h2>One table, on the CPU and the GPU</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">Radix stores all its data in tables: rows of elements, and columns of typed-array channels grouped into named bundles. The GPU holds the same table in textures, one per channel, so row <i>i</i> on the CPU is row <i>i</i> on the GPU, with the same bits.</p>
+      <p>A table can be sent to a worker without a copy, saved to a file chunk by chunk, and uploaded to the GPU unchanged. Code on each side reads it with twin classes: <code>Splats</code> on the CPU and <code>GpuSplats</code> in shaders have the same method names and the same bits.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="twin">
+        <div><div class="small" style="margin-bottom: 6px">ArrayData (CPU): click a row</div><div class="rows" id="cpuRows"></div></div>
+        <div><div class="small" style="margin-bottom: 6px">GpuArrays (a channel's texture)</div><div class="tex" id="gpuTex"></div><div class="small" id="texAt"></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/arraydata.html">ArrayData</a> <a href="ref/gpu-arrays.html">GPU arrays</a> <a href="data.html">The data</a></p>
+</section>
+
+<section id="bytes" data-title="32 bytes">
+  <div class="eyebrow">Idea 2</div>
+  <h2>A splat in 32 bytes</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">A splat is a center, three scales, a rotation, a color, and an opacity, plus a normal, roughness, and metallic for lighting. Radix's ext layout stores all of these in two 128-bit words.</p>
+      <p>The center is float32. The rotation is stored as an axis and an angle, which keeps small rotations precise. Color has a shared exponent, so it can hold HDR values and the negative values that merged LoD nodes produce. For large files, the packed layout uses 16 bytes per splat.</p>
+    </div>
+    <div class="panel reveal">
+      <div id="words"></div>
+      <div id="wordInfo">Hover a field.</div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/splats.html#layouts">Layouts</a> <a href="ref/encoding.html">Encodings</a></p>
+</section>
+
+<section id="generators" data-title="Generators">
+  <div class="eyebrow">Idea 3</div>
+  <h2>Splats from generators</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">The projection shader gets each splat <i>i</i> from a generator. Stored splats from a file are read by one generator; a subset of a file through an index list uses the same generator with different data; a formula is another generator.</p>
+      <p>Programs are cached by generator, and data is bound per object, so a new file or a new subset compiles no new program. A generator can also read a simulation's particle buffers directly, without copying them into a splat array.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="chips" id="genKind"></div>
+      <canvas class="fig" id="genCanvas" style="margin-top: 10px"></canvas>
+      <pre id="genCode" style="margin-bottom: 0"></pre>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/generators.html">Generators and modifiers</a> <a href="ref/recipes.html#a-subset-chosen-per-camera">A subset per camera</a></p>
+</section>
+
+<section id="words2" data-title="Words">
+  <div class="eyebrow">Idea 4</div>
+  <h2>Project once, into a few words</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">Each render projects every splat for the camera into a few 32-bit words, holding what the draw needs to place and shade its quad, and a sort key. The draw only decodes these words.</p>
+      <p>The values both eyes of an XR frame share are computed once from the head, and each eye adds only its 2D bound. Stereo adds words per splat, but there is still one projection pass and one sort for both eyes.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="chips" id="method"></div>
+      <div class="chips" id="eyes" style="margin-top: 8px"></div>
+      <div class="bytes" id="byteRow"></div>
+      <div class="small" id="byteNote" style="margin-top: 8px"></div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/projection.html#words">Words</a> <a href="ref/xr.html#head-and-eyes">Head and eyes</a></p>
+</section>
+
+<section id="keys" data-title="Sort keys">
+  <div class="eyebrow">Idea 5</div>
+  <h2>Sort keys from distances</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">Splats blend back to front, so each gets a sort key: its distance from the head as the bits of a float, inverted so that ascending keys run from far to near. Distances from the head stay valid as the head turns, which depths along the view direction do not.</p>
+      <p>The key width is a setting. 24 bits (the default) orders splats more than about 0.0015% of their distance apart, in three GPU radix passes. 32 bits keeps the full float, in four passes. 16 bits ties splats within 0.1%, in two passes.</p>
+    </div>
+    <div class="panel reveal">
+      <label class="ctl">distance <input type="range" id="dist" min="-6" max="8" step="0.01" value="1.2"><output id="distOut"></output></label>
+      <div class="keyrow"><span class="lbl">float32</span><div class="bits" id="fbits"></div></div>
+      <div class="keyrow"><span class="lbl">32-bit</span><div class="bits" id="k32"></div></div>
+      <div class="keyrow"><span class="lbl">24-bit</span><div class="bits" id="k24"></div></div>
+      <div class="keyrow"><span class="lbl">16-bit</span><div class="bits" id="k16"></div></div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/sorting.html#sort-keys">Sort keys</a> <a href="pipeline.html">The pipeline</a></p>
+</section>
+
+<section id="together" data-title="One sort">
+  <div class="eyebrow">Idea 6</div>
+  <h2>Sorting all objects together</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">Two splat objects drawn in two draw calls, each sorted on its own, blend wrongly where they overlap: one is painted over the other even where their splats interleave in depth.</p>
+      <p>A renderer projects all objects of its collection into one set, each with its own transform, and sorts them as one list. Any mix of files, subsets, and generated splats then blends correctly, in one draw call.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="chips" id="blend"></div>
+      <canvas class="fig" id="blendCanvas" style="margin-top: 10px"></canvas>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/rendering.html#splatcollection">SplatCollection</a> <a href="multi-splat.html">Drawing many objects</a></p>
+</section>
+
+<section id="views" data-title="Views">
+  <div class="eyebrow">Idea 7</div>
+  <h2>One renderer, many viewpoints</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">A renderer holds the settings that all viewpoints share. A view holds only what one viewpoint changes, such as its own subset of objects, its own blur, or no modifier. Each field the view leaves unset comes from the renderer.</p>
+      <p>On WebGPU no state depends on the camera between renders, so one renderer can draw any number of cameras without views. On WebGL2 each camera's view also holds that camera's sort order.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="chips" id="viewPick"></div>
+      <table class="resolve" id="resolve" style="margin-top: 10px"></table>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/views.html">Views</a> <a href="ref/recipes.html#thumbnails-with-different-settings">Thumbnails with different settings</a></p>
+</section>
+
+<section id="backends" data-title="Both backends">
+  <div class="eyebrow">Idea 8</div>
+  <h2>One source, two backends</h2>
+  <div class="idea">
+    <div>
+      <p class="lede">Every shader in Radix is TSL, which three.js compiles to WGSL for WebGPU and GLSL for WebGL2. On WebGPU the projection runs in compute and the sort on the GPU; on WebGL2 the same projection runs as a fragment pass and the sort moves to a worker.</p>
+      <p>The app code is the same on both: the renderer picks the backend, and the splat renderer picks the sort. On WebGL2 a view draws its last order until a new one arrives, so a late order still draws the right splats.</p>
+    </div>
+    <div class="panel reveal">
+      <div class="chips" id="backend"></div>
+      <div class="lanes" id="lanes" style="margin-top: 12px"></div>
+      <div class="small" id="laneNote" style="margin-top: 8px"></div>
+    </div>
+  </div>
+  <p class="deeper">See also: <a href="ref/sorting.html#the-cpu-sort">The CPU sort</a> <a href="ref/recipes.html#one-code-path-for-both-backends">One code path</a></p>
+</section>
+
+<section id="next" data-title="Related pages">
+  <div class="eyebrow">More</div>
+  <h2>Related pages</h2>
+  <div class="next-cards">
+    <a href="model.html" style="--c: var(--gpu)"><em>20 minutes</em><b>How the classes fit together</b><span>The classes and the data passed between them during a frame.</span></a>
+    <a href="ref/quickstart.html" style="--c: var(--worker)"><em>Reference</em><b>Quickstart</b><span>A page that draws a file, explained line by line.</span></a>
+    <a href="why.html" style="--c: var(--pink)"><em>5 minutes</em><b>Radix and SparkJS</b><span>Frame times and features compared with SparkJS.</span></a>
+  </div>
+</section>
+
+<footer>Radix docs · <a href="index.html">home</a> · source: <code>docs/ideas.html</code></footer>
+
+<script src="site.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function chips(el, items, initial, onPick) {
+  el.innerHTML = items.map(([v, label]) => `<span class="chip" data-v="${v}">${label}</span>`).join("");
+  const pick = (v) => { $$(".chip", el).forEach((c) => c.classList.toggle("on", c.dataset.v === v)); onPick(v); };
+  el.addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) pick(c.dataset.v); });
+  pick(initial);
+}
+
+function fitCanvas(canvas) {
+  const dpr = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+
+function whileVisible(el, frame) {
+  let on = false;
+  new IntersectionObserver(([e]) => { on = e.isIntersecting; }).observe(el);
+  const loop = (t) => { if (on) frame(t / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+
+// ---------- 1. Twin tables ----------
+(() => {
+  const ROWS = 16;
+  $("#cpuRows").innerHTML = Array.from({ length: ROWS }, (_, i) => `<div data-i="${i}"><span class="i">${i}</span><span>extA[${i}]</span><span>extB[${i}]</span></div>`).join("");
+  $("#gpuTex").innerHTML = Array.from({ length: 32 }, (_, t) => `<span data-t="${t}">${t < ROWS ? t : ""}</span>`).join("");
+  const pick = (i) => {
+    $$("#cpuRows div").forEach((d) => d.classList.toggle("on", Number(d.dataset.i) === i));
+    $$("#gpuTex span").forEach((s) => s.classList.toggle("on", Number(s.dataset.t) === i));
+    $("#texAt").innerHTML = `row ${i} is texel ${i}: x = ${i} &amp; 1023, y = ${i} &gt;&gt; 10, layer 0 (each texture row is 1024 texels; drawn 8 wide here)`;
+  };
+  $("#cpuRows").addEventListener("click", (e) => { const d = e.target.closest("[data-i]"); if (d) pick(Number(d.dataset.i)); });
+  pick(5);
+})();
+
+// ---------- 2. A splat in 32 bytes ----------
+(() => {
+  const C = { center: "#2dd4bf", normal: "#60a5fa", opacity: "#facc15", rgb: "#f472b6", scale: "#a78bfa", pbr: "#4ade80", rot: "#fb923c" };
+  const WORDS = [
+    ["A.x", [["center x", 32, C.center, "float32, at full precision"]]],
+    ["A.y", [["center y", 32, C.center, "float32"]]],
+    ["A.z", [["center z", 32, C.center, "float32"]]],
+    ["A.w", [["normal", 24, C.normal, "an octahedral direction, 12 + 12 bits, within 0.06 degrees; 0 means none"], ["opacity", 8, C.opacity, "one byte, 128 = 1.0, up to about 2 for merged LoD nodes"]]],
+    ["B.x", [["rgb", 32, C.rgb, "three 8-bit magnitudes, three signs, and a shared 5-bit exponent, so HDR and negative colors can be stored"]]],
+    ["B.y", [["ln sx", 16, C.scale, "half-float log scales"], ["ln sy", 16, C.scale, "half-float log scales"]]],
+    ["B.z", [["ln sz", 16, C.scale, "half-float log scale"], ["rough", 8, C.pbr, "roughness, unorm8"], ["metal", 8, C.pbr, "metallic, unorm8"]]],
+    ["B.w", [["axis 10 + 10", 20, C.rot, "the rotation's axis, octahedral, 10 + 10 bits"], ["angle", 12, C.rot, "its angle in 12 bits; small rotations stay within 0.03 degrees"]]],
+  ];
+  $("#words").innerHTML = WORDS.map(([label, fields]) => `<div class="word"><div class="wl">${label}</div><div class="wb">${fields.map(([n, bits, c, info]) => `<div class="f" style="flex:${bits};background:${c}" data-info="${info}">${n}</div>`).join("")}</div></div>`).join("");
+  $("#words").addEventListener("mouseover", (e) => { const f = e.target.closest(".f"); if (f) $("#wordInfo").textContent = `${f.textContent}: ${f.dataset.info}`; });
+})();
+
+// ---------- 3. Generators ----------
+(() => {
+  const canvas = $("#genCanvas");
+  const N = 900;
+  const pts = Array.from({ length: N }, (_, i) => {
+    const a = i * 2.39996, r = Math.sqrt(i / N);
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.62, d: Math.hypot(Math.cos(a) * r - 0.35, Math.sin(a) * r * 0.62 + 0.1) };
+  });
+  const CODE = {
+    file: `// a stored file: splat i is stored splat i\nSplatCollection.arrays(splats, { matrixWorld })`,
+    subset: `// the same generator, an index list as data: no new program\n{ generator: listed, data: { splats, indices: nearest }, count }`,
+    formula: `// a formula: splat i computed in the shader\nconst ring = {\n  generateSplat: (i) =&gt; GpuSplats.Splat(ringAt(i), ...),\n};\n{ generator: ring, count }`,
+  };
+  let kind = "file";
+  chips($("#genKind"), [["file", "a file"], ["subset", "a subset (index list)"], ["formula", "a formula"]], "file", (v) => { kind = v; $("#genCode").innerHTML = CODE[v]; });
+  whileVisible(canvas, (t) => {
+    const { ctx, w, h } = fitCanvas(canvas);
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, s = Math.min(w, h * 1.6) * 0.42;
+    for (let i = 0; i < N; i++) {
+      let x, y, on = true;
+      if (kind === "formula") {
+        const a = (i / N) * Math.PI * 2 + t * 0.4;
+        x = Math.cos(a) * 0.85; y = Math.sin(a) * 0.5 + Math.sin(a * 12 + t * 2) * 0.04;
+      } else {
+        x = pts[i].x; y = pts[i].y;
+        on = kind === "file" || pts[i].d < 0.45 + Math.sin(t) * 0.08;
+      }
+      ctx.fillStyle = on ? (kind === "formula" ? `hsl(${(i / N) * 300} 80% 62%)` : "#2dd4bf") : "#ffffff14";
+      ctx.globalAlpha = on ? 0.85 : 1;
+      ctx.beginPath(); ctx.arc(cx + x * s, cy + y * s, 2.1, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  });
+})();
+
+// ---------- 4. Words per method ----------
+(() => {
+  const WORDS = { ewa: [0, 4], "3dgut": [6, 2], htgs: [6, 2], raygs: [4, 3] };
+  let method = "ewa", eyes = 1;
+  const draw = () => {
+    const [head, eye] = WORDS[method];
+    const words = head + eye * eyes;
+    const cells = [];
+    for (let i = 0; i < head; i++) cells.push(`<span style="background:#2dd4bf">head</span>`);
+    for (let e = 0; e < eyes; e++) for (let i = 0; i < eye; i++) cells.push(`<span style="background:${e ? "#a78bfa" : "#f472b6"}">eye ${e + 1}</span>`);
+    cells.push(`<span style="background:#fb923c">key</span>`);
+    $("#byteRow").innerHTML = cells.join("");
+    $("#byteNote").textContent = `${words} words (${words * 4} bytes) plus a 4-byte sort key per splat. ${head ? `The ${head} head words are shared by every eye.` : "ewa has no head words: each eye's 2D Gaussian is computed for it."}`;
+  };
+  chips($("#method"), [["ewa", "ewa"], ["3dgut", "3dgut"], ["htgs", "htgs"], ["raygs", "raygs"]], "ewa", (v) => { method = v; draw(); });
+  chips($("#eyes"), [["1", "mono"], ["2", "stereo"]], "1", (v) => { eyes = Number(v); draw(); });
+})();
+
+// ---------- 5. Sort keys ----------
+(() => {
+  const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+  const LO = 95 << 23, HI = (159 << 23) - 1;
+  const keyOf = (f, bits) => {
+    const mask = bits === 32 ? 0xffffffff : 2 ** bits - 1;
+    const validMax = 0xff * 2 ** (bits - 8) - 1;
+    const q = bits === 32 ? f : bits === 24 ? f >>> 7 : (Math.min(Math.max(f, LO), HI) - LO) >>> 13;
+    return Math.min((mask ^ q) >>> 0, validMax);
+  };
+  const show = (el, value, bits, total = 32) => {
+    $(el).innerHTML = Array.from({ length: total }, (_, k) => {
+      const bit = total - 1 - k;
+      const used = bit < bits;
+      const one = used && Math.floor(value / 2 ** bit) % 2 === 1;
+      return `<span class="${one ? "one" : ""}${used ? "" : " off"}">${used ? (one ? 1 : 0) : ""}</span>`;
+    }).join("");
+  };
+  const draw = () => {
+    const d = 2 ** Number($("#dist").value);
+    f32[0] = d;
+    const f = u32[0];
+    $("#distOut").textContent = d < 1 ? d.toFixed(4) : d.toFixed(2);
+    show("#fbits", f, 32);
+    show("#k32", keyOf(f, 32), 32);
+    show("#k24", keyOf(f, 24), 24);
+    show("#k16", keyOf(f, 16), 16);
+  };
+  $("#dist").addEventListener("input", draw);
+  draw();
+})();
+
+// ---------- 6. One sort ----------
+(() => {
+  const canvas = $("#blendCanvas");
+  const A = Array.from({ length: 70 }, (_, i) => ({ x: -0.25 + Math.sin(i * 1.7) * 0.35, y: Math.cos(i * 2.3) * 0.32, z: (i * 0.37) % 1, c: "#f472b6", a: i * 0.9 }));
+  const B = Array.from({ length: 70 }, (_, i) => ({ x: 0.25 + Math.sin(i * 1.3 + 1) * 0.35, y: Math.cos(i * 1.9 + 2) * 0.32, z: (i * 0.61 + 0.2) % 1, c: "#2dd4bf", a: i * 1.3 }));
+  let mode = "together";
+  const draw = () => {
+    const { ctx, w, h } = fitCanvas(canvas);
+    ctx.clearRect(0, 0, w, h);
+    const list = mode === "separate" ? [...[...A].sort((p, q) => q.z - p.z), ...[...B].sort((p, q) => q.z - p.z)] : [...A, ...B].sort((p, q) => q.z - p.z);
+    for (const s of list) {
+      ctx.save();
+      ctx.translate(w / 2 + s.x * w * 0.6, h / 2 + s.y * h);
+      ctx.rotate(s.a);
+      ctx.scale(26 + 22 * (1 - s.z), 9 + 6 * (1 - s.z));
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      g.addColorStop(0, s.c); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  };
+  chips($("#blend"), [["separate", "two draws, sorted apart"], ["together", "one sort, one draw"]], "together", (v) => { mode = v; draw(); });
+  addEventListener("resize", draw);
+})();
+
+// ---------- 7. Views ----------
+(() => {
+  const RENDERER = { collection: "every object", method: "ewa", blurAmount: "0.3", modifier: "depth tint", sortBits: "24" };
+  const VIEWS = {
+    renderer: {},
+    minimap: { collection: "LoD subset", blurAmount: "0.5" },
+    thumb: { modifier: "null (none)" },
+  };
+  chips($("#viewPick"), [["renderer", "a render with no view"], ["minimap", "viewFor(minimapCamera)"], ["thumb", "viewFor(\"thumb\")"]], "minimap", (v) => {
+    const own = VIEWS[v];
+    $("#resolve").innerHTML = Object.entries(RENDERER).map(([k, base]) => {
+      const set = k in own;
+      return `<tr class="${set ? "own" : ""}"><td>${k}</td><td>${set ? own[k] : base}</td><td class="from">${set ? "the view's" : k === "method" ? "the renderer's (always)" : "the renderer's"}</td></tr>`;
+    }).join("");
+  });
+})();
+
+// ---------- 8. Both backends ----------
+(() => {
+  const LANES = {
+    gpu: { note: "WebGPU: the projection in compute, then compaction and a radix sort on the GPU, then an indirect draw. Each frame is drawn in the order for its own camera.",
+      rows: [["GPU", [["project", "#f472b6"], ["sort", "#fb923c"], ["draw", "#a78bfa"], ["project", "#f472b6"], ["sort", "#fb923c"], ["draw", "#a78bfa"]]], ["worker", []]] },
+    cpu: { note: "WebGL2: the same projection runs as a fragment pass, and the last applied order is drawn. When the camera has moved, a keys pass and a readback start a worker sort, and its order is applied when it arrives.",
+      rows: [["GPU", [["project", "#f472b6"], ["keys", "#60a5fa"], ["draw", "#a78bfa"], ["project", "#f472b6"], ["draw", "#a78bfa"], ["project", "#f472b6"], ["draw", "#a78bfa"]]], ["worker", [["", "transparent"], ["", "transparent"], ["sort", "#4ade80"], ["sort", "#4ade80"], ["apply", "#facc15"], ["", "transparent"], ["", "transparent"]]]] },
+  };
+  chips($("#backend"), [["gpu", "WebGPU"], ["cpu", "WebGL2"]], "gpu", (v) => {
+    const l = LANES[v];
+    $("#lanes").innerHTML = l.rows.map(([who, cells]) => `<div class="who">${who}</div><div class="track">${cells.length ? cells.map(([t, c]) => `<span style="background:${c}">${t}</span>`).join("") : `<span style="background:#ffffff08;color:var(--faint)">idle</span>`}</div>`).join("");
+    $("#laneNote").textContent = l.note;
+  });
+})();
+</script>
+</body>
+</html>
