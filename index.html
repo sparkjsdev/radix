@@ -22,6 +22,68 @@
 <p class="meta">Built from b831cc5 on 2026-10-29</p>
 
 <h2>Getting started</h2>
+<h3>Copy Code</h3>
+<p>Copy the following code into an <code>index.html</code> file and serve it over http(s). It draws a butterfly on WebGPU, or on the WebGL2 backend where WebGPU is missing.</p>
+<pre class="lang-html"><code>&lt;style&gt; body {margin: 0;} &lt;/style&gt;
+&lt;script type="importmap"&gt;
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+      "@sparkjsdev/radix": "https://cdn.jsdelivr.net/npm/@sparkjsdev/radix@0.0.1/dist/radix.module.js"
+    }
+  }
+&lt;/script&gt;
+&lt;script type="module"&gt;
+  import * as THREE from "three";
+  import { GpuArrays, SplatCollection, SplatRenderer, createRenderer, loadSplats } from "@sparkjsdev/radix";
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
+  const renderer = await createRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const splatURL = "https://storage.googleapis.com/forge-dev-public/asundqui/radix/261009/rdx/butterfly-ai.rdx";
+  const data = await loadSplats(splatURL);
+  const butterfly = new THREE.Object3D();
+  butterfly.rotation.x = Math.PI;
+  butterfly.position.set(0, 0, -3);
+  scene.add(butterfly);
+
+  const collection = new SplatCollection([
+    SplatCollection.arrays(GpuArrays.fromData(renderer, data), { matrixWorld: butterfly.matrixWorld }),
+  ]);
+  scene.add(new SplatRenderer({ renderer, collection }));
+
+  renderer.setAnimationLoop(function animate(time) {
+    renderer.render(scene, camera);
+    butterfly.rotation.y += 0.01;
+  });
+&lt;/script&gt;</code></pre>
+<h3>CDN</h3>
+<pre class="lang-html"><code>&lt;script type="importmap"&gt;
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+      "@sparkjsdev/radix": "https://cdn.jsdelivr.net/npm/@sparkjsdev/radix@0.0.1/dist/radix.module.js"
+    }
+  }
+&lt;/script&gt;</code></pre>
+<p>Radix imports <code>three</code>, <code>three/webgpu</code> and <code>three/tsl</code>, so the map names all three. The workers' code is inlined into the bundle, so there is no separate worker file to serve.</p>
+<h3>NPM</h3>
+<pre class="lang-sh"><code>npm install three@0.186 @sparkjsdev/radix</code></pre>
+<p>From a local checkout instead (npm builds <code>dist/</code> on install through the <code>prepare</code> script):</p>
+<pre class="lang-sh"><code>cd radix &amp;&amp; npm install          # also builds dist/
+cd ../my-app &amp;&amp; npm install three@0.186 ../radix</code></pre>
+<p>TypeScript apps need TypeScript 5.7 or newer, and the WebGPU types: TypeScript 6's DOM types include them, older versions need <code>@webgpu/types</code>.</p>
+
+<h2>Develop</h2>
 <pre class="lang-sh"><code>git clone git@github.com:sparkjsdev/radix.git
 cd radix
 npm install
