@@ -52,7 +52,7 @@ export class WgpuCompute {
     this.workgroupSize = [workgroupSize[0], workgroupSize[1] ?? 1, workgroupSize[2] ?? 1];
     this.computeNode = Fn(() => {
       body({ globalId, localId, workgroupId, numWorkgroups, index: instanceIndex });
-    })().compute([1, 1, 1], this.workgroupSize);
+    })().computeKernel(this.workgroupSize);
 
     if (label) {
       this.computeNode.name = label;
@@ -63,12 +63,8 @@ export class WgpuCompute {
   // array is the workgroup count per dimension
   dispatch(renderer: WebGPURenderer, size: DispatchSize) {
     requireWebGPU(renderer, "WgpuCompute");
-    if (typeof size === "number") {
-      if (size > 0) {
-        renderer.compute(this.computeNode, size);
-      }
-    } else {
-      renderer.compute(this.computeNode, dispatchArgument(size));
+    if (typeof size !== "number" || size > 0) {
+      renderer.compute(this.prepare(size));
     }
   }
 
