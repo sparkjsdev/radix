@@ -2,7 +2,7 @@ import type { IndirectStorageBufferAttribute, WebGPURenderer } from "three/webgp
 import type { SortKeyBits } from "../core/sort";
 import { getGpuCaps } from "../gpu/createRenderer";
 import { TSL, type TslNode } from "../gpu/tsl";
-import { WgpuBuffer } from "./WgpuBuffer";
+import { EMPTY_BUFFER, WgpuBuffer } from "./WgpuBuffer";
 import { WgpuCompute, WgpuComputeBatch, requireWebGPU, type DispatchSize } from "./WgpuCompute";
 import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan, type ScanTier } from "./workgroupScan";
 
@@ -108,9 +108,9 @@ export class WgpuRadixSort {
 
   // Grow the scratch buffers to the keys' and values' capacity
   ensureCapacity() {
-    this.keysB.ensureCapacity(this.keys.capacity);
-    this.valuesB.ensureCapacity(this.values.capacity);
-    this.blockHistograms.ensureCapacity(BINS * this.blocksFor(this.keys.capacity));
+    this.keysB.ensureCapacity(this.keys.capacity, EMPTY_BUFFER);
+    this.valuesB.ensureCapacity(this.values.capacity, EMPTY_BUFFER);
+    this.blockHistograms.ensureCapacity(BINS * this.blocksFor(this.keys.capacity), EMPTY_BUFFER);
   }
 
   // Sort the first `count` keys and values in place (ascending, stable);

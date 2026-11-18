@@ -1,6 +1,6 @@
 import type { WebGPURenderer } from "three/webgpu";
 import { TSL, type TslNode } from "../gpu/tsl";
-import { WgpuBuffer } from "./WgpuBuffer";
+import { EMPTY_BUFFER, WgpuBuffer } from "./WgpuBuffer";
 import { WgpuCompute, WgpuComputeBatch, requireWebGPU } from "./WgpuCompute";
 import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan, type ScanTier } from "./workgroupScan";
 
@@ -121,9 +121,9 @@ export class WgpuCompact {
   // Compact the first n indices (queued synchronously)
   compact(n: number) {
     const blocks = Math.max(1, Math.ceil(n / BLOCK));
-    this.keys.ensureCapacity(n);
-    this.values.ensureCapacity(n);
-    this.blockOffsets.ensureCapacity(blocks);
+    this.keys.ensureCapacity(n, EMPTY_BUFFER);
+    this.values.ensureCapacity(n, EMPTY_BUFFER);
+    this.blockOffsets.ensureCapacity(blocks, EMPTY_BUFFER);
     this.n.value = n;
     this.numBlocks.value = blocks;
 

@@ -91,6 +91,26 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     }
   }));
 
+  await check("WgpuBuffer: discard growth zeroes new storage and keep preserves scalar data", onWebGPU(async () => {
+    const buffer = new WgpuBuffer({ renderer, format: "uint32", count: 1 });
+    try {
+      buffer.upload(new Uint32Array([123]));
+      buffer.ensureCapacity(4, { allocateEmpty: true });
+      if ((await buffer.read()).some((value) => value !== 0)) return "discarded data survived growth";
+      buffer.upload(new Uint32Array([456, 789]));
+      buffer.ensureCapacity(8, { keep: true });
+      const kept = await buffer.read();
+      if (kept[0] !== 456 || kept[1] !== 789 || kept.subarray(2).some((value) => value !== 0)) {
+        return "preserved data or zero-initialized tail differs";
+      }
+      buffer.ensureCapacity(16);
+      buffer.attribute.array[0] = 987;
+      if ((await buffer.read(0, 1))[0] !== 987) return "default resize failed to upload the CPU attribute";
+    } finally {
+      buffer.dispose();
+    }
+  }));
+
   await check("WgpuBuffer atomic counter", onWebGPU(async () => {
     const counter = new WgpuBuffer({ renderer, format: "uint32", count: 1, atomic: true });
     const kernel = new WgpuCompute({

@@ -6,6 +6,7 @@ import { TSL, type TslNode } from "../gpu/tsl";
 import { requireWebGPU } from "./WgpuCompute";
 
 const { storage } = TSL;
+export const EMPTY_BUFFER = { allocateEmpty: true } as const;
 
 // Typed, resizable storage buffer (WebGPU backend only) of a 32-bit format
 // with 1, 2 or 4 components ("uint32", "float32x4", ...). Kernels and
@@ -76,16 +77,27 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   }
 
   // Resize to `count` elements; with `keep` the old contents are copied over
-  setCapacity(count: number, { keep = false }: { keep?: boolean } = {}) {
+  setCapacity(count: number, { keep = false, allocateEmpty = false }: { keep?: boolean; allocateEmpty?: boolean } = {}) {
     const capacity = Math.max(1, count);
     if (capacity === this.capacity) {
       return false;
     }
     this.checkSize(capacity);
 
+    const backend = this.backend();
     const previous = this.attribute;
-    const previousBuffer = this.backend().get(previous).buffer;
-    this.attribute = this.makeAttribute(capacity, previous.name);
+    const previousBuffer = backend.get(previous).buffer;
+    const attribute = this.makeAttribute(capacity, previous.name);
+    // Sorter scratch has no initial CPU data to upload. Match Three's
+    // scalar storage layout and register the zero-initialized buffer it owns.
+    if (allocateEmpty && !keep && capacity > this.capacity && this.format === "uint32" && !this.indirect) {
+      backend.get(attribute).buffer = backend.device.createBuffer({
+        label: attribute.name,
+        size: attribute.array.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+      });
+    }
+    this.attribute = attribute;
     this.capacity = capacity;
     this.node.value = this.attribute;
 
@@ -93,13 +105,13 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
       this.copyBuffer(previousBuffer, 0, this.gpuBuffer(), 0, Math.min(previousBuffer.size, this.byteLength));
     }
     if (previousBuffer) {
-      this.backend().destroyAttribute(previous);
+      backend.destroyAttribute(previous);
     }
     return true;
   }
 
   // Grows by doubling, at most to the binding limit (count itself must fit)
-  ensureCapacity(count: number, options?: { keep?: boolean }) {
+  ensureCapacity(count: number, options?: { keep?: boolean; allocateEmpty?: boolean }) {
     if (count <= this.capacity) {
       return false;
     }
