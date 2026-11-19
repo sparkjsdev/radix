@@ -6,7 +6,6 @@ import { TSL, type TslNode } from "../gpu/tsl";
 import { requireWebGPU } from "./WgpuCompute";
 
 const { storage } = TSL;
-export const EMPTY_BUFFER = { allocateEmpty: true } as const;
 
 // Typed, resizable storage buffer (WebGPU backend only) of a 32-bit format
 // with 1, 2 or 4 components ("uint32", "float32x4", ...). Kernels and
@@ -18,17 +17,20 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   readonly format: F;
   readonly atomic: boolean;
   readonly indirect: boolean;
+  readonly gpuOnly: boolean;
   attribute: StorageBufferAttribute;
   node: TslNode;
   capacity: number;
 
-  constructor({ renderer, format, count, atomic = false, indirect = false, label = "" }: {
+  constructor({ renderer, format, count, atomic = false, indirect = false, gpuOnly = false, label = "" }: {
     renderer: WebGPURenderer;
     format: F;
     count: number;
     atomic?: boolean;
     // Indirect dispatch arguments (uint32, 3 per dispatch)
     indirect?: boolean;
+    // Allocate zeroed GPU storage without uploading the attribute's CPU array
+    gpuOnly?: boolean;
     // The GPU buffer's name in WebGPU errors and debuggers
     label?: string;
   }) {
@@ -41,6 +43,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     this.format = format;
     this.atomic = atomic;
     this.indirect = indirect;
+    this.gpuOnly = gpuOnly;
 
     this.capacity = Math.max(1, count);
     this.checkSize(this.capacity);
@@ -77,7 +80,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   }
 
   // Resize to `count` elements; with `keep` the old contents are copied over
-  setCapacity(count: number, { keep = false, allocateEmpty = false }: { keep?: boolean; allocateEmpty?: boolean } = {}) {
+  setCapacity(count: number, { keep = false }: { keep?: boolean } = {}) {
     const capacity = Math.max(1, count);
     if (capacity === this.capacity) {
       return false;
@@ -87,17 +90,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     const backend = this.backend();
     const previous = this.attribute;
     const previousBuffer = backend.get(previous).buffer;
-    const attribute = this.makeAttribute(capacity, previous.name);
-    // Sorter scratch has no initial CPU data to upload. Match Three's
-    // scalar storage layout and register the zero-initialized buffer it owns.
-    if (allocateEmpty && !keep && capacity > this.capacity && this.format === "uint32" && !this.indirect) {
-      backend.get(attribute).buffer = backend.device.createBuffer({
-        label: attribute.name,
-        size: attribute.array.byteLength,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-      });
-    }
-    this.attribute = attribute;
+    this.attribute = this.makeAttribute(capacity, previous.name);
     this.capacity = capacity;
     this.node.value = this.attribute;
 
@@ -111,7 +104,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   }
 
   // Grows by doubling, at most to the binding limit (count itself must fit)
-  ensureCapacity(count: number, options?: { keep?: boolean; allocateEmpty?: boolean }) {
+  ensureCapacity(count: number, options?: { keep?: boolean }) {
     if (count <= this.capacity) {
       return false;
     }
@@ -191,6 +184,17 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
       ? new IndirectStorageBufferAttribute(new Uint32Array(capacity * components), components)
       : new StorageBufferAttribute(new array(capacity * components), components);
     attribute.name = name;
+    if (this.gpuOnly) {
+      // Until three supports GPU-only storage attributes (mrdoob/three.js#33280),
+      // register an unmapped buffer with the same usage flags as its WebGPU backend.
+      const backend = this.backend();
+      const kind = this.indirect ? GPUBufferUsage.INDIRECT : GPUBufferUsage.VERTEX;
+      backend.get(attribute).buffer = backend.device.createBuffer({
+        label: name,
+        size: attribute.array.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST | kind,
+      });
+    }
     return attribute;
   }
 

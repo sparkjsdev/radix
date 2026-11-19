@@ -2,7 +2,7 @@ import type { IndirectStorageBufferAttribute, WebGPURenderer } from "three/webgp
 import type { SortKeyBits } from "../core/sort";
 import { getGpuCaps } from "../gpu/createRenderer";
 import { TSL, type TslNode } from "../gpu/tsl";
-import { EMPTY_BUFFER, WgpuBuffer } from "./WgpuBuffer";
+import { WgpuBuffer } from "./WgpuBuffer";
 import { WgpuCompute, WgpuComputeBatch, requireWebGPU, type DispatchSize } from "./WgpuCompute";
 import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan, type ScanTier } from "./workgroupScan";
 
@@ -99,18 +99,18 @@ export class WgpuRadixSort {
 
     this.keys = keys;
     this.values = values;
-    const buffer = (count: number, label: string) => new WgpuBuffer({ renderer, format: "uint32", count, label });
-    this.keysB = buffer(keys.capacity, "radix_sortKeysB");
-    this.valuesB = buffer(values.capacity, "radix_sortValuesB");
-    this.blockHistograms = buffer(BINS * this.blocksFor(keys.capacity), "radix_sortBlockHistograms");
-    this.digitTotals = buffer(BINS, "radix_sortDigitTotals");
+    const scratch = (count: number, label: string) => new WgpuBuffer({ renderer, format: "uint32", count, gpuOnly: true, label });
+    this.keysB = scratch(keys.capacity, "radix_sortKeysB");
+    this.valuesB = scratch(values.capacity, "radix_sortValuesB");
+    this.blockHistograms = scratch(BINS * this.blocksFor(keys.capacity), "radix_sortBlockHistograms");
+    this.digitTotals = new WgpuBuffer({ renderer, format: "uint32", count: BINS, label: "radix_sortDigitTotals" });
   }
 
   // Grow the scratch buffers to the keys' and values' capacity
   ensureCapacity() {
-    this.keysB.ensureCapacity(this.keys.capacity, EMPTY_BUFFER);
-    this.valuesB.ensureCapacity(this.values.capacity, EMPTY_BUFFER);
-    this.blockHistograms.ensureCapacity(BINS * this.blocksFor(this.keys.capacity), EMPTY_BUFFER);
+    this.keysB.ensureCapacity(this.keys.capacity);
+    this.valuesB.ensureCapacity(this.values.capacity);
+    this.blockHistograms.ensureCapacity(BINS * this.blocksFor(this.keys.capacity));
   }
 
   // Sort the first `count` keys and values in place (ascending, stable);

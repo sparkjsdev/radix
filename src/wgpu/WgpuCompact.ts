@@ -1,6 +1,6 @@
 import type { WebGPURenderer } from "three/webgpu";
 import { TSL, type TslNode } from "../gpu/tsl";
-import { EMPTY_BUFFER, WgpuBuffer } from "./WgpuBuffer";
+import { WgpuBuffer } from "./WgpuBuffer";
 import { WgpuCompute, WgpuComputeBatch, requireWebGPU } from "./WgpuCompute";
 import { SCAN_WORKGROUP, scanTier, threadRank, workgroupExclusiveScan, type ScanTier } from "./workgroupScan";
 
@@ -38,11 +38,11 @@ export class WgpuCompact {
     requireWebGPU(renderer, "WgpuCompact");
     this.renderer = renderer;
     this.tier = scanTier(renderer, tier);
-    const buffer = (label: string) => new WgpuBuffer({ renderer, format: "uint32", count: 1, label });
-    this.keys = buffer("radix_compactKeys");
-    this.values = buffer("radix_compactValues");
-    this.count = buffer("radix_compactCount");
-    this.blockOffsets = buffer("radix_compactBlockOffsets");
+    const scratch = (label: string) => new WgpuBuffer({ renderer, format: "uint32", count: 1, gpuOnly: true, label });
+    this.keys = scratch("radix_compactKeys");
+    this.values = scratch("radix_compactValues");
+    this.count = new WgpuBuffer({ renderer, format: "uint32", count: 1, label: "radix_compactCount" });
+    this.blockOffsets = scratch("radix_compactBlockOffsets");
 
     const { n, numBlocks, blockOffsets, count, keys, values, invalid } = this;
     const tierOf = this.tier;
@@ -121,9 +121,9 @@ export class WgpuCompact {
   // Compact the first n indices (queued synchronously)
   compact(n: number) {
     const blocks = Math.max(1, Math.ceil(n / BLOCK));
-    this.keys.ensureCapacity(n, EMPTY_BUFFER);
-    this.values.ensureCapacity(n, EMPTY_BUFFER);
-    this.blockOffsets.ensureCapacity(blocks, EMPTY_BUFFER);
+    this.keys.ensureCapacity(n);
+    this.values.ensureCapacity(n);
+    this.blockOffsets.ensureCapacity(blocks);
     this.n.value = n;
     this.numBlocks.value = blocks;
 

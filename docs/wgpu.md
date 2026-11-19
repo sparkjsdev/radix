@@ -166,7 +166,7 @@ buffer.ensureCapacity(n, { keep: true });
 
 | Member | What it does |
 |---|---|
-| `new WgpuBuffer({ renderer, format, count, atomic?, indirect?, label? })` | `atomic`: the elements are `atomic<u32>` or `atomic<i32>`; `indirect`: dispatch or draw arguments; `label`: the GPU buffer's name in WebGPU errors and debuggers |
+| `new WgpuBuffer({ renderer, format, count, atomic?, indirect?, gpuOnly?, label? })` | `atomic`: the elements are `atomic<u32>` or `atomic<i32>`; `indirect`: dispatch or draw arguments; `gpuOnly`: skip the initial CPU upload on each allocation (default `false`); `label`: the GPU buffer's name in WebGPU errors and debuggers |
 | `element(i)` | element `i` in TSL |
 | `upload(data, offset?)`, `read(offset?, count?)`, `clear(offset?, count?)` | CPU writes, readbacks, and zeroing |
 | `copyFrom(src, { srcStart?, dstStart?, count? })` | a GPU copy from a buffer of the same format |
@@ -176,6 +176,7 @@ buffer.ensureCapacity(n, { keep: true });
 | `dispose()` | frees the buffer |
 
 - Growing or swapping keeps the same TSL node, so shaders built on the buffer keep working.
+- Set `gpuOnly: true` for scratch storage. Construction and resizing create zero-initialized GPU buffers. Three still has a typed array for the attribute. Use `upload` for explicit CPU writes and `keep: true` on resize to preserve GPU contents.
 - Shaders bind a whole buffer, so a size larger than the device's `maxStorageBufferBindingSize` throws an error naming the limit. Radix requests 256 MiB by default, which 98% of devices support (64M uint32s); `createRenderer({ limits: { maxStorageBufferBindingSize: "adapter" } })` asks for all the adapter has.
 
 ## WgpuRadixSort and WgpuCompact
