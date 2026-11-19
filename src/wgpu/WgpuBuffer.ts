@@ -17,17 +17,20 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
   readonly format: F;
   readonly atomic: boolean;
   readonly indirect: boolean;
+  readonly gpuOnly: boolean;
   attribute: StorageBufferAttribute;
   node: TslNode;
   capacity: number;
 
-  constructor({ renderer, format, count, atomic = false, indirect = false, label = "" }: {
+  constructor({ renderer, format, count, atomic = false, indirect = false, gpuOnly = false, label = "" }: {
     renderer: WebGPURenderer;
     format: F;
     count: number;
     atomic?: boolean;
     // Indirect dispatch arguments (uint32, 3 per dispatch)
     indirect?: boolean;
+    // Allocate zeroed GPU storage without uploading the attribute's CPU array
+    gpuOnly?: boolean;
     // The GPU buffer's name in WebGPU errors and debuggers
     label?: string;
   }) {
@@ -40,6 +43,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     this.format = format;
     this.atomic = atomic;
     this.indirect = indirect;
+    this.gpuOnly = gpuOnly;
 
     this.capacity = Math.max(1, count);
     this.checkSize(this.capacity);
@@ -83,8 +87,9 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
     }
     this.checkSize(capacity);
 
+    const backend = this.backend();
     const previous = this.attribute;
-    const previousBuffer = this.backend().get(previous).buffer;
+    const previousBuffer = backend.get(previous).buffer;
     this.attribute = this.makeAttribute(capacity, previous.name);
     this.capacity = capacity;
     this.node.value = this.attribute;
@@ -93,7 +98,7 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
       this.copyBuffer(previousBuffer, 0, this.gpuBuffer(), 0, Math.min(previousBuffer.size, this.byteLength));
     }
     if (previousBuffer) {
-      this.backend().destroyAttribute(previous);
+      backend.destroyAttribute(previous);
     }
     return true;
   }
@@ -179,6 +184,17 @@ export class WgpuBuffer<F extends ArrayFormat = ArrayFormat> {
       ? new IndirectStorageBufferAttribute(new Uint32Array(capacity * components), components)
       : new StorageBufferAttribute(new array(capacity * components), components);
     attribute.name = name;
+    if (this.gpuOnly) {
+      // Until three supports GPU-only storage attributes (mrdoob/three.js#33280),
+      // register an unmapped buffer with the same usage flags as its WebGPU backend.
+      const backend = this.backend();
+      const kind = this.indirect ? GPUBufferUsage.INDIRECT : GPUBufferUsage.VERTEX;
+      backend.get(attribute).buffer = backend.device.createBuffer({
+        label: name,
+        size: attribute.array.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST | kind,
+      });
+    }
     return attribute;
   }
 

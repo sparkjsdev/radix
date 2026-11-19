@@ -28,6 +28,69 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
 
   // --- Sorting (WebGPU) ---
 
+  await check("WgpuRadixSort: stable direct ordering across repeat growth and buffer swaps", onWebGPU(async () => {
+    const keysBuffer = new WgpuBuffer({ renderer, format: "uint32", count: 1 });
+    const values = new WgpuBuffer({ renderer, format: "uint32", count: 1 });
+    const sort = new WgpuRadixSort({ renderer, keys: keysBuffer, values });
+    try {
+      values.upload(new Uint32Array([123]));
+      sort.sort(0, { bits: 24 });
+      if ((await values.read(0, 1))[0] !== 123) return "zero sort modified the input";
+      const rounds = [[24, 2049], [24, 2049], [16, 8193], [32, 137], [24, 20000]] as const;
+      for (const [bits, count] of rounds) {
+        const keys = Uint32Array.from({ length: count }, (_, i) => (((i * 29 + count) % 13) * 2 ** (bits - 4)) >>> 0);
+        keysBuffer.ensureCapacity(count);
+        values.ensureCapacity(count);
+        keysBuffer.upload(keys);
+        values.upload(Uint32Array.from({ length: count }, (_, i) => i));
+        sort.sort(count, { bits });
+        const { ordering } = SortKeys.sort({ keys, count, bits });
+        const actual = await values.read(0, count);
+        const sortedKeys = await keysBuffer.read(0, count);
+        const at = actual.findIndex((value, i) => value !== ordering[i] || sortedKeys[i] !== keys[ordering[i]]);
+        if (at >= 0) return `${bits} bits, ${count} keys: wrong key or stable index at ${at}`;
+      }
+    } finally {
+      sort.dispose();
+      keysBuffer.dispose();
+      values.dispose();
+    }
+  }));
+
+  await check("WgpuSplatSorter: indirect count and stable indices across growth, culling and zero", onWebGPU(async () => {
+    const sorter = new WgpuSplatSorter(renderer);
+    const rounds = [[24, 2049], [24, 2049], [16, 8193], [32, 137], [24, 20000], [32, 17], [16, 0]] as const;
+    try {
+      for (const [bits, count] of rounds) {
+        const keys = Uint32Array.from({ length: Math.max(count, 1) }, (_, i) => (
+          (i % 7 === 0 || count === 17 ? SortKeys.invalid(bits) : ((i * 17 + count) % 11) * 2 ** (bits - 4)) >>> 0
+        ));
+        const data = new ArrayData({ count: keys.length }).addBundle("sortKeys", SortKeys.KEYS, { data: { key: new Uint8Array(keys.buffer) } });
+        const arrays = GpuArrays.fromData(renderer, data);
+        try {
+          sorter.sort(arrays, count, bits);
+          const { ordering, visible } = SortKeys.sort({ keys, count, bits });
+          const actualCount = await sorter.readCount();
+          const args = await sorter.indirect.read(0, 5);
+          const quads = WgpuSplatSorter.QUADS_PER_INSTANCE;
+          const expectedArgs = [quads * 6, Math.ceil(visible / quads), 0, 0, 0];
+          if (actualCount !== visible || args.some((arg, i) => arg !== expectedArgs[i])) {
+            return `${bits} bits, ${count} keys: count ${actualCount}/${visible}, draw arguments ${args}`;
+          }
+          if (visible > 0) {
+            const actual = await sorter.values.read(0, visible);
+            const at = actual.findIndex((value, i) => value !== ordering[i]);
+            if (at >= 0) return `${bits} bits, ${count} keys: index ${at} is ${actual[at]}, expected ${ordering[at]}`;
+          }
+        } finally {
+          arrays.dispose();
+        }
+      }
+    } finally {
+      sorter.dispose();
+    }
+  }));
+
   await check("WgpuRadixSort equals sortKeys: 16/24/32 bits, every tier, counts 0, 1, block edges, large", onWebGPU(async () => {
     const random = rng(7);
     for (const tier of tiers) {

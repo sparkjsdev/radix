@@ -38,11 +38,11 @@ export class WgpuCompact {
     requireWebGPU(renderer, "WgpuCompact");
     this.renderer = renderer;
     this.tier = scanTier(renderer, tier);
-    const buffer = (label: string) => new WgpuBuffer({ renderer, format: "uint32", count: 1, label });
-    this.keys = buffer("radix_compactKeys");
-    this.values = buffer("radix_compactValues");
-    this.count = buffer("radix_compactCount");
-    this.blockOffsets = buffer("radix_compactBlockOffsets");
+    const scratch = (label: string) => new WgpuBuffer({ renderer, format: "uint32", count: 1, gpuOnly: true, label });
+    this.keys = scratch("radix_compactKeys");
+    this.values = scratch("radix_compactValues");
+    this.count = new WgpuBuffer({ renderer, format: "uint32", count: 1, label: "radix_compactCount" });
+    this.blockOffsets = scratch("radix_compactBlockOffsets");
 
     const { n, numBlocks, blockOffsets, count, keys, values, invalid } = this;
     const tierOf = this.tier;

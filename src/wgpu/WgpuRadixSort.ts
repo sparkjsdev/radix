@@ -99,11 +99,11 @@ export class WgpuRadixSort {
 
     this.keys = keys;
     this.values = values;
-    const buffer = (count: number, label: string) => new WgpuBuffer({ renderer, format: "uint32", count, label });
-    this.keysB = buffer(keys.capacity, "radix_sortKeysB");
-    this.valuesB = buffer(values.capacity, "radix_sortValuesB");
-    this.blockHistograms = buffer(BINS * this.blocksFor(keys.capacity), "radix_sortBlockHistograms");
-    this.digitTotals = buffer(BINS, "radix_sortDigitTotals");
+    const scratch = (count: number, label: string) => new WgpuBuffer({ renderer, format: "uint32", count, gpuOnly: true, label });
+    this.keysB = scratch(keys.capacity, "radix_sortKeysB");
+    this.valuesB = scratch(values.capacity, "radix_sortValuesB");
+    this.blockHistograms = scratch(BINS * this.blocksFor(keys.capacity), "radix_sortBlockHistograms");
+    this.digitTotals = new WgpuBuffer({ renderer, format: "uint32", count: BINS, label: "radix_sortDigitTotals" });
   }
 
   // Grow the scratch buffers to the keys' and values' capacity

@@ -67,7 +67,7 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
   // --- Storage buffers ---
   await check("WgpuBuffer upload, read, clear, copyFrom, growing with keep", onWebGPU(async () => {
     const buffer = new WgpuBuffer({ renderer, format: "float32x4", count: 1000 });
-    const other = new WgpuBuffer({ renderer, format: "float32x4", count: 500 });
+    const other = new WgpuBuffer({ renderer, format: "float32x4", count: 500, gpuOnly: true });
     try {
       const values = Float32Array.from({ length: 4000 }, (_, i) => i * 0.5);
       buffer.upload(values);
@@ -88,6 +88,34 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
     } finally {
       buffer.dispose();
       other.dispose();
+    }
+  }));
+
+  await check("WgpuBuffer: GPU-only allocation, discard and keep across resizes", onWebGPU(async () => {
+    const buffer = new WgpuBuffer({ renderer, format: "uint32", count: 1, gpuOnly: true });
+    const cpu = new WgpuBuffer({ renderer, format: "uint32", count: 1 });
+    try {
+      buffer.attribute.array[0] = 123;
+      cpu.attribute.array[0] = 456;
+      if ((await buffer.read())[0] !== 0 || (await cpu.read())[0] !== 456) return "wrong initial data";
+      buffer.upload(new Uint32Array([123]));
+      buffer.ensureCapacity(4);
+      buffer.attribute.array[0] = 123;
+      if ((await buffer.read()).some((value) => value !== 0)) return "discarded data survived growth";
+      buffer.upload(new Uint32Array([456, 789]));
+      buffer.ensureCapacity(8, { keep: true });
+      const kept = await buffer.read();
+      if (kept[0] !== 456 || kept[1] !== 789 || kept.subarray(2).some((value) => value !== 0)) {
+        return "preserved data or zero-initialized tail differs";
+      }
+      buffer.setCapacity(0, { keep: true });
+      if (buffer.capacity !== 1 || (await buffer.read())[0] !== 456) return "lost prefix on shrink";
+      cpu.ensureCapacity(4);
+      cpu.attribute.array[0] = 987;
+      if ((await cpu.read(0, 1))[0] !== 987) return "default resize failed to upload the CPU attribute";
+    } finally {
+      buffer.dispose();
+      cpu.dispose();
     }
   }));
 
@@ -115,7 +143,7 @@ export async function runWgpuTests(renderer: WebGPURenderer, check: Check) {
   await check("WgpuCompute dispatch by thread count, 2D workgroups and indirect", onWebGPU(async () => {
     const limit = uniform(0, "uint");
     const out = new WgpuBuffer({ renderer, format: "uint32", count: 5_000_000 });
-    const indirect = new WgpuBuffer({ renderer, format: "uint32", count: 3, indirect: true });
+    const indirect = new WgpuBuffer({ renderer, format: "uint32", count: 3, indirect: true, gpuOnly: true });
     const kernel = new WgpuCompute({
       body: ({ index }) => {
         If(index.lessThan(limit), () => {
