@@ -118,7 +118,7 @@ The bundle `sortKeys` (`SortKeys.KEYS`) holds one RGBA8 texel per splat: a back-
 - The draw has no vertex attributes, only an index buffer of 1024 quads (`quadIndices`: `4q + [0, 1, 2, 2, 1, 3]`). It is a single draw call, and each instance draws 1024 splats (`WgpuSplatSorter.QUADS_PER_INSTANCE`): splat `instanceIndex × 1024 + vertexIndex / 4`, with the corner in bits 0 and 1 of `vertexIndex`. GPUs run vertex shaders in batches, and an instance per quad left most of each batch idle (10-15% of the draw).
 - Because the draw is indexed, each quad's 2 shared corners are shaded once: 4 vertex shader invocations per splat, not 6.
 - The order comes from the GPU sorter's values (an indirect draw) or from the applied CPU order's index list. The vertex stage loads the splat's words, rebuilds its eye-space data, and places the corner; the varyings each method's density reads are written explicitly, so the fragment stage repeats none of the vertex work.
-- There is one material, built against real (empty) projected arrays from the start, and rebuilt in place when the method, the eye count, or the order source changes.
+- There is one material, built against real (empty) projected arrays from the start, and rebuilt in place when the method, the eye count, the order source, or the renderer's `fragment` changes ([rendering.md](rendering.md#the-fragment-stage)).
 - Splats blend premultiplied "over" (one, one minus source alpha), back to front, in sRGB-encoded color as they were trained; they test depth but do not write it, so opaque meshes drawn first hide them.
 
 ## Params

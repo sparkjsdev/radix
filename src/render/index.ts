@@ -5,6 +5,7 @@
 export type { ProjectionMethod } from "./projections.tsl";
 export { SplatCollection, type AnySplatObject, type MappedObject, type SplatObject } from "./SplatCollection";
 export type { SplatObjectParams, SplatViewParams } from "./splatParams";
+export type { SplatFragment, SplatFragmentModifier, SplatFragmentOutput } from "./splatDraw";
 export { SplatProjector } from "./SplatProjector";
 export { SplatRenderer, type SplatRendererOptions } from "./SplatRenderer";
 export type { ModifierSpace } from "./splatTransform.tsl";

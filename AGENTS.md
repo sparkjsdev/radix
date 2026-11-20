@@ -526,7 +526,11 @@ for some). `docs/checks.md` lists what each covers.
   splat struct node of their input form (`SplatProjection.input`: ewa
   `"cov"`, the others `"splat"`) and never fetch.
 - One material per renderer, rebuilt in one place when the method, the eye
-  count or the order source changes. It is built against real projected
+  count, the order source or `fragment` (`SplatFragmentModifier`, called
+  once per build with property nodes) changes. Three r186 reads no
+  `mrtNode` beside a custom `fragmentNode`, so a modifier's `mrt` becomes
+  the fragment node (an output struct, the color as `output`, which must
+  be the target's first texture: three builds outputs in texture order). It is built against real projected
   arrays from the start (the constructor makes empty ones): a draw compiled
   while its projected reader held the placeholder keeps reading it, and the
   ray methods then draw garbage (`renderTests.ts` checks a renderer that

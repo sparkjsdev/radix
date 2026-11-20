@@ -118,6 +118,9 @@ This table lists every export of `@sparkjsdev/radix`, sorted by name. Everything
 | `SplatData` | type | core | a table with a layout's splat bundle |
 | `SplatFiles` | class | core | splat files on the current thread ([files.md](files.md#splatfiles-and-the-per-format-classes)) |
 | `SplatFormat` | type | core | `"ply" \| "compressed-ply" \| "spz" \| "rad" \| "rdx"` |
+| `SplatFragment` | type | render | what a fragment modifier reads: `color`, `position` ([rendering.md](rendering.md#the-fragment-stage)) |
+| `SplatFragmentModifier` | type | render | builds on the draw's fragment stage: `SplatRenderer.fragment` ([rendering.md](rendering.md#the-fragment-stage)) |
+| `SplatFragmentOutput` | type | render | what it returns: `discard`, `color`, `mrt` |
 | `SplatGenerator` | value and type | gpu | makes splat `i` in TSL; `fromSplats`, `forArrays`, `indices`, `context` ([generators.md](generators.md)) |
 | `SplatGeneratorContext` | type | gpu | what a generator or modifier knows of the object and the view: `viewOrigin`, ... ([generators.md](generators.md#the-generator-context)) |
 | `SplatLayout` | type | core | `"extSplats" \| "covSplats" \| "packedSplats"` |

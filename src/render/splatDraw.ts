@@ -5,7 +5,7 @@
 // fragment shader evaluates the method's density and blends premultiplied
 // color "over" the target.
 import * as THREE from "three";
-import { NodeMaterial, type WebGPURenderer } from "three/webgpu";
+import { NodeMaterial, type MRTNode, type WebGPURenderer } from "three/webgpu";
 import type { GpuArrayReader } from "../gpu/GpuArrayReader";
 import { hdrToneMappingActive } from "../gpu/hdr";
 import { TSL, type TslNode } from "../gpu/tsl";
@@ -15,7 +15,7 @@ import { SplatParams } from "./splatParams";
 import type { SplatProjection } from "./SplatProjection";
 import { splatViewIndex } from "./viewIndex";
 
-const { Discard, Fn, If, instanceIndex, log, max, min, select, sqrt, sRGBTransferEOTF, struct, uint, varyingProperty, vec2, vec3, vec4, vertexIndex } = TSL;
+const { Discard, Fn, If, instanceIndex, log, max, min, mrt, property, select, sqrt, sRGBTransferEOTF, struct, uint, varyingProperty, vec2, vec3, vec4, vertexIndex } = TSL;
 
 // What a method's vertex step fills, plus what the fragment needs
 export const DrawVertex = struct({
@@ -45,6 +45,32 @@ export function quadIndices(quads: number) {
   return indices;
 }
 
+// What a fragment modifier reads: the draw's fragment, after the density
+// cut and minAlpha
+export interface SplatFragment {
+  // The premultiplied color the draw blends "over" the target (vec4)
+  color: TslNode;
+  // The fragment's point on its splat's quad in the eye's view space (vec3):
+  // the camera at the origin, looking down -z
+  position: TslNode;
+}
+
+// What it gives back, each optional
+export interface SplatFragmentOutput {
+  // Drops the fragment where true (bool)
+  discard?: TslNode;
+  // The color drawn instead (premultiplied vec4)
+  color?: TslNode;
+  // Outputs into the render target's other textures, by texture name, with
+  // their blend modes (three's mrt(); the draw's color goes to "output",
+  // which must be the first texture)
+  mrt?: MRTNode;
+}
+
+// Builds the draw's fragment stage on top of Radix's: called once each
+// time the material is built, with property nodes the stage fills
+export type SplatFragmentModifier = (fragment: SplatFragment) => SplatFragmentOutput;
+
 export interface DrawOptions {
   projection: SplatProjection;
   eyes: number;
@@ -57,6 +83,7 @@ export interface DrawOptions {
   quads: number;
   // 1 when the output stores linear color (see outputIsLinear)
   encodeLinear: TslNode;
+  fragment?: SplatFragmentModifier;
 }
 
 // A splat material: premultiplied "over" blending, depth tested, not written
@@ -95,7 +122,7 @@ export function setDrawNodes(material: NodeMaterial, options: DrawOptions) {
 
 let nextDrawKey = 0;
 
-function drawNodes({ projection, eyes, projected, order, count, quads, encodeLinear }: DrawOptions) {
+function drawNodes({ projection, eyes, projected, order, count, quads, encodeLinear, fragment: modifier }: DrawOptions) {
   const params = SplatParams.nodes;
   const v = eyes === 1 ? uint(0) : splatViewIndex;
 
@@ -106,6 +133,12 @@ function drawNodes({ projection, eyes, projected, order, count, quads, encodeLin
   const rgb = varyingProperty("vec3", "vSplatRgb");
   const opacity = varyingProperty("float", "vSplatOpacity");
   const cutoff = varyingProperty("float", "vSplatCutoff");
+
+  // Only with a fragment modifier: the quad corner in view space, as a
+  // homogeneous point (linear in clip space, so it interpolates exactly)
+  const viewPoint = modifier ? varyingProperty("vec4", "vSplatViewPoint") : undefined;
+  const input = modifier ? { color: property("vec4", "SplatColor"), position: property("vec3", "SplatPosition") } : undefined;
+  const output = modifier?.(input!);
 
   const vertex = Fn(() => {
     const out = DrawVertex().toVar();
@@ -159,6 +192,7 @@ function drawNodes({ projection, eyes, projected, order, count, quads, encodeLin
     rgb.assign(out.get("rgb"));
     opacity.assign(out.get("opacity"));
     cutoff.assign(out.get("cutoff"));
+    viewPoint?.assign(SplatCamera.eye(v).projectionInverse.mul(out.get("position")));
     return out.get("position");
   });
 
@@ -174,10 +208,25 @@ function drawNodes({ projection, eyes, projected, order, count, quads, encodeLin
     });
 
     const color = select(encodeLinear.greaterThan(0.5), sRGBTransferEOTF(rgb), rgb);
-    return vec4(color.mul(alpha), alpha);
+    if (!input || !viewPoint) {
+      return vec4(color.mul(alpha), alpha);
+    }
+    input.color.assign(vec4(color.mul(alpha), alpha));
+    input.position.assign(viewPoint.xyz.div(viewPoint.w));
+    if (output?.discard) {
+      If(output.discard, () => {
+        Discard();
+      });
+    }
+    return output?.color ?? input.color;
   });
 
-  return { vertexNode: vertex(), fragmentNode: fragment() };
+  // Three takes a custom fragment node's other outputs only as an output
+  // struct, so the color becomes the mrt's "output". Three builds the outputs
+  // in texture order and the others read what the color's stage assigns, so
+  // "output" must be the target's first texture.
+  const color = fragment();
+  return { vertexNode: vertex(), fragmentNode: output?.mrt ? output.mrt.merge(mrt({ output: color })) : color };
 }
 
 // Whether the output encodes linear color: splats are sRGB, drawn as they
