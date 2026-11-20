@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { MeshBasicNodeMaterial, type WebGPURenderer } from "three/webgpu";
 import {
   ArrayData, Encoding, GpuArrayReader, GpuArrays, GpuArrayWriter, GpuSortKeys, GpuSplatReader, Hdr, SortKeys, SplatCollection,
-  WgpuBuffer, WgpuCompact, WgpuRadixSort, WgpuSplatSorter, createRenderer, getGpuCaps, sortSplatKeys,
+  TSL, WgpuBuffer, WgpuCompact, WgpuRadixSort, WgpuSplatSorter, createRenderer, getGpuCaps, sortSplatKeys,
   type ExtSplat, type ProjectionMethod, type SortKeyBits, type SplatGenerator, type SplatLayout,
 } from "@sparkjsdev/radix";
 import { programOf } from "../../src/render/SplatProjector";
@@ -15,6 +15,8 @@ import {
   SplatProjection, H, W, decodeBound, drawSplats, eyeCulled, eyeWords, headWords, makeCamera, makeSplats, collectionOf, meanAbsDiff, pixelAt, project,
   randomSplats, readProjection, readSortKeys, renderPixels, rng, setCamera, splat, splatData, type Check,
 } from "./renderUtils";
+
+const { mrt, vec4 } = TSL;
 
 const METHODS = SplatProjection.METHODS;
 const LAYOUTS: SplatLayout[] = ["extSplats", "covSplats", "packedSplats"];
@@ -639,6 +641,76 @@ export async function runRenderTests(renderer: WebGPURenderer, check: Check) {
       return undefined;
     } finally {
       logRenderer.dispose();
+    }
+  });
+
+  await check("render: a fragment modifier clips at drawing depth: a depth plane between two splats, a plane through one, a cut 0.01 either side of its depth", async () => {
+    const single = [splat([0, 0, -4], 0.25, [0, 0, 1], 1)];
+    for (const method of METHODS) {
+      const behind = await drawSplats(renderer, pair, { method, sortMode, fragment: ({ position }) => ({ discard: position.z.greaterThan(-4.5) }) });
+      const [r, , b] = pixelAt(behind, W / 2, H / 2);
+      if (b < 200 || r > 40) {
+        return `${method}: depth plane at z -4.5, center rgb ${r}, ${b}, expected the far splat`;
+      }
+
+      const half = await drawSplats(renderer, single, { method, sortMode, fragment: ({ position }) => ({ discard: position.x.lessThan(0) }) });
+      const [left, right] = [pixelAt(half, W / 2 - 4, H / 2)[3], pixelAt(half, W / 2 + 4, H / 2)[3]];
+      if (left !== 0 || right < 100) {
+        return `${method}: plane x = 0, alpha ${left} left and ${right} right of center`;
+      }
+
+      for (const [cut, kept] of [[-4.01, true], [-3.99, false]] as const) {
+        const pixels = await drawSplats(renderer, single, { method, sortMode, fragment: ({ position }) => ({ discard: position.z.lessThan(cut) }) });
+        if ((pixelAt(pixels, W / 2, H / 2)[3] > 100) !== kept) {
+          return `${method}: splat at z -4, cut beyond z ${cut}: ${kept ? "dropped" : "kept"}`;
+        }
+      }
+    }
+    return undefined;
+  });
+
+  await check("render: a fragment modifier's mrt writes the view depth into a second target texture, and its color draws", async () => {
+    const camera = makeCamera(renderer);
+    const arrays = GpuArrays.fromData(renderer, splatData([splat([0.5, 0, -4], 0.25, [0, 0, 1], 1)]));
+    const splatRenderer = makeSplats(renderer, {
+      collection: collectionOf(arrays), sortMode,
+      fragment: ({ color, position }) => ({ color: vec4(color.a, 0, 0, color.a), mrt: mrt({ depth: vec4(position.z.negate(), 0, 0, 1) }) }),
+    });
+    const scene3 = new THREE.Scene().add(splatRenderer);
+    const target = new THREE.RenderTarget(W, H, { type: THREE.HalfFloatType, count: 2 });
+    target.textures[0].name = "output";
+    target.textures[1].name = "depth";
+    const frame = async () => {
+      renderer.setRenderTarget(target);
+      renderer.setClearColor(0x000000, 0);
+      renderer.clear();
+      renderer.render(scene3, camera);
+      renderer.setRenderTarget(null);
+      const read = async (index: number) => {
+        const data = await renderer.readRenderTargetPixelsAsync(target, 0, 0, W, H, index) as Uint16Array | Float32Array;
+        return data instanceof Uint16Array ? Float32Array.from(data, (h) => Encoding.decodeHalf(h)) : data;
+      };
+      return [await read(0), await read(1)];
+    };
+    try {
+      await frame();
+      if (!webgpu) {
+        const view = splatRenderer.viewFor(camera);
+        view.apply(await view.sort(camera));
+      }
+      const [colors, depths] = await frame();
+      const x = Math.round((new THREE.Vector3(0.5, 0, -4).project(camera).x * 0.5 + 0.5) * W);
+      const [red, , blue] = colors.subarray((H / 2 * W + x) * 4);
+      const [depth, background] = [depths[(H / 2 * W + x) * 4], depths[(2 * W + 2) * 4]];
+      if (red < 0.5 || blue > 0.01) {
+        return `color rgb ${red.toFixed(3)}, ${blue.toFixed(3)} at the splat, expected the modifier's red`;
+      }
+      return Math.abs(depth - 4) < 0.01 && background === 0 ? undefined : `depth ${depth} at the splat, expected 4; background ${background}`;
+    } finally {
+      renderer.setRenderTarget(null);
+      target.dispose();
+      splatRenderer.dispose();
+      arrays.dispose();
     }
   });
 

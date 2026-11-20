@@ -13,7 +13,7 @@ import { WorkerPool, type WorkerLease } from "../worker/WorkerPool";
 import type { ProjectionMethod } from "./projections.tsl";
 import { SplatCamera } from "./splatCamera";
 import { SplatCollection, type AnySplatObject } from "./SplatCollection";
-import { makeDrawMaterial, outputIsLinear, quadIndices, setDrawNodes, type DrawOptions } from "./splatDraw";
+import { makeDrawMaterial, outputIsLinear, quadIndices, setDrawNodes, type DrawOptions, type SplatFragmentModifier } from "./splatDraw";
 import { SplatParams, type SplatObjectParams, type SplatViewParams } from "./splatParams";
 import { SplatProjection, type ProjectedSchema } from "./SplatProjection";
 import { projectCollection } from "./SplatProjector";
@@ -45,6 +45,7 @@ export interface SplatRendererOptions {
   modifier?: SplatModifier;
   covModifier?: CovSplatModifier;
   modifierSpace?: ModifierSpace;
+  fragment?: SplatFragmentModifier;
   sortMode?: "gpu" | "cpu";
   autoSort?: AutoSort | false;
   sortWorker?: WorkerPool | WorkerLease;
@@ -123,6 +124,9 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
   modifier?: SplatModifier;
   covModifier?: CovSplatModifier;
   modifierSpace: ModifierSpace;
+  // Builds the draw's fragment stage on top of Radix's (clip, extra
+  // outputs); a change rebuilds the material at the next render
+  fragment?: SplatFragmentModifier;
   autoSort: AutoSort | false;
   // Where CPU sorts run: by default SplatRenderer.sortPool, shared by every
   // renderer; a given pool or lease is the app's
@@ -155,12 +159,12 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
   private orderReader = new GpuArrayReader(ArrayData.INDICES);
   private orderCount = uniform(0, "uint");
   private encodeLinear = uniform(0);
-  // What the material draws: the projected arrays (by their reader) and the
-  // order source
-  private drawState!: { for: Projected; projected: GpuArrayReader; sorter?: WgpuSplatSorter };
+  // What the material draws: the projected arrays (by their reader), the
+  // order source and the fragment modifier
+  private drawState!: { for: Projected; projected: GpuArrayReader; sorter?: WgpuSplatSorter; fragment?: SplatFragmentModifier };
 
   constructor({
-    renderer, collection = SplatCollection.EMPTY, method = "ewa", sortBits = 24, params, objectParams, modifier, covModifier, modifierSpace = "view",
+    renderer, collection = SplatCollection.EMPTY, method = "ewa", sortBits = 24, params, objectParams, modifier, covModifier, modifierSpace = "view", fragment,
     sortMode, autoSort = { distance: 0, angle: 0 }, sortWorker, viewKey = (camera) => camera, onInvalidate,
   }: SplatRendererOptions) {
     const geometry = new THREE.InstancedBufferGeometry();
@@ -177,6 +181,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     this.modifier = modifier;
     this.covModifier = covModifier;
     this.modifierSpace = modifierSpace;
+    this.fragment = fragment;
     this._sortMode = sortMode ?? (isWebGPUBackend(renderer) ? "gpu" : "cpu");
     this.autoSort = autoSort;
     this.sortWorker = sortWorker;
@@ -443,7 +448,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
     }
 
     // Point the draw at the projection and the order
-    if (this.drawState.for !== this.projected || this.drawState.sorter !== sorter) {
+    if (this.drawState.for !== this.projected || this.drawState.sorter !== sorter || this.drawState.fragment !== this.fragment) {
       this.buildMaterial(sorter);
     }
     this.drawState.projected.bind(arrays, "projected");
@@ -462,13 +467,13 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
   }
 
   // The one material, built (or rebuilt in place) for the projected
-  // arrays and the order source
+  // arrays, the order source and the fragment modifier
   private buildMaterial(sorter: WgpuSplatSorter | undefined) {
     const { projection, eyes, arrays } = this.projected;
     const projected = projection.reader(eyes).bind(arrays, "projected");
     const order: DrawOptions["order"] = sorter ? (i) => sorter.values.element(i) : (i) => this.orderReader.load("index", i);
     const count = sorter ? sorter.count : this.orderCount;
-    const options = { projection, eyes, projected, order, count, quads: QUADS, encodeLinear: this.encodeLinear };
+    const options = { projection, eyes, projected, order, count, quads: QUADS, encodeLinear: this.encodeLinear, fragment: this.fragment };
 
     if (this.drawState) {
       setDrawNodes(this.material, options);
@@ -476,7 +481,7 @@ export class SplatRenderer extends THREE.Mesh<THREE.InstancedBufferGeometry, Nod
       this.material.dispose();
       this.material = makeDrawMaterial(options);
     }
-    this.drawState = { for: this.projected, projected, sorter };
+    this.drawState = { for: this.projected, projected, sorter, fragment: this.fragment };
   }
 }
 

@@ -104,6 +104,7 @@ const splatRenderer = new SplatRenderer({
 | `objectParams` | [the defaults](params.md) | the object param defaults; given fields override them |
 | `modifier`, `covModifier` | none | a TSL function run on every splat, in splat or covariance form ([generators.md](generators.md#modifiers)) |
 | `modifierSpace` | `"view"` | where the modifier runs: `"view"`, `"world"`, `"object"`, or a `Matrix4` (a frame's `matrixWorld`) |
+| `fragment` | none | a TSL function that builds on the draw's fragment stage: discard, color, and extra outputs ([the fragment stage](#the-fragment-stage)) |
 | `sortMode` | `"gpu"` on WebGPU, else `"cpu"` | the GPU sort every render, or each view's applied CPU order |
 | `autoSort` | `{ distance: 0, angle: 0 }` | the CPU sort's automatic loop, or `false` ([views.md](views.md#autosort)) |
 | `sortWorker` | `SplatRenderer.sortPool` | a `WorkerPool` or `WorkerLease` for CPU sorts ([sorting.md](sorting.md#the-cpu-sort)) |
@@ -112,7 +113,7 @@ const splatRenderer = new SplatRenderer({
 
 | Member | What it does |
 |---|---|
-| `collection`, `method`, `sortBits`, `modifier`, `covModifier`, `modifierSpace`, `autoSort`, `sortWorker`, `viewKey`, `onInvalidate` | the options above, settable at any time |
+| `collection`, `method`, `sortBits`, `modifier`, `covModifier`, `modifierSpace`, `fragment`, `autoSort`, `sortWorker`, `viewKey`, `onInvalidate` | the options above, settable at any time |
 | `params`, `objectParams` | complete objects, changed in place: `splatRenderer.objectParams.blurAmount = 0.5` |
 | `sortMode` | settable; switching to `"gpu"` drops every view's orders |
 | `viewFor(key, options?)` | the view of `key`, made on first use; `options` are set on it ([views.md](views.md)) |
@@ -126,7 +127,43 @@ const splatRenderer = new SplatRenderer({
 | `SplatRenderer.sortPool` | static: the `WorkerPool` every renderer's CPU sorts share, all views of all renderers without a `sortWorker`. Made on first use, starting workers as sorts need them; it lives with the page |
 | `SplatRenderer.sortWorkers` | static: the shared pool's size, 4 by default. It is read when the pool is made, at the first CPU sort, so set it before then |
 
-The settings a render uses resolve field by field: the view's when it sets one, else the renderer's ([views.md](views.md#how-settings-resolve)). `method` and `sortMode` belong to the renderer only, because the method decides the projected arrays and the draw material. Drawing with two methods takes two renderers.
+The settings a render uses resolve field by field: the view's when it sets one, else the renderer's ([views.md](views.md#how-settings-resolve)). `method`, `sortMode`, and `fragment` belong to the renderer only, because the method decides the projected arrays and the draw material, and `fragment` is part of that material. Drawing with two methods takes two renderers.
+
+## The fragment stage
+
+A modifier runs before the sort and keeps or drops whole splats. `fragment` runs in the draw, on each fragment of each splat's quad, after the density cut and `minAlpha`. It can drop fragments where they are drawn (a clip plane or clip volume that cuts through splats), change the color, and write extra outputs such as depth into the render target's other textures.
+
+```ts
+const { mrt, uniform, vec4 } = TSL;
+
+// The app's: a plane in view space, (normal, constant), set before each render
+const plane = uniform(new THREE.Vector4(0, 0, -1, -5));
+
+splatRenderer.fragment = ({ color, position }) => ({
+  // As three's clipping planes, keep the side the normal points to: here,
+  // beyond 5 m
+  discard: plane.xyz.dot(position).add(plane.w).lessThan(0),
+  // Into a render target whose textures are named "output" and "depth"
+  mrt: mrt({ depth: vec4(position.z.negate(), 0, 0, color.a) }),
+});
+```
+
+| `SplatFragment` field | Type | |
+|---|---|---|
+| `color` | `vec4` | the premultiplied color the draw blends "over" the target; alpha is `color.a` |
+| `position` | `vec3` | the fragment's point on its splat's quad in the eye's view space (camera at the origin, looking down -z) |
+
+| `SplatFragmentOutput` field | Type | |
+|---|---|---|
+| `discard` | `bool` | drops the fragment where true |
+| `color` | `vec4` | the premultiplied color drawn instead |
+| `mrt` | `MRTNode` | three's `mrt()`: a node per other texture of the render target, keyed by the texture's `name`; the draw's color goes to the texture named `output`. `setBlendMode` sets an output's blending (none by default) |
+
+- The function is called once each time the material is built (at the first render after `fragment`, the method, or the eye count changes), not per frame. It gets property nodes that the fragment stage fills and returns nodes, so values that change belong in uniforms. Assigning a new function builds a new draw program.
+- A quad lies at its splat center's depth, so `position.z` is the same over one splat: a plane cuts a splat's quad where the quad crosses it, and a plane facing the camera keeps or drops each splat whole by its center depth.
+- In stereo, `position` is in the view space of the eye being drawn.
+- `mrt` takes effect only when drawing into a render target. Three matches its keys to the target's texture names: name the first texture `output` (the draw's color must be first, because the other outputs read values its stage computes) and give each of the others a node.
+- Without `fragment`, the draw's shaders hold none of this: no varying, uniform, or output is added.
 
 ## Several renderers
 
@@ -137,5 +174,5 @@ Two renderers drawn in one render each keep their own projected splats and sorte
 - Each renderer sorts only its own splats: objects that overlap must be in the same renderer's collection to blend correctly.
 - A collection made per frame is fine on WebGPU, but on the CPU sort each new collection needs a new sort before it shows. Make a new collection only when the set of objects changes.
 - `frustumCulled` is off: the projection culls splats itself.
-- Splats are depth tested against what is drawn before them (opaque meshes) but write no depth. Each quad sits at its splat center's depth, so a splat crossing a mesh is hidden or shown whole. That depth is stored in steps of 1.5e-5 to 3e-5 of the distance ([projection.md](projection.md#words)), and works the same with a logarithmic depth buffer (`createRenderer({ logarithmicDepthBuffer: true })`).
+- Splats are depth tested against what is drawn before them (opaque meshes) but write no depth (a `fragment` can write it into a texture of its own). Each quad sits at its splat center's depth, so a splat crossing a mesh is hidden or shown whole. That depth is stored in steps of 1.5e-5 to 3e-5 of the distance ([projection.md](projection.md#words)), and works the same with a logarithmic depth buffer (`createRenderer({ logarithmicDepthBuffer: true })`).
 - `dispose()` renderers you no longer need. A renderer that is garbage-collected undisposed logs a warning, and its objects are released at that point.

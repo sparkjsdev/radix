@@ -13,6 +13,7 @@ export interface EyeNodes {
   fromHead: TslNode;
   fromHeadQuat: TslNode;
   projection: TslNode;
+  projectionInverse: TslNode;
   isOrtho: TslNode;
   renderSize: TslNode;
   ndcZMin: TslNode;
@@ -29,6 +30,7 @@ const nodes = {
   fromHeads: uniformArray(Array.from({ length: MAX_EYES }, () => new THREE.Matrix4())),
   fromHeadQuats: uniformArray(Array.from({ length: MAX_EYES }, () => new THREE.Vector4(0, 0, 0, 1))),
   projections: uniformArray(Array.from({ length: MAX_EYES }, () => new THREE.Matrix4())),
+  projectionInverses: uniformArray(Array.from({ length: MAX_EYES }, () => new THREE.Matrix4())),
   orthos: uniformArray(new Array<number>(MAX_EYES).fill(0), "uint"),
   renderSize: uniform(new THREE.Vector2(1, 1)),
   // NDC depth of the near plane: -1 (WebGL clip convention) or 0 (WebGPU)
@@ -61,6 +63,7 @@ export class SplatCamera {
       fromHead: nodes.fromHeads.element(at),
       fromHeadQuat: nodes.fromHeadQuats.element(at),
       projection: nodes.projections.element(at),
+      projectionInverse: nodes.projectionInverses.element(at),
       isOrtho: nodes.orthos.element(at).notEqual(uint(0)),
       renderSize: nodes.renderSize,
       ndcZMin: nodes.ndcZMin,
@@ -131,6 +134,7 @@ export class SplatCamera {
       const q = scratch.quaternion;
       (nodes.fromHeadQuats.array[v] as THREE.Vector4).set(q.x, q.y, q.z, q.w);
       (nodes.projections.array[v] as THREE.Matrix4).copy(projection);
+      (nodes.projectionInverses.array[v] as THREE.Matrix4).copy(projection).invert();
       nodes.orthos.array[v] = ortho ? 1 : 0;
     });
     (nodes.renderSize.value as THREE.Vector2).copy(size);
